@@ -31,6 +31,7 @@ import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.DigestCredential;
+import io.undertow.security.idm.GSSContextCredential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.security.idm.X509CertificateCredential;
@@ -58,6 +59,7 @@ import java.util.Set;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.ietf.jgss.GSSException;
 import org.junit.Test;
 
 /**
@@ -75,6 +77,9 @@ public abstract class AuthenticationTestBase {
     static {
         final Set<String> certUsers = new HashSet<String>();
         certUsers.add("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB");
+
+        final Set<String> gssApiUsers = new HashSet<String>();
+        gssApiUsers.add("jduke@UNDERTOW.IO");
 
         final Map<String, char[]> passwordUsers = new HashMap<String, char[]>(2);
         passwordUsers.put("userOne", "passwordOne".toCharArray());
@@ -118,6 +123,37 @@ public abstract class AuthenticationTestBase {
                         };
                     }
 
+                } else if (credential instanceof GSSContextCredential) {
+                    try {
+                        final GSSContextCredential gssCredential = (GSSContextCredential) credential;
+                        final String name = gssCredential.getGssContext().getSrcName().toString();
+                        if (gssApiUsers.contains(name)) {
+                            return new Account() {
+
+                                private final Principal principal = new Principal() {
+
+                                    @Override
+                                    public String getName() {
+                                        return name;
+                                    }
+                                };
+
+                                @Override
+                                public Principal getPrincipal() {
+                                    return principal;
+                                }
+
+                                @Override
+                                public Set<String> getRoles() {
+                                    return Collections.emptySet();
+                                }
+                            };
+
+                        }
+
+                    } catch (GSSException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
 
                 return null;

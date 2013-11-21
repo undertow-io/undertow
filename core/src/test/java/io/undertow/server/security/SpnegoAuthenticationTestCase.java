@@ -18,24 +18,59 @@
 
 package io.undertow.server.security;
 
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.NEGOTIATE;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static io.undertow.server.security.KerberosKDCUtil.login;
+
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
+
 import javax.security.auth.Subject;
 
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.GSSAPIServerSubjectFactory;
+import io.undertow.security.api.SecurityNotification.EventType;
+import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FlexBase64;
 
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSManager;
+import org.ietf.jgss.GSSName;
+import org.ietf.jgss.Oid;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * A test case to test the SPNEGO authentication mechanism.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public class SpnegoAuthenticationTestCase {
+@RunWith(DefaultServer.class)
+public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
+
+    private static Oid SPNEGO;
+
+    @Override
+    protected AuthenticationMechanism getTestMechanism() {
+        return new GSSAPIAuthenticationMechanism(new SubjectFactory());
+    }
 
     @BeforeClass
     public static void startServers() throws Exception {
         KerberosKDCUtil.startServer();
+        SPNEGO = new Oid("1.3.6.1.5.5.2");
     }
 
     @AfterClass
@@ -44,22 +79,81 @@ public class SpnegoAuthenticationTestCase {
     }
 
     @Test
-    public void test() {
-        System.out.println("Test Run");
+    public void testBasicSuccess() throws Exception {
+        setAuthenticationChain();
+
+        final TestHttpClient client = new TestHttpClient();
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+        HttpResponse result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
+        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        assertEquals(1, values.length);
+        assertEquals(NEGOTIATE.toString(), values[0].getValue());
+        HttpClientUtils.readResponse(result);
+
+        Subject clientSubject = login("jduke", "theduke".toCharArray());
+
+        Subject.doAs(clientSubject, new PrivilegedExceptionAction<Void>() {
+
+            @Override
+            public Void run() throws Exception {
+                GSSManager gssManager = GSSManager.getInstance();
+                GSSName serverName = gssManager.createName("HTTP/" + DefaultServer.getDefaultServerAddress().getHostString(), null);
+
+                GSSContext context = gssManager.createContext(serverName, SPNEGO, null, GSSContext.DEFAULT_LIFETIME);
+
+                byte[] token = new byte[0];
+
+                boolean gotOur200 = false;
+                while (!context.isEstablished()) {
+                    token = context.initSecContext(token, 0, token.length);
+
+                    if (token != null && token.length > 0) {
+                        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+                        get.addHeader(AUTHORIZATION.toString(), NEGOTIATE + " " + FlexBase64.encodeString(token, false));
+                        HttpResponse result = client.execute(get);
+
+                        Header[] headers = result.getHeaders(WWW_AUTHENTICATE.toString());
+                        if (headers.length > 0) {
+                            String header = headers[0].getValue();
+                            assertTrue("Negotiate header", header.startsWith(NEGOTIATE.toString() + " "));
+
+                            byte[] headerBytes = header.getBytes("UTF-8");
+                            token = FlexBase64.decode(headerBytes, NEGOTIATE.toString().length() + 1, headerBytes.length).array();
+                        }
+
+                        if (result.getStatusLine().getStatusCode() == 200) {
+                            Header[] values = result.getHeaders("ProcessedBy");
+                            assertEquals(1, values.length);
+                            assertEquals("ResponseHandler", values[0].getValue());
+                            HttpClientUtils.readResponse(result);
+                            assertSingleNotificationType(EventType.AUTHENTICATED);
+                            gotOur200 = true;
+                        } else if (result.getStatusLine().getStatusCode() == 401) {
+                            assertTrue("We did get a header.", headers.length > 0);
+
+                            HttpClientUtils.readResponse(result);
+
+                        } else {
+                            fail(String.format("Unexpected status code %d", result.getStatusLine().getStatusCode()));
+                        }
+                    }
+                }
+
+                assertTrue(gotOur200);
+                assertTrue(context.isEstablished());
+                return null;
+            }
+        });
     }
 
-    @Test
-    public void testJDuke() throws Exception {
-        Subject subject = KerberosKDCUtil.login("jduke", "theduke".toCharArray());
+    private class SubjectFactory implements GSSAPIServerSubjectFactory {
 
-        System.out.println(subject.toString());
-    }
+        @Override
+        public Subject getSubjectForHost(String hostName) throws GeneralSecurityException {
+            return login("HTTP/" + hostName, "servicepwd".toCharArray());
+        }
 
-    @Test
-    public void testServer() throws Exception {
-        Subject subject = KerberosKDCUtil.login("HTTP/" + DefaultServer.getDefaultServerAddress().getHostString(), "servicepwd".toCharArray());
-
-        System.out.println(subject.toString());
     }
 
 }
