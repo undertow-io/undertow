@@ -174,8 +174,9 @@ public class DeploymentInfo implements Cloneable {
         return displayName;
     }
 
-    public void setDisplayName(final String displayName) {
+    public DeploymentInfo setDisplayName(final String displayName) {
         this.displayName = displayName;
+        return this;
     }
 
     public String getContextPath() {
@@ -230,8 +231,9 @@ public class DeploymentInfo implements Cloneable {
     /**
      * @param defaultSessionTimeout The default session timeout, in seconds
      */
-    public void setDefaultSessionTimeout(final int defaultSessionTimeout) {
+    public DeploymentInfo setDefaultSessionTimeout(final int defaultSessionTimeout) {
         this.defaultSessionTimeout = defaultSessionTimeout;
+        return this;
     }
 
     /**
@@ -249,8 +251,9 @@ public class DeploymentInfo implements Cloneable {
      * Sets the default encoding that will be used for servlet responses
      * @param defaultEncoding The default encoding
      */
-    public void setDefaultEncoding(String defaultEncoding) {
+    public DeploymentInfo setDefaultEncoding(String defaultEncoding) {
         this.defaultEncoding = defaultEncoding;
+        return this;
     }
 
     public String getUrlEncoding() {
@@ -263,8 +266,9 @@ public class DeploymentInfo implements Cloneable {
      *
      * @param urlEncoding The encoding to use
      */
-    public void setUrlEncoding(String urlEncoding) {
+    public DeploymentInfo setUrlEncoding(String urlEncoding) {
         this.urlEncoding = urlEncoding;
+        return this;
     }
 
     /**
@@ -547,8 +551,9 @@ public class DeploymentInfo implements Cloneable {
      * @param executor The executor
      * @see ServletInfo#executor
      */
-    public void setExecutor(final Executor executor) {
+    public DeploymentInfo setExecutor(final Executor executor) {
         this.executor = executor;
+        return this;
     }
 
     public Executor getAsyncExecutor() {
@@ -562,32 +567,36 @@ public class DeploymentInfo implements Cloneable {
      *
      * @param asyncExecutor The executor
      */
-    public void setAsyncExecutor(final Executor asyncExecutor) {
+    public DeploymentInfo setAsyncExecutor(final Executor asyncExecutor) {
         this.asyncExecutor = asyncExecutor;
+        return this;
     }
 
     public File getTempDir() {
         return tempDir;
     }
 
-    public void setTempDir(final File tempDir) {
+    public DeploymentInfo setTempDir(final File tempDir) {
         this.tempDir = tempDir;
+        return this;
     }
 
     public boolean isIgnoreFlush() {
         return ignoreFlush;
     }
 
-    public void setIgnoreFlush(boolean ignoreFlush) {
+    public DeploymentInfo setIgnoreFlush(boolean ignoreFlush) {
         this.ignoreFlush = ignoreFlush;
+        return this;
     }
 
     public JspConfigDescriptor getJspConfigDescriptor() {
         return jspConfigDescriptor;
     }
 
-    public void setJspConfigDescriptor(JspConfigDescriptor jspConfigDescriptor) {
+    public DeploymentInfo setJspConfigDescriptor(JspConfigDescriptor jspConfigDescriptor) {
         this.jspConfigDescriptor = jspConfigDescriptor;
+        return this;
     }
 
     public DefaultServletConfig getDefaultServletConfig() {
@@ -736,8 +745,9 @@ public class DeploymentInfo implements Cloneable {
      * @param servletContextAttributeBackingMap
      *         The backing map
      */
-    public void setServletContextAttributeBackingMap(final ConcurrentMap<String, Object> servletContextAttributeBackingMap) {
+    public DeploymentInfo setServletContextAttributeBackingMap(final ConcurrentMap<String, Object> servletContextAttributeBackingMap) {
         this.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
+        return this;
     }
 
     public ServletSessionConfig getServletSessionConfig() {
@@ -765,8 +775,9 @@ public class DeploymentInfo implements Cloneable {
         return denyUncoveredHttpMethods;
     }
 
-    public void setDenyUncoveredHttpMethods(final boolean denyUncoveredHttpMethods) {
+    public DeploymentInfo setDenyUncoveredHttpMethods(final boolean denyUncoveredHttpMethods) {
         this.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
+        return this;
     }
 
     public ServletStackTraces getServletStackTraces() {
@@ -782,16 +793,18 @@ public class DeploymentInfo implements Cloneable {
         return invalidateSessionOnLogout;
     }
 
-    public void setInvalidateSessionOnLogout(boolean invalidateSessionOnLogout) {
+    public DeploymentInfo setInvalidateSessionOnLogout(boolean invalidateSessionOnLogout) {
         this.invalidateSessionOnLogout = invalidateSessionOnLogout;
+        return this;
     }
 
     public int getDefaultCookieVersion() {
         return defaultCookieVersion;
     }
 
-    public void setDefaultCookieVersion(int defaultCookieVersion) {
+    public DeploymentInfo setDefaultCookieVersion(int defaultCookieVersion) {
         this.defaultCookieVersion = defaultCookieVersion;
+        return this;
     }
 
     public SessionPersistenceManager getSessionPersistenceManager() {
@@ -803,28 +816,31 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public void addPrincipalVsRoleMapping(final String principal, final String mapping) {
+    public DeploymentInfo addPrincipalVsRoleMapping(final String principal, final String mapping) {
         Set<String> set = principalVersusRolesMap.get(principal);
         if (set == null) {
             principalVersusRolesMap.put(principal, set = new HashSet<String>());
         }
         set.add(mapping);
+        return this;
     }
 
-    public void addPrincipalVsRoleMappings(final String principal, final String... mappings) {
+    public DeploymentInfo addPrincipalVsRoleMappings(final String principal, final String... mappings) {
         Set<String> set = principalVersusRolesMap.get(principal);
         if (set == null) {
             principalVersusRolesMap.put(principal, set = new HashSet<String>());
         }
         set.addAll(Arrays.asList(mappings));
+        return this;
     }
 
-    public void addPrincipalVsRoleMappings(final String principal, final Collection<String> mappings) {
+    public DeploymentInfo addPrincipalVsRoleMappings(final String principal, final Collection<String> mappings) {
         Set<String> set = principalVersusRolesMap.get(principal);
         if (set == null) {
             principalVersusRolesMap.put(principal, set = new HashSet<String>());
         }
         set.addAll(mappings);
+        return this;
     }
 
     public Map<String, Set<String>> getPrincipalVersusRolesMap() {
