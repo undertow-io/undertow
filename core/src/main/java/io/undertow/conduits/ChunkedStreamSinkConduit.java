@@ -201,6 +201,10 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     @Override
     public int writeFinal(ByteBuffer src) throws IOException {
         //todo: we could optimise this to just set a content length if no data has been written
+        if(!src.hasRemaining()) {
+            terminateWrites();
+            return 0;
+        }
         if (lastChunkBuffer == null) {
             createLastChunk();
         }
