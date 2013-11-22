@@ -28,6 +28,8 @@ import static io.undertow.server.security.KerberosKDCUtil.login;
 
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
+import java.util.List;
 
 import javax.security.auth.Subject;
 
@@ -63,8 +65,10 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
     private static Oid SPNEGO;
 
     @Override
-    protected AuthenticationMechanism getTestMechanism() {
-        return new GSSAPIAuthenticationMechanism(new SubjectFactory());
+    protected List<AuthenticationMechanism> getTestMechanisms() {
+        AuthenticationMechanism mechanism = new GSSAPIAuthenticationMechanism(new SubjectFactory());
+
+        return Collections.singletonList(mechanism);
     }
 
     @BeforeClass
