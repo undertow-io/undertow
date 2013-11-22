@@ -18,21 +18,13 @@
 
 package io.undertow.server.security;
 
+import static io.undertow.server.security.KerberosKDCUtil.login;
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.NEGOTIATE;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static io.undertow.server.security.KerberosKDCUtil.login;
-
-import java.security.GeneralSecurityException;
-import java.security.PrivilegedExceptionAction;
-import java.util.Collections;
-import java.util.List;
-
-import javax.security.auth.Subject;
-
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
 import io.undertow.security.api.SecurityNotification.EventType;
@@ -41,6 +33,13 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
+
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
+import java.util.List;
+
+import javax.security.auth.Subject;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -83,7 +82,7 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
     }
 
     @Test
-    public void testBasicSuccess() throws Exception {
+    public void testSpnegoSuccess() throws Exception {
         setAuthenticationChain();
 
         final TestHttpClient client = new TestHttpClient();
@@ -91,8 +90,8 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(1, values.length);
-        assertEquals(NEGOTIATE.toString(), values[0].getValue());
+        String header = getAuthHeader(NEGOTIATE, values);
+        assertEquals(NEGOTIATE.toString(), header);
         HttpClientUtils.readResponse(result);
 
         Subject clientSubject = login("jduke", "theduke".toCharArray());
@@ -119,8 +118,7 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
 
                         Header[] headers = result.getHeaders(WWW_AUTHENTICATE.toString());
                         if (headers.length > 0) {
-                            String header = headers[0].getValue();
-                            assertTrue("Negotiate header", header.startsWith(NEGOTIATE.toString() + " "));
+                            String header = getAuthHeader(NEGOTIATE, headers);
 
                             byte[] headerBytes = header.getBytes("UTF-8");
                             token = FlexBase64.decode(headerBytes, NEGOTIATE.toString().length() + 1, headerBytes.length).array();
