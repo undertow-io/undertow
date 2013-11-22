@@ -46,9 +46,13 @@ import static org.junit.Assert.assertEquals;
 @RunWith(DefaultServer.class)
 public class BasicAuthenticationTestCase extends AuthenticationTestBase {
 
+    static AuthenticationMechanism getTestMechanism() {
+        return new BasicAuthenticationMechanism("Test Realm");
+    }
+
     @Override
     protected List<AuthenticationMechanism> getTestMechanisms() {
-        AuthenticationMechanism mechanism = new BasicAuthenticationMechanism("Test Realm");
+        AuthenticationMechanism mechanism = getTestMechanism();
 
         return Collections.singletonList(mechanism);
     }
@@ -56,14 +60,18 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
     @Test
     public void testBasicSuccess() throws Exception {
         setAuthenticationChain();
+        _testBasicSuccess();
+        assertSingleNotificationType(EventType.AUTHENTICATED);
+    }
 
+    static void _testBasicSuccess() throws Exception {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(1, values.length);
-        assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+        String header = getAuthHeader(BASIC, values);
+        assertEquals(BASIC + " realm=\"Test Realm\"", header);
         HttpClientUtils.readResponse(result);
 
         get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -75,20 +83,23 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
         HttpClientUtils.readResponse(result);
-        assertSingleNotificationType(EventType.AUTHENTICATED);
     }
 
     @Test
     public void testBadUserName() throws Exception {
         setAuthenticationChain();
+        _testBadUserName();
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
+    }
 
+    static void _testBadUserName() throws Exception {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(1, values.length);
-        assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+        String header = getAuthHeader(BASIC, values);
+        assertEquals(BASIC + " realm=\"Test Realm\"", header);
         HttpClientUtils.readResponse(result);
 
         get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -96,20 +107,23 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         HttpClientUtils.readResponse(result);
-        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
     @Test
     public void testBadPassword() throws Exception {
         setAuthenticationChain();
+        _testBadPassword();
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
+    }
 
+    static void _testBadPassword() throws Exception {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(1, values.length);
-        assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+        String header = getAuthHeader(BASIC, values);
+        assertEquals(BASIC + " realm=\"Test Realm\"", header);
         HttpClientUtils.readResponse(result);
 
         get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -117,7 +131,6 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         HttpClientUtils.readResponse(result);
-        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
 }

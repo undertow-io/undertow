@@ -18,6 +18,7 @@
 package io.undertow.server.security;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
@@ -269,6 +270,18 @@ public abstract class AuthenticationTestBase {
         }
 
         return null;
+    }
+
+    protected static String getAuthHeader(final HttpString prefix, final Header[] values) {
+        for (Header current : values) {
+            String currentValue = current.getValue();
+            if (currentValue.startsWith(prefix.toString())) {
+                return currentValue;
+            }
+        }
+
+        fail("Expected header not found.");
+        return null; // Unreachable
     }
 
     /**
