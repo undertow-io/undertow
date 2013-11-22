@@ -17,6 +17,9 @@
  */
 package io.undertow.server.security;
 
+import java.util.Collections;
+import java.util.List;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
@@ -46,8 +49,10 @@ public class ClientCertTestCase extends AuthenticationTestBase {
     private static SSLContext clientSSLContext;
 
     @Override
-    protected AuthenticationMechanism getTestMechanism() {
-        return new ClientCertAuthenticationMechanism();
+    protected List<AuthenticationMechanism> getTestMechanisms() {
+        AuthenticationMechanism mechanism = new ClientCertAuthenticationMechanism();
+
+        return Collections.singletonList(mechanism);
     }
 
     @BeforeClass

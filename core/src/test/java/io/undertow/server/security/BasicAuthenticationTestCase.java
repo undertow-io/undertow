@@ -17,6 +17,9 @@
  */
 package io.undertow.server.security;
 
+import java.util.Collections;
+import java.util.List;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
@@ -44,8 +47,10 @@ import static org.junit.Assert.assertEquals;
 public class BasicAuthenticationTestCase extends AuthenticationTestBase {
 
     @Override
-    protected AuthenticationMechanism getTestMechanism() {
-        return new BasicAuthenticationMechanism("Test Realm");
+    protected List<AuthenticationMechanism> getTestMechanisms() {
+        AuthenticationMechanism mechanism = new BasicAuthenticationMechanism("Test Realm");
+
+        return Collections.singletonList(mechanism);
     }
 
     @Test

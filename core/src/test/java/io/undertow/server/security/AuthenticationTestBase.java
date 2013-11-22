@@ -224,9 +224,7 @@ public abstract class AuthenticationTestBase {
         current = new AuthenticationCallHandler(current);
         current = new AuthenticationConstraintHandler(current);
 
-        AuthenticationMechanism authMech = getTestMechanism();
-
-        current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism> singletonList(authMech));
+        current = new AuthenticationMechanismsHandler(current, getTestMechanisms());
         auditReceiver.takeNotifications(); // Ensure empty on initialisation.
         current = new NotificationReceiverHandler(current, Collections.<NotificationReceiver> singleton(auditReceiver));
 
@@ -235,7 +233,7 @@ public abstract class AuthenticationTestBase {
         DefaultServer.setRootHandler(current);
     }
 
-    protected abstract AuthenticationMechanism getTestMechanism();
+    protected abstract List<AuthenticationMechanism> getTestMechanisms();
 
     /**
      * Basic test to prove detection of the ResponseHandler response.
