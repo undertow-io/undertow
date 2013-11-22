@@ -161,6 +161,8 @@ class KerberosKDCUtil {
                         substitute.write(current);
                     }
                     if (current == -1) {
+                        baos.write(current);
+                        baos.write(second);
                         baos.write(substitute.toByteArray()); // Terminator never found.
                     }
                     String toReplace = new String(substitute.toByteArray(), UTF_8);
@@ -171,6 +173,7 @@ class KerberosKDCUtil {
                     }
                 } else {
                     baos.write(current);
+                    baos.write(second);
                 }
             } else {
                 baos.write(current);
