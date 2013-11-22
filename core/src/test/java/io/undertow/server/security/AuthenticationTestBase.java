@@ -253,7 +253,7 @@ public abstract class AuthenticationTestBase {
         assertEquals("ResponseHandler", values[0].getValue());
     }
 
-    public void assertSingleNotificationType(final SecurityNotification.EventType eventType) {
+    protected static void assertSingleNotificationType(final SecurityNotification.EventType eventType) {
         List<SecurityNotification> notifications = auditReceiver.takeNotifications();
         assertEquals("A single notification is expected.", 1, notifications.size());
         assertEquals("Expected EventType not matched.", eventType, notifications.get(0).getEventType());
