@@ -36,9 +36,9 @@ import static org.xnio.Bits.anyAreSet;
  *
  * @author Stuart Douglas
  */
-public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
+public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
-    public static final AttachmentKey<PipelingBufferingStreamSinkConduit> ATTACHMENT_KEY = AttachmentKey.create(PipelingBufferingStreamSinkConduit.class);
+    public static final AttachmentKey<PipeliningBufferingStreamSinkConduit> ATTACHMENT_KEY = AttachmentKey.create(PipeliningBufferingStreamSinkConduit.class);
 
     /**
      * If this channel is shutdown
@@ -54,7 +54,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
 
     private final ExchangeCompletionListener completionListener = new PipelineExchangeCompletionListener();
 
-    public PipelingBufferingStreamSinkConduit(StreamSinkConduit next, final Pool<ByteBuffer> pool) {
+    public PipeliningBufferingStreamSinkConduit(StreamSinkConduit next, final Pool<ByteBuffer> pool) {
         super(next);
         this.pool = pool;
     }
@@ -147,7 +147,6 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
                 buffer.free();
                 buffer = null;
             }
-
         }
 
         if (!anyAreSet(state, FLUSHING)) {
@@ -172,6 +171,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
                 if(written > originalBufferedRemaining) {
                     buffer.free();
                     this.buffer = null;
+                    state &= ~FLUSHING;
                     return written - originalBufferedRemaining;
                 }
                 return 0;

@@ -28,7 +28,7 @@ import io.undertow.conduits.FinishableStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
-import io.undertow.conduits.PipelingBufferingStreamSinkConduit;
+import io.undertow.conduits.PipeliningBufferingStreamSinkConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.Connectors;
@@ -72,7 +72,7 @@ public class HttpTransferEncoding {
         final HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
         ConduitStreamSinkChannel sinkChannel = connection.getChannel().getSinkChannel();
         //if we are already using the pipelineing buffer add it to the exchange
-        PipelingBufferingStreamSinkConduit pipeliningBuffer = connection.getAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY);
+        PipeliningBufferingStreamSinkConduit pipeliningBuffer = connection.getAttachment(PipeliningBufferingStreamSinkConduit.ATTACHMENT_KEY);
         if (pipeliningBuffer != null) {
             pipeliningBuffer.setupPipelineBuffer(exchange);
         }
@@ -86,8 +86,8 @@ public class HttpTransferEncoding {
                     && connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
-                connection.putAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
+                pipeliningBuffer = new PipeliningBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
+                connection.putAttachment(PipeliningBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
                 pipeliningBuffer.setupPipelineBuffer(exchange);
             }
             // no content - immediately start the next request, returning an empty stream for this one
@@ -104,7 +104,7 @@ public class HttpTransferEncoding {
 
     }
 
-    private static boolean handleRequestEncoding(final HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipelingBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
+    private static boolean handleRequestEncoding(final HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipeliningBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
         HttpString transferEncoding = Headers.IDENTITY;
         if (transferEncodingHeader != null) {
             transferEncoding = new HttpString(transferEncodingHeader);
@@ -136,8 +136,8 @@ public class HttpTransferEncoding {
             if (connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
-                connection.putAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
+                pipeliningBuffer = new PipeliningBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
+                connection.putAttachment(PipeliningBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
                 pipeliningBuffer.setupPipelineBuffer(exchange);
             }
 
