@@ -238,7 +238,7 @@ public class Undertow {
         private final OptionMap.Builder serverOptions = OptionMap.builder();
 
         private Builder() {
-            ioThreads = Runtime.getRuntime().availableProcessors();
+            ioThreads = Math.max(Runtime.getRuntime().availableProcessors(), 2);
             workerThreads = ioThreads * 8;
             long maxMemory = Runtime.getRuntime().maxMemory();
             //smaller than 64mb of ram we use 512b buffers
