@@ -96,6 +96,8 @@ public class QueryParameterUtils {
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             if (!newQueryParameters.containsKey(entry.getKey())) {
                 newQueryParameters.put(entry.getKey(), new ArrayDeque<String>(entry.getValue()));
+            } else {
+                newQueryParameters.get(entry.getKey()).addAll(entry.getValue());
             }
         }
         return newQueryParameters;

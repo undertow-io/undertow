@@ -126,21 +126,21 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
                 }
 
-                String newQueryString = "";
                 int qsPos = path.indexOf("?");
                 String newServletPath = path;
                 if (qsPos != -1) {
-                    newQueryString = newServletPath.substring(qsPos + 1);
+                    String newQueryString = newServletPath.substring(qsPos + 1);
                     newServletPath = newServletPath.substring(0, qsPos);
+
+                    Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
+                    requestImpl.getExchange().setQueryString(newQueryString);
+                    requestImpl.setQueryParameters(newQueryParameters);
                 }
                 String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
 
-                requestImpl.setQueryParameters(newQueryParameters);
 
                 requestImpl.getExchange().setRelativePath(newServletPath);
-                requestImpl.getExchange().setQueryString(QueryParameterUtils.buildQueryString(newQueryParameters));
                 requestImpl.getExchange().setRequestPath(newRequestUri);
                 requestImpl.getExchange().setRequestURI(newRequestUri);
                 requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
@@ -242,23 +242,24 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 pathInfo = request.getAttribute(INCLUDE_PATH_INFO);
                 queryString = request.getAttribute(INCLUDE_QUERY_STRING);
 
-                String newQueryString = "";
                 int qsPos = path.indexOf("?");
                 String newServletPath = path;
                 if (qsPos != -1) {
-                    newQueryString = newServletPath.substring(qsPos + 1);
+                    String newQueryString = newServletPath.substring(qsPos + 1);
                     newServletPath = newServletPath.substring(0, qsPos);
+
+                    Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
+                    requestImpl.setQueryParameters(newQueryParameters);
+                    requestImpl.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
+                } else {
+                    requestImpl.setAttribute(INCLUDE_QUERY_STRING, "");
                 }
                 String newRequestUri = servletContext.getContextPath() + newServletPath;
-
-                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
-                requestImpl.setQueryParameters(newQueryParameters);
 
                 requestImpl.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
                 requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
                 requestImpl.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
                 requestImpl.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
-                requestImpl.setAttribute(INCLUDE_QUERY_STRING, QueryParameterUtils.buildQueryString(newQueryParameters));
             }
             boolean inInclude = responseImpl.isInsideInclude();
             responseImpl.setInsideInclude(true);

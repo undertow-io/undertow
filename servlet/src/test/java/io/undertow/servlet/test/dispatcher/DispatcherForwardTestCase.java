@@ -173,7 +173,7 @@ public class DispatcherForwardTestCase {
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:foo=bar&a=b servletPath:/path requestUri:/servletContext/path", response);
+            Assert.assertEquals("pathInfo:null queryString:foo=bar servletPath:/path requestUri:/servletContext/path", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
