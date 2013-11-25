@@ -156,13 +156,20 @@ public class AnnotatedEndpoint extends Endpoint {
         }
 
         @Override
+        protected long getMaxPongBufferSize() {
+            if (pongMessage != null) {
+                return pongMessage.getMaxMessageSize();
+            }
+            return -1;
+        }
+
+        @Override
         protected long getMaxBinaryBufferSize() {
             if (binaryMessage != null) {
                 return binaryMessage.getMaxMessageSize();
             }
             return 1;
         }
-
         @Override
         protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
             Pooled<ByteBuffer[]> data = message.getData();

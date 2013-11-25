@@ -73,11 +73,11 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
         } else if (messageChannel.getType() == WebSocketFrameType.BINARY) {
             readBufferedBinary(messageChannel, false, new BufferedBinaryMessage(getMaxBinaryBufferSize(), true));
         } else if (messageChannel.getType() == WebSocketFrameType.PONG) {
-            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxBinaryBufferSize(), true));
+            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxPongBufferSize(), true));
         } else if (messageChannel.getType() == WebSocketFrameType.PING) {
-            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxBinaryBufferSize(), true));
+            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxPingBufferSize(), true));
         } else if (messageChannel.getType() == WebSocketFrameType.CLOSE) {
-            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxBinaryBufferSize(), true));
+            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxCloseBufferSize(), true));
         }
     }
 
@@ -85,6 +85,16 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
         return -1;
     }
 
+    protected long getMaxPongBufferSize() {
+        return -1;
+    }
+
+    protected long getMaxCloseBufferSize() {
+        return -1;
+    }
+    protected long getMaxPingBufferSize() {
+        return -1;
+    }
     protected long getMaxTextBufferSize() {
         return -1;
     }
