@@ -37,8 +37,6 @@ import static org.xnio.IoUtils.safeClose;
 final class AjpReadListener implements ChannelListener<StreamSourceChannel>, ExchangeCompletionListener {
 
     private static final byte[] CPONG = {'A', 'B', 0, 1, 9}; //CPONG response data
-    public static final String HTTPS = "https";
-    public static final String HTTP = "http";
 
     private final AjpServerConnection connection;
     private final String scheme;
@@ -177,10 +175,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                 httpServerExchange.setSourceAddress(state.createPeerAddress());
                 if(scheme != null) {
                     httpServerExchange.setRequestScheme(scheme);
-                } else if(connection.getSslSessionInfo() != null) {
-                    httpServerExchange.setRequestScheme(HTTPS);
-                } else {
-                    httpServerExchange.setRequestScheme(HTTP);
                 }
                 state = null;
                 this.httpServerExchange = null;

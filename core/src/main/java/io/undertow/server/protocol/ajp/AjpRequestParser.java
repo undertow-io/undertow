@@ -276,6 +276,11 @@ public class AjpRequestParser extends AbstractAjpParser {
                     return;
                 } else {
                     final byte isSsl = buf.get();
+                    if(isSsl != 0) {
+                        exchange.setRequestScheme("https");
+                    } else {
+                        exchange.setRequestScheme("http");
+                    }
                 }
             }
             case AjpRequestParseState.READING_NUM_HEADERS: {
