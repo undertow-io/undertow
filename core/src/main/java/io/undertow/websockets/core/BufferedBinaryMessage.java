@@ -23,6 +23,7 @@ public class BufferedBinaryMessage {
     private final long maxMessageSize;
     private long currentSize;
     private boolean complete;
+    private int frameCount;
 
 
     public BufferedBinaryMessage(long maxMessageSize, boolean bufferFullMessage) {
@@ -98,6 +99,8 @@ public class BufferedBinaryMessage {
                                         dealWithFullBuffer(channel);
                                     } else if (!current.getResource().hasRemaining()) {
                                         callback.complete(channel.getWebSocketChannel(), BufferedBinaryMessage.this);
+                                    } else {
+                                        handleNewFrame(channel, callback);
                                     }
                                 }
                             } catch (IOException e) {
@@ -115,10 +118,24 @@ public class BufferedBinaryMessage {
                     dealWithFullBuffer(channel);
                 } else if (!current.getResource().hasRemaining()) {
                     callback.complete(channel.getWebSocketChannel(), BufferedBinaryMessage.this);
+                } else {
+                    handleNewFrame(channel, callback);
                 }
             }
         } catch (IOException e) {
             callback.onError(channel.getWebSocketChannel(), this, e);
+        }
+    }
+
+    private void handleNewFrame(StreamSourceFrameChannel channel, final WebSocketCallback<BufferedBinaryMessage> callback) {
+        //TODO: remove this crap
+        //basically some bogus web sockets TCK tests assume that messages will be broken up into frames
+        //even if we have the full message availble.
+        if(!bufferFullMessage) {
+            if(channel.getWebSocketFrameCount() != frameCount && current != null && !channel.isFinalFragment()) {
+                frameCount = channel.getWebSocketFrameCount();
+                callback.complete(channel.getWebSocketChannel(), this);
+            }
         }
     }
 

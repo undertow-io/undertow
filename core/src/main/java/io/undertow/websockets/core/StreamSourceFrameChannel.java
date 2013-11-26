@@ -76,6 +76,10 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         return rsv;
     }
 
+    int getWebSocketFrameCount() {
+        return getReadFrameCount();
+    }
+
     /**
      * Discard the frame, which means all data that would be part of the frame will be discarded.
      * <p/>

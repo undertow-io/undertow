@@ -62,6 +62,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     private final Object lock = new Object();
     private int waiters;
     private volatile boolean waitingForFrame;
+    private int readFrameCount = 0;
 
     public AbstractFramedStreamSourceChannel(AbstractFramedChannel<C, R, S> framedChannel) {
         this.underlying = framedChannel.getSourceChannel();
@@ -479,6 +480,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         if (frameDataRemaining == 0) {
             synchronized (lock) {
+                readFrameCount++;
                 if (pendingFrameData.isEmpty()) {
                     try {
                         if (anyAreSet(state, STATE_LAST_FRAME)) {
@@ -512,6 +514,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         return framedChannel;
     }
 
+    protected int getReadFrameCount() {
+        return readFrameCount;
+    }
 
     private class FrameData {
 
