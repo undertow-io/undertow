@@ -5,6 +5,7 @@ import io.undertow.predicate.PredicateParser;
 import io.undertow.predicate.PredicatesHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.DateHandler;
+import io.undertow.server.handlers.GracefulShutdownHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.HttpTraceHandler;
 import io.undertow.server.handlers.IPAddressAccessControlHandler;
@@ -273,6 +274,17 @@ public class Handlers {
      */
     public static HttpHandler urlDecodingHandler(final String charset, final HttpHandler next) {
         return new URLDecodingHandler(next, charset);
+    }
+
+
+    /**
+     * Returns a new handler that can be used to wait for all requests to finish before shutting down the server gracefully.
+     *
+     * @param next The next http handler
+     * @return The graceful shutdown handler
+     */
+    public static GracefulShutdownHandler shutdown(HttpHandler next) {
+        return new GracefulShutdownHandler(next);
     }
 
     private Handlers() {

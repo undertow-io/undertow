@@ -251,4 +251,7 @@ public interface UndertowMessages {
 
     @Message(id = 75, value = "Object was freed")
     IllegalStateException objectWasFreed();
+
+    @Message(id = 76, value = "Handler not shutdown")
+    IllegalStateException handlerNotShutdown();
 }
