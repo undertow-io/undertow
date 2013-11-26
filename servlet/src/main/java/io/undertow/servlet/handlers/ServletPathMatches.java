@@ -220,8 +220,11 @@ public class ServletPathMatches {
                 }
             }
         }
-        //we always create a default servlet, even if it is not going to have any path mappings registered
-        final ServletHandler managedDefaultServlet = servlets.addServlet(new ServletInfo(DEFAULT_SERVLET_NAME, DefaultServlet.class));
+        ServletHandler managedDefaultServlet = servlets.getServletHandler(DEFAULT_SERVLET_NAME);
+        if(managedDefaultServlet == null) {
+            //we always create a default servlet, even if it is not going to have any path mappings registered
+            managedDefaultServlet = servlets.addServlet(new ServletInfo(DEFAULT_SERVLET_NAME, DefaultServlet.class));
+        }
 
         if (defaultServlet == null) {
             //no explicit default servlet was specified, so we register our mapping
