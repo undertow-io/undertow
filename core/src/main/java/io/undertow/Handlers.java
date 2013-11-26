@@ -283,7 +283,7 @@ public class Handlers {
      * @param next The next http handler
      * @return The graceful shutdown handler
      */
-    public static GracefulShutdownHandler shutdown(HttpHandler next) {
+    public static GracefulShutdownHandler gracefulShutdown(HttpHandler next) {
         return new GracefulShutdownHandler(next);
     }
 

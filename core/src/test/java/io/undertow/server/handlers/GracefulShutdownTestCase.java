@@ -9,7 +9,9 @@ import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -23,17 +25,20 @@ import java.util.concurrent.atomic.AtomicReference;
 @RunWith(DefaultServer.class)
 public class GracefulShutdownTestCase {
 
-    @Test
-    public void simpleGracefulShutdownTestCase() throws IOException, InterruptedException {
-        final AtomicReference<CountDownLatch> otherLatch = new AtomicReference<CountDownLatch>();
-        final AtomicReference<CountDownLatch> latchAtomicReference = new AtomicReference<CountDownLatch>();
+    static final AtomicReference<CountDownLatch> latch1 = new AtomicReference<CountDownLatch>();
+    static final AtomicReference<CountDownLatch> latch2 = new AtomicReference<CountDownLatch>();
 
-        GracefulShutdownHandler shutdown = Handlers.shutdown(new HttpHandler() {
+    private static GracefulShutdownHandler shutdown;
+
+    @BeforeClass
+    public static void setup() {
+
+        shutdown = Handlers.gracefulShutdown(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                final CountDownLatch countDownLatch = latchAtomicReference.get();
-                final CountDownLatch latch = otherLatch.get();
-                if(latch != null) {
+                final CountDownLatch countDownLatch = latch2.get();
+                final CountDownLatch latch = latch1.get();
+                if (latch != null) {
                     latch.countDown();
                 }
                 if (countDownLatch != null) {
@@ -42,6 +47,19 @@ public class GracefulShutdownTestCase {
             }
         });
         DefaultServer.setRootHandler(shutdown);
+    }
+
+    @After
+    public void after() {
+        latch1.set(null);
+        latch2.set(null);
+        shutdown.start();
+    }
+
+
+    @Test
+    public void simpleGracefulShutdownTestCase() throws IOException, InterruptedException {
+
 
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
@@ -63,12 +81,12 @@ public class GracefulShutdownTestCase {
             HttpClientUtils.readResponse(result);
 
             CountDownLatch latch = new CountDownLatch(1);
-            latchAtomicReference.set(latch);
+            latch2.set(latch);
 
-            otherLatch.set(new CountDownLatch(1));
+            latch1.set(new CountDownLatch(1));
             Thread t = new Thread(new RequestTask());
             t.start();
-            otherLatch.get().await();
+            latch1.get().await();
             shutdown.shutdown();
 
             Assert.assertFalse(shutdown.awaitShutdown(10));
@@ -81,6 +99,67 @@ public class GracefulShutdownTestCase {
             client.getConnectionManager().shutdown();
         }
 
+    }
+
+
+
+    @Test
+    public void gracefulShutdownListenerTestCase() throws IOException, InterruptedException {
+
+
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            shutdown.shutdown();
+
+            result = client.execute(get);
+            Assert.assertEquals(503, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            shutdown.start();
+
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            CountDownLatch latch = new CountDownLatch(1);
+            latch2.set(latch);
+
+
+            latch1.set(new CountDownLatch(1));
+            Thread t = new Thread(new RequestTask());
+            t.start();
+            latch1.get().await();
+
+            ShutdownListener listener = new ShutdownListener();
+            shutdown.shutdown();
+            shutdown.addShutdownListener(listener);
+            Assert.assertFalse(listener.invoked);
+
+            latch.countDown();
+            long end = System.currentTimeMillis() + 5000;
+            while (!listener.invoked && System.currentTimeMillis() < end) {
+                Thread.sleep(10);
+            }
+            Assert.assertTrue(listener.invoked);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+
+    }
+
+    private class ShutdownListener implements GracefulShutdownHandler.ShutdownListener {
+
+        private volatile boolean invoked = false;
+
+        @Override
+        public synchronized void shutdown(boolean sucessful) {
+            invoked = true;
+        }
     }
 
     private final class RequestTask implements Runnable {

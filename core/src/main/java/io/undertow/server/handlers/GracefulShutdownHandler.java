@@ -6,6 +6,8 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StatusCodes;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
@@ -23,6 +25,7 @@ public class GracefulShutdownHandler implements HttpHandler {
 
     private volatile boolean shutdown = false;
     private final GracefulShutdownListener listener = new GracefulShutdownListener();
+    private final List<ShutdownListener> shutdownListeners = new ArrayList<ShutdownListener>();
 
     private final Object lock = new Object();
 
@@ -56,12 +59,20 @@ public class GracefulShutdownHandler implements HttpHandler {
     public void start() {
         synchronized (lock) {
             shutdown = false;
+            for (ShutdownListener listener : shutdownListeners) {
+                listener.shutdown(false);
+            }
+            shutdownListeners.clear();
         }
     }
 
     private void shutdownComplete() {
         assert Thread.holdsLock(lock);
         lock.notifyAll();
+        for (ShutdownListener listener : shutdownListeners) {
+            listener.shutdown(true);
+        }
+        shutdownListeners.clear();
     }
 
     /**
@@ -103,14 +114,32 @@ public class GracefulShutdownHandler implements HttpHandler {
         }
     }
 
+    /**
+     * Adds a shutdown listener that will be invoked when all requests have finished. If all requests have already been finished
+     * the listener will be invoked immediately.
+     *
+     * @param shutdownListener The shutdown listener
+     */
+    public void addShutdownListener(final ShutdownListener shutdownListener) {
+        synchronized (lock) {
+            if (!shutdown) {
+                throw UndertowMessages.MESSAGES.handlerNotShutdown();
+            }
+            long count = activeRequestsUpdater.get(this);
+            if (count == 0) {
+                shutdownListener.shutdown(true);
+            } else {
+                shutdownListeners.add(shutdownListener);
+            }
+        }
+    }
+
     private void decrementRequests() {
         long active = activeRequestsUpdater.decrementAndGet(this);
         if (shutdown) {
             synchronized (lock) {
                 if (active == 0) {
-                    if (shutdown) {
-                        shutdownComplete();
-                    }
+                    shutdownComplete();
                 }
             }
         }
@@ -126,5 +155,18 @@ public class GracefulShutdownHandler implements HttpHandler {
                 nextListener.proceed();
             }
         }
+    }
+
+    /**
+     * A listener which can be registered with the handler to be notified when all pending requests have finished.
+     */
+    public interface ShutdownListener {
+
+        /**
+         * Notification that the container has shutdown.
+         *
+         * @param shutdownSucessful If the shutdown suceeded or not
+         */
+        void shutdown(boolean shutdownSucessful);
     }
 }
