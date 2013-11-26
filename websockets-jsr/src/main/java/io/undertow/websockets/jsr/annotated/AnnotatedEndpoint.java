@@ -170,22 +170,32 @@ public class AnnotatedEndpoint extends Endpoint {
             }
             return 1;
         }
+
         @Override
-        protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+        protected void onFullCloseMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
             Pooled<ByteBuffer[]> data = message.getData();
-            ByteBuffer buffer = WebSockets.mergeBuffers(data.getResource());
+            final ByteBuffer buffer = WebSockets.mergeBuffers(data.getResource());
             data.free();
-            WebSockets.sendClose(buffer.duplicate(), channel, null);
-            if (webSocketClose == null) {
-                return;
-            }
             try {
-                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
-                params.put(Session.class, session);
-                params.put(Map.class, session.getPathParameters());
-                invokeMethod(params, webSocketClose, session);
-            } catch (Exception e) {
-                AnnotatedEndpoint.this.onError(session, e);
+                if (webSocketClose != null) {
+                    try {
+                        final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+                        params.put(Session.class, session);
+                        params.put(Map.class, session.getPathParameters());
+                        invokeMethod(params, webSocketClose, session);
+                    } catch (Exception e) {
+                        AnnotatedEndpoint.this.onError(session, e);
+                    }
+                }
+            } finally {
+                //execute this in the executor to preserve ordering, otherwise the socket
+                //may be closed while invocations are active
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        WebSockets.sendClose(buffer.duplicate(), channel, null);
+                    }
+                });
             }
         }
 
