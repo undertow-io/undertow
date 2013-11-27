@@ -260,11 +260,11 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
             buffer.put((byte) (int) methodNp);
             putString(buffer, exchange.getRequest().getProtocol().toString());
             putString(buffer, path);
-            putString(buffer, notNull(exchange.getAttachment(ProxiedRequestAttachments.REMOTE_ADDRESS)));
-            putString(buffer, notNull(exchange.getAttachment(ProxiedRequestAttachments.REMOTE_HOST)));
-            putString(buffer, notNull(exchange.getAttachment(ProxiedRequestAttachments.SERVER_NAME)));
-            putInt(buffer, notNull(exchange.getAttachment(ProxiedRequestAttachments.SERVER_PORT)));
-            buffer.put((byte) (notNull(exchange.getAttachment(ProxiedRequestAttachments.IS_SSL)) ? 1 : 0));
+            putString(buffer, notNull(request.getAttachment(ProxiedRequestAttachments.REMOTE_ADDRESS)));
+            putString(buffer, notNull(request.getAttachment(ProxiedRequestAttachments.REMOTE_HOST)));
+            putString(buffer, notNull(request.getAttachment(ProxiedRequestAttachments.SERVER_NAME)));
+            putInt(buffer, notNull(request.getAttachment(ProxiedRequestAttachments.SERVER_PORT)));
+            buffer.put((byte) (notNull(request.getAttachment(ProxiedRequestAttachments.IS_SSL)) ? 1 : 0));
 
             int headers = 0;
             //we need to count the headers

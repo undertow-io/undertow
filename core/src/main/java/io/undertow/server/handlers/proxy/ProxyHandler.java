@@ -284,9 +284,12 @@ public final class ProxyHandler implements HttpHandler {
                 outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, "localhost");
             }
 
+            if(exchange.getRequestScheme().equals("https")) {
+                request.putAttachment(ProxiedRequestAttachments.IS_SSL, true);
+            }
+
             SSLSessionInfo sslSessionInfo = exchange.getConnection().getSslSessionInfo();
             if (sslSessionInfo != null) {
-                request.putAttachment(ProxiedRequestAttachments.IS_SSL, true);
                 X509Certificate[] peerCertificates;
                 try {
                     peerCertificates = sslSessionInfo.getPeerCertificateChain(false);
