@@ -28,8 +28,6 @@ import org.xnio.IoUtils;
 
 import javax.websocket.Endpoint;
 import java.net.URI;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * {@link WebSocketConnectionCallback} implementation which will setuo the {@link UndertowSession} and notify
@@ -63,7 +61,7 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
                 instance = new ImmediateInstanceHandle<Endpoint>((Endpoint) config.getEndpointConfiguration().getConfigurator().getEndpointInstance(config.getEndpointConfiguration().getEndpointClass()));
             }
 
-            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), Collections.<String, List<String>>emptyMap(), this, null, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions());
+            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, null, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions());
             config.getOpenSessions().add(session);
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());

@@ -73,13 +73,6 @@ public interface WebSocketHttpExchange extends Closeable {
     void setResponseHeader(final String headerName, final String headerValue);
 
     /**
-     * Set a http response code
-     *
-     * @param code
-     */
-    void setResponesCode(int code);
-
-    /**
      * Upgrade the underlying channel
      *
      * @param upgradeCallback
@@ -137,4 +130,6 @@ public interface WebSocketHttpExchange extends Closeable {
      * @return The session object, or null
      */
     Object getSession();
+
+    Map<String,List<String>> getRequestParameters();
 }

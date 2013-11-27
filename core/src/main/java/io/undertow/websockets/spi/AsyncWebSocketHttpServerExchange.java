@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,11 +90,6 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
     @Override
     public void setResponseHeader(final String headerName, final String headerValue) {
         exchange.getResponseHeaders().put(HttpString.tryFromString(headerName), headerValue);
-    }
-
-    @Override
-    public void setResponesCode(final int code) {
-        exchange.setResponseCode(code);
     }
 
     @Override
@@ -229,5 +225,14 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
     @Override
     public Object getSession() {
         return null;
+    }
+
+    @Override
+    public Map<String, List<String>> getRequestParameters() {
+        Map<String, List<String>> params = new HashMap<String, List<String>>();
+        for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
+            params.put(param.getKey(), new ArrayList<String>(param.getValue()));
+        }
+        return params;
     }
 }

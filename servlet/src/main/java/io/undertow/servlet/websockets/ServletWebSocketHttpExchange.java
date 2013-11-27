@@ -38,6 +38,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -127,11 +128,6 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
     }
 
     @Override
-    public void setResponesCode(final int code) {
-        response.setStatus(code);
-    }
-
-    @Override
     public void upgradeChannel(final UpgradeCallback upgradeCallback) {
         exchange.upgradeChannel(new ExchangeCompletionListener() {
             @Override
@@ -208,5 +204,14 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
     @Override
     public Object getSession() {
         return request.getSession(false);
+    }
+
+    @Override
+    public Map<String, List<String>> getRequestParameters() {
+        Map<String, List<String>> params = new HashMap<String, List<String>>();
+        for(Map.Entry<String, String[]> param : request.getParameterMap().entrySet()) {
+            params.put(param.getKey(), new ArrayList<String>(Arrays.asList(param.getValue())));
+        }
+        return params;
     }
 }
