@@ -692,6 +692,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *                               read
      */
     public void upgradeChannel(final HttpUpgradeListener listener) {
+        if(!connection.isUpgradeSupported()) {
+            throw UndertowMessages.MESSAGES.upgradeNotSupported();
+        }
         ExchangeCompletionListener upgradeCompleteListener = new UpgradeCompletionListener(listener);
         setResponseCode(101);
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
@@ -720,6 +723,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *                               read
      */
     public void upgradeChannel(String productName, final HttpUpgradeListener listener) {
+        if(!connection.isUpgradeSupported()) {
+            throw UndertowMessages.MESSAGES.upgradeNotSupported();
+        }
         ExchangeCompletionListener upgradeCompleteListener = new UpgradeCompletionListener(listener);
         setResponseCode(101);
         final HeaderMap headers = getResponseHeaders();

@@ -116,4 +116,9 @@ public final class AjpServerConnection extends AbstractServerConnection {
         }
         return channel;
     }
+
+    @Override
+    protected boolean isUpgradeSupported() {
+        return true; //TODO: should we support this?
+    }
 }

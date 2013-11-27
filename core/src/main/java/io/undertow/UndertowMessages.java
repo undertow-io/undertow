@@ -254,4 +254,7 @@ public interface UndertowMessages {
 
     @Message(id = 76, value = "Handler not shutdown")
     IllegalStateException handlerNotShutdown();
+
+    @Message(id = 77, value = "The underlying transport does not support HTTP upgrade")
+    IllegalStateException upgradeNotSupported();
 }

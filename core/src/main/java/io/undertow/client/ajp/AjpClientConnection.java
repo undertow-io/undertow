@@ -452,7 +452,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 //check if an updated worked
                 if (anyAreSet(AjpClientConnection.this.state, UPGRADE_REQUESTED)) {
                     String connectionString = response.getResponseHeaders().getFirst(CONNECTION);
-                    if (!UPGRADE.equalToString(connectionString)) {
+                    if (connectionString == null || !UPGRADE.equalToString(connectionString)) {
                         //just unset the upgrade requested flag
                         AjpClientConnection.this.state &= ~UPGRADE_REQUESTED;
                     }

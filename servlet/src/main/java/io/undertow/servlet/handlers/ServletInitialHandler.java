@@ -412,6 +412,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         public ConduitStreamSourceChannel getSourceChannel() {
             return new ConduitStreamSourceChannel(null, null);
         }
+
+        @Override
+        protected boolean isUpgradeSupported() {
+            return false;
+        }
     }
 
 }

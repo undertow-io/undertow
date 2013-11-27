@@ -163,4 +163,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
         }
         return channel;
     }
+
+    @Override
+    protected boolean isUpgradeSupported() {
+        return true;
+    }
 }

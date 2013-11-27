@@ -132,6 +132,8 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
 
     protected abstract ConduitStreamSourceChannel getSourceChannel();
 
+    protected abstract boolean isUpgradeSupported();
+
     public interface CloseListener {
 
         void closed(final ServerConnection connection);
