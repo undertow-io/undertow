@@ -20,6 +20,7 @@ package io.undertow.server.security;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -61,12 +62,14 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     private static final String ZERO = "00000000";
 
     /**
-     * @see io.undertow.server.security.AuthenticationTestBase#getTestMechanism()
+     * @see io.undertow.server.security.AuthenticationTestBase#getTestMechanisms()
      */
     @Override
-    protected AuthenticationMechanism getTestMechanism() {
-        return new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5),
+    protected List<AuthenticationMechanism> getTestMechanisms() {
+        AuthenticationMechanism mechanims = new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5),
                 Collections.singletonList(DigestQop.AUTH), REALM_NAME, "/", new SimpleNonceManager());
+
+        return Collections.singletonList(mechanims);
     }
 
     private String createNonce() {
