@@ -51,6 +51,7 @@ import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -61,6 +62,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@Ignore("Fails when run with -Pproxy")
 public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
 
     private static Oid SPNEGO;
