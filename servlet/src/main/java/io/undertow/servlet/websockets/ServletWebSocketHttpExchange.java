@@ -18,8 +18,8 @@
 
 package io.undertow.servlet.websockets;
 
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
 import io.undertow.websockets.spi.UpgradeCallback;
@@ -29,6 +29,7 @@ import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
+import org.xnio.StreamConnection;
 
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletOutputStream;
@@ -129,10 +130,10 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public void upgradeChannel(final UpgradeCallback upgradeCallback) {
-        exchange.upgradeChannel(new ExchangeCompletionListener() {
+        exchange.upgradeChannel(new HttpUpgradeListener() {
             @Override
-            public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-                upgradeCallback.handleUpgrade(exchange.getConnection().upgradeChannel(), exchange.getConnection().getBufferPool());
+            public void handleUpgrade(StreamConnection streamConnection) {
+                upgradeCallback.handleUpgrade(streamConnection, exchange.getConnection().getBufferPool());
             }
         });
     }

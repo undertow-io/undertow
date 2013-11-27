@@ -1,11 +1,11 @@
 package io.undertow.servlet.core;
 
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.ServerConnection;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.spec.WebConnectionImpl;
+import org.xnio.ChannelListener;
 import org.xnio.StreamConnection;
 
 import javax.servlet.http.HttpUpgradeHandler;
@@ -15,21 +15,22 @@ import javax.servlet.http.HttpUpgradeHandler;
  *
  * @author Stuart Douglas
  */
-public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements ExchangeCompletionListener {
+public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements HttpUpgradeListener {
     private final InstanceHandle<T> instance;
     private final ThreadSetupAction threadSetupAction;
+    private final HttpServerExchange exchange;
 
-    public ServletUpgradeListener(final InstanceHandle<T> instance, ThreadSetupAction threadSetupAction) {
+    public ServletUpgradeListener(final InstanceHandle<T> instance, ThreadSetupAction threadSetupAction, HttpServerExchange exchange) {
         this.instance = instance;
         this.threadSetupAction = threadSetupAction;
+        this.exchange = exchange;
     }
 
     @Override
-    public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-        final StreamConnection channel = exchange.getConnection().upgradeChannel();
-        exchange.getConnection().addCloseListener(new ServerConnection.CloseListener() {
+    public void handleUpgrade(final StreamConnection channel) {
+        channel.getCloseSetter().set(new ChannelListener<StreamConnection>() {
             @Override
-            public void closed(ServerConnection connection) {
+            public void handleEvent(StreamConnection channel) {
                 final ThreadSetupAction.Handle handle = threadSetupAction.setup(exchange);
                 try {
                     instance.getInstance().destroy();

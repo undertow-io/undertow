@@ -19,7 +19,6 @@
 package io.undertow.server;
 
 import io.undertow.UndertowLogger;
-import io.undertow.util.AbstractAttachable;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -40,7 +39,7 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
 
-public abstract class AbstractServerConnection extends AbstractAttachable implements ServerConnection {
+public abstract class AbstractServerConnection  extends ServerConnection {
     protected final StreamConnection channel;
     protected final CloseSetter closeSetter;
     protected final Pool<ByteBuffer> bufferPool;
@@ -249,12 +248,12 @@ public abstract class AbstractServerConnection extends AbstractAttachable implem
     }
 
     @Override
-    public ConduitStreamSinkChannel getSinkChannel() {
+    protected ConduitStreamSinkChannel getSinkChannel() {
         return channel.getSinkChannel();
     }
 
     @Override
-    public ConduitStreamSourceChannel getSourceChannel() {
+    protected ConduitStreamSourceChannel getSourceChannel() {
         return channel.getSourceChannel();
     }
 

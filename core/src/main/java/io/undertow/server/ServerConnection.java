@@ -1,6 +1,6 @@
 package io.undertow.server;
 
-import io.undertow.util.Attachable;
+import io.undertow.util.AbstractAttachable;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -20,26 +20,26 @@ import java.nio.ByteBuffer;
  *
  * @author Stuart Douglas
  */
-public interface ServerConnection extends Attachable, ConnectedChannel {
+public abstract class ServerConnection extends AbstractAttachable implements ConnectedChannel  {
 
     /**
      *
      * @return The connections buffer pool
      */
-    Pool<ByteBuffer> getBufferPool();
+    public abstract Pool<ByteBuffer> getBufferPool();
 
     /**
      *
      * @return The connections worker
      */
-    XnioWorker getWorker();
+    public abstract XnioWorker getWorker();
 
     /**
      *
      * @return The IO thread associated with the connection
      */
     @Override
-    XnioIoThread getIoThread();
+    public abstract XnioIoThread getIoThread();
 
     /**
      * Sends an out of band response, such as a HTTP 100-continue response.
@@ -52,28 +52,28 @@ public interface ServerConnection extends Attachable, ConnectedChannel {
      * @return The out of band exchange.
      * @param exchange The current exchange
      */
-    HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange);
+    public abstract HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange);
 
     /**
      *
      * @return true if the connection is open
      */
-    boolean isOpen();
+    public abstract boolean isOpen();
 
-    boolean supportsOption(Option<?> option);
+    public abstract boolean supportsOption(Option<?> option);
 
-    <T> T getOption(Option<T> option) throws IOException;
+    public abstract <T> T getOption(Option<T> option) throws IOException;
 
-    <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException;
+    public abstract <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException;
 
-    void close() throws IOException;
+    public abstract void close() throws IOException;
 
     /**
      * Returns the actual address of the remote connection. This will not take things like X-Forwarded-for
      * into account.
      * @return The address of the remote peer
      */
-    SocketAddress getPeerAddress();
+    public abstract SocketAddress getPeerAddress();
 
     /**
      * Returns the actual address of the remote connection. This will not take things like X-Forwarded-for
@@ -83,15 +83,15 @@ public interface ServerConnection extends Attachable, ConnectedChannel {
      * @param <A> The address type
      * @return The remote endpoint address
      */
-    <A extends SocketAddress> A getPeerAddress(Class<A> type);
+    public abstract <A extends SocketAddress> A getPeerAddress(Class<A> type);
 
-    SocketAddress getLocalAddress();
+    public abstract SocketAddress getLocalAddress();
 
-    <A extends SocketAddress> A getLocalAddress(Class<A> type);
+    public abstract <A extends SocketAddress> A getLocalAddress(Class<A> type);
 
-    OptionMap getUndertowOptions();
+    public abstract OptionMap getUndertowOptions();
 
-    int getBufferSize();
+    public abstract int getBufferSize();
 
     /**
      * Gets SSL information about the connection. This could represent the actual
@@ -100,7 +100,7 @@ public interface ServerConnection extends Attachable, ConnectedChannel {
      *
      * @return SSL information about the connection
      */
-    SSLSessionInfo getSslSessionInfo();
+    public abstract SSLSessionInfo getSslSessionInfo();
 
     /**
      * Sets the current SSL information. This can be used by handlers to setup SSL
@@ -113,24 +113,24 @@ public interface ServerConnection extends Attachable, ConnectedChannel {
      *
      * @param sessionInfo The ssl session information
      */
-    void setSslSessionInfo(SSLSessionInfo sessionInfo);
+    public abstract void setSslSessionInfo(SSLSessionInfo sessionInfo);
 
     /**
      * Adds a close listener, than will be invoked with the connection is closed
      *
      * @param listener The close listener
      */
-    void addCloseListener(CloseListener listener);
+    public abstract void addCloseListener(CloseListener listener);
 
     /**
      * Upgrade the connection, if allowed
      * @return The StreamConnection that should be passed to the upgrade handler
      */
-    StreamConnection upgradeChannel();
+    protected abstract StreamConnection upgradeChannel();
 
-    ConduitStreamSinkChannel getSinkChannel();
+    protected abstract ConduitStreamSinkChannel getSinkChannel();
 
-    ConduitStreamSourceChannel getSourceChannel();
+    protected abstract ConduitStreamSourceChannel getSourceChannel();
 
     public interface CloseListener {
 

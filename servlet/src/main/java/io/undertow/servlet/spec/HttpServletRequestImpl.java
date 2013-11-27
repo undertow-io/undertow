@@ -443,7 +443,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         try {
             InstanceFactory<T> factory = servletContext.getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(handlerClass);
             final InstanceHandle<T> instance = factory.createInstance();
-            exchange.upgradeChannel(new ServletUpgradeListener<T>(instance, servletContext.getDeployment().getThreadSetupAction()));
+            exchange.upgradeChannel(new ServletUpgradeListener<T>(instance, servletContext.getDeployment().getThreadSetupAction(), exchange));
             return instance.getInstance();
         } catch (InstantiationException e) {
             throw new RuntimeException(e);

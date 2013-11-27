@@ -691,7 +691,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
      */
-    public void upgradeChannel(final ExchangeCompletionListener upgradeCompleteListener) {
+    public void upgradeChannel(final HttpUpgradeListener listener) {
+        ExchangeCompletionListener upgradeCompleteListener = new UpgradeCompletionListener(listener);
         setResponseCode(101);
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
@@ -718,7 +719,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
      */
-    public void upgradeChannel(String productName, final ExchangeCompletionListener upgradeCompleteListener) {
+    public void upgradeChannel(String productName, final HttpUpgradeListener listener) {
+        ExchangeCompletionListener upgradeCompleteListener = new UpgradeCompletionListener(listener);
         setResponseCode(101);
         final HeaderMap headers = getResponseHeaders();
         headers.put(Headers.UPGRADE, productName);
@@ -1628,5 +1630,22 @@ public final class HttpServerExchange extends AbstractAttachable {
     @Override
     public String toString() {
         return "HttpServerExchange{ " + getRequestMethod().toString() + " " + getRequestURI() + '}';
+    }
+
+    private final class UpgradeCompletionListener implements ExchangeCompletionListener {
+        private final HttpUpgradeListener listener;
+
+        private UpgradeCompletionListener(HttpUpgradeListener listener) {
+            this.listener = listener;
+        }
+
+        @Override
+        public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+            try {
+                listener.handleUpgrade(exchange.getConnection().upgradeChannel());
+            } finally {
+                nextListener.proceed();
+            }
+        }
     }
 }

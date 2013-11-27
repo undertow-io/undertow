@@ -3,8 +3,8 @@ package io.undertow.websockets.spi;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -15,6 +15,7 @@ import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
+import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
@@ -94,11 +95,12 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public void upgradeChannel(final UpgradeCallback upgradeCallback) {
-        exchange.upgradeChannel(new ExchangeCompletionListener() {
+        exchange.upgradeChannel(new HttpUpgradeListener() {
+
             @Override
-            public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+            public void handleUpgrade(StreamConnection streamConnection) {
                 try {
-                    upgradeCallback.handleUpgrade(exchange.getConnection().upgradeChannel(), exchange.getConnection().getBufferPool());
+                    upgradeCallback.handleUpgrade(streamConnection, exchange.getConnection().getBufferPool());
                 } catch (Exception e) {
                     UndertowLogger.REQUEST_LOGGER.cannotUpgradeConnection(e);
                 }
@@ -230,7 +232,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
     @Override
     public Map<String, List<String>> getRequestParameters() {
         Map<String, List<String>> params = new HashMap<String, List<String>>();
-        for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
+        for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
             params.put(param.getKey(), new ArrayList<String>(param.getValue()));
         }
         return params;

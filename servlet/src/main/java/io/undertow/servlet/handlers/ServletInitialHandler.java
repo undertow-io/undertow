@@ -32,7 +32,6 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
@@ -298,7 +297,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         return next;
     }
 
-    private static class MockServerConnection extends AbstractAttachable implements ServerConnection {
+    private static class MockServerConnection extends ServerConnection {
         private final Pool<ByteBuffer> bufferPool;
         private SSLSessionInfo sslSessionInfo;
 

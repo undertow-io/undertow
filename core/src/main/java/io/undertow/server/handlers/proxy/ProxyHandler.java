@@ -30,15 +30,14 @@ import io.undertow.client.ContinueNotification;
 import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
-import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Certificates;
@@ -372,24 +371,18 @@ public final class ProxyHandler implements HttpHandler {
             }
 
             if (exchange.isUpgrade()) {
-                exchange.upgradeChannel(new ExchangeCompletionListener() {
+                exchange.upgradeChannel(new HttpUpgradeListener() {
                     @Override
-                    public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+                    public void handleUpgrade(StreamConnection streamConnection) {
                         StreamConnection clientChannel = null;
-                        final HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
                         try {
                             clientChannel = result.getConnection().performUpgrade();
-                            connection.resetChannel();
 
-                            StreamConnection streamConnection = connection.getChannel();
-                            if (connection.getExtraBytes() != null) {
-                                streamConnection.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(streamConnection.getSourceChannel().getConduit(), connection));
-                            }
-                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel.getSourceChannel(), streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), connection.getBufferPool());
-                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), connection.getBufferPool());
-                            nextListener.proceed();
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel.getSourceChannel(), streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), result.getConnection().getBufferPool());
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), result.getConnection().getBufferPool());
+
                         } catch (IOException e) {
-                            IoUtils.safeClose(connection.getChannel());
+                            IoUtils.safeClose(streamConnection, clientChannel);
                         }
                     }
                 });

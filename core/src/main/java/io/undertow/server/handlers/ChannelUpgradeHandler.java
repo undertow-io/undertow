@@ -19,10 +19,9 @@
 package io.undertow.server.handlers;
 
 import io.undertow.Handlers;
-import io.undertow.UndertowLogger;
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
@@ -143,14 +142,11 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                             }
                         }
 
-                        exchange.upgradeChannel(string, new ExchangeCompletionListener() {
+                        exchange.upgradeChannel(string, new HttpUpgradeListener() {
+
                             @Override
-                            public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-                                try {
-                                ChannelListeners.invokeChannelListener(exchange.getConnection().upgradeChannel(), listener);
-                                } catch (Exception e) {
-                                    UndertowLogger.REQUEST_LOGGER.cannotUpgradeConnection(e);
-                                }
+                            public void handleUpgrade(StreamConnection streamConnection) {
+                                ChannelListeners.invokeChannelListener(streamConnection, listener);
                             }
                         });
                         exchange.endExchange();

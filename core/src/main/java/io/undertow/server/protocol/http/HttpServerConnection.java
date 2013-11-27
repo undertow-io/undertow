@@ -26,7 +26,6 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
-import io.undertow.server.ServerConnection;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.xnio.OptionMap;
@@ -46,7 +45,7 @@ import java.nio.ByteBuffer;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpServerConnection extends AbstractServerConnection implements ServerConnection {
+public final class HttpServerConnection extends AbstractServerConnection {
 
     private SSLSessionInfo sslSessionInfo;
 
@@ -157,7 +156,7 @@ public final class HttpServerConnection extends AbstractServerConnection impleme
     }
 
     @Override
-    public StreamConnection upgradeChannel() {
+    protected StreamConnection upgradeChannel() {
         resetChannel();
         if (extraBytes != null) {
             channel.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this));
