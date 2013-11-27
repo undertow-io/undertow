@@ -101,18 +101,14 @@ public class JsrWebSocketFilter implements Filter {
                     }
                 }
 
-                if (handshaker == null) {
-                    chain.doFilter(request, response);
-                } else {
+                if (handshaker != null) {
                     facade.putAttachment(HandshakeUtil.PATH_PARAMS, matchResult.getParameters());
                     handshaker.handshake(facade, callback);
                     return;
                 }
             }
-            chain.doFilter(request, response);
-        } else {
-            chain.doFilter(request, response);
         }
+        chain.doFilter(request, response);
     }
 
     @Override
