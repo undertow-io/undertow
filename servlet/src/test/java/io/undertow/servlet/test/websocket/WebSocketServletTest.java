@@ -20,7 +20,7 @@ import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;

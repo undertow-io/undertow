@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.undertow.websockets.core.handler;
+package io.undertow.websockets;
 
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.spi.WebSocketHttpExchange;

@@ -7,7 +7,7 @@ import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedTextMessage;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSockets;
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 import static io.undertow.Handlers.path;

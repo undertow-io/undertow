@@ -20,8 +20,8 @@ package io.undertow.websockets.jsr;
 import java.util.HashSet;
 import java.util.Set;
 
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
-import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
 import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;

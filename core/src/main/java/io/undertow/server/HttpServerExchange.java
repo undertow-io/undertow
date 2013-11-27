@@ -1642,7 +1642,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
             try {
-                listener.handleUpgrade(exchange.getConnection().upgradeChannel());
+                listener.handleUpgrade(exchange.getConnection().upgradeChannel(), exchange);
             } finally {
                 nextListener.proceed();
             }

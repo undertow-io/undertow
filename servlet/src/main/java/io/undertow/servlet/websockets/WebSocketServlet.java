@@ -1,12 +1,16 @@
 package io.undertow.servlet.websockets;
 
 import io.undertow.UndertowLogger;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
+import org.xnio.StreamConnection;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -79,7 +83,15 @@ public class WebSocketServlet extends HttpServlet {
             resp.sendError(400);
             return;
         }
-        handshaker.handshake(facade, callback);
+        final Handshake selected = handshaker;
+        facade.upgradeChannel(new HttpUpgradeListener() {
+            @Override
+            public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+                WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
+                callback.onConnect(facade, channel);
+            }
+        });
+        handshaker.handshake(facade);
     }
 
     protected List<Handshake> handshakes() {

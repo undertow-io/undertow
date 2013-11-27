@@ -1,5 +1,6 @@
 package io.undertow.websockets.spi;
 
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 import org.xnio.Pool;
@@ -77,7 +78,7 @@ public interface WebSocketHttpExchange extends Closeable {
      *
      * @param upgradeCallback
      */
-    void upgradeChannel(final UpgradeCallback upgradeCallback);
+    void upgradeChannel(final HttpUpgradeListener upgradeCallback);
 
     /**
      * Send some data

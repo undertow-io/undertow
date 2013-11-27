@@ -15,7 +15,6 @@ import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
-import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
@@ -94,18 +93,8 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
     }
 
     @Override
-    public void upgradeChannel(final UpgradeCallback upgradeCallback) {
-        exchange.upgradeChannel(new HttpUpgradeListener() {
-
-            @Override
-            public void handleUpgrade(StreamConnection streamConnection) {
-                try {
-                    upgradeCallback.handleUpgrade(streamConnection, exchange.getConnection().getBufferPool());
-                } catch (Exception e) {
-                    UndertowLogger.REQUEST_LOGGER.cannotUpgradeConnection(e);
-                }
-            }
-        });
+    public void upgradeChannel(final HttpUpgradeListener upgradeCallback) {
+        exchange.upgradeChannel(upgradeCallback);
     }
 
     @Override

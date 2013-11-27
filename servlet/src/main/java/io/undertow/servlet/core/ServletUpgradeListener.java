@@ -27,11 +27,11 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Htt
     }
 
     @Override
-    public void handleUpgrade(final StreamConnection channel) {
+    public void handleUpgrade(final StreamConnection channel, HttpServerExchange exchange) {
         channel.getCloseSetter().set(new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection channel) {
-                final ThreadSetupAction.Handle handle = threadSetupAction.setup(exchange);
+                final ThreadSetupAction.Handle handle = threadSetupAction.setup(ServletUpgradeListener.this.exchange);
                 try {
                     instance.getInstance().destroy();
                 } finally {
@@ -43,10 +43,10 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Htt
                 }
             }
         });
-        exchange.getIoThread().execute(new Runnable() {
+        this.exchange.getIoThread().execute(new Runnable() {
             @Override
             public void run() {
-                final ThreadSetupAction.Handle handle = threadSetupAction.setup(exchange);
+                final ThreadSetupAction.Handle handle = threadSetupAction.setup(ServletUpgradeListener.this.exchange);
                 try {
                     //run the upgrade in the IO thread, to prevent threading issues
                     instance.getInstance().init(new WebConnectionImpl(channel));

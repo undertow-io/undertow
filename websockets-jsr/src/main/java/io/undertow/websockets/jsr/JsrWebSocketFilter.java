@@ -18,15 +18,19 @@
 
 package io.undertow.websockets.jsr;
 
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.PathTemplateMatcher;
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
 import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
 import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
+import org.xnio.StreamConnection;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -105,7 +109,15 @@ public class JsrWebSocketFilter implements Filter {
                     chain.doFilter(request, response);
                 } else {
                     facade.putAttachment(HandshakeUtil.PATH_PARAMS, matchResult.getParameters());
-                    handshaker.handshake(facade, callback);
+                    final Handshake selected = handshaker;
+                    facade.upgradeChannel(new HttpUpgradeListener() {
+                        @Override
+                        public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+                            WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
+                            callback.onConnect(facade, channel);
+                        }
+                    });
+                    handshaker.handshake(facade);
                     return;
                 }
             }

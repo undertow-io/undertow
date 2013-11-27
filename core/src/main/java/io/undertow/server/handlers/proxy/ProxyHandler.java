@@ -373,7 +373,7 @@ public final class ProxyHandler implements HttpHandler {
             if (exchange.isUpgrade()) {
                 exchange.upgradeChannel(new HttpUpgradeListener() {
                     @Override
-                    public void handleUpgrade(StreamConnection streamConnection) {
+                    public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
                         StreamConnection clientChannel = null;
                         try {
                             clientChannel = result.getConnection().performUpgrade();

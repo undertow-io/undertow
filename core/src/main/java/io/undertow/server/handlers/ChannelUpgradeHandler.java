@@ -145,7 +145,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                         exchange.upgradeChannel(string, new HttpUpgradeListener() {
 
                             @Override
-                            public void handleUpgrade(StreamConnection streamConnection) {
+                            public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
                                 ChannelListeners.invokeChannelListener(streamConnection, listener);
                             }
                         });

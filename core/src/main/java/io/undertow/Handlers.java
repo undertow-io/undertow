@@ -20,8 +20,8 @@ import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
-import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 
 import java.util.List;
 

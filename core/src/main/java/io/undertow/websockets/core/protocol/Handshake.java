@@ -21,8 +21,6 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketHandshakeException;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
-import io.undertow.websockets.spi.UpgradeCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoFuture;
 import org.xnio.Pool;
@@ -74,7 +72,7 @@ public abstract class Handshake {
     }
 
     /**
-     * Return the full url of the websocket location of the given {@link HttpServerExchange}
+     * Return the full url of the websocket location of the given {@link WebSocketHttpExchange}
      */
     protected static String getWebSocketLocation(WebSocketHttpExchange exchange) {
         String scheme;
@@ -89,20 +87,10 @@ public abstract class Handshake {
     /**
      * Issue the WebSocket upgrade
      *
-     * @param exchange The {@link HttpServerExchange} for which the handshake and upgrade should occur.
-     * @param callback The callback to call once the exchange is upgraded
+     * @param exchange The {@link WebSocketHttpExchange} for which the handshake and upgrade should occur.
      */
-    public final void handshake(final WebSocketHttpExchange exchange, final WebSocketConnectionCallback callback) {
+    public final void handshake(final WebSocketHttpExchange exchange) {
 
-        exchange.upgradeChannel(new UpgradeCallback() {
-
-            @Override
-            public void handleUpgrade(final StreamConnection channel, final Pool<ByteBuffer> buffers) {
-                //TODO: fix this up to use the new API and not assembled
-                WebSocketChannel webSocket = createChannel(exchange, channel, buffers);
-                callback.onConnect(exchange, webSocket);
-            }
-        });
         handshakeInternal(exchange);
     }
 
@@ -114,7 +102,7 @@ public abstract class Handshake {
     public abstract boolean matches(WebSocketHttpExchange exchange);
 
     /**
-     * Create the {@link WebSocketChannel} from the {@link HttpServerExchange}
+     * Create the {@link WebSocketChannel} from the {@link WebSocketHttpExchange}
      */
     public abstract WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final Pool<ByteBuffer> pool);
 

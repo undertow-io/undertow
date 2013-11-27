@@ -13,7 +13,8 @@ public interface HttpUpgradeListener {
      * Method that is called once the upgrade is complete.
      *
      * @param streamConnection The connection that can be used to send or receive data
+     * @param exchange
      */
-    void handleUpgrade(final StreamConnection streamConnection);
+    void handleUpgrade(final StreamConnection streamConnection, HttpServerExchange exchange);
 
 }

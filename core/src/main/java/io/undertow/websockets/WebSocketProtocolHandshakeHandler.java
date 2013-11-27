@@ -16,18 +16,21 @@
  * limitations under the License.
  */
 
-package io.undertow.websockets.core.handler;
+package io.undertow.websockets;
 
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Methods;
+import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
 import io.undertow.websockets.spi.AsyncWebSocketHttpServerExchange;
+import org.xnio.StreamConnection;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -41,6 +44,11 @@ import java.util.Set;
  */
 public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     private final Set<Handshake> handshakes;
+
+    /**
+     * The upgrade listener. This will only be used if another web socket implementation is being layered on top.
+     */
+    private final HttpUpgradeListener upgradeListener;
 
     private final WebSocketConnectionCallback callback;
 
@@ -65,7 +73,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      * @param callback The {@link WebSocketConnectionCallback} which will be executed once the handshake was
      *                 established
      */
-    public WebSocketProtocolHandshakeHandler(final WebSocketConnectionCallback callback, final  HttpHandler next) {
+    public WebSocketProtocolHandshakeHandler(final WebSocketConnectionCallback callback, final HttpHandler next) {
         this.callback = callback;
         Set<Handshake> handshakes = new HashSet<Handshake>();
         handshakes.add(new Hybi13Handshake());
@@ -73,6 +81,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         handshakes.add(new Hybi07Handshake());
         this.handshakes = handshakes;
         this.next = next;
+        this.upgradeListener = null;
     }
 
     /**
@@ -85,6 +94,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final WebSocketConnectionCallback callback) {
         this(handshakes, callback, ResponseCodeHandler.HANDLE_404);
     }
+
     /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
      *
@@ -92,10 +102,64 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      * @param callback   The {@link WebSocketConnectionCallback} which will be executed once the handshake was
      *                   established
      */
-    public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final WebSocketConnectionCallback callback, final  HttpHandler next) {
+    public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final WebSocketConnectionCallback callback, final HttpHandler next) {
         this.callback = callback;
         this.handshakes = new HashSet<Handshake>(handshakes);
         this.next = next;
+        this.upgradeListener = null;
+    }
+
+    /**
+     * Create a new {@link WebSocketProtocolHandshakeHandler}
+     *
+     * @param callback The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                 established
+     */
+    public WebSocketProtocolHandshakeHandler(final HttpUpgradeListener callback) {
+        this(callback, ResponseCodeHandler.HANDLE_404);
+    }
+
+    /**
+     * Create a new {@link WebSocketProtocolHandshakeHandler}
+     *
+     * @param callback The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                 established
+     */
+    public WebSocketProtocolHandshakeHandler(final HttpUpgradeListener callback, final HttpHandler next) {
+        this.callback = null;
+        Set<Handshake> handshakes = new HashSet<Handshake>();
+        handshakes.add(new Hybi13Handshake());
+        handshakes.add(new Hybi08Handshake());
+        handshakes.add(new Hybi07Handshake());
+        this.handshakes = handshakes;
+        this.next = next;
+        this.upgradeListener = callback;
+    }
+
+
+    /**
+     * Create a new {@link WebSocketProtocolHandshakeHandler}
+     *
+     * @param handshakes The supported handshake methods
+     * @param callback   The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                   established
+     */
+    public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final HttpUpgradeListener callback) {
+        this(handshakes, callback, ResponseCodeHandler.HANDLE_404);
+    }
+
+    /**
+     * Create a new {@link WebSocketProtocolHandshakeHandler}
+     *
+     * @param handshakes The supported handshake methods
+     * @param callback   The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                   established
+     */
+    public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final HttpUpgradeListener callback, final HttpHandler next) {
+        this.callback = null;
+        this.handshakes = new HashSet<Handshake>(handshakes);
+        this.next = next;
+        this.upgradeListener = callback;
     }
 
     @Override
@@ -118,7 +182,19 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         if (handshaker == null) {
             next.handleRequest(exchange);
         } else {
-            handshaker.handshake(facade, callback);
+            final Handshake selected = handshaker;
+            if (upgradeListener == null) {
+                exchange.upgradeChannel(new HttpUpgradeListener() {
+                    @Override
+                    public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+                        WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
+                        callback.onConnect(facade, channel);
+                    }
+                });
+            } else {
+                exchange.upgradeChannel(upgradeListener);
+            }
+            handshaker.handshake(facade);
         }
     }
 }

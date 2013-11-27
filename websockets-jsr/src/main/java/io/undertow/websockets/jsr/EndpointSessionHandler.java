@@ -21,7 +21,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoUtils;
