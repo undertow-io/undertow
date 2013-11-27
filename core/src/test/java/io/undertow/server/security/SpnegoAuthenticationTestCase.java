@@ -29,6 +29,7 @@ import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
+import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -59,6 +60,7 @@ import org.junit.runner.RunWith;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore
 public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
 
     private static Oid SPNEGO;
