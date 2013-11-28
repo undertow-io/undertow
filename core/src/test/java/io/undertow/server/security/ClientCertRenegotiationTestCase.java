@@ -29,6 +29,8 @@ import io.undertow.testutils.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -92,4 +94,53 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
         assertSingleNotificationType(EventType.AUTHENTICATED);
     }
 
+    @Test
+    public void testClientCertSuccessWithPostBody() throws Exception {
+        setAuthenticationChain();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(clientSSLContext);
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerSSLAddress());
+        post.setEntity(new StringEntity("hi"));
+        HttpResponse result = client.execute(post);
+        assertEquals(200, result.getStatusLine().getStatusCode());
+
+        Header[] values = result.getHeaders("ProcessedBy");
+        assertEquals("ProcessedBy Headers", 1, values.length);
+        assertEquals("ResponseHandler", values[0].getValue());
+
+        values = result.getHeaders("AuthenticatedUser");
+        assertEquals("AuthenticatedUser Headers", 1, values.length);
+        assertEquals("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB", values[0].getValue());
+        HttpClientUtils.readResponse(result);
+        assertSingleNotificationType(EventType.AUTHENTICATED);
+    }
+
+
+    @Test
+    public void testClientCertSuccessWithLargePostBody() throws Exception {
+        setAuthenticationChain();
+
+        final StringBuilder messageBuilder = new StringBuilder(6919638);
+        for (int i = 0; i < 6919638; ++i) {
+            messageBuilder.append("*");
+        }
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(clientSSLContext);
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerSSLAddress());
+        post.setEntity(new StringEntity(messageBuilder.toString()));
+        HttpResponse result = client.execute(post);
+        assertEquals(200, result.getStatusLine().getStatusCode());
+
+        Header[] values = result.getHeaders("ProcessedBy");
+        assertEquals("ProcessedBy Headers", 1, values.length);
+        assertEquals("ResponseHandler", values[0].getValue());
+
+        values = result.getHeaders("AuthenticatedUser");
+        assertEquals("AuthenticatedUser Headers", 1, values.length);
+        assertEquals("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB", values[0].getValue());
+        HttpClientUtils.readResponse(result);
+        assertSingleNotificationType(EventType.AUTHENTICATED);
+    }
 }

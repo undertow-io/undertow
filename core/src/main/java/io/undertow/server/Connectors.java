@@ -4,7 +4,9 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
+import org.xnio.Pooled;
 
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -34,6 +36,28 @@ public class Connectors {
                 exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(entry.getValue()));
             }
         }
+    }
+
+    /**
+     * Attached buffered data to the exchange. The will generally be used to allow data to be re-read.
+     *
+     *
+     *
+     * @param exchange The HTTP server exchange
+     * @param buffers The buffers to attach
+     */
+    public static void ungetRequestBytes(final HttpServerExchange exchange, Pooled<ByteBuffer>... buffers) {
+        Pooled<ByteBuffer>[] existing = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
+        Pooled<ByteBuffer>[] newArray;
+        if(existing == null) {
+            newArray = new Pooled[buffers.length];
+            System.arraycopy(buffers, 0, newArray, 0, buffers.length);
+        } else {
+            newArray = new Pooled[existing.length + buffers.length];
+            System.arraycopy(existing, 0, newArray, 0, existing.length);
+            System.arraycopy(buffers, 0, newArray, existing.length, buffers.length);
+        }
+        exchange.putAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA, newArray); //todo: force some kind of wakeup?
     }
 
     public static void terminateRequest(final HttpServerExchange exchange) {

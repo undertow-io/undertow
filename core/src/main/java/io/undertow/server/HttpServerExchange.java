@@ -30,6 +30,7 @@ import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
@@ -39,10 +40,12 @@ import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import io.undertow.util.SameThreadExecutor;
 import org.jboss.logging.Logger;
+import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.Pooled;
 import org.xnio.XnioIoThread;
 import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
@@ -58,12 +61,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreClear;
@@ -81,6 +87,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     // immutable state
 
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
+
+    /**
+     * The attachment key that buffered request data is attached under.
+     */
+    static final AttachmentKey<Pooled<ByteBuffer>[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(Pooled[].class);
 
     private final ServerConnection connection;
     private final HeaderMap requestHeaders = new HeaderMap();
@@ -692,7 +703,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *                               read
      */
     public void upgradeChannel(final HttpUpgradeListener listener) {
-        if(!connection.isUpgradeSupported()) {
+        if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
         ExchangeCompletionListener upgradeCompleteListener = new UpgradeCompletionListener(listener);
@@ -723,7 +734,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *                               read
      */
     public void upgradeChannel(String productName, final HttpUpgradeListener listener) {
-        if(!connection.isUpgradeSupported()) {
+        if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
         ExchangeCompletionListener upgradeCompleteListener = new UpgradeCompletionListener(listener);
@@ -1547,10 +1558,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      * <p/>
      * It also delays a readResume call until the current call stack has returned, thus ensuring that only 1 thread is
      * active in the exchange at any one time.
+     * <p/>
+     * It also handles buffered request data.
      */
     private final class ReadDispatchChannel extends DetachableStreamSourceChannel implements StreamSourceChannel, Runnable {
 
         private boolean wakeup = true;
+        private boolean readsResumed = false;
+
 
         public ReadDispatchChannel(final StreamSourceChannel delegate) {
             super(delegate);
@@ -1563,6 +1578,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void resumeReads() {
+            readsResumed = true;
             if (isFinished()) {
                 return;
             }
@@ -1602,6 +1618,182 @@ public final class HttpServerExchange extends AbstractAttachable {
             delegate.getCloseSetter().set(null);
             if (delegate.isReadResumed()) {
                 delegate.suspendReads();
+            }
+        }
+
+        @Override
+        public long transferTo(long position, long count, FileChannel target) throws IOException {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered == null) {
+                return super.transferTo(position, count, target);
+            }
+            return target.transferFrom(this, position, count);
+        }
+
+        @Override
+        public void awaitReadable() throws IOException {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered == null) {
+                super.awaitReadable();
+            }
+        }
+
+        @Override
+        public void suspendReads() {
+            readsResumed = false;
+            super.suspendReads();
+        }
+
+        @Override
+        public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered == null) {
+                return super.transferTo(count, throughBuffer, target);
+            }
+            //make sure there is no garbage in throughBuffer
+            throughBuffer.position(0);
+            throughBuffer.limit(0);
+            long copied = 0;
+            for (int i = 0; i < buffered.length; ++i) {
+                Pooled<ByteBuffer> pooled = buffered[i];
+                if (pooled != null) {
+                    final ByteBuffer buf = pooled.getResource();
+                    if (buf.hasRemaining()) {
+                        int res = target.write(buf);
+
+                        if (!buf.hasRemaining()) {
+                            pooled.free();
+                            buffered[i] = null;
+                        }
+                        if (res == 0) {
+                            return copied;
+                        } else {
+                            copied += res;
+                        }
+                    } else {
+                        pooled.free();
+                        buffered[i] = null;
+                    }
+                }
+            }
+            removeAttachment(BUFFERED_REQUEST_DATA);
+            if (copied == 0) {
+                return super.transferTo(count, throughBuffer, target);
+            } else {
+                return copied;
+            }
+        }
+
+        @Override
+        public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered == null) {
+                super.awaitReadable(time, timeUnit);
+            }
+        }
+
+        @Override
+        public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered == null) {
+                return super.read(dsts, offset, length);
+            }
+            long copied = 0;
+            for (int i = 0; i < buffered.length; ++i) {
+                Pooled<ByteBuffer> pooled = buffered[i];
+                if (pooled != null) {
+                    final ByteBuffer buf = pooled.getResource();
+                    if (buf.hasRemaining()) {
+                        copied += Buffers.copy(dsts, offset, length, buf);
+                        if (!buf.hasRemaining()) {
+                            pooled.free();
+                            buffered[i] = null;
+                        }
+                        if (!Buffers.hasRemaining(dsts, offset, length)) {
+                            return copied;
+                        }
+                    } else {
+                        pooled.free();
+                        buffered[i] = null;
+                    }
+                }
+            }
+            removeAttachment(BUFFERED_REQUEST_DATA);
+            if (copied == 0) {
+                return super.read(dsts, offset, length);
+            } else {
+                return copied;
+            }
+        }
+
+        @Override
+        public long read(ByteBuffer[] dsts) throws IOException {
+            return read(dsts, 0, dsts.length);
+        }
+
+        @Override
+        public boolean isOpen() {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered != null) {
+                return true;
+            }
+            return super.isOpen();
+        }
+
+        @Override
+        public void close() throws IOException {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered != null) {
+                for (Pooled<ByteBuffer> pooled : buffered) {
+                    if (pooled != null) {
+                        pooled.free();
+                    }
+                }
+            }
+            removeAttachment(BUFFERED_REQUEST_DATA);
+            super.close();
+        }
+
+        @Override
+        public boolean isReadResumed() {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered != null) {
+                return readsResumed;
+            }
+            return super.isReadResumed();
+        }
+
+        @Override
+        public int read(ByteBuffer dst) throws IOException {
+            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            if (buffered == null) {
+                return super.read(dst);
+            }
+            int copied = 0;
+            for (int i = 0; i < buffered.length; ++i) {
+                Pooled<ByteBuffer> pooled = buffered[i];
+                if (pooled != null) {
+                    final ByteBuffer buf = pooled.getResource();
+                    if (buf.hasRemaining()) {
+                        copied += Buffers.copy(dst, buf);
+                        if (!buf.hasRemaining()) {
+                            pooled.free();
+                            buffered[i] = null;
+                        }
+                        if (!dst.hasRemaining()) {
+                            return copied;
+                        }
+                    } else {
+                        pooled.free();
+                        buffered[i] = null;
+                    }
+                }
+            }
+            removeAttachment(BUFFERED_REQUEST_DATA);
+            if (copied == 0) {
+                return super.read(dst);
+            } else {
+                return copied;
             }
         }
     }

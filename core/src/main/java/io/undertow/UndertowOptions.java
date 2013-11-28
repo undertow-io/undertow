@@ -60,17 +60,17 @@ public class UndertowOptions {
 
     /**
      * The maximum number of parameters that will be parsed. This is used to protect against hash vulnerabilities.
-     *
+     * <p/>
      * This applies to both query parameters, and to POST data, but is not cumulative (i.e. you can potentially have
      * max parameters * 2 total parameters).
-     *
+     * <p/>
      * Defaults to 1000
      */
     public static final Option<Integer> MAX_PARAMETERS = Option.simple(UndertowOptions.class, "MAX_PARAMETERS", Integer.class);
 
     /**
      * The maximum number of headers that will be parsed. This is used to protect against hash vulnerabilities.
-     *
+     * <p/>
      * Defaults to 200
      */
     public static final Option<Integer> MAX_HEADERS = Option.simple(UndertowOptions.class, "MAX_HEADERS", Integer.class);
@@ -78,27 +78,27 @@ public class UndertowOptions {
 
     /**
      * The maximum number of cookies that will be parsed. This is used to protect against hash vulnerabilities.
-     *
+     * <p/>
      * Defaults to 200
      */
     public static final Option<Integer> MAX_COOKIES = Option.simple(UndertowOptions.class, "MAX_COOKIES", Integer.class);
 
     /**
      * If a request comes in with encoded / characters (i.e. %2F), will these be decoded.
-     *
+     * <p/>
      * This can cause security problems if a front end proxy does not perform the same decoding, and as a result
      * this is disabled by default.
-     *
+     * <p/>
      * Defaults to false
      *
-     * @see  http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-0450
+     * @see http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-0450
      */
     public static final Option<Boolean> ALLOW_ENCODED_SLASH = Option.simple(UndertowOptions.class, "ALLOW_ENCODED_SLASH", Boolean.class);
 
     /**
      * If this is true then the parser will decode the URL and query parameters using the selected character encoding (UTF-8 by default). If this is false they will
      * not be decoded. This will allow a later handler to decode them into whatever charset is desired.
-     *
+     * <p/>
      * Defaults to true.
      */
     public static final Option<Boolean> DECODE_URL = Option.simple(UndertowOptions.class, "DECODE_URL", Boolean.class);
@@ -107,7 +107,7 @@ public class UndertowOptions {
     /**
      * If this is true then the parser will decode the URL and query parameters using the selected character encoding (UTF-8 by default). If this is false they will
      * not be decoded. This will allow a later handler to decode them into whatever charset is desired.
-     *
+     * <p/>
      * Defaults to true.
      */
     public static final Option<String> URL_CHARSET = Option.simple(UndertowOptions.class, "URL_CHARSET", String.class);
@@ -115,10 +115,20 @@ public class UndertowOptions {
     /**
      * If this is true then a Connection: keep-alive header will be added to responses, even when it is not strictly required by
      * the specification.
-     *
+     * <p/>
      * Defaults to true
      */
     public static final Option<Boolean> ALWAYS_SET_KEEP_ALIVE = Option.simple(UndertowOptions.class, "ALWAYS_SET_KEEP_ALIVE", Boolean.class);
+
+    /**
+     * When buffering a request the maximum number of pooled buffers to use.
+     * <p/>
+     * Requests are not usually buffered, the most common case is when performing SSL renegotiation for a POST request, and the post data must be fully
+     * buffered in order to perform the renegotiation.
+     * <p/>
+     * Defaults to 1.
+     */
+    public static final Option<Integer> MAX_BUFFERS_FOR_BUFFERED_REQUEST = Option.simple(UndertowOptions.class, "MAX_BUFFERS_FOR_BUFFERED_REQUEST", Integer.class);
 
     private UndertowOptions() {
 

@@ -210,7 +210,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static void runInternal(final RunNotifier notifier) {
         if (first) {
             first = false;
-            xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
+            xnio = Xnio.getInstance(DefaultServer.class.getClassLoader());
             try {
                 worker = xnio.createWorker(OptionMap.builder()
                         .set(Options.WORKER_IO_THREADS, 8)
