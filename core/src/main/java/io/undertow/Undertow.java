@@ -73,7 +73,7 @@ public class Undertow {
     }
 
     public synchronized void start() {
-        xnio = Xnio.getInstance("nio", Undertow.class.getClassLoader());
+        xnio = Xnio.getInstance(Undertow.class.getClassLoader());
         channels = new ArrayList<AcceptingChannel<? extends StreamConnection>>();
         try {
             worker = xnio.createWorker(OptionMap.builder()

@@ -106,7 +106,7 @@ public class AutobahnWebSocketServer {
     };
 
     public void run() {
-        xnio = Xnio.getInstance("nio");
+        xnio = Xnio.getInstance();
         try {
             worker = xnio.createWorker(OptionMap.builder()
                     .set(Options.WORKER_WRITE_THREADS, 4)

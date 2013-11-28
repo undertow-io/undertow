@@ -45,7 +45,7 @@ public class WebSocketClient13TestCase {
     @BeforeClass
     public static void setup() throws IOException {
         DefaultServer.setRootHandler(AutobahnWebSocketServer.getRootHandler());
-        Xnio xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
+        Xnio xnio = Xnio.getInstance(DefaultServer.class.getClassLoader());
         worker = xnio.createWorker(OptionMap.builder()
                 .set(Options.WORKER_IO_THREADS, 2)
                 .set(Options.CONNECTION_HIGH_WATER, 1000000)

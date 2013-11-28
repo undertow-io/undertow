@@ -56,7 +56,7 @@ public class AnnotatedAutobahnServer implements Runnable {
 
     public void run() {
 
-        Xnio xnio = Xnio.getInstance("nio");
+        Xnio xnio = Xnio.getInstance();
         try {
 
             XnioWorker worker = xnio.createWorker(OptionMap.builder()
