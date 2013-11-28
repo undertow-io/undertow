@@ -112,7 +112,10 @@ public class CachedResource implements Resource {
     }
 
     public void invalidate() {
-        cachingResourceManager.getDataCache().remove(cacheKey);
+        final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
+        if(dataCache != null) {
+            dataCache.remove(cacheKey);
+        }
     }
 
     public boolean checkStillValid() {
