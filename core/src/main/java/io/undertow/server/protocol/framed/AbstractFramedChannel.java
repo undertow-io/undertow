@@ -17,7 +17,6 @@
  */
 package io.undertow.server.protocol.framed;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.util.ReferenceCountedPooled;
@@ -649,23 +648,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     if (sender.isWriteResumed()) {
                         ChannelListeners.invokeChannelListener(sender, sender.getWriteListener());
                     }
-                    if (!sender.isReadyForFlush()) {
-                        break;
-                    }
                 }
-                //now we flush
-                try {
-                    flushSenders();
-                    if (pendingFrames.isEmpty()) {
-                        channel.suspendWrites();
-                    } else {
-                        S first = pendingFrames.get(0);
-                        if (!first.isReadyForFlush() && !first.isWriteResumed()) {
-                            channel.suspendWrites();
-                        }
-                    }
-                } catch (IOException e) {
-                    UndertowLogger.ROOT_LOGGER.debugf(e, "Exception writing frames");
+                if(pendingFrames.isEmpty()) {
+                    channel.suspendWrites();
                 }
             }
         }
