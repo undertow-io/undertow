@@ -91,10 +91,10 @@
 
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
+        <version.io.undertow.build.checkstyle-config>1.0.0.Final</version.io.undertow.build.checkstyle-config>
     </properties>
 
     <modules>
-        <module>build-config</module>
         <module>parser-generator</module>
         <module>core</module>
         <module>servlet</module>
@@ -146,9 +146,9 @@
                     </configuration>
                     <dependencies>
                         <dependency>
-                            <groupId>io.undertow</groupId>
-                            <artifactId>undertow-build-config</artifactId>
-                            <version>${project.version}</version>
+                            <groupId>io.undertow.build</groupId>
+                            <artifactId>undertow-checkstyle-config</artifactId>
+                            <version>${version.io.undertow.build.checkstyle-config}</version>
                         </dependency>
                     </dependencies>
                     <executions>
@@ -201,8 +201,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.undertow</groupId>
-            <artifactId>undertow-build-config</artifactId>
+            <groupId>io.undertow.build</groupId>
+            <artifactId>undertow-checkstyle-config</artifactId>
         </dependency>
     </dependencies>
 
@@ -223,12 +223,6 @@
                 <version>${project.version}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
-                <artifactId>undertow-build-config</artifactId>
-                <version>${project.version}</version>
             </dependency>
 
             <dependency>
@@ -258,6 +252,13 @@
             </dependency>
 
             <!-- External Dependencies -->
+
+            <dependency>
+                <groupId>io.undertow.build</groupId>
+                <artifactId>undertow-checkstyle-config</artifactId>
+                <version>${version.io.undertow.build.checkstyle-config}</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.jboss.classfilewriter</groupId>
                 <artifactId>jboss-classfilewriter</artifactId>
