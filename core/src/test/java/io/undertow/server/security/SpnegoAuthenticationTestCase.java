@@ -62,7 +62,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
-@Ignore("Fails when run with -Pproxy")
+@Ignore("UNDERTOW-151 Fails when run with -Pproxy")
 public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
 
     private static Oid SPNEGO;
