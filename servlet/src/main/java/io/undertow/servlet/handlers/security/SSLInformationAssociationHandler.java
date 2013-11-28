@@ -78,7 +78,7 @@ public class SSLInformationAssociationHandler implements HttpHandler {
      */
     private X509Certificate[] getCerts(SSLSessionInfo session) {
         try {
-            javax.security.cert.X509Certificate[] javaxCerts = session.getPeerCertificateChain(false);
+            javax.security.cert.X509Certificate[] javaxCerts = session.getPeerCertificateChain();
             if (javaxCerts == null || javaxCerts.length == 0) {
                 return null;
             }
@@ -94,7 +94,7 @@ public class SSLInformationAssociationHandler implements HttpHandler {
         } catch (Exception e) {
             return null;
         }
-    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {

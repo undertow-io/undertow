@@ -1,6 +1,7 @@
 package io.undertow.attribute;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.util.Certificates;
 
@@ -23,7 +24,7 @@ public class SslClientCertAttribute implements ExchangeAttribute {
         }
         X509Certificate[] certificates;
         try {
-            certificates = ssl.getPeerCertificateChain(false);
+            certificates = ssl.getPeerCertificateChain();
             if(certificates.length > 0) {
                 return Certificates.toPem(certificates[0]);
             }
@@ -31,6 +32,8 @@ public class SslClientCertAttribute implements ExchangeAttribute {
         } catch (SSLPeerUnverifiedException e) {
             return null;
         } catch (CertificateEncodingException e) {
+            return null;
+        } catch (RenegotiationRequiredException e) {
             return null;
         }
     }

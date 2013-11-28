@@ -257,4 +257,7 @@ public interface UndertowMessages {
 
     @Message(id = 77, value = "The underlying transport does not support HTTP upgrade")
     IllegalStateException upgradeNotSupported();
+
+    @Message(id = 78, value = "Renegotiation not supported")
+    IOException renegotiationNotSupported();
 }

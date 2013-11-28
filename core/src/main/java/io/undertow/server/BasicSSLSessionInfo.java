@@ -2,6 +2,7 @@ package io.undertow.server;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.FlexBase64;
+import org.xnio.SslClientAuthMode;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.cert.CertificateException;
@@ -74,7 +75,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     }
 
     @Override
-    public java.security.cert.Certificate[] getPeerCertificates(boolean forceRenegotiate) throws SSLPeerUnverifiedException {
+    public java.security.cert.Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
         if (certificate == null) {
             throw UndertowMessages.MESSAGES.peerUnverified();
         }
@@ -82,11 +83,16 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     }
 
     @Override
-    public X509Certificate[] getPeerCertificateChain(boolean forceRenegotiate) throws SSLPeerUnverifiedException {
+    public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
         if (certificate == null) {
             throw UndertowMessages.MESSAGES.peerUnverified();
         }
         return new X509Certificate[]{certificate};
+    }
+
+    @Override
+    public void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException {
+        throw UndertowMessages.MESSAGES.renegotiationNotSupported();
     }
 
 

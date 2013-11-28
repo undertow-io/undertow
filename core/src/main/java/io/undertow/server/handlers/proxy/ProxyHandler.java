@@ -36,6 +36,7 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
+import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Attachable;
@@ -292,13 +293,15 @@ public final class ProxyHandler implements HttpHandler {
             if (sslSessionInfo != null) {
                 X509Certificate[] peerCertificates;
                 try {
-                    peerCertificates = sslSessionInfo.getPeerCertificateChain(false);
+                    peerCertificates = sslSessionInfo.getPeerCertificateChain();
                     if (peerCertificates.length > 0) {
                         request.putAttachment(ProxiedRequestAttachments.SSL_CERT, Certificates.toPem(peerCertificates[0]));
                     }
                 } catch (SSLPeerUnverifiedException e) {
                     //ignore
                 } catch (CertificateEncodingException e) {
+                    //ignore
+                } catch (RenegotiationRequiredException e) {
                     //ignore
                 }
                 request.putAttachment(ProxiedRequestAttachments.SSL_CYPHER, sslSessionInfo.getCipherSuite());

@@ -24,15 +24,18 @@ import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
+import org.xnio.SslClientAuthMode;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
+import java.io.IOException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
 /**
  * The Client Cert based authentication mechanism.
- *
+ * <p/>
  * When authenticate is called the current request is checked to see if it a SSL request, this is further checked to identify if
  * the client has been verified at the SSL level.
  *
@@ -67,7 +70,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession != null) {
             try {
-                Certificate[] clientCerts = sslSession.getPeerCertificates(forceRenegotiation);
+                Certificate[] clientCerts = getPeerCertificates(exchange, sslSession);
                 if (clientCerts[0] instanceof X509Certificate) {
                     Credential credential = new X509CertificateCredential((X509Certificate) clientCerts[0]);
 
@@ -91,6 +94,25 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
          */
 
         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
+    }
+
+    private Certificate[] getPeerCertificates(final HttpServerExchange exchange, SSLSessionInfo sslSession) throws SSLPeerUnverifiedException {
+        try {
+            return sslSession.getPeerCertificates();
+        } catch (RenegotiationRequiredException e) {
+            if (forceRenegotiation) {
+                try {
+                    sslSession.renegotiate(exchange, SslClientAuthMode.REQUESTED);
+                    return sslSession.getPeerCertificates();
+
+                } catch (IOException e1) {
+                    //ignore
+                } catch (RenegotiationRequiredException e1) {
+                    //ignore
+                }
+            }
+        }
+        throw new SSLPeerUnverifiedException("");
     }
 
     @Override
