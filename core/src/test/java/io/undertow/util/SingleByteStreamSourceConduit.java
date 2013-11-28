@@ -31,7 +31,8 @@ public class SingleByteStreamSourceConduit extends AbstractStreamSourceConduit<S
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
-        if (state > singleByteReads) {
+        if (state > singleByteReads || dst.remaining() == 1) {
+            //we always let a single byte read through, otherwise SSL renegotiation breaks
             return next.read(dst);
         }
 
