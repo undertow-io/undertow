@@ -31,7 +31,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
@@ -48,7 +47,6 @@ import static org.xnio.SslClientAuthMode.NOT_REQUESTED;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  * @author Stuart Douglas
  */
-@Ignore("Requires XNIO release")
 @RunWith(DefaultServer.class)
 public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
 
