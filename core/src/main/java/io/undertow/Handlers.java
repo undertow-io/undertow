@@ -13,6 +13,7 @@ import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.PredicateContextHandler;
 import io.undertow.server.handlers.PredicateHandler;
+import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
@@ -285,6 +286,16 @@ public class Handlers {
      */
     public static GracefulShutdownHandler gracefulShutdown(HttpHandler next) {
         return new GracefulShutdownHandler(next);
+    }
+
+    /**
+     * Returns a new handler that sets the peer address based on the X-Forwarded-For and
+     * X-Forwared-Proto header
+     * @param next The next http handler
+     * @return The handler
+     */
+    public static ProxyPeerAddressHandler proxyPeerAddress(HttpHandler next) {
+        return new ProxyPeerAddressHandler(next);
     }
 
     private Handlers() {
