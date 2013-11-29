@@ -6,7 +6,9 @@ import org.xnio.ChannelListener;
 import org.xnio.Options;
 import org.xnio.Pooled;
 import org.xnio.SslClientAuthMode;
+import org.xnio.channels.Channels;
 import org.xnio.channels.SslChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.cert.X509Certificate;
@@ -57,20 +59,73 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
         }
     }
 
+
     @Override
-    public void renegotiate(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {
-        AbstractServerConnection.ConduitState oldState = serverConnection.resetChannel();
+    public void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException {
+        if (exchange.isRequestComplete()) {
+            renegotiateNoRequest(exchange, sslClientAuthMode);
+        } else {
+            renegotiateBufferRequest(exchange, sslClientAuthMode);
+        }
+    }
+
+    public void renegotiateBufferRequest(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {
+        int allowedBuffers = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERS_FOR_BUFFERED_REQUEST, 1);
+        if (allowedBuffers <= 0) {
+            throw new SSLPeerUnverifiedException("");
+        }
+
+        //first we need to read the request
+        boolean requestResetRequired = false;
+        StreamSourceChannel requestChannel = Connectors.getExistingRequestChannel(exchange);
+        if (requestChannel == null) {
+            requestChannel = exchange.getRequestChannel();
+            requestResetRequired = true;
+        }
+
         Pooled<ByteBuffer> pooled = null;
         boolean free = true; //if the pooled buffer should be freed
-        int allowedBuffers = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERS_FOR_BUFFERED_REQUEST, 1);
         int usedBuffers = 0;
         Pooled<ByteBuffer>[] poolArray = null;
-        if (allowedBuffers > 0) {
-            poolArray = new Pooled[allowedBuffers];
-            pooled = exchange.getConnection().getBufferPool().allocate();
-            poolArray[usedBuffers++] = pooled;
-        }
+        poolArray = new Pooled[allowedBuffers];
+        pooled = exchange.getConnection().getBufferPool().allocate();
+        poolArray[usedBuffers++] = pooled;
         boolean dataRead = false;
+        try {
+            int res;
+            do {
+                final ByteBuffer buf = pooled.getResource();
+                res = Channels.readBlocking(requestChannel, buf);
+                if (!buf.hasRemaining()) {
+                    if (usedBuffers == allowedBuffers) {
+                        throw new SSLPeerUnverifiedException("");
+                    } else {
+                        buf.flip();
+                        pooled = exchange.getConnection().getBufferPool().allocate();
+                        poolArray[usedBuffers++] = pooled;
+                    }
+                }
+            } while (res != -1);
+            free = false;
+            pooled.getResource().flip();
+            Connectors.ungetRequestBytes(exchange, poolArray);
+            renegotiateNoRequest(exchange, newAuthMode);
+        } finally {
+            if (free) {
+                for(Pooled<ByteBuffer> buf : poolArray) {
+                    if(buf != null) {
+                        buf.free();
+                    }
+                }
+            }
+            if(requestResetRequired) {
+                exchange.requestChannel = null;
+            }
+        }
+    }
+
+    public void renegotiateNoRequest(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {
+        AbstractServerConnection.ConduitState oldState = serverConnection.resetChannel();
         try {
             SslClientAuthMode sslClientAuthMode = channel.getOption(Options.SSL_CLIENT_AUTH_MODE);
             if (sslClientAuthMode == SslClientAuthMode.NOT_REQUESTED) {
@@ -80,46 +135,24 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                 channel.setOption(Options.SSL_CLIENT_AUTH_MODE, newAuthMode);
                 channel.getSslSession().invalidate();
                 channel.startHandshake();
-                ByteBuffer buff;
-                if (pooled == null) {
-                    buff = ByteBuffer.wrap(new byte[1]);
-                } else {
-                    buff = pooled.getResource();
-                }
-                while (!waiter.isDone()) {
+                ByteBuffer buff = ByteBuffer.wrap(new byte[1]);
+                while (!waiter.isDone() && serverConnection.isOpen()) {
                     int read = serverConnection.getSourceChannel().read(buff);
                     if (read != 0) {
-                        dataRead = true;
-                        if (pooled == null) {
-                            throw new SSLPeerUnverifiedException("");
-                        }
-                        if (!buff.hasRemaining()) {
-                            if (usedBuffers == allowedBuffers) {
-                                pooled = null;
-                                buff = ByteBuffer.wrap(new byte[1]);
-                            } else {
-                                pooled = exchange.getConnection().getBufferPool().allocate();
-                                poolArray[usedBuffers++] = pooled;
-                                buff = pooled.getResource();
-                            }
-                        }
+                        throw new SSLPeerUnverifiedException("");
                     }
                     if (!waiter.isDone()) {
                         serverConnection.getSourceChannel().awaitReadable();
                     }
                 }
-                if(dataRead) {
-                    free = false;
-                    Connectors.ungetRequestBytes(exchange, poolArray);
-                }
             }
         } finally {
-            if (free && pooled != null) {
-                pooled.free();
+            if (oldState != null) {
+                serverConnection.restoreChannel(oldState);
             }
-            serverConnection.restoreChannel(oldState);
         }
     }
+
 
     @Override
     public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException, RenegotiationRequiredException {
@@ -137,7 +170,6 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
             throw e;
         }
     }
-
 
     private static class SslHandshakeWaiter implements ChannelListener<SslChannel> {
 

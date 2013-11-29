@@ -17,6 +17,7 @@
  */
 package io.undertow.server.security;
 
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
@@ -36,6 +37,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
+import org.xnio.Pooled;
 
 import javax.net.ssl.SSLContext;
 
@@ -120,9 +122,12 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
     @Test
     public void testClientCertSuccessWithLargePostBody() throws Exception {
         setAuthenticationChain();
+        Pooled<ByteBuffer> buf = DefaultServer.getBufferPool().allocate();
+        int requestSize = buf.getResource().limit() - 1;
+        buf.free();
 
-        final StringBuilder messageBuilder = new StringBuilder(6919638);
-        for (int i = 0; i < 6919638; ++i) {
+        final StringBuilder messageBuilder = new StringBuilder(requestSize);
+        for (int i = 0; i < requestSize; ++i) {
             messageBuilder.append("*");
         }
 

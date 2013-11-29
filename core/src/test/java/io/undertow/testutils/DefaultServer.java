@@ -46,6 +46,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
+import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
@@ -63,6 +64,7 @@ import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -191,9 +193,13 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static void setupProxyHandlerForSSL(ProxyHandler proxyHandler) {
-        proxyHandler.addRequestHeader(Headers.SSL_CLIENT_CERT, "%{SSL_CLIENT_CERT}" ,DefaultServer.class.getClassLoader());
-        proxyHandler.addRequestHeader(Headers.SSL_CIPHER, "%{SSL_CIPHER}" ,DefaultServer.class.getClassLoader());
-        proxyHandler.addRequestHeader(Headers.SSL_SESSION_ID, "%{SSL_SESSION_ID}" ,DefaultServer.class.getClassLoader());
+        proxyHandler.addRequestHeader(Headers.SSL_CLIENT_CERT, "%{SSL_CLIENT_CERT}", DefaultServer.class.getClassLoader());
+        proxyHandler.addRequestHeader(Headers.SSL_CIPHER, "%{SSL_CIPHER}", DefaultServer.class.getClassLoader());
+        proxyHandler.addRequestHeader(Headers.SSL_SESSION_ID, "%{SSL_SESSION_ID}", DefaultServer.class.getClassLoader());
+    }
+
+    public static Pool<ByteBuffer> getBufferPool() {
+        return openListener.getBufferPool();
     }
 
     @Override
@@ -278,7 +284,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     private static ChannelListener<StreamConnection> wrapOpenListener(final ChannelListener<StreamConnection> listener) {
-        if(!single) {
+        if (!single) {
             return listener;
         }
         return new ChannelListener<StreamConnection>() {
@@ -302,8 +308,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        if(proxy) {
-            if(method.getAnnotation(ProxyIgnore.class) != null ||
+        if (proxy) {
+            if (method.getAnnotation(ProxyIgnore.class) != null ||
                     method.getMethod().getDeclaringClass().isAnnotationPresent(ProxyIgnore.class)) {
                 return;
             }
@@ -318,7 +324,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @param handler The handler to use
      */
     public static void setRootHandler(HttpHandler handler) {
-        if(proxy && !ajp) {
+        if (proxy && !ajp) {
             //if we are testing HTTP proxy we always add the SSLHeaderHandler
             //this allows the SSL information to be propagated to be backend
             handler = new SSLHeaderHandler(handler);
@@ -377,8 +383,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      *                applicable.
      */
     public static void startSSLServer(final SSLContext context, final OptionMap options) throws IOException {
-        if(isApacheTest()) {
-           return;
+        if (isApacheTest()) {
+            return;
         }
         OptionMap combined = OptionMap.builder().addAll(serverOptions).addAll(options)
                 .set(Options.USE_DIRECT_BUFFERS, true)
@@ -411,14 +417,14 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static int getHostPort(String serverName) {
-        if(isApacheTest()) {
+        if (isApacheTest()) {
             return APACHE_PORT;
         }
         return Integer.getInteger(serverName + ".server.port", 7777);
     }
 
     public static int getHostSSLPort(String serverName) {
-        if(isApacheTest()) {
+        if (isApacheTest()) {
             return APACHE_SSL_PORT;
         }
         return Integer.getInteger(serverName + ".server.sslPort", 7778);

@@ -114,7 +114,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The actual request channel. May be null if it has not been created yet.
      */
-    private ReadDispatchChannel requestChannel;
+    protected ReadDispatchChannel requestChannel;
 
     private BlockingHttpExchange blockingHttpExchange;
 
@@ -1195,6 +1195,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         return old;
     }
 
+    /**
+     * Returns true if {@link #startBlocking()} or {@link #startBlocking(BlockingHttpExchange)} has been called.
+     *
+     * @return <code>true</code> If this is a blocking HTTP server exchange
+     */
+    public boolean isBlocking() {
+        return blockingHttpExchange != null;
+    }
 
     /**
      * @return The input stream

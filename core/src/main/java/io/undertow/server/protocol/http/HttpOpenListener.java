@@ -91,4 +91,9 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         this.undertowOptions = undertowOptions;
         this.parser = HttpRequestParser.instance(undertowOptions);
     }
+
+    @Override
+    public Pool<ByteBuffer> getBufferPool() {
+        return bufferPool;
+    }
 }

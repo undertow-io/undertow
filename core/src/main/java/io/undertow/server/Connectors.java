@@ -5,6 +5,7 @@ import io.undertow.server.handlers.Cookie;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import org.xnio.Pooled;
+import org.xnio.channels.StreamSourceChannel;
 
 import java.nio.ByteBuffer;
 import java.util.Date;
@@ -181,5 +182,14 @@ public class Connectors {
             UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", exchange);
             exchange.endExchange();
         }
+    }
+
+    /**
+     * Returns the existing request channel, if it exists. Otherwise returns null
+     *
+     * @param exchange The http server exchange
+     */
+    public static StreamSourceChannel getExistingRequestChannel(final HttpServerExchange exchange) {
+        return exchange.requestChannel;
     }
 }

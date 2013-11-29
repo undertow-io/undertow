@@ -72,6 +72,11 @@ public class AjpOpenListener implements OpenListener {
         this.undertowOptions = undertowOptions;
     }
 
+    @Override
+    public Pool<ByteBuffer> getBufferPool() {
+        return bufferPool;
+    }
+
     public String getScheme() {
         return scheme;
     }
