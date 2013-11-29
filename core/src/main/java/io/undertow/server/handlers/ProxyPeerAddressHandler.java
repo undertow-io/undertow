@@ -38,6 +38,10 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             //we have no way of knowing the port
             exchange.setSourceAddress(new InetSocketAddress(address, 0));
         }
+        String forwardedProto = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PROTO);
+        if (forwardedProto != null) {
+            exchange.setRequestScheme(forwardedProto);
+        }
         next.handleRequest(exchange);
     }
 }
