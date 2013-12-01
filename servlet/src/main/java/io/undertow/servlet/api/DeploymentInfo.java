@@ -39,6 +39,7 @@ import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.DefaultAuthorizationManager;
 import io.undertow.servlet.core.InMemorySessionManagerFactory;
@@ -99,6 +100,11 @@ public class DeploymentInfo implements Cloneable {
     private final Set<String> securityRoles = new HashSet<String>();
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<NotificationReceiver>();
     private final Map<String, AuthenticationMechanismFactory> authenticationMechanisms = new HashMap<String, AuthenticationMechanismFactory>();
+
+    /**
+     * additional servlet extensions
+     */
+    private final List<ServletExtension> servletExtensions = new ArrayList<ServletExtension>();
 
     /**
      * map of additional roles that should be applied to the given principal.
@@ -836,6 +842,21 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableMap(authenticationMechanisms);
     }
 
+    /**
+     * Adds an additional servlet extension to the deployment. Servlet extensions are generally discovered
+     * using META-INF/services entries, however this may not be practical in all environments.
+     * @param servletExtension The servlet extension
+     * @return this
+     */
+    public DeploymentInfo addServletExtension(final ServletExtension servletExtension) {
+        this.servletExtensions.add(servletExtension);
+        return this;
+    }
+
+    public List<ServletExtension> getServletExtensions() {
+        return servletExtensions;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -899,6 +920,7 @@ public class DeploymentInfo implements Cloneable {
         info.ignoreFlush = ignoreFlush;
         info.authorizationManager = authorizationManager;
         info.authenticationMechanisms.putAll(authenticationMechanisms);
+        info.servletExtensions.addAll(servletExtensions);
         return info;
     }
 

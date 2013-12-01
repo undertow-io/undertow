@@ -63,7 +63,7 @@ public class DeploymentUtils {
                 .setDeploymentName("servletContext.war")
                 .addServlets(servlets);
         if(servletExtension != null) {
-            servletExtension.handleDeployment(builder, null);
+            builder.addServletExtension(servletExtension);
         }
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
