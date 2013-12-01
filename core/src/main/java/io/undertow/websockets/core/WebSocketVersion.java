@@ -19,6 +19,8 @@
 package io.undertow.websockets.core;
 
 
+import io.undertow.util.AttachmentKey;
+
 /**
  * <p>
  * Enum which list all the different versions of the WebSocket specification (to the current date).
@@ -31,6 +33,7 @@ package io.undertow.websockets.core;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public enum WebSocketVersion {
+
     /**
      * Unknown version of the protocol
      */
@@ -80,5 +83,8 @@ public enum WebSocketVersion {
         // Should never hit here.
         throw new IllegalStateException("Unknown WebSocket version: " + this);
     }
+
+
+    public static final AttachmentKey<WebSocketVersion> ATTACHMENT_KEY = AttachmentKey.create(WebSocketVersion.class);
 }
 

@@ -90,7 +90,7 @@ public abstract class Handshake {
      * @param exchange The {@link WebSocketHttpExchange} for which the handshake and upgrade should occur.
      */
     public final void handshake(final WebSocketHttpExchange exchange) {
-
+        exchange.putAttachment(WebSocketVersion.ATTACHMENT_KEY, version);
         handshakeInternal(exchange);
     }
 
