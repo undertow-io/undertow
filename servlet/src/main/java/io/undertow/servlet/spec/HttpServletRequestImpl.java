@@ -512,11 +512,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public int getContentLength() {
-        final String contentLength = getHeader(Headers.CONTENT_LENGTH);
-        if (contentLength == null || contentLength.isEmpty()) {
+        long length = getContentLengthLong();
+        if(length > Integer.MAX_VALUE) {
             return -1;
         }
-        return Integer.parseInt(contentLength);
+        return (int)length;
     }
 
     @Override
