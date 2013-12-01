@@ -8,7 +8,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.TransportGuaranteeType;
-import io.undertow.servlet.handlers.security.SingleConstraintMatch;
+import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.HttpSessionImpl;

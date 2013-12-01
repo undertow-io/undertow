@@ -40,6 +40,7 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.core.DefaultAuthorizationManager;
 import io.undertow.servlet.core.InMemorySessionManagerFactory;
 import io.undertow.servlet.util.DefaultClassIntrospector;
 
@@ -81,6 +82,7 @@ public class DeploymentInfo implements Cloneable {
     private String defaultEncoding = "ISO-8859-1";
     private String urlEncoding = null;
     private boolean ignoreFlush = true;
+    private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -816,6 +818,15 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public AuthorizationManager getAuthorizationManager() {
+        return authorizationManager;
+    }
+
+    public DeploymentInfo setAuthorizationManager(AuthorizationManager authorizationManager) {
+        this.authorizationManager = authorizationManager;
+        return this;
+    }
+
     public DeploymentInfo addPrincipalVsRoleMapping(final String principal, final String mapping) {
         Set<String> set = principalVersusRolesMap.get(principal);
         if (set == null) {
@@ -908,6 +919,7 @@ public class DeploymentInfo implements Cloneable {
         info.sessionPersistenceManager = sessionPersistenceManager;
         info.principalVersusRolesMap.putAll(principalVersusRolesMap);
         info.ignoreFlush = ignoreFlush;
+        info.authorizationManager = authorizationManager;
         return info;
     }
 

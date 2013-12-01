@@ -18,19 +18,16 @@
 package io.undertow.servlet.handlers.security;
 
 import io.undertow.security.api.SecurityContext;
-import io.undertow.security.idm.Account;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.api.SecurityInfo;
+import io.undertow.servlet.api.AuthorizationManager;
+import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 
 /**
  * Servlet role handler
@@ -40,58 +37,28 @@ import javax.servlet.http.HttpServletResponse;
 public class ServletSecurityRoleHandler implements HttpHandler {
 
     private final HttpHandler next;
-    private final Map<String, Set<String>> principalVsRoleMap;
+    private final AuthorizationManager authorizationManager;
 
-    public ServletSecurityRoleHandler(final HttpHandler next, Map<String, Set<String>> principalVsRoleMap) {
+    public ServletSecurityRoleHandler(final HttpHandler next, AuthorizationManager authorizationManager) {
         this.next = next;
-        this.principalVsRoleMap = principalVsRoleMap;
+        this.authorizationManager = authorizationManager;
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        List<SingleConstraintMatch> constraints = servletRequestContext.getRequiredConstrains();
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         ServletRequest request = servletRequestContext.getServletRequest();
-        if (request.getDispatcherType() != DispatcherType.REQUEST) {
-            next.handleRequest(exchange);
-        } else if (constraints == null || constraints.isEmpty()) {
-            next.handleRequest(exchange);
-        } else {
-            Account account = sc.getAuthenticatedAccount();
-            for (final SingleConstraintMatch constraint : constraints) {
-                boolean found = false;
+        if (request.getDispatcherType() == DispatcherType.REQUEST) {
+            List<SingleConstraintMatch> constraints = servletRequestContext.getRequiredConstrains();
+            SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+            if (!authorizationManager.canAccessResource(constraints, sc.getAuthenticatedAccount(), servletRequestContext.getCurrentServlet().getManagedServlet().getServletInfo(), servletRequestContext.getOriginalRequest(), servletRequestContext.getDeployment())) {
 
-                Set<String> roleSet = constraint.getRequiredRoles();
-                if (roleSet.isEmpty() && constraint.getEmptyRoleSemantic() != SecurityInfo.EmptyRoleSemantic.DENY) {
-                    /*
-                     * The EmptyRoleSemantic was either PERMIT or AUTHENTICATE, either way a roles check is not needed.
-                     */
-                    found = true;
-                } else if(account != null) {
-                    final Set<String> roles = principalVsRoleMap.get(account.getPrincipal().getName());
-
-                    for (String role : roleSet) {
-                        if(roles != null) {
-                            if(roles.contains(role)) {
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (account.getRoles().contains(role)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-                if (!found) {
-                    HttpServletResponse response = (HttpServletResponse) servletRequestContext.getServletResponse();
-                    response.sendError(403);
-                    return;
-                }
+                HttpServletResponse response = (HttpServletResponse) servletRequestContext.getServletResponse();
+                response.sendError(403);
+                return;
             }
-            next.handleRequest(exchange);
         }
+        next.handleRequest(exchange);
     }
 
 

@@ -422,7 +422,7 @@ public class ServletPathMatches {
     }
 
     private static ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet, final String servletPath, final DeploymentInfo deploymentInfo, boolean defaultServlet) {
-        HttpHandler servletHandler = new ServletSecurityRoleHandler(next, deploymentInfo.getPrincipalVersusRolesMap());
+        HttpHandler servletHandler = new ServletSecurityRoleHandler(next, deploymentInfo.getAuthorizationManager());
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
         return new ServletChain(servletHandler, managedServlet, servletPath, defaultServlet);
     }

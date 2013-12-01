@@ -15,9 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.servlet.handlers.security;
-
-import io.undertow.servlet.api.SecurityInfo;
+package io.undertow.servlet.api;
 
 import java.util.Set;
 
@@ -34,16 +32,16 @@ public class SingleConstraintMatch {
     private final SecurityInfo.EmptyRoleSemantic emptyRoleSemantic;
     private final Set<String> requiredRoles;
 
-    SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic emptyRoleSemantic, Set<String> requiredRoles) {
+    public SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic emptyRoleSemantic, Set<String> requiredRoles) {
         this.emptyRoleSemantic = emptyRoleSemantic;
         this.requiredRoles = requiredRoles;
     }
 
-    SecurityInfo.EmptyRoleSemantic getEmptyRoleSemantic() {
+    public SecurityInfo.EmptyRoleSemantic getEmptyRoleSemantic() {
         return emptyRoleSemantic;
     }
 
-    Set<String> getRequiredRoles() {
+    public Set<String> getRequiredRoles() {
         return requiredRoles;
     }
 

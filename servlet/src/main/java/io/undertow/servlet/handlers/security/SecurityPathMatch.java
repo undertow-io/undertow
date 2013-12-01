@@ -17,6 +17,7 @@
  */
 package io.undertow.servlet.handlers.security;
 
+import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.api.TransportGuaranteeType;
 
 /**
