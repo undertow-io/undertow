@@ -18,6 +18,7 @@
 package io.undertow.security.impl;
 
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
@@ -26,12 +27,14 @@ import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.handlers.form.FormParserFactory;
 import org.xnio.SslClientAuthMode;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import java.io.IOException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 
 /**
  * The Client Cert based authentication mechanism.
@@ -43,11 +46,15 @@ import java.security.cert.X509Certificate;
  */
 public class ClientCertAuthenticationMechanism implements AuthenticationMechanism {
 
+    public static final String FORCE_RENEGOTIATION = "force_renegotiation";
+
     private final String name;
     /**
      * If we should force a renegotiation if client certs were not supplied. <code>true</code> by default
      */
     private final boolean forceRenegotiation;
+
+    public static final Factory FACTORY = new Factory();
 
     public ClientCertAuthenticationMechanism() {
         this(true);
@@ -118,6 +125,15 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
         return new ChallengeResult(false);
+    }
+
+    private static final class Factory implements AuthenticationMechanismFactory {
+
+        @Override
+        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+            String forceRenegotiation = properties.get(FORCE_RENEGOTIATION);
+            return new ClientCertAuthenticationMechanism(mechanismName, forceRenegotiation == null ? true : "true".equals(forceRenegotiation));
+        }
     }
 
 }

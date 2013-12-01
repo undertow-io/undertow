@@ -96,8 +96,7 @@ public class ServletCustomAuthTestCase {
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
                 .addServlets(s, s1)
-                .setIgnoreStandardAuthenticationMechanism(true)
-                .addAuthenticationMechanism(new CustomAuthenticationMechanism("FORM", "/FormLoginServlet", "/error.html"));
+                .addAuthenticationMechanism("FORM", CustomAuthenticationMechanism.FACTORY);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

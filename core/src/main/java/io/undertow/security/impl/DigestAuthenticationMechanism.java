@@ -26,6 +26,7 @@ import static io.undertow.util.Headers.NEXT_NONCE;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.NonceManager;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
@@ -33,6 +34,7 @@ import io.undertow.security.idm.DigestAlgorithm;
 import io.undertow.security.idm.DigestCredential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -64,6 +66,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     private static final String OPAQUE_VALUE = "00000000000000000000000000000000";
     private static final byte COLON = ':';
     private static final Charset UTF_8 = Charset.forName("UTF-8");
+
+    public static final Factory FACTORY = new Factory();
 
     private static final Set<DigestAuthorizationToken> MANDATORY_REQUEST_TOKENS;
 
@@ -620,6 +624,14 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             super(cause);
         }
 
+    }
+
+    private static final class Factory implements AuthenticationMechanismFactory {
+
+        @Override
+        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+            return new DigestAuthenticationMechanism(properties.get(REALM), properties.get(CONTEXT_PATH), mechanismName);
+        }
     }
 
 }

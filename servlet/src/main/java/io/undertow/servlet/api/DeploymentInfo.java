@@ -34,7 +34,7 @@ import java.util.concurrent.Executor;
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
-import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
@@ -70,7 +70,6 @@ public class DeploymentInfo implements Cloneable {
     private ConfidentialPortManager confidentialPortManager;
     private boolean allowNonStandardWrappers = false;
     private int defaultSessionTimeout = 60 * 30;
-    private boolean ignoreStandardAuthenticationMechanism = false;
     private ConcurrentMap<String, Object> servletContextAttributeBackingMap;
     private ServletSessionConfig servletSessionConfig;
     private String hostName = "localhost";
@@ -83,7 +82,6 @@ public class DeploymentInfo implements Cloneable {
     private String urlEncoding = null;
     private boolean ignoreFlush = true;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
-    private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -100,6 +98,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<SecurityConstraint> securityConstraints = new ArrayList<SecurityConstraint>();
     private final Set<String> securityRoles = new HashSet<String>();
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<NotificationReceiver>();
+    private final Map<String, AuthenticationMechanismFactory> authenticationMechanisms = new HashMap<String, AuthenticationMechanismFactory>();
 
     /**
      * map of additional roles that should be applied to the given principal.
@@ -141,7 +140,7 @@ public class DeploymentInfo implements Cloneable {
         if (classIntrospecter == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("classIntrospecter");
         }
-        if(defaultEncoding == null) {
+        if (defaultEncoding == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("defaultEncoding");
         }
 
@@ -151,7 +150,7 @@ public class DeploymentInfo implements Cloneable {
         for (final FilterInfo filter : this.filters.values()) {
             filter.validate();
         }
-        for(FilterMappingInfo mapping : this.filterServletNameMappings) {
+        for (FilterMappingInfo mapping : this.filterServletNameMappings) {
             if (!this.filters.containsKey(mapping.getFilterName())) {
                 throw UndertowServletMessages.MESSAGES.filterNotFound(mapping.getFilterName(), mapping.getMappingType() + " - " + mapping.getMapping());
             }
@@ -238,19 +237,13 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    /**
-     * @return <code>true</code> If the authentication mechanism specified in web.xml should not be used
-     */
-    public boolean isIgnoreStandardAuthenticationMechanism() {
-        return ignoreStandardAuthenticationMechanism;
-    }
-
     public String getDefaultEncoding() {
         return defaultEncoding;
     }
 
     /**
      * Sets the default encoding that will be used for servlet responses
+     *
      * @param defaultEncoding The default encoding
      */
     public DeploymentInfo setDefaultEncoding(String defaultEncoding) {
@@ -271,37 +264,6 @@ public class DeploymentInfo implements Cloneable {
     public DeploymentInfo setUrlEncoding(String urlEncoding) {
         this.urlEncoding = urlEncoding;
         return this;
-    }
-
-    /**
-     * @param ignoreStandardAuthenticationMechanism
-     *         If the authentication mechanism specified in web.xml should be ignored
-     */
-    public DeploymentInfo setIgnoreStandardAuthenticationMechanism(final boolean ignoreStandardAuthenticationMechanism) {
-        this.ignoreStandardAuthenticationMechanism = ignoreStandardAuthenticationMechanism;
-        return this;
-    }
-
-
-    public DeploymentInfo addAuthenticationMechanism(final AuthenticationMechanism mechanism) {
-        additionalAuthenticationMechanisms.add(mechanism);
-        return this;
-    }
-
-
-    public DeploymentInfo addAuthenticationMechanisms(final AuthenticationMechanism... mechanisms) {
-        additionalAuthenticationMechanisms.addAll(Arrays.asList(mechanisms));
-        return this;
-    }
-
-
-    public DeploymentInfo addAuthenticationMechanisms(final Collection<AuthenticationMechanism> mechanisms) {
-        additionalAuthenticationMechanisms.addAll(mechanisms);
-        return this;
-    }
-
-    public List<AuthenticationMechanism> getAdditionalAuthenticationMechanisms() {
-        return Collections.unmodifiableList(additionalAuthenticationMechanisms);
     }
 
     public DeploymentInfo addServlet(final ServletInfo servlet) {
@@ -858,6 +820,22 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableMap(principalVersusRolesMap);
     }
 
+    /**
+     * Adds an authentication mechanism. The name is case insenstive, and will be converted to uppercase internally.
+     *
+     * @param name    The name
+     * @param factory The factory
+     * @return
+     */
+    public DeploymentInfo addAuthenticationMechanism(final String name, final AuthenticationMechanismFactory factory) {
+        authenticationMechanisms.put(name.toUpperCase(), factory);
+        return this;
+    }
+
+    public Map<String, AuthenticationMechanismFactory> getAuthenticationMechanisms() {
+        return Collections.unmodifiableMap(authenticationMechanisms);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -894,7 +872,9 @@ public class DeploymentInfo implements Cloneable {
         info.defaultServletConfig = defaultServletConfig;
         info.localeCharsetMapping.putAll(localeCharsetMapping);
         info.sessionManagerFactory = sessionManagerFactory;
-        info.loginConfig = loginConfig;
+        if (loginConfig != null) {
+            info.loginConfig = loginConfig.clone();
+        }
         info.identityManager = identityManager;
         info.confidentialPortManager = confidentialPortManager;
         info.defaultEncoding = defaultEncoding;
@@ -907,8 +887,6 @@ public class DeploymentInfo implements Cloneable {
         info.notificationReceivers.addAll(notificationReceivers);
         info.allowNonStandardWrappers = allowNonStandardWrappers;
         info.defaultSessionTimeout = defaultSessionTimeout;
-        info.ignoreStandardAuthenticationMechanism = ignoreStandardAuthenticationMechanism;
-        info.additionalAuthenticationMechanisms.addAll(additionalAuthenticationMechanisms);
         info.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
         info.servletSessionConfig = servletSessionConfig;
         info.hostName = hostName;
@@ -920,6 +898,7 @@ public class DeploymentInfo implements Cloneable {
         info.principalVersusRolesMap.putAll(principalVersusRolesMap);
         info.ignoreFlush = ignoreFlush;
         info.authorizationManager = authorizationManager;
+        info.authenticationMechanisms.putAll(authenticationMechanisms);
         return info;
     }
 

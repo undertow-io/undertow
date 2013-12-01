@@ -22,13 +22,16 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Map;
 
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.FlexBase64;
 
 import static io.undertow.util.Headers.AUTHORIZATION;
@@ -44,6 +47,7 @@ import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
+    public static final String SILENT = "silent";
 
     private final String name;
     private final String challenge;
@@ -59,6 +63,8 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
      * programmatic clients to login using basic auth.
      */
     private final boolean silent;
+
+    public static final Factory FACTORY = new Factory();
 
     // TODO - Can we get the realm name from the IDM?
     public BasicAuthenticationMechanism(final String realmName) {
@@ -143,6 +149,16 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     private static void clear(final char[] array) {
         for (int i = 0; i < array.length; i++) {
             array[i] = 0x00;
+        }
+    }
+
+    public static class Factory implements AuthenticationMechanismFactory {
+
+        @Override
+        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+            String realm = properties.get(REALM);
+            String silent = properties.get(SILENT);
+            return new BasicAuthenticationMechanism(realm, mechanismName, silent != null && silent.equals("true"));
         }
     }
 

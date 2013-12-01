@@ -17,11 +17,15 @@
  */
 package io.undertow.servlet.test.security.custom;
 
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.util.Methods;
+
+import java.util.Map;
 
 /**
  * <p>
@@ -39,6 +43,8 @@ import io.undertow.util.Methods;
 public class CustomAuthenticationMechanism extends ServletFormAuthenticationMechanism {
     public static final String POST_LOCATION = "custom_security_check";
 
+    public static final Factory FACTORY = new Factory();
+
     public CustomAuthenticationMechanism(String name, String loginPage, String errorPage) {
         super(FormParserFactory.builder().build(), name, loginPage, errorPage);
     }
@@ -49,6 +55,14 @@ public class CustomAuthenticationMechanism extends ServletFormAuthenticationMech
             return runFormAuth(exchange, securityContext);
         } else {
             return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
+        }
+    }
+
+    public static final class Factory implements AuthenticationMechanismFactory {
+
+        @Override
+        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+            return new CustomAuthenticationMechanism(mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE));
         }
     }
 }

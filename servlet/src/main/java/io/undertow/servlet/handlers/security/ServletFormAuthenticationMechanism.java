@@ -1,6 +1,7 @@
 package io.undertow.servlet.handlers.security;
 
 import java.io.IOException;
+import java.util.Map;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -10,6 +11,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
@@ -24,6 +27,8 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 public class ServletFormAuthenticationMechanism extends FormAuthenticationMechanism {
 
     private static final String SESSION_KEY = "io.undertow.servlet.form.auth.redirect.location";
+
+    public static final Factory FACTORY = new Factory();
 
     @Deprecated
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
@@ -81,6 +86,14 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
                     throw new RuntimeException(e);
                 }
             }
+        }
+    }
+
+    public static class Factory implements AuthenticationMechanismFactory {
+
+        @Override
+        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+            return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE));
         }
     }
 }

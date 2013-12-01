@@ -20,6 +20,7 @@ package io.undertow.servlet.core;
 
 import io.undertow.Handlers;
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.handlers.AuthenticationCallHandler;
@@ -40,6 +41,7 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.AuthMethodConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -249,6 +251,19 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
 
+        final Map<String, AuthenticationMechanismFactory> factoryMap = new HashMap<String, AuthenticationMechanismFactory>(deploymentInfo.getAuthenticationMechanisms());
+        if(!factoryMap.containsKey(BASIC_AUTH)) {
+            factoryMap.put(BASIC_AUTH, BasicAuthenticationMechanism.FACTORY);
+        }
+        if(!factoryMap.containsKey(FORM_AUTH)) {
+            factoryMap.put(FORM_AUTH, ServletFormAuthenticationMechanism.FACTORY);
+        }
+        if(!factoryMap.containsKey(DIGEST_AUTH)) {
+            factoryMap.put(DIGEST_AUTH, DigestAuthenticationMechanism.FACTORY);
+        }
+        if(!factoryMap.containsKey(CLIENT_CERT_AUTH)) {
+            factoryMap.put(CLIENT_CERT_AUTH, ClientCertAuthenticationMechanism.FACTORY);
+        }
         HttpHandler current = initialHandler;
         current = new SSLInformationAssociationHandler(current);
 
@@ -263,47 +278,40 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         String mechName = null;
-        if (loginConfig != null || !deploymentInfo.getAdditionalAuthenticationMechanisms().isEmpty()) {
+        if (loginConfig != null) {
             List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
-            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism());
-            authenticationMechanisms.addAll(deploymentInfo.getAdditionalAuthenticationMechanisms());
+            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism()); //TODO: does this really need to be hard coded?
 
-            if (loginConfig != null) {
+            //we don't allow multipart requests, and always use the default encoding
+            FormParserFactory parser = FormParserFactory.builder(false)
+                    .addParser(new FormEncodedDataDefinition().setDefaultEncoding(deploymentInfo.getDefaultEncoding()))
+                    .build();
 
-                mechName = loginConfig.getAuthMethod();
-                if (!deploymentInfo.isIgnoreStandardAuthenticationMechanism()) {
-                    if (mechName != null) {
-                        String[] mechanisms = mechName.split(",");
-                        for (String mechanism : mechanisms) {
-                            if (mechanism.equalsIgnoreCase(BASIC_AUTH)) {
-                                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
-                                // comparable using '=='
-                                authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
-                            } else if (mechanism.equalsIgnoreCase("BASIC-SILENT")) {
-                                //slient basic auth with use the basic headers if available, but will never challenge
-                                //this allows programtic clients to use basic auth, and browsers to use other mechanisms
-                                authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), "BASIC-SILENT", true));
-                            } else if (mechanism.equalsIgnoreCase(FORM_AUTH)) {
-                                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
-                                // comparable using '=='
-
-                                //we don't allow multipart requests, and always use the default encoding
-                                FormParserFactory parser = FormParserFactory.builder(false)
-                                        .addParser(new FormEncodedDataDefinition().setDefaultEncoding(deploymentInfo.getDefaultEncoding()))
-                                        .build();
-
-                                authenticationMechanisms.add(new ServletFormAuthenticationMechanism(parser, FORM_AUTH, loginConfig.getLoginPage(),
-                                        loginConfig.getErrorPage()));
-                            } else if (mechanism.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
-                                authenticationMechanisms.add(new ClientCertAuthenticationMechanism());
-                            } else if (mechanism.equalsIgnoreCase(DIGEST_AUTH)) {
-                                authenticationMechanisms.add(new DigestAuthenticationMechanism(loginConfig.getRealmName(), deploymentInfo.getContextPath(), DIGEST_AUTH));
-                            } else {
-                                throw UndertowServletMessages.MESSAGES.unknownAuthenticationMechanism(mechanism);
-                            }
-                        }
-                    }
+            for(AuthMethodConfig method : loginConfig.getAuthMethods()) {
+                AuthenticationMechanismFactory factory = factoryMap.get(method.getName());
+                if(factory == null) {
+                    throw UndertowServletMessages.MESSAGES.unknownAuthenticationMechanism(method.getName());
                 }
+                if(mechName == null) {
+                    mechName = method.getName();
+                }
+
+                final Map<String, String> properties = new HashMap<String, String>();
+                properties.put(AuthenticationMechanismFactory.CONTEXT_PATH, deploymentInfo.getContextPath());
+                properties.put(AuthenticationMechanismFactory.REALM, loginConfig.getRealmName());
+                properties.put(AuthenticationMechanismFactory.ERROR_PAGE, loginConfig.getErrorPage());
+                properties.put(AuthenticationMechanismFactory.LOGIN_PAGE, loginConfig.getLoginPage());
+                properties.putAll(method.getProperties());
+
+                String name = method.getName().toUpperCase();
+                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
+                // comparable using '=='
+                name = name.equals(FORM_AUTH) ? FORM_AUTH : name;
+                name = name.equals(BASIC_AUTH) ? BASIC_AUTH : name;
+                name = name.equals(DIGEST_AUTH) ? DIGEST_AUTH : name;
+                name = name.equals(CLIENT_CERT_AUTH) ? CLIENT_CERT_AUTH : name;
+
+                authenticationMechanisms.add(factory.create(name, parser, properties));
             }
             current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
         }
