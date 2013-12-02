@@ -199,13 +199,6 @@
         </pluginManagement>
     </build>
 
-    <dependencies>
-        <dependency>
-            <groupId>io.undertow.build</groupId>
-            <artifactId>undertow-checkstyle-config</artifactId>
-        </dependency>
-    </dependencies>
-
     <dependencyManagement>
         <dependencies>
 
