@@ -261,12 +261,19 @@ public class HttpTransferEncoding {
             final String transferEncodingHeader = responseHeaders.getLast(Headers.TRANSFER_ENCODING);
             if (transferEncodingHeader == null) {
                 if (exchange.isHttp11()) {
-                    responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
+                    if(exchange.isPersistent()) {
+                        responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
 
-                    if(headRequest) {
-                        return channel;
+                        if (headRequest) {
+                            return channel;
+                        }
+                        return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+                    } else {
+                        if(headRequest) {
+                            return channel;
+                        }
+                        return new FinishableStreamSinkConduit(channel, finishListener);
                     }
-                    return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
                 } else {
                     exchange.setPersistent(false);
                     responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
