@@ -85,6 +85,7 @@ import javax.servlet.SessionTrackingMode;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -316,7 +317,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
                 authenticationMechanisms.add(factory.create(name, parser, properties));
             }
-            current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
+
+            deployment.setAuthenticationMechanisms(authenticationMechanisms);
+            //if the JASPI auth mechanism is set then it takes over
+            if(deploymentInfo.getJaspiAuthenticationMechanism() == null) {
+                current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
+            } else {
+                current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(deploymentInfo.getJaspiAuthenticationMechanism()));
+            }
         }
 
         current = new CachedAuthenticatedSessionHandler(current, this.deployment.getServletContext());

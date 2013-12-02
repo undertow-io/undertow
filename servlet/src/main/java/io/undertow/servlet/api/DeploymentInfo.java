@@ -34,6 +34,7 @@ import java.util.concurrent.Executor;
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.idm.IdentityManager;
@@ -83,6 +84,7 @@ public class DeploymentInfo implements Cloneable {
     private String urlEncoding = null;
     private boolean ignoreFlush = true;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
+    private AuthenticationMechanism jaspiAuthenticationMechanism;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -855,6 +857,14 @@ public class DeploymentInfo implements Cloneable {
 
     public List<ServletExtension> getServletExtensions() {
         return servletExtensions;
+    }
+
+    public AuthenticationMechanism getJaspiAuthenticationMechanism() {
+        return jaspiAuthenticationMechanism;
+    }
+
+    public void setJaspiAuthenticationMechanism(AuthenticationMechanism jaspiAuthenticationMechanism) {
+        this.jaspiAuthenticationMechanism = jaspiAuthenticationMechanism;
     }
 
     @Override

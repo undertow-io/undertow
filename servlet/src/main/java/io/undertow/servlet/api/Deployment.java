@@ -19,9 +19,11 @@
 package io.undertow.servlet.api;
 
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.core.ManagedFilters;
@@ -82,5 +84,11 @@ public interface Deployment {
     Executor getAsyncExecutor();
 
     Charset getDefaultCharset();
+
+    /**
+     *
+     * @return The list of authentication mechanisms configured for this deployment
+     */
+    List<AuthenticationMechanism> getAuthenticationMechanisms();
 
 }

@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.api.Deployment;
@@ -67,6 +68,7 @@ public class DeploymentImpl implements Deployment {
     private volatile Map<String, String> mimeExtensionMappings;
     private volatile SessionManager sessionManager;
     private volatile Charset defaultCharset;
+    private volatile List<AuthenticationMechanism> authenticationMechanisms;
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo, ServletContainer servletContainer) {
         this.deploymentInfo = deploymentInfo;
@@ -195,6 +197,15 @@ public class DeploymentImpl implements Deployment {
 
     public Charset getDefaultCharset() {
         return defaultCharset;
+    }
+
+    public void setAuthenticationMechanisms(List<AuthenticationMechanism> authenticationMechanisms) {
+        this.authenticationMechanisms = authenticationMechanisms;
+    }
+
+    @Override
+    public List<AuthenticationMechanism> getAuthenticationMechanisms() {
+        return authenticationMechanisms;
     }
 
     public void setDefaultCharset(Charset defaultCharset) {
