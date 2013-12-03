@@ -292,7 +292,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     .build();
                     
             List<AuthMethodConfig> authMethods = Collections.<AuthMethodConfig>emptyList();
-            if(loginConfig!=null) {
+            if(loginConfig != null) {
                 authMethods = loginConfig.getAuthMethods();
             }
 
