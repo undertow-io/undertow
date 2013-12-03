@@ -931,6 +931,7 @@ public class DeploymentInfo implements Cloneable {
         info.authorizationManager = authorizationManager;
         info.authenticationMechanisms.putAll(authenticationMechanisms);
         info.servletExtensions.addAll(servletExtensions);
+        info.jaspiAuthenticationMechanism = jaspiAuthenticationMechanism;
         return info;
     }
 
