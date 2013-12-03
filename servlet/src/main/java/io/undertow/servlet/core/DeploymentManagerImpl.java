@@ -282,7 +282,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         String mechName = null;
-        if (loginConfig != null) {
+        if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
             List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
             authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism()); //TODO: does this really need to be hard coded?
 
@@ -290,8 +290,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
             FormParserFactory parser = FormParserFactory.builder(false)
                     .addParser(new FormEncodedDataDefinition().setDefaultEncoding(deploymentInfo.getDefaultEncoding()))
                     .build();
+                    
+            List<AuthMethodConfig> authMethods = Collections.<AuthMethodConfig>emptyList();
+            if(loginConfig!=null) {
+                authMethods = loginConfig.getAuthMethods();
+            }
 
-            for(AuthMethodConfig method : loginConfig.getAuthMethods()) {
+            for(AuthMethodConfig method : authMethods) {
                 AuthenticationMechanismFactory factory = factoryMap.get(method.getName());
                 if(factory == null) {
                     throw UndertowServletMessages.MESSAGES.unknownAuthenticationMechanism(method.getName());
