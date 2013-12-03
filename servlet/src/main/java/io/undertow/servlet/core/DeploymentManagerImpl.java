@@ -290,7 +290,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             FormParserFactory parser = FormParserFactory.builder(false)
                     .addParser(new FormEncodedDataDefinition().setDefaultEncoding(deploymentInfo.getDefaultEncoding()))
                     .build();
-                    
+
             List<AuthMethodConfig> authMethods = Collections.<AuthMethodConfig>emptyList();
             if(loginConfig != null) {
                 authMethods = loginConfig.getAuthMethods();
