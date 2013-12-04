@@ -27,7 +27,6 @@ import io.undertow.testutils.DefaultServer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -37,7 +36,6 @@ import org.junit.runner.RunWith;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @RunWith(DefaultServer.class)
-@Ignore("UNDERTOW-151 Fails when run with -Pproxy")
 public class SpnegoBasicAuthenticationTestCase extends SpnegoAuthenticationTestCase {
 
     @Override
