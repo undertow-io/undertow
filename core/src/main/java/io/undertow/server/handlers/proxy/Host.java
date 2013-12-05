@@ -29,6 +29,8 @@ class Host {
 
     private final URI uri;
 
+    private final String jvmRoute;
+
 
     private final UndertowClient client;
 
@@ -47,9 +49,10 @@ class Host {
 
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new ConcurrentHashMap<XnioIoThread, HostThreadData>();
 
-    public Host(LoadBalancingProxyClient loadBalancingProxyClient, URI uri, UndertowClient client) {
+    public Host(LoadBalancingProxyClient loadBalancingProxyClient, URI uri, String jvmRoute, UndertowClient client) {
         this.loadBalancingProxyClient = loadBalancingProxyClient;
         this.uri = uri;
+        this.jvmRoute = jvmRoute;
         this.client = client;
     }
 
@@ -192,6 +195,10 @@ class Host {
             return AvailabilityType.AVAILABLE;
         }
         return AvailabilityType.FULL;
+    }
+
+    String getJvmRoute() {
+        return jvmRoute;
     }
 
     /**

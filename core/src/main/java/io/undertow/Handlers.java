@@ -4,6 +4,7 @@ import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicateParser;
 import io.undertow.predicate.PredicatesHandler;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
@@ -296,6 +297,10 @@ public class Handlers {
      */
     public static ProxyPeerAddressHandler proxyPeerAddress(HttpHandler next) {
         return new ProxyPeerAddressHandler(next);
+    }
+
+    public static JvmRouteHandler jvMRoute(final String sessionCookieName, final String jvmRoute, HttpHandler next) {
+        return new JvmRouteHandler(next, sessionCookieName, jvmRoute);
     }
 
     private Handlers() {

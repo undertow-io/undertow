@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import static io.undertow.Handlers.jvMRoute;
 import static io.undertow.Handlers.path;
 
 /**
@@ -63,24 +64,24 @@ public class LoadBalancingProxyTestCase {
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addListener(port + 1, DefaultServer.getHostAddress("default"))
-                .setHandler(path()
+                .setHandler(jvMRoute("JSESSIONID", "s1", path()
                         .addPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(), sessionConfig))
-                        .addPath("/name", new StringSendHandler("server1")))
+                        .addPath("/name", new StringSendHandler("server1"))))
                 .build();
 
         server2 = Undertow.builder()
                 .addListener(port + 2, DefaultServer.getHostAddress("default"))
-                .setHandler(path()
+                .setHandler(jvMRoute("JSESSIONID", "s2", path()
                         .addPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(), sessionConfig))
-                        .addPath("/name", new StringSendHandler("server2")))
+                        .addPath("/name", new StringSendHandler("server2"))))
                 .build();
         server1.start();
         server2.start();
 
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
-                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null))
-                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null))
+                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
+                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
                 , 10000));
     }
 
