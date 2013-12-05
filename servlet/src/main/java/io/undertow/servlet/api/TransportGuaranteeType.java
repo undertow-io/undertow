@@ -7,4 +7,5 @@ public enum TransportGuaranteeType {
     NONE,
     INTEGRAL,
     CONFIDENTIAL,
+    REJECTED;
 }
