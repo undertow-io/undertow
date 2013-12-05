@@ -549,15 +549,6 @@ public abstract class HttpRequestParser {
     @SuppressWarnings("unused")
     final void handleHeaderValue(ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
         StringBuilder stringBuilder = state.stringBuilder;
-        if (stringBuilder == null) {
-            stringBuilder = new StringBuilder();
-            state.parseState = 0;
-
-            if (state.mapCount++ > maxHeaders) {
-                throw UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders);
-            }
-        }
-
 
         int parseState = state.parseState;
         while (buffer.hasRemaining() && parseState == NORMAL) {
@@ -616,6 +607,10 @@ public abstract class HttpRequestParser {
                         HttpString nextStandardHeader = state.nextHeader;
                         String headerValue = stringBuilder.toString();
 
+
+                        if (state.mapCount++ > maxHeaders) {
+                            throw UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders);
+                        }
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
                         builder.getRequestHeaders().add(nextStandardHeader, headerValue);
 
