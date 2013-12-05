@@ -94,7 +94,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     res = buffer.remaining();
                 }
 
-                if(res <= 0) {
+                if (res <= 0) {
                     handleFailedRead(channel, res);
                     return;
                 }
@@ -185,11 +185,22 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
         final HttpServerConnection connection = this.connection;
         if (exchange.isPersistent() && !exchange.isUpgrade()) {
             newRequest();
-            StreamConnection channel = connection.getChannel();
+            final StreamConnection channel = connection.getChannel();
             if (connection.getExtraBytes() == null) {
                 //if we are not pipelining we just register a listener
-                channel.getSourceChannel().getReadSetter().set(this);
-                channel.getSourceChannel().resumeReads();
+                if (exchange.isInIoThread()) {
+                    channel.getSourceChannel().getReadSetter().set(this);
+
+                    channel.getSourceChannel().resumeReads();
+                } else {
+                    channel.getIoThread().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            channel.getSourceChannel().getReadSetter().set(this);
+                            channel.getSourceChannel().resumeReads();
+                        }
+                    });
+                }
             } else {
                 if (channel.getSourceChannel().isReadResumed()) {
                     channel.getSourceChannel().setReadListener(LazySuspendListener.INSTANCE);
@@ -204,7 +215,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     executor.execute(this);
                 }
             }
-        } else if(!exchange.isPersistent()) {
+        } else if (!exchange.isPersistent()) {
             IoUtils.safeClose(connection);
         }
         nextListener.proceed();
