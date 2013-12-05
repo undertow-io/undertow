@@ -1624,9 +1624,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void requestDone() {
             delegate.getReadSetter().set(null);
             delegate.getCloseSetter().set(null);
-            if (delegate.isReadResumed()) {
-                delegate.suspendReads();
-            }
         }
 
         @Override
