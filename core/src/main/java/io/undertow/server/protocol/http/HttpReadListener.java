@@ -190,13 +190,12 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                 //if we are not pipelining we just register a listener
                 if (exchange.isInIoThread()) {
                     channel.getSourceChannel().getReadSetter().set(this);
-
                     channel.getSourceChannel().resumeReads();
                 } else {
                     channel.getIoThread().execute(new Runnable() {
                         @Override
                         public void run() {
-                            channel.getSourceChannel().getReadSetter().set(this);
+                            channel.getSourceChannel().getReadSetter().set(HttpReadListener.this);
                             channel.getSourceChannel().resumeReads();
                         }
                     });
