@@ -22,10 +22,10 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.AuthorizationManager;
 import io.undertow.servlet.api.ConfidentialPortManager;
-import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
+import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -44,17 +44,26 @@ public class ServletConfidentialityConstraintHandler extends SinglePortConfident
     }
 
     @Override
-    protected boolean confidentialityRequired(HttpServerExchange exchange) {
+    public void handleRequest(HttpServerExchange exchange) throws Exception {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-
-        //the configure (via web.xml or annotations) guarantee
-        TransportGuaranteeType configuredGuarantee = servletRequestContext.getTransportGuarenteeType();
-        Deployment deployment = servletRequestContext.getDeployment();
-        final AuthorizationManager authorizationManager = deployment.getDeploymentInfo().getAuthorizationManager();
+        final AuthorizationManager authorizationManager = servletRequestContext.getDeployment().getDeploymentInfo().getAuthorizationManager();
 
         TransportGuaranteeType connectionGuarantee = servletRequestContext.getOriginalRequest().isSecure() ? TransportGuaranteeType.CONFIDENTIAL : TransportGuaranteeType.NONE;
+        TransportGuaranteeType transportGuarantee = authorizationManager.transportGuarantee(connectionGuarantee,
+                servletRequestContext.getTransportGuarenteeType(), servletRequestContext.getOriginalRequest());
+        servletRequestContext.setTransportGuarenteeType(transportGuarantee);
 
-        TransportGuaranteeType transportGuarantee = authorizationManager.transportGuarantee(connectionGuarantee, configuredGuarantee, servletRequestContext.getOriginalRequest());
+        if (TransportGuaranteeType.REJECTED == transportGuarantee) {
+            HttpServletResponse response = (HttpServletResponse) servletRequestContext.getServletResponse();
+            response.sendError(403);
+            return;
+        }
+        super.handleRequest(exchange);
+    }
+
+    @Override
+    protected boolean confidentialityRequired(HttpServerExchange exchange) {
+        TransportGuaranteeType transportGuarantee = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getTransportGuarenteeType();
 
         // TODO - We may be able to add more flexibility here especially with authentication mechanisms such as Digest for
         // INTEGRAL - for now just use SSL.
