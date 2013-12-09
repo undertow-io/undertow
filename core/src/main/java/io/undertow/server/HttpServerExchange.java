@@ -542,7 +542,13 @@ public final class HttpServerExchange extends AbstractAttachable {
     public int getHostPort() {
         String host = requestHeaders.getFirst(Headers.HOST);
         if (host != null) {
-            int colonIndex = host.indexOf(':');
+            //for ipv6 addresses we make sure we take out the first part, which can have multiple occurrences of :
+            final int colonIndex;
+            if (host.startsWith("[")) {
+                colonIndex = host.indexOf(':', host.indexOf(']'));
+            } else {
+               colonIndex = host.indexOf(':');
+            }
             if (colonIndex != -1) {
                 return Integer.parseInt(host.substring(colonIndex + 1));
             }
