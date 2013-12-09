@@ -23,7 +23,6 @@ import io.undertow.UndertowOptions;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.LazySuspendListener;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -120,7 +119,8 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
 
             // we remove ourselves as the read listener from the channel;
             // if the http handler doesn't set any then reads will suspend, which is the right thing to do
-            channel.getReadSetter().set(LazySuspendListener.INSTANCE);
+            channel.getReadSetter().set(null);
+            channel.suspendReads();
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
@@ -202,7 +202,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                 }
             } else {
                 if (channel.getSourceChannel().isReadResumed()) {
-                    channel.getSourceChannel().setReadListener(LazySuspendListener.INSTANCE);
+                    channel.getSourceChannel().suspendReads();
                 }
                 if (exchange.isInIoThread()) {
                     channel.getIoThread().execute(this);
