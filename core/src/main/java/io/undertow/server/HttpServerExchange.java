@@ -174,7 +174,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private Sender sender;
 
-    private long requestStartTime;
+    private long requestStartTime = -1;
 
 
     /**

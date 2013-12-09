@@ -22,3 +22,4 @@ io.undertow.attribute.QueryParameterAttribute$Builder
 io.undertow.attribute.SslClientCertAttribute$Builder
 io.undertow.attribute.SslCipherAttribute$Builder
 io.undertow.attribute.SslSessionIdAttribute$Builder
+io.undertow.attribute.ResponseTimeAttribute$Builder
