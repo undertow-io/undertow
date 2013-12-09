@@ -16,17 +16,14 @@
  * limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test;
+package io.undertow.util;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
-
-import javax.websocket.DeploymentException;
-
-import io.undertow.util.PathTemplate;
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * @author Stuart Douglas
@@ -34,7 +31,7 @@ import org.junit.Test;
 public class PathTemplateTestCase {
 
     @Test
-    public void testMatches() throws DeploymentException {
+    public void testMatches() {
         testMatch("/docs/mydoc", "/docs/mydoc");
         testMatch("/docs/{docId}", "/docs/mydoc", "docId", "mydoc");
         testMatch("/docs/{docId}/{op}", "/docs/mydoc/read", "docId", "mydoc", "op", "read");
@@ -48,14 +45,14 @@ public class PathTemplateTestCase {
 
 
     @Test
-    public void testDetectDuplicates() throws DeploymentException {
+    public void testDetectDuplicates() {
         final TreeSet<PathTemplate> seen = new TreeSet<PathTemplate>();
         seen.add(PathTemplate.create("/bob/{foo}"));
         Assert.assertTrue(seen.contains(PathTemplate.create("/bob/{ak}")));
         Assert.assertFalse(seen.contains(PathTemplate.create("/bob/{ak}/other")));
     }
 
-    private void testMatch(final String template, final String path, final String ... pathParams) throws DeploymentException {
+    private void testMatch(final String template, final String path, final String ... pathParams)  {
         Assert.assertEquals(0, pathParams.length % 2);
         final Map<String, String> expected = new HashMap<String, String>();
         for(int i = 0; i < pathParams.length; i+=2) {

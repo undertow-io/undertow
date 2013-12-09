@@ -12,6 +12,7 @@ import io.undertow.server.handlers.HttpTraceHandler;
 import io.undertow.server.handlers.IPAddressAccessControlHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.PathTemplateHandler;
 import io.undertow.server.handlers.PredicateContextHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.ProxyPeerAddressHandler;
@@ -52,6 +53,24 @@ public class Handlers {
     public static PathHandler path() {
         return new PathHandler();
     }
+
+    /**
+     *
+     * @return a new path template handler
+     */
+    public static PathTemplateHandler pathTemplate() {
+        return new PathTemplateHandler();
+    }
+
+    /**
+     *
+     * @param rewriteQueryParams If the query params should be rewitten
+     * @return The path template handler
+     */
+    public static PathTemplateHandler pathTemplate(boolean rewriteQueryParams) {
+        return new PathTemplateHandler(rewriteQueryParams);
+    }
+
 
     /**
      * Creates a new virtual host handler
