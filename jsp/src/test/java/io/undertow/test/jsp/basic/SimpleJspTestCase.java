@@ -71,7 +71,7 @@ public class SimpleJspTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        servletPath.addPath(builder.getContextPath(), manager.start());
+        servletPath.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(servletPath);
         System.setProperty(KEY, "Hello JSP!");

@@ -34,7 +34,7 @@ public class ChatServer {
         Undertow server = Undertow.builder()
                 .addListener(8080, "localhost")
                 .setHandler(path()
-                        .addPath("/myapp", websocket(new WebSocketConnectionCallback() {
+                        .addPrefixPath("/myapp", websocket(new WebSocketConnectionCallback() {
 
                             @Override
                             public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
@@ -64,7 +64,7 @@ public class ChatServer {
                                 }
                             }
                         }))
-                        .addPath("/", resource(new ClassPathResourceManager(ChatServer.class.getClassLoader(), ChatServer.class.getPackage()))
+                        .addPrefixPath("/", resource(new ClassPathResourceManager(ChatServer.class.getClassLoader(), ChatServer.class.getPackage()))
                                 .addWelcomeFiles("index.html")))
                 .build();
 

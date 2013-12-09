@@ -76,7 +76,7 @@ public class ErrorPageTestCase {
 
         final DeploymentManager manager1 = container.addDeployment(builder1);
         manager1.deploy();
-        root.addPath(builder1.getContextPath(), manager1.start());
+        root.addPrefixPath(builder1.getContextPath(), manager1.start());
 
 
         DeploymentInfo builder2 = new DeploymentInfo();
@@ -101,7 +101,7 @@ public class ErrorPageTestCase {
 
         final DeploymentManager manager2 = container.addDeployment(builder2);
         manager2.deploy();
-        root.addPath(builder2.getContextPath(), manager2.start());
+        root.addPrefixPath(builder2.getContextPath(), manager2.start());
 
     }
 

@@ -138,9 +138,9 @@ public class SenderTestCase {
             }
         };
 
-        PathHandler handler = new PathHandler().addPath("/lots", lotsOfSendsHandler)
-                .addPath("/fixed", fixedLengthSender)
-                .addPath("/transfer", lotsOfTransferHandler);
+        PathHandler handler = new PathHandler().addPrefixPath("/lots", lotsOfSendsHandler)
+                .addPrefixPath("/fixed", fixedLengthSender)
+                .addPrefixPath("/transfer", lotsOfTransferHandler);
         DefaultServer.setRootHandler(handler);
     }
 

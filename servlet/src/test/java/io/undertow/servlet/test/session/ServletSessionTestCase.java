@@ -64,7 +64,7 @@ public class ServletSessionTestCase {
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         try {
-            pathHandler.addPath(builder.getContextPath(), manager.start());
+            pathHandler.addPrefixPath(builder.getContextPath(), manager.start());
         } catch (ServletException e) {
             throw new RuntimeException(e);
         }

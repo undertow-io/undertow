@@ -50,7 +50,7 @@ public class FileHandlerIndexTestCase {
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPath("/path", new ResourceHandler()
+                            .addPrefixPath("/path", new ResourceHandler()
                                     .setResourceManager(new FileResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true)
                                     .addWelcomeFiles("page.html"))));

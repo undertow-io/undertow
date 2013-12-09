@@ -61,7 +61,7 @@ public class ServletSessionPersistenceTestCase {
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         try {
-            pathHandler.addPath(builder.getContextPath(), manager.start());
+            pathHandler.addPrefixPath(builder.getContextPath(), manager.start());
         } catch (ServletException e) {
             throw new RuntimeException(e);
         }
@@ -86,7 +86,7 @@ public class ServletSessionPersistenceTestCase {
             manager.stop();
             manager.undeploy();
             manager.deploy();
-            pathHandler.addPath(builder.getContextPath(), manager.start());
+            pathHandler.addPrefixPath(builder.getContextPath(), manager.start());
 
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

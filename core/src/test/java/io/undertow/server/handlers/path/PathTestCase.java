@@ -53,15 +53,21 @@ public class PathTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             final PathHandler handler = new PathHandler();
-            handler.addPath("a", new RemainingPathHandler("/a"));
-            handler.addPath("/aa", new RemainingPathHandler("/aa"));
-            handler.addPath("/aa/anotherSubPath", new RemainingPathHandler("/aa/anotherSubPath"));
+            handler.addPrefixPath("a", new RemainingPathHandler("/a"));
+            handler.addPrefixPath("/aa", new RemainingPathHandler("/aa"));
+            handler.addExactPath("/aa", new HttpHandler() {
+                @Override
+                public void handleRequest(HttpServerExchange exchange) throws Exception {
+                    exchange.getResponseSender().send("Exact /aa match:" + exchange.getRelativePath() + ":" + exchange.getResolvedPath());
+                }
+            });
+            handler.addPrefixPath("/aa/anotherSubPath", new RemainingPathHandler("/aa/anotherSubPath"));
 
             final PathHandler sub = new PathHandler();
 
-            handler.addPath("/path", sub);
-            sub.addPath("/subpath", new RemainingPathHandler("/subpath"));
-            sub.addPath("/", new RemainingPathHandler("/path"));
+            handler.addPrefixPath("/path", sub);
+            sub.addPrefixPath("/subpath", new RemainingPathHandler("/subpath"));
+            sub.addPrefixPath("/", new RemainingPathHandler("/path"));
 
             DefaultServer.setRootHandler(handler);
 
@@ -84,8 +90,13 @@ public class PathTestCase {
             runPathTest(client, "/a", "/a", "");
             runPathTest(client, "/aa/anotherSubPath", "/aa/anotherSubPath", "");
             runPathTest(client, "/aa/anotherSubPath/bob", "/aa/anotherSubPath", "/bob");
-            runPathTest(client, "/aa?a=b", "/aa", "", Collections.singletonMap("a", "b"));
+            runPathTest(client, "/aa/b?a=b", "/aa", "/b", Collections.singletonMap("a", "b"));
 
+            //now test the exact path match
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/aa");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("Exact /aa match::/aa", HttpClientUtils.readResponse(result));
 
 
         } finally {

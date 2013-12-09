@@ -48,7 +48,7 @@ public class CrossContextClassLoaderTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
+        root.addPrefixPath(builder.getContextPath(), manager.start());
 
 
         s = new ServletInfo("included", IncludedServlet.class)
@@ -63,7 +63,7 @@ public class CrossContextClassLoaderTestCase {
 
         manager = container.addDeployment(builder);
         manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
+        root.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(root);
     }

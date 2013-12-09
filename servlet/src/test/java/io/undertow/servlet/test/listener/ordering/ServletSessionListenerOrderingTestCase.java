@@ -68,7 +68,7 @@ public class ServletSessionListenerOrderingTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        path.addPath(builder.getContextPath(), manager.start());
+        path.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(path);
     }

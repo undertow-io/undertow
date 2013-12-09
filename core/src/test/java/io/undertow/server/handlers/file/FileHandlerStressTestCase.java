@@ -65,7 +65,7 @@ public class FileHandlerStressTestCase {
 
             final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(1024, 10, 10480), handler);
             final PathHandler path = new PathHandler();
-            path.addPath("/path", cacheHandler);
+            path.addPrefixPath("/path", cacheHandler);
             final CanonicalPathHandler root = new CanonicalPathHandler();
             root.setNext(path);
             DefaultServer.setRootHandler(root);

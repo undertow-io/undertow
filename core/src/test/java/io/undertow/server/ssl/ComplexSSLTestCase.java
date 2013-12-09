@@ -71,7 +71,7 @@ public class ComplexSSLTestCase {
         virtualHostHandler.addHost("default-host", pathHandler);
         virtualHostHandler.setDefaultHandler(pathHandler);
 
-        pathHandler.addPath("/", new ResourceHandler()
+        pathHandler.addPrefixPath("/", new ResourceHandler()
                 .setResourceManager(new FileResourceManager(rootPath, 10485760))
                 .setDirectoryListingEnabled(true));
 

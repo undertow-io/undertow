@@ -89,7 +89,7 @@ public class MockRequestTestCase {
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         deployment = manager.getDeployment();
-        root.addPath(builder.getContextPath(), manager.start());
+        root.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(root);
     }

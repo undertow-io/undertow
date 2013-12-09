@@ -53,7 +53,7 @@ public class DefaultServletTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
+        root.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(root);
     }

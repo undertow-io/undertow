@@ -81,8 +81,8 @@ public class SetAttributeTestCase {
     public void testRewrite() throws IOException {
         DefaultServer.setRootHandler(
                 rewrite("regex['/somePath/(.*)']", "/otherPath/$1", getClass().getClassLoader(), path()
-                        .addPath("/otherPath", new InfoHandler())
-                        .addPath("/relative",
+                        .addPrefixPath("/otherPath", new InfoHandler())
+                        .addPrefixPath("/relative",
                                 rewrite("path-template['/foo/{bar}/{woz}']", "/foo?bar=${bar}&woz=${woz}", getClass().getClassLoader(), new InfoHandler()))
                 ));
 

@@ -50,13 +50,13 @@ public class RedirectTestCase {
     @BeforeClass
     public static void setup() {
         DefaultServer.setRootHandler(new PathHandler()
-                .addPath("/target", new HttpHandler() {
+                .addPrefixPath("/target", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         message = exchange.getRequestURI();
                     }
                 })
-                .addPath("/", predicateContext(predicate(Predicates.regex("%{REQUEST_URL}", "/(aa.*?)c", RedirectTestCase.class.getClassLoader(), false),
+                .addPrefixPath("/", predicateContext(predicate(Predicates.regex("%{REQUEST_URL}", "/(aa.*?)c", RedirectTestCase.class.getClassLoader(), false),
                         Handlers.redirect("/target/matched/${1}"), Handlers.redirect("/target%U"))))
         );
     }

@@ -88,7 +88,7 @@ public class ConfidentialityConstraintUrlMappingTestCase {
 
         DeploymentManager manager = container.addDeployment(info);
         manager.deploy();
-        root.addPath(info.getContextPath(), manager.start());
+        root.addPrefixPath(info.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(root);
     }

@@ -50,7 +50,7 @@ public class FileHandlerTestCase {
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPath("/path", new ResourceHandler()
+                            .addPrefixPath("/path", new ResourceHandler()
                                     .setResourceManager(new FileResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true))));
 
@@ -74,7 +74,7 @@ public class FileHandlerTestCase {
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPath("/path", new ResourceHandler()
+                            .addPrefixPath("/path", new ResourceHandler()
                                     // 1 byte = force transfer
                                     .setResourceManager(new FileResourceManager(rootPath, 1))
                                     .setDirectoryListingEnabled(true))));

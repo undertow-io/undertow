@@ -24,7 +24,7 @@ public class WebSocketServer {
         Undertow server = Undertow.builder()
                 .addListener(8080, "localhost")
                 .setHandler(path()
-                        .addPath("/myapp", websocket(new WebSocketConnectionCallback() {
+                        .addPrefixPath("/myapp", websocket(new WebSocketConnectionCallback() {
 
                             @Override
                             public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
@@ -38,7 +38,7 @@ public class WebSocketServer {
                                 channel.resumeReceives();
                             }
                         }))
-                        .addPath("/", resource(new ClassPathResourceManager(WebSocketServer.class.getClassLoader(), WebSocketServer.class.getPackage())).addWelcomeFiles("index.html")))
+                        .addPrefixPath("/", resource(new ClassPathResourceManager(WebSocketServer.class.getClassLoader(), WebSocketServer.class.getPackage())).addWelcomeFiles("index.html")))
                 .build();
         server.start();
     }
