@@ -26,6 +26,7 @@ import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -52,6 +53,7 @@ import static org.xnio.SslClientAuthMode.NOT_REQUESTED;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@ProxyIgnore
 public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
 
     private static SSLContext clientSSLContext;
