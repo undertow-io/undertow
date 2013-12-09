@@ -260,4 +260,8 @@ public interface UndertowMessages {
 
     @Message(id = 78, value = "Renegotiation not supported")
     IOException renegotiationNotSupported();
+
+    @Message(id = 79, value = "Not a valid user agent pattern %s")
+    IllegalArgumentException notAValidUserAgentPattern(String userAgent);
+
 }

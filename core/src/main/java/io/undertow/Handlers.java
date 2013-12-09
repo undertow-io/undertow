@@ -20,6 +20,7 @@ import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
+import io.undertow.server.handlers.UserAgentAccessControlHandler;
 import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
@@ -230,6 +231,17 @@ public class Handlers {
      */
     public static final IPAddressAccessControlHandler ipAccessControl(final HttpHandler next, boolean defaultAllow) {
         return new IPAddressAccessControlHandler(next).setDefaultAllow(defaultAllow);
+    }
+
+    /**
+     * Returns a new handler that can allow or deny access to a resource based on the user agent
+     *
+     * @param next         The next handler in the chain
+     * @param defaultAllow Determine if a non-matching user agent will be allowed by default
+     * @return A new user agent access control handler
+     */
+    public static final UserAgentAccessControlHandler userAgentAccessControl(final HttpHandler next, boolean defaultAllow) {
+        return new UserAgentAccessControlHandler(next).setDefaultAllow(defaultAllow);
     }
 
     /**
