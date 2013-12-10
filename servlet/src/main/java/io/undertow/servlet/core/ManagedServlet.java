@@ -29,12 +29,15 @@ import javax.servlet.UnavailableException;
 import io.undertow.server.handlers.form.FormEncodedDataDefinition;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
+import io.undertow.server.handlers.resource.ResourceChangeListener;
+import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.spec.ServletConfigImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import org.xnio.FileChangeCallback;
 
 /**
  * Manager for a servlets lifecycle.
@@ -184,14 +187,15 @@ public class ManagedServlet implements Lifecycle {
         private final ServletContextImpl servletContext;
         private volatile InstanceHandle<? extends Servlet> handle;
         private volatile Servlet instance;
+        private ResourceChangeListener changeListener;
 
-        private DefaultInstanceStrategy(final InstanceFactory<? extends Servlet> factory, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
+        DefaultInstanceStrategy(final InstanceFactory<? extends Servlet> factory, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
             this.factory = factory;
             this.servletInfo = servletInfo;
             this.servletContext = servletContext;
         }
 
-        public void start() throws ServletException {
+        public synchronized void start() throws ServletException {
             try {
                 handle = factory.createInstance();
             } catch (Exception e) {
@@ -199,10 +203,19 @@ public class ManagedServlet implements Lifecycle {
             }
             instance = handle.getInstance();
             instance.init(new ServletConfigImpl(servletInfo, servletContext));
+            //if a servlet implements FileChangeCallback it will be notified of file change events
+            final ResourceManager resourceManager = servletContext.getDeployment().getDeploymentInfo().getResourceManager();
+            if(instance instanceof ResourceChangeListener && resourceManager.isResourceChangeListenerSupported()) {
+                resourceManager.registerResourceChangeListener(changeListener = (ResourceChangeListener) instance);
+            }
         }
 
-        public void stop() {
+        public synchronized void stop() {
             if (handle != null) {
+                final ResourceManager resourceManager = servletContext.getDeployment().getDeploymentInfo().getResourceManager();
+                if(changeListener != null) {
+                    resourceManager.removeResourceChangeListener(changeListener);
+                }
                 instance.destroy();
                 handle.release();
             }
