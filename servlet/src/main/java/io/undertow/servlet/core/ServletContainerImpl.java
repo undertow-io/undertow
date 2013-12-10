@@ -88,6 +88,6 @@ public class ServletContainerImpl implements ServletContainer {
                 }
             }
         }
-        return null;
+        return deploymentsByPath.get("");
     }
 }
