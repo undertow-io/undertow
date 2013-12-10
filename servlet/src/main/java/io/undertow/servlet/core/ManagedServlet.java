@@ -37,7 +37,6 @@ import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.spec.ServletConfigImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import org.xnio.FileChangeCallback;
 
 /**
  * Manager for a servlets lifecycle.
