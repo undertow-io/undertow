@@ -26,6 +26,7 @@ import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.servlet.util.SavedRequest;
 
 import javax.servlet.http.HttpSession;
 
@@ -60,6 +61,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
         // the AuthenticatedSessionManager.
         if (session != null) {
             exchange.putAttachment(AuthenticatedSessionManager.ATTACHMENT_KEY, SESSION_MANAGER);
+            SavedRequest.tryRestoreRequest(exchange, session); //not sure if this is where it belongs
         }
 
         next.handleRequest(exchange);

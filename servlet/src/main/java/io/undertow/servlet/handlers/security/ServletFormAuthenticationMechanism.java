@@ -1,7 +1,13 @@
 package io.undertow.servlet.handlers.security;
 
-import java.io.IOException;
-import java.util.Map;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismFactory;
+import io.undertow.security.impl.FormAuthenticationMechanism;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormParserFactory;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.util.SavedRequest;
+import io.undertow.util.Methods;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -10,13 +16,8 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.AuthenticationMechanismFactory;
-import io.undertow.security.impl.FormAuthenticationMechanism;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.form.FormParserFactory;
-import io.undertow.servlet.handlers.ServletRequestContext;
+import java.io.IOException;
+import java.util.Map;
 
 /**
  * Servlet handler for FORM authentication. Instead of using a redirect it
@@ -54,6 +55,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         ServletRequest req = servletRequestContext.getServletRequest();
         ServletResponse resp = servletRequestContext.getServletResponse();
         RequestDispatcher disp = req.getRequestDispatcher(location);
+        exchange.setRequestMethod(Methods.GET); //TODO: is this correct?
         try {
             disp.forward(req, resp);
         } catch (ServletException e) {
@@ -69,6 +71,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
         req.getSession(true).setAttribute(SESSION_KEY, req.getContextPath() + req.getServletPath() + (req.getPathInfo() == null ? "" : req.getPathInfo()));
+        SavedRequest.trySaveRequest(exchange);
     }
 
     @Override
@@ -77,9 +80,9 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
         HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
         HttpSession session = req.getSession(false);
-        if(session != null) {
+        if (session != null) {
             String path = (String) session.getAttribute(SESSION_KEY);
-            if(path != null) {
+            if (path != null) {
                 try {
                     resp.sendRedirect(path);
                 } catch (IOException e) {

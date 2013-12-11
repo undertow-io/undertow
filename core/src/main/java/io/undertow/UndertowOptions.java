@@ -121,14 +121,14 @@ public class UndertowOptions {
     public static final Option<Boolean> ALWAYS_SET_KEEP_ALIVE = Option.simple(UndertowOptions.class, "ALWAYS_SET_KEEP_ALIVE", Boolean.class);
 
     /**
-     * When buffering a request the maximum number of pooled buffers to use.
+     * Maximum size of a buffered request, in bytes
      * <p/>
      * Requests are not usually buffered, the most common case is when performing SSL renegotiation for a POST request, and the post data must be fully
      * buffered in order to perform the renegotiation.
      * <p/>
-     * Defaults to 1.
+     * Defaults to 16384.
      */
-    public static final Option<Integer> MAX_BUFFERS_FOR_BUFFERED_REQUEST = Option.simple(UndertowOptions.class, "MAX_BUFFERS_FOR_BUFFERED_REQUEST", Integer.class);
+    public static final Option<Integer> MAX_BUFFERED_REQUEST_SIZE = Option.simple(UndertowOptions.class, "MAX_BUFFERED_REQUEST_SIZE", Integer.class);
 
     private UndertowOptions() {
 

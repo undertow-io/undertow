@@ -28,6 +28,7 @@ import org.apache.http.ProtocolException;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HttpContext;
@@ -58,6 +59,11 @@ public class ServletFormAuthTestCase {
                         .addRoleAllowed("role1"))
                 .addMapping("/secured/*");
 
+        ServletInfo echo = new ServletInfo("echo", EchoServlet.class)
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("role1"))
+                .addMapping("/secured/echo");
+
         ServletInfo s1 = new ServletInfo("loginPage", FormLoginServlet.class)
                 .setServletSecurityInfo(new ServletSecurityInfo()
                         .addRoleAllowed("group1"))
@@ -74,7 +80,7 @@ public class ServletFormAuthTestCase {
                 .setDeploymentName("servletContext.war")
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
-                .addServlets(s, s1);
+                .addServlets(s, s1, echo);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -120,4 +126,41 @@ public class ServletFormAuthTestCase {
         }
     }
 
+    @Test
+    public void testServletFormAuthWithSavedPostBody() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        client.setRedirectStrategy(new DefaultRedirectStrategy() {
+            @Override
+            public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
+                if (response.getStatusLine().getStatusCode() == 302) {
+                    return true;
+                }
+                return super.isRedirected(request, response, context);
+            }
+        });
+        try {
+            final String uri = DefaultServer.getDefaultServerURL() + "/servletContext/secured/echo";
+            HttpPost post = new HttpPost(uri);
+            post.setEntity(new StringEntity("String Entity"));
+            HttpResponse result = client.execute(post);
+            assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("Login Page", response);
+
+            BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
+            final List<NameValuePair> data = new ArrayList<NameValuePair>();
+            data.addAll(Arrays.asList(pairs));
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
+
+            post.setEntity(new UrlEncodedFormEntity(data));
+
+            result = client.execute(post);
+            assertEquals(200, result.getStatusLine().getStatusCode());
+
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("String Entity", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }

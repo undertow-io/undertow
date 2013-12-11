@@ -70,8 +70,8 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
     }
 
     public void renegotiateBufferRequest(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {
-        int allowedBuffers = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERS_FOR_BUFFERED_REQUEST, 1);
-        if (allowedBuffers <= 0) {
+        int maxSize = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, 16384);
+        if (maxSize <= 0) {
             throw new SSLPeerUnverifiedException("");
         }
 
@@ -83,14 +83,14 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
             requestResetRequired = true;
         }
 
-        Pooled<ByteBuffer> pooled = null;
+        Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
         boolean free = true; //if the pooled buffer should be freed
         int usedBuffers = 0;
         Pooled<ByteBuffer>[] poolArray = null;
+        final int bufferSize = pooled.getResource().remaining();
+        int allowedBuffers = ((maxSize + bufferSize - 1) / bufferSize);
         poolArray = new Pooled[allowedBuffers];
-        pooled = exchange.getConnection().getBufferPool().allocate();
         poolArray[usedBuffers++] = pooled;
-        boolean dataRead = false;
         try {
             int res;
             do {
