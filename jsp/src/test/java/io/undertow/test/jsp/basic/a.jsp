@@ -1,1 +1,0 @@
-<HTML><BODY> Message:<%= System.getProperty("io.undertow.message") %></BODY></HTML>

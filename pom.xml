@@ -98,7 +98,6 @@
         <module>parser-generator</module>
         <module>core</module>
         <module>servlet</module>
-        <module>jsp</module>
         <module>examples</module>
         <module>websockets-jsr</module>
     </modules>
