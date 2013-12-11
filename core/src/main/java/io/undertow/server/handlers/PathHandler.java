@@ -18,18 +18,10 @@
 
 package io.undertow.server.handlers;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentMap;
-
 import io.undertow.Handlers;
-import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.CopyOnWriteMap;
+import io.undertow.util.PathMatcher;
 
 /**
  * Handler that dispatches to a given handler based of a prefix match of the path.
@@ -43,17 +35,10 @@ import io.undertow.util.CopyOnWriteMap;
  */
 public class PathHandler implements HttpHandler {
 
-    private volatile HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
-    private final ConcurrentMap<String, HttpHandler> paths = new CopyOnWriteMap<String, HttpHandler>();
-    private final ConcurrentMap<String, HttpHandler> exactPathMatches = new CopyOnWriteMap<String, HttpHandler>();
-
-    /**
-     * lengths of all registered paths
-     */
-    private volatile int[] lengths = {};
+    private final PathMatcher<HttpHandler> pathMatcher = new PathMatcher<HttpHandler>();
 
     public PathHandler(final HttpHandler defaultHandler) {
-        this.defaultHandler = defaultHandler;
+        pathMatcher.addPrefixPath("/", defaultHandler);
     }
 
     public PathHandler() {
@@ -61,44 +46,14 @@ public class PathHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        final String path = exchange.getRelativePath();
-        if (!exactPathMatches.isEmpty()) {
-            HttpHandler match = exactPathMatches.get(path);
-            if (match != null) {
-                exchange.setRelativePath("");
-                exchange.setResolvedPath(exchange.getResolvedPath() + path);
-                match.handleRequest(exchange);
-                return;
-            }
+        final PathMatcher.PathMatch<HttpHandler> match = pathMatcher.match(exchange);
+        if(match.getValue() == null) {
+            ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
+            return;
         }
-
-        int length = path.length();
-        final int[] lengths = this.lengths;
-        for (int i = 0; i < lengths.length; ++i) {
-            int pathLength = lengths[i];
-            if (pathLength == length) {
-                HttpHandler next = paths.get(path);
-                if (next != null) {
-                    exchange.setRelativePath(path.substring(pathLength));
-                    exchange.setResolvedPath(exchange.getResolvedPath() + path);
-                    next.handleRequest(exchange);
-                    return;
-                }
-            } else if (pathLength < length) {
-                char c = path.charAt(pathLength);
-                if (c == '/') {
-                    String part = path.substring(0, pathLength);
-                    HttpHandler next = paths.get(part);
-                    if (next != null) {
-                        exchange.setRelativePath(path.substring(pathLength));
-                        exchange.setResolvedPath(exchange.getResolvedPath() + part);
-                        next.handleRequest(exchange);
-                        return;
-                    }
-                }
-            }
-        }
-        defaultHandler.handleRequest(exchange);
+        exchange.setRelativePath(match.getRemaining());
+        exchange.setResolvedPath(exchange.getRequestPath().substring(0, exchange.getRequestPath().length() - match.getRemaining().length()));
+        match.getValue().handleRequest(exchange);
     }
 
     /**
@@ -134,53 +89,15 @@ public class PathHandler implements HttpHandler {
      */
     public synchronized PathHandler addPrefixPath(final String path, final HttpHandler handler) {
         Handlers.handlerNotNull(handler);
-        if (path.isEmpty()) {
-            throw UndertowMessages.MESSAGES.pathMustBeSpecified();
-        }
-        if (path.equals("/")) {
-            this.defaultHandler = handler;
-            return this;
-        }
-        if (path.charAt(0) != '/') {
-            paths.put("/" + path, handler);
-        } else {
-            paths.put(path, handler);
-        }
-        buildLengths();
+        pathMatcher.addPrefixPath(path, handler);
         return this;
     }
 
 
     public synchronized PathHandler addExactPath(final String path, final HttpHandler handler) {
         Handlers.handlerNotNull(handler);
-        if (path.isEmpty()) {
-            throw UndertowMessages.MESSAGES.pathMustBeSpecified();
-        }
-        if (path.charAt(0) != '/') {
-            exactPathMatches.put("/" + path, handler);
-        } else {
-            exactPathMatches.put(path, handler);
-        }
+        pathMatcher.addExactPath(path, handler);
         return this;
-    }
-
-    private void buildLengths() {
-        final Set<Integer> lengths = new TreeSet<Integer>(new Comparator<Integer>() {
-            @Override
-            public int compare(Integer o1, Integer o2) {
-                return -o1.compareTo(o2);
-            }
-        });
-        for (String p : paths.keySet()) {
-            lengths.add(p.length());
-        }
-
-        int[] lengthArray = new int[lengths.size()];
-        int pos = 0;
-        for (int i : lengths) {
-            lengthArray[pos++] = i;
-        }
-        this.lengths = lengthArray;
     }
 
     @Deprecated
@@ -189,45 +106,17 @@ public class PathHandler implements HttpHandler {
     }
 
     public synchronized PathHandler removePrefixPath(final String path) {
-        if (path == null || path.isEmpty()) {
-            throw UndertowMessages.MESSAGES.pathMustBeSpecified();
-        }
-
-        if (path.equals("/")) {
-            defaultHandler = ResponseCodeHandler.HANDLE_404;
-            return this;
-        }
-
-        if (path.charAt(0) != '/') {
-            paths.remove("/" + path);
-        } else {
-            paths.remove(path);
-        }
-        buildLengths();
+        pathMatcher.removePrefixPath(path);
         return this;
     }
 
     public synchronized PathHandler removeExactPath(final String path) {
-        if (path == null || path.isEmpty()) {
-            throw UndertowMessages.MESSAGES.pathMustBeSpecified();
-        }
-        if (path.charAt(0) != '/') {
-            exactPathMatches.remove("/" + path);
-        } else {
-            exactPathMatches.remove(path);
-        }
+        pathMatcher.removeExactPath(path);
         return this;
     }
 
     public synchronized PathHandler clearPaths() {
-        paths.clear();
-        exactPathMatches.clear();
-        this.lengths = new int[0];
-        defaultHandler = ResponseCodeHandler.HANDLE_404;
+        pathMatcher.clearPaths();
         return this;
-    }
-
-    public Map<String, HttpHandler> getPaths() {
-        return Collections.unmodifiableMap(paths);
     }
 }
