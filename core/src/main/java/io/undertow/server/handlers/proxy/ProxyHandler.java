@@ -72,6 +72,11 @@ import java.util.concurrent.TimeUnit;
 /**
  * An HTTP handler which proxies content to a remote server.
  *
+ * This handler acts like a filter. The {@link ProxyClient} has a chance to decide if it
+ * knows how to proxy the request. If it does then it will provide a connection that can
+ * used to connect to the remote server, otherwise the next handler will be invoked and the
+ * request will proceed as normal.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ProxyHandler implements HttpHandler {
@@ -91,18 +96,27 @@ public final class ProxyHandler implements HttpHandler {
      */
     private final Map<HttpString, ExchangeAttribute> requestHeaders = new CopyOnWriteMap<HttpString, ExchangeAttribute>();
 
-    public ProxyHandler(ProxyClient proxyClient, int maxRequestTime) {
+    private final HttpHandler next;
+
+    public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next) {
         this.proxyClient = proxyClient;
         this.maxRequestTime = maxRequestTime;
+        this.next = next;
     }
 
 
-    public ProxyHandler(ProxyClient proxyClient) {
+    public ProxyHandler(ProxyClient proxyClient, HttpHandler next) {
         this.proxyClient = proxyClient;
+        this.next = next;
         this.maxRequestTime = -1;
     }
 
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        final ProxyClient.ProxyTarget target = proxyClient.findTarget(exchange);
+        if(target == null) {
+            next.handleRequest(exchange);
+            return;
+        }
         if (maxRequestTime > 0) {
             final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
@@ -130,7 +144,7 @@ public final class ProxyHandler implements HttpHandler {
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
             public void run() {
-                proxyClient.getConnection(exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
+                proxyClient.getConnection(target, exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
             }
         });
     }

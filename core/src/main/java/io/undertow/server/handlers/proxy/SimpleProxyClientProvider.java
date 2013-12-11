@@ -27,13 +27,20 @@ public class SimpleProxyClientProvider implements ProxyClient {
     private final AttachmentKey<ClientConnection> clientAttachmentKey = AttachmentKey.create(ClientConnection.class);
     private final UndertowClient client;
 
+    private static final ProxyTarget TARGET = new ProxyTarget() {};
+
     public SimpleProxyClientProvider(URI uri) {
         this.uri = uri;
         client = UndertowClient.getInstance();
     }
 
     @Override
-    public void getConnection(HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
+    public ProxyTarget findTarget(HttpServerExchange exchange) {
+        return TARGET;
+    }
+
+    @Override
+    public void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
         ClientConnection existing = exchange.getConnection().getAttachment(clientAttachmentKey);
         if (existing != null) {
             if (existing.isOpen()) {
@@ -46,7 +53,6 @@ public class SimpleProxyClientProvider implements ProxyClient {
             }
         }
         client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
-
     }
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {
@@ -83,4 +89,6 @@ public class SimpleProxyClientProvider implements ProxyClient {
             callback.failed(exchange);
         }
     }
+
+
 }

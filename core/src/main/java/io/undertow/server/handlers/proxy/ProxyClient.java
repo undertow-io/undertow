@@ -12,10 +12,37 @@ import java.util.concurrent.TimeUnit;
  * on the exchange.
  *
  *
+ *
+ *
  * @author Stuart Douglas
  */
 public interface ProxyClient {
 
-    void getConnection(final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit);
+    /**
+     * Finds a proxy target for this request, returning null if none can be found.
+     *
+     * If this method returns null it means that there is no backend available to handle
+     * this request, and it should proceed as normal.
+     *
+     * @param exchange The exchange
+     * @return The proxy target
+     */
+    ProxyTarget findTarget(final HttpServerExchange exchange);
 
+    /**
+     * Gets a proxy connection for the given request.
+     *
+     * @param exchange The exchange
+     * @param callback The callback
+     * @param timeout The timeout
+     * @param timeUnit Time unit for the timeout
+     */
+    void getConnection(final ProxyTarget target, final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit);
+
+    /**
+     * An opaque interface that may contain information about the proxy target
+     */
+    public interface ProxyTarget {
+
+    }
 }

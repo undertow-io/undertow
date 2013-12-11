@@ -160,7 +160,7 @@ class Host {
                 if (callback.getExpireTime() > 0 && callback.getExpireTime() < time) {
                     callback.getCallback().failed(callback.getExchange());
                 } else {
-                    loadBalancingProxyClient.getConnection(callback.getExchange(), callback.getCallback(), callback.getExpireTime() > 0 ? time - callback.getExpireTime() : -1, TimeUnit.MILLISECONDS);
+                    loadBalancingProxyClient.getConnection(callback.getProxyTarget(), callback.getExchange(), callback.getCallback(), callback.getExpireTime() > 0 ? time - callback.getExpireTime() : -1, TimeUnit.MILLISECONDS);
                     callback.getCallback().failed(callback.getExchange());
                 }
             }
@@ -252,7 +252,7 @@ class Host {
         return data;
     }
 
-    public void connect(HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit) {
+    public void connect(ProxyClient.ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit) {
         HostThreadData data = getData();
         ClientConnection conn = data.availbleConnections.poll();
         while (conn != null && !conn.isOpen()) {
@@ -266,10 +266,10 @@ class Host {
             CallbackHolder holder;
             if (timeout > 0) {
                 long time = System.currentTimeMillis();
-                holder = new CallbackHolder(callback, exchange, time + timeUnit.toMillis(timeout));
+                holder = new CallbackHolder(proxyTarget, callback, exchange, time + timeUnit.toMillis(timeout));
                 holder.setTimeoutKey(exchange.getIoThread().executeAfter(holder, timeout, timeUnit));
             } else {
-                holder = new CallbackHolder(callback, exchange, -1);
+                holder = new CallbackHolder(proxyTarget, callback, exchange, -1);
             }
             data.awaitingConnections.add(holder);
         }
@@ -285,13 +285,15 @@ class Host {
 
 
     private static final class CallbackHolder implements Runnable {
+        final ProxyClient.ProxyTarget proxyTarget;
         final ProxyCallback<ProxyConnection> callback;
         final HttpServerExchange exchange;
         final long expireTime;
         XnioExecutor.Key timeoutKey;
         boolean cancelled = false;
 
-        private CallbackHolder(ProxyCallback<ProxyConnection> callback, HttpServerExchange exchange, long expireTime) {
+        private CallbackHolder(ProxyClient.ProxyTarget proxyTarget, ProxyCallback<ProxyConnection> callback, HttpServerExchange exchange, long expireTime) {
+            this.proxyTarget = proxyTarget;
             this.callback = callback;
             this.exchange = exchange;
             this.expireTime = expireTime;
@@ -326,6 +328,10 @@ class Host {
             cancelled = true;
             callback.failed(exchange);
         }
+
+        public ProxyClient.ProxyTarget getProxyTarget() {
+            return proxyTarget;
+        }
     }
 
     enum AvailabilityType {
@@ -333,6 +339,11 @@ class Host {
          * The host is read to accept requests
          */
         AVAILABLE,
+        /**
+         * The host is stopped. No request should be forwarded that are not tied
+         * to this node via sticky sessions
+         */
+        DRAIN,
         /**
          * All connections are in use, connections will be queued
          */

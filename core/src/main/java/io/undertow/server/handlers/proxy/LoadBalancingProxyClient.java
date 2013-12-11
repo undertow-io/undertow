@@ -47,6 +47,8 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     private final Map<String, Host> routes = new CopyOnWriteMap<String, Host>();
 
+    private static final ProxyTarget PROXY_TARGET = new ProxyTarget() {};
+
     public LoadBalancingProxyClient() {
         this(UndertowClient.getInstance());
     }
@@ -127,12 +129,17 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     @Override
-    public void getConnection(HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
+    public ProxyTarget findTarget(HttpServerExchange exchange) {
+        return PROXY_TARGET;
+    }
+
+    @Override
+    public void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
         final Host host = selectHost(exchange);
         if (host == null) {
             callback.failed(exchange);
         } else {
-            host.connect(exchange, callback, timeout, timeUnit);
+            host.connect(target, exchange, callback, timeout, timeUnit);
         }
     }
 
