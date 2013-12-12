@@ -1,11 +1,9 @@
 package io.undertow.server.handlers;
 
 import io.undertow.UndertowMessages;
+import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 
 import java.util.List;
@@ -14,28 +12,33 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 /**
- * Handler that can accept or reject a request based on the user agent of the remote peer.
+ * Handler that can accept or reject a request based on an attribute of the remote peer
  *
+ * todo: should we support non-regex values for performance reasons?
+ * @author Stuart Douglas
  * @author Andre Dietisheim
  */
-public class UserAgentAccessControlHandler implements HttpHandler {
+public class AccessControlListHandler implements HttpHandler {
 
     private volatile HttpHandler next;
     private volatile boolean defaultAllow = false;
-    private final List<UserAgentMatch> userAgentAcl = new CopyOnWriteArrayList<UserAgentMatch>();
+    private final ExchangeAttribute attribute;
+    private final List<AclMatch> acl = new CopyOnWriteArrayList<AclMatch>();
 
-    public UserAgentAccessControlHandler(final HttpHandler next) {
+    public AccessControlListHandler(final HttpHandler next, ExchangeAttribute attribute) {
         this.next = next;
+        this.attribute = attribute;
     }
 
-    public UserAgentAccessControlHandler() {
+    public AccessControlListHandler(ExchangeAttribute attribute) {
+        this.attribute = attribute;
         this.next = ResponseCodeHandler.HANDLE_404;
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        String userAgent = getUserAgent(exchange);
-        if (userAgent != null && isAllowed(userAgent)) {
+        String attribute = this.attribute.readAttribute(exchange);
+        if (attribute != null && isAllowed(attribute)) {
             next.handleRequest(exchange);
         } else {
             exchange.setResponseCode(StatusCodes.FORBIDDEN);
@@ -43,21 +46,10 @@ public class UserAgentAccessControlHandler implements HttpHandler {
         }
     }
 
-    String getUserAgent(HttpServerExchange exchange) {
-        String userAgent = null;
-        HeaderMap headers = exchange.getRequestHeaders();
-        if (headers != null) {
-            HeaderValues values = headers.get(Headers.USER_AGENT_STRING);
-            if (values != null && !values.isEmpty()) {
-                userAgent = values.getFirst();
-            }
-        }
-        return userAgent;
-    }
-
-    boolean isAllowed(String userAgent) {
-        for (UserAgentMatch rule : userAgentAcl) {
-            if (rule.matches(userAgent)) {
+    //package private for unit tests
+    boolean isAllowed(String attribute) {
+        for (AclMatch rule : acl) {
+            if (rule.matches(attribute)) {
                 return !rule.isDeny();
             }
         }
@@ -68,7 +60,7 @@ public class UserAgentAccessControlHandler implements HttpHandler {
         return defaultAllow;
     }
 
-    public UserAgentAccessControlHandler setDefaultAllow(final boolean defaultAllow) {
+    public AccessControlListHandler setDefaultAllow(final boolean defaultAllow) {
         this.defaultAllow = defaultAllow;
         return this;
     }
@@ -77,7 +69,7 @@ public class UserAgentAccessControlHandler implements HttpHandler {
         return next;
     }
 
-    public UserAgentAccessControlHandler setNext(final HttpHandler next) {
+    public AccessControlListHandler setNext(final HttpHandler next) {
         this.next = next;
         return this;
     }
@@ -87,10 +79,10 @@ public class UserAgentAccessControlHandler implements HttpHandler {
      * <p/>
      * User agent may be given as regex
      *
-     * @param userAgent The user agent to add to the ACL
+     * @param pattern The pattern to add to the ACL
      */
-    public UserAgentAccessControlHandler addAllow(final String userAgent) {
-        return addRule(userAgent, false);
+    public AccessControlListHandler addAllow(final String pattern) {
+        return addRule(pattern, false);
     }
 
     /**
@@ -98,28 +90,28 @@ public class UserAgentAccessControlHandler implements HttpHandler {
      * <p/>
      * User agent may be given as regex
      *
-     * @param peer The user agent to add to the ACL
+     * @param pattern The user agent to add to the ACL
      */
-    public UserAgentAccessControlHandler addDeny(final String userAgent) {
-        return addRule(userAgent, true);
+    public AccessControlListHandler addDeny(final String pattern) {
+        return addRule(pattern, true);
     }
 
-    public UserAgentAccessControlHandler clearRules() {
-        this.userAgentAcl.clear();
+    public AccessControlListHandler clearRules() {
+        this.acl.clear();
         return this;
     }
 
-    private UserAgentAccessControlHandler addRule(final String userAgent, final boolean deny) {
-        this.userAgentAcl.add(new UserAgentMatch(deny, userAgent));
+    private AccessControlListHandler addRule(final String userAgent, final boolean deny) {
+        this.acl.add(new AclMatch(deny, userAgent));
         return this;
     }
 
-    static class UserAgentMatch {
+    static class AclMatch {
 
         private final boolean deny;
         private final Pattern pattern;
 
-        protected UserAgentMatch(final boolean deny, final String pattern) {
+        protected AclMatch(final boolean deny, final String pattern) {
             this.deny = deny;
             this.pattern = createPattern(pattern);
         }
@@ -128,12 +120,12 @@ public class UserAgentAccessControlHandler implements HttpHandler {
             try {
                 return Pattern.compile(pattern);
             } catch (PatternSyntaxException e) {
-                throw UndertowMessages.MESSAGES.notAValidIpPattern(pattern);
+                throw UndertowMessages.MESSAGES.notAValidRegularExpressionPattern(pattern);
             }
         }
 
-        boolean matches(final String userAgent) {
-            return pattern.matcher(userAgent).matches();
+        boolean matches(final String attribute) {
+            return pattern.matcher(attribute).matches();
         }
 
         boolean isDeny() {

@@ -264,4 +264,6 @@ public interface UndertowMessages {
     @Message(id = 79, value = "Not a valid user agent pattern %s")
     IllegalArgumentException notAValidUserAgentPattern(String userAgent);
 
+    @Message(id = 80, value = "Not a valid regular expression pattern %s")
+    IllegalArgumentException notAValidRegularExpressionPattern(String pattern);
 }

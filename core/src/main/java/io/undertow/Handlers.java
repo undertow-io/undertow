@@ -1,10 +1,12 @@
 package io.undertow;
 
+import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicateParser;
 import io.undertow.predicate.PredicatesHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.JvmRouteHandler;
+import io.undertow.server.handlers.AccessControlListHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
@@ -20,7 +22,6 @@ import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
-import io.undertow.server.handlers.UserAgentAccessControlHandler;
 import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
@@ -234,14 +235,14 @@ public class Handlers {
     }
 
     /**
-     * Returns a new handler that can allow or deny access to a resource based on the user agent
+     * Returns a new handler that can allow or deny access to a resource based an at attribute of the exchange
      *
      * @param next         The next handler in the chain
      * @param defaultAllow Determine if a non-matching user agent will be allowed by default
      * @return A new user agent access control handler
      */
-    public static final UserAgentAccessControlHandler userAgentAccessControl(final HttpHandler next, boolean defaultAllow) {
-        return new UserAgentAccessControlHandler(next).setDefaultAllow(defaultAllow);
+    public static final AccessControlListHandler acl(final HttpHandler next, boolean defaultAllow, ExchangeAttribute attribute) {
+        return new AccessControlListHandler(next, attribute).setDefaultAllow(defaultAllow);
     }
 
     /**

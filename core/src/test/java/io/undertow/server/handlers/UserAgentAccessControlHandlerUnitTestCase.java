@@ -17,6 +17,8 @@
  */
 package io.undertow.server.handlers;
 
+import static io.undertow.attribute.ExchangeAttributes.requestHeader;
+import static io.undertow.util.Headers.USER_AGENT;
 import static org.junit.Assert.*;
 
 import java.net.UnknownHostException;
@@ -41,22 +43,22 @@ public class UserAgentAccessControlHandlerUnitTestCase {
 
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidPattern() {
-        new UserAgentAccessControlHandler().addAllow("[bogus");
+        new AccessControlListHandler(requestHeader(USER_AGENT)).addAllow("[bogus");
     }
 
     @Test
     public void testFalseDefault() {
-        assertFalse(new UserAgentAccessControlHandler().setDefaultAllow(false).isAllowed("some useragent"));
+        assertFalse(new AccessControlListHandler(requestHeader(USER_AGENT)).setDefaultAllow(false).isAllowed("some useragent"));
     }
 
     @Test
     public void testTrueDefault() throws UnknownHostException {
-        assertTrue(new UserAgentAccessControlHandler().setDefaultAllow(true).isAllowed("some useragent"));
+        assertTrue(new AccessControlListHandler(requestHeader(USER_AGENT)).setDefaultAllow(true).isAllowed("some useragent"));
     }
 
     @Test
     public void testAllowAllButOne() throws UnknownHostException {
-        UserAgentAccessControlHandler handler = new UserAgentAccessControlHandler()
+        AccessControlListHandler handler = new AccessControlListHandler(requestHeader(USER_AGENT))
             .setDefaultAllow(true)
             .addDeny(PATTERN_IE_ALL);
         assertFalse(handler.isAllowed(IE_6));
@@ -65,7 +67,7 @@ public class UserAgentAccessControlHandlerUnitTestCase {
 
     @Test
     public void testDenyAllButOne() throws UnknownHostException {
-        UserAgentAccessControlHandler handler = new UserAgentAccessControlHandler()
+        AccessControlListHandler handler = new AccessControlListHandler(requestHeader(USER_AGENT))
             .setDefaultAllow(false)
             .addAllow(PATTERN_FF_ALL);
         assertTrue(handler.isAllowed(FF_25));
@@ -74,7 +76,7 @@ public class UserAgentAccessControlHandlerUnitTestCase {
 
     @Test
     public void testAllowIE6AndAboveAndAllOthers() throws UnknownHostException {
-        UserAgentAccessControlHandler handler = new UserAgentAccessControlHandler()
+        AccessControlListHandler handler = new AccessControlListHandler(requestHeader(USER_AGENT))
             .setDefaultAllow(true)
             .addAllow(PATTERN_IE_ALL_ABOVE_6)
             .addDeny(PATTERN_IE_ALL);
