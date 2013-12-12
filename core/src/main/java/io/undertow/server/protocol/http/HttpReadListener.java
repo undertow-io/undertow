@@ -124,11 +124,6 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                 }
             } while (!state.isComplete());
 
-            // we remove ourselves as the read listener from the channel;
-            // if the http handler doesn't set any then reads will suspend, which is the right thing to do
-            channel.getReadSetter().set(null);
-            channel.suspendReads();
-
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
