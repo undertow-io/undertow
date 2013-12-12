@@ -3,6 +3,7 @@ package io.undertow.server.protocol.http;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -78,7 +79,11 @@ public class HttpContinue {
             throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
         }
 
+        HeaderValues transfer_encoding = exchange.getRequestHeaders().get(Headers.TRANSFER_ENCODING);
+        exchange.getRequestHeaders().remove(Headers.TRANSFER_ENCODING);
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
+        if(transfer_encoding != null)
+            exchange.getRequestHeaders().putAll(Headers.TRANSFER_ENCODING, transfer_encoding);
         newExchange.setResponseCode(100);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
@@ -115,7 +120,11 @@ public class HttpContinue {
         if (!exchange.isResponseChannelAvailable()) {
             throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
         }
+        HeaderValues transfer_encoding = exchange.getRequestHeaders().get(Headers.TRANSFER_ENCODING);
+        exchange.getRequestHeaders().remove(Headers.TRANSFER_ENCODING);
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
+        if(transfer_encoding != null)
+            exchange.getRequestHeaders().putAll(Headers.TRANSFER_ENCODING, transfer_encoding);
         newExchange.setResponseCode(100);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         newExchange.startBlocking();
@@ -136,7 +145,11 @@ public class HttpContinue {
 
 
     private static void internalSendContinueResponse(final HttpServerExchange exchange, final IoCallback callback) {
+        HeaderValues transfer_encoding = exchange.getRequestHeaders().get(Headers.TRANSFER_ENCODING);
+        exchange.getRequestHeaders().remove(Headers.TRANSFER_ENCODING);
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
+        if(transfer_encoding != null)
+            exchange.getRequestHeaders().putAll(Headers.TRANSFER_ENCODING, transfer_encoding);
         newExchange.setResponseCode(100);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
