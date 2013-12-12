@@ -34,6 +34,7 @@ import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.channels.SslChannel;
+import org.xnio.conduits.StreamSinkConduit;
 
 import javax.net.ssl.SSLSession;
 import java.nio.ByteBuffer;
@@ -164,6 +165,11 @@ public final class HttpServerConnection extends AbstractServerConnection {
             channel.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this));
         }
         return channel;
+    }
+
+    @Override
+    protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
+        return HttpTransferEncoding.createSinkConduit(conduit, exchange);
     }
 
     @Override

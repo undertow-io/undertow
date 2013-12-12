@@ -48,6 +48,7 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
+import org.xnio.conduits.StreamSinkConduit;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
@@ -411,6 +412,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         @Override
         public ConduitStreamSourceChannel getSourceChannel() {
             return new ConduitStreamSourceChannel(null, null);
+        }
+
+        @Override
+        protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
+            return conduit;
         }
 
         @Override

@@ -170,7 +170,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private ConduitWrapper<StreamSourceConduit>[] requestWrappers; //we don't allocate these by default, as for get requests they are not used
 
     private int responseWrapperCount = 0;
-    private ConduitWrapper<StreamSinkConduit>[] responseWrappers = new ConduitWrapper[4]; //these are allocated by default, as they are always used
+    private ConduitWrapper<StreamSinkConduit>[] responseWrappers;
 
     private Sender sender;
 
@@ -1068,17 +1068,21 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the response channel, or {@code null} if another party already acquired the channel
      */
     public StreamSinkChannel getResponseChannel() {
-        final ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
-        this.responseWrappers = null;
-        if (wrappers == null) {
+        if (responseChannel != null) {
             return null;
         }
+        final ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
+        this.responseWrappers = null;
         final ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
         if (sinkChannel == null) {
             return null;
         }
-        final WrapperConduitFactory<StreamSinkConduit> factory = new WrapperConduitFactory<StreamSinkConduit>(wrappers, responseWrapperCount, sinkChannel.getConduit(), this);
-        sinkChannel.setConduit(factory.create());
+        if(wrappers != null) {
+            final WrapperStreamSinkConduitFactory factory = new WrapperStreamSinkConduitFactory(wrappers, responseWrapperCount, this, sinkChannel.getConduit());
+            sinkChannel.setConduit(factory.create());
+        } else {
+            sinkChannel.setConduit(connection.getSinkConduit(this, sinkChannel.getConduit()));
+        }
         this.responseChannel = new WriteDispatchChannel(sinkChannel);
         this.startResponse();
         return responseChannel;
@@ -1106,7 +1110,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return <code>true</code> if {@link #getResponseChannel()} has not been called
      */
     public boolean isResponseChannelAvailable() {
-        return responseWrappers != null;
+        return responseChannel == null;
     }
 
     /**
@@ -1154,10 +1158,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void addResponseWrapper(final ConduitWrapper<StreamSinkConduit> wrapper) {
         ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
-        if (wrappers == null) {
+        if (responseChannel != null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
-        if (wrappers.length == responseWrapperCount) {
+        if(wrappers == null) {
+            this.responseWrappers = wrappers = new ConduitWrapper[2];
+        } else if (wrappers.length == responseWrapperCount) {
             responseWrappers = new ConduitWrapper[wrappers.length + 2];
             System.arraycopy(wrappers, 0, responseWrappers, 0, wrappers.length);
             wrappers = responseWrappers;
@@ -1812,18 +1818,41 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
+    public static class WrapperStreamSinkConduitFactory implements ConduitFactory<StreamSinkConduit> {
+
+        private final HttpServerExchange exchange;
+        private final ConduitWrapper<StreamSinkConduit>[] wrappers;
+        private int position;
+        private final StreamSinkConduit first;
+
+
+        public WrapperStreamSinkConduitFactory(ConduitWrapper<StreamSinkConduit>[] wrappers, int wrapperCount, HttpServerExchange exchange, StreamSinkConduit first) {
+            this.wrappers = wrappers;
+            this.exchange = exchange;
+            this.first = first;
+            this.position = wrapperCount - 1;
+        }
+
+        @Override
+        public StreamSinkConduit create() {
+            if (position == -1) {
+                return exchange.getConnection().getSinkConduit(exchange, first);
+            } else {
+                return wrappers[position--].wrap(this, exchange);
+            }
+        }
+    }
+
     public static class WrapperConduitFactory<T extends Conduit> implements ConduitFactory<T> {
 
         private final HttpServerExchange exchange;
         private final ConduitWrapper<T>[] wrappers;
-        private final int wrapperCount;
         private int position;
         private T first;
 
 
         public WrapperConduitFactory(ConduitWrapper<T>[] wrappers, int wrapperCount, T first, HttpServerExchange exchange) {
             this.wrappers = wrappers;
-            this.wrapperCount = wrapperCount;
             this.exchange = exchange;
             this.position = wrapperCount - 1;
             this.first = first;
@@ -1838,7 +1867,6 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
     }
-
     @Override
     public String toString() {
         return "HttpServerExchange{ " + getRequestMethod().toString() + " " + getRequestURI() + '}';

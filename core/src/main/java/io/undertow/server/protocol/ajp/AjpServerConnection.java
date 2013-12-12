@@ -26,7 +26,6 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.protocol.http.HttpTransferEncoding;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -34,6 +33,7 @@ import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
 import java.nio.ByteBuffer;
@@ -68,9 +68,6 @@ public final class AjpServerConnection extends AbstractServerConnection {
         newExchange.setRequestPath(exchange.getRequestPath());
         newExchange.getRequestHeaders().put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
         newExchange.getRequestHeaders().put(Headers.CONTENT_LENGTH, 0);
-
-        //apply transfer encoding rules
-        HttpTransferEncoding.setupRequest(newExchange);
 
         newExchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
@@ -115,6 +112,11 @@ public final class AjpServerConnection extends AbstractServerConnection {
             channel.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this));
         }
         return channel;
+    }
+
+    @Override
+    protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
+        return conduit;
     }
 
     @Override

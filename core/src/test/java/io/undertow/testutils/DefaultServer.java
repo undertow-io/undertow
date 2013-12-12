@@ -231,6 +231,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 serverOptions = OptionMap.builder()
                         .set(Options.TCP_NODELAY, true)
                         .set(Options.REUSE_ADDRESSES, true)
+                        .set(Options.BALANCING_TOKENS, 1)
+                        .set(Options.BALANCING_CONNECTIONS, 2)
                         .getMap();
                 if (ajp) {
                     openListener = new AjpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), 8192);

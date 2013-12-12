@@ -10,6 +10,7 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
+import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -131,6 +132,20 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
     protected abstract ConduitStreamSinkChannel getSinkChannel();
 
     protected abstract ConduitStreamSourceChannel getSourceChannel();
+
+    /**
+     * Gets the sink conduit that should be used for this request.
+     *
+     * This allows the connection to apply any per-request conduit wrapping
+     * that is required, without adding to the response wrappers array.
+     *
+     * There is no corresponding method for source conduits, as in general
+     * conduits can be directly inserted into the connection after the
+     * request has been read.
+     *
+     * @return The source conduit
+     */
+    protected abstract StreamSinkConduit getSinkConduit(HttpServerExchange exchange, final StreamSinkConduit conduit);
 
     protected abstract boolean isUpgradeSupported();
 
