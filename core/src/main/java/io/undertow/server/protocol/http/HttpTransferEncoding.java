@@ -102,6 +102,12 @@ public class HttpTransferEncoding {
         //now the response wrapper, to add in the appropriate connection control headers
         exchange.addResponseWrapper(responseWrapper());
 
+        if(!exchange.isRequestComplete() || connection.getExtraBytes() != null) {
+            //if there is more data we suspend reads
+            sourceChannel.setReadListener(null);
+            sourceChannel.suspendReads();
+        }
+
     }
 
     private static boolean handleRequestEncoding(final HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipeliningBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
