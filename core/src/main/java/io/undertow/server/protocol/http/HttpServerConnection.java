@@ -52,12 +52,14 @@ public final class HttpServerConnection extends AbstractServerConnection {
     private SSLSessionInfo sslSessionInfo;
     private HttpReadListener readListener;
     private PipeliningBufferingStreamSinkConduit pipelineBuffer;
+    private HttpResponseConduit responseConduit;
 
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         if (channel instanceof SslChannel) {
             sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel), this);
         }
+        this.responseConduit = new HttpResponseConduit(channel.getSinkChannel().getConduit(), bufferPool);
     }
 
     @Override
@@ -79,7 +81,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
         newExchange.getRequestHeaders().put(Headers.CONTENT_LENGTH, 0);
 
         //apply transfer encoding rules
-        HttpTransferEncoding.setupRequest(newExchange);
+        HttpTransferEncoding.setupRequest(newExchange, true);
         Connectors.terminateRequest(newExchange);
 
         //we restore the read channel immediately, as this out of band response has no read side
@@ -200,7 +202,12 @@ public final class HttpServerConnection extends AbstractServerConnection {
         return pipelineBuffer;
     }
 
+    public HttpResponseConduit getResponseConduit() {
+        return responseConduit;
+    }
+
     public void setPipelineBuffer(PipeliningBufferingStreamSinkConduit pipelineBuffer) {
         this.pipelineBuffer = pipelineBuffer;
+        this.responseConduit = new HttpResponseConduit(pipelineBuffer, bufferPool);
     }
 }

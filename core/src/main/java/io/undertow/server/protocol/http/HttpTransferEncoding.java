@@ -60,7 +60,7 @@ public class HttpTransferEncoding {
     private HttpTransferEncoding() {
     }
 
-    public static void setupRequest(final HttpServerExchange exchange) {
+    public static void setupRequest(final HttpServerExchange exchange, final boolean outOfBand) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         final String connectionHeader = requestHeaders.getFirst(Headers.CONNECTION);
         final String transferEncodingHeader = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
@@ -94,7 +94,13 @@ public class HttpTransferEncoding {
         }
 
         exchange.setPersistent(persistentConnection);
-        sinkChannel.setConduit(new HttpResponseConduit(sinkChannel.getConduit(), connection.getBufferPool(), exchange));
+        if(outOfBand) {
+            sinkChannel.setConduit(new HttpResponseConduit(sinkChannel.getConduit(), connection.getBufferPool(), exchange));
+        } else {
+            HttpResponseConduit responseConduit = connection.getResponseConduit();
+            responseConduit.reset(exchange);
+            sinkChannel.setConduit(responseConduit);
+        }
 
         if(!exchange.isRequestComplete() || connection.getExtraBytes() != null) {
             //if there is more data we suspend reads

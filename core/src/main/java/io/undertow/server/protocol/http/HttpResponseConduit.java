@@ -56,7 +56,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     private int valueIdx;
     private int charIndex;
     private Pooled<ByteBuffer> pooledBuffer;
-    private final HttpServerExchange exchange;
+    private HttpServerExchange exchange;
 
     private static final int STATE_BODY = 0; // Message body, normal pass-through operation
     private static final int STATE_START = 1; // No headers written yet
@@ -73,12 +73,26 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     private static final int MASK_STATE = 0x0000000F;
     private static final int FLAG_SHUTDOWN = 0x00000010;
 
-    HttpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange) {
+    HttpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool) {
+        super(next);
+        this.pool = pool;
+    }
+
+    HttpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, HttpServerExchange exchange) {
         super(next);
         this.pool = pool;
         this.exchange = exchange;
     }
-
+    void reset(HttpServerExchange exchange) {
+        this.exchange = exchange;
+        state = STATE_START;
+        fiCookie = -1L;
+        string = null;
+        headerValues = null;
+        valueIdx = 0;
+        charIndex = 0;
+        pooledBuffer = null;
+    }
 
     /**
      * Handles writing out the header data. It can also take a byte buffer of user
@@ -324,11 +338,13 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     charIndex = 0;
                     if (valueIdx == headerValues.size()) {
                         if (!buffer.hasRemaining()) {
-                            if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_EOL_CR;
+                            if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx))
+                                return STATE_HDR_EOL_CR;
                         }
                         buffer.put((byte) 13); // CR
                         if (!buffer.hasRemaining()) {
-                            if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_EOL_LF;
+                            if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx))
+                                return STATE_HDR_EOL_LF;
                         }
                         buffer.put((byte) 10); // LF
                         if ((fiCookie = headers.fiNextNonEmpty(fiCookie)) != -1L) {
@@ -338,11 +354,13 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             break;
                         } else {
                             if (!buffer.hasRemaining()) {
-                                if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_FINAL_CR;
+                                if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx))
+                                    return STATE_HDR_FINAL_CR;
                             }
                             buffer.put((byte) 13); // CR
                             if (!buffer.hasRemaining()) {
-                                if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_FINAL_LF;
+                                if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx))
+                                    return STATE_HDR_FINAL_LF;
                             }
                             buffer.put((byte) 10); // LF
                             this.fiCookie = -1;
@@ -377,13 +395,15 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 // Clean-up states
                 case STATE_HDR_EOL_CR: {
                     if (!buffer.hasRemaining()) {
-                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_EOL_CR;
+                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx))
+                            return STATE_HDR_EOL_CR;
                     }
                     buffer.put((byte) 13); // CR
                 }
                 case STATE_HDR_EOL_LF: {
                     if (!buffer.hasRemaining()) {
-                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_EOL_LF;
+                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx))
+                            return STATE_HDR_EOL_LF;
                     }
                     buffer.put((byte) 10); // LF
                     if (valueIdx < headerValues.size()) {
@@ -399,14 +419,16 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
                 case STATE_HDR_FINAL_CR: {
                     if (!buffer.hasRemaining()) {
-                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_FINAL_CR;
+                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx))
+                            return STATE_HDR_FINAL_CR;
                     }
                     buffer.put((byte) 13); // CR
                     // fall thru
                 }
                 case STATE_HDR_FINAL_LF: {
                     if (!buffer.hasRemaining()) {
-                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_FINAL_LF;
+                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx))
+                            return STATE_HDR_FINAL_LF;
                     }
                     buffer.put((byte) 10); // LF
                     this.fiCookie = -1L;
