@@ -99,7 +99,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private int exchangeCompletionListenersCount = 0;
     private ExchangeCompletionListener[] exchangeCompleteListeners;
-    private DefaultResponseListener[] defaultResponseListeners = new DefaultResponseListener[2];
+    private DefaultResponseListener[] defaultResponseListeners;
 
     private Map<String, Deque<String>> queryParameters;
     private Map<String, Deque<String>> pathParameters;
@@ -782,13 +782,17 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public void addDefaultResponseListener(final DefaultResponseListener listener) {
         int i = 0;
-        while (i != defaultResponseListeners.length && defaultResponseListeners[i] != null) {
-            ++i;
-        }
-        if (i == defaultResponseListeners.length) {
-            DefaultResponseListener[] old = defaultResponseListeners;
-            defaultResponseListeners = new DefaultResponseListener[defaultResponseListeners.length + 2];
-            System.arraycopy(old, 0, defaultResponseListeners, 0, old.length);
+        if(defaultResponseListeners == null) {
+            defaultResponseListeners = new DefaultResponseListener[2];
+        } else {
+            while (i != defaultResponseListeners.length && defaultResponseListeners[i] != null) {
+                ++i;
+            }
+            if (i == defaultResponseListeners.length) {
+                DefaultResponseListener[] old = defaultResponseListeners;
+                defaultResponseListeners = new DefaultResponseListener[defaultResponseListeners.length + 2];
+                System.arraycopy(old, 0, defaultResponseListeners, 0, old.length);
+            }
         }
         defaultResponseListeners[i] = listener;
     }
@@ -1286,20 +1290,22 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
             return;
         }
-        int i = defaultResponseListeners.length - 1;
-        while (i >= 0) {
-            DefaultResponseListener listener = defaultResponseListeners[i];
-            if (listener != null) {
-                defaultResponseListeners[i] = null;
-                try {
-                    if (listener.handleDefaultResponse(this)) {
-                        return;
+        if(defaultResponseListeners != null) {
+            int i = defaultResponseListeners.length - 1;
+            while (i >= 0) {
+                DefaultResponseListener listener = defaultResponseListeners[i];
+                if (listener != null) {
+                    defaultResponseListeners[i] = null;
+                    try {
+                        if (listener.handleDefaultResponse(this)) {
+                            return;
+                        }
+                    } catch (Exception e) {
+                        UndertowLogger.REQUEST_LOGGER.debug("Exception running default response listener", e);
                     }
-                } catch (Exception e) {
-                    UndertowLogger.REQUEST_LOGGER.debug("Exception running default response listener", e);
                 }
+                i--;
             }
-            i--;
         }
 
         if (blockingHttpExchange != null) {
