@@ -51,6 +51,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     private SSLSessionInfo sslSessionInfo;
     private HttpReadListener readListener;
+    private PipeliningBufferingStreamSinkConduit pipelineBuffer;
 
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
@@ -184,6 +185,22 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     @Override
     protected void exchangeComplete(HttpServerExchange exchange) {
-        readListener.exchangeComplete(exchange);
+        if (pipelineBuffer == null) {
+            readListener.exchangeComplete(exchange);
+        } else {
+            pipelineBuffer.exchangeComplete(exchange);
+        }
+    }
+
+    HttpReadListener getReadListener() {
+        return readListener;
+    }
+
+    public PipeliningBufferingStreamSinkConduit getPipelineBuffer() {
+        return pipelineBuffer;
+    }
+
+    public void setPipelineBuffer(PipeliningBufferingStreamSinkConduit pipelineBuffer) {
+        this.pipelineBuffer = pipelineBuffer;
     }
 }

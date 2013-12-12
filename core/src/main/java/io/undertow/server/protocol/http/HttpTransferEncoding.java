@@ -28,7 +28,6 @@ import io.undertow.conduits.FinishableStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
-import io.undertow.conduits.PipeliningBufferingStreamSinkConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
@@ -70,7 +69,7 @@ public class HttpTransferEncoding {
         final HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
         ConduitStreamSinkChannel sinkChannel = connection.getChannel().getSinkChannel();
         //if we are already using the pipelineing buffer add it to the exchange
-        PipeliningBufferingStreamSinkConduit pipeliningBuffer = connection.getAttachment(PipeliningBufferingStreamSinkConduit.ATTACHMENT_KEY);
+        PipeliningBufferingStreamSinkConduit pipeliningBuffer = connection.getPipelineBuffer();
         if (pipeliningBuffer != null) {
             pipeliningBuffer.setupPipelineBuffer(exchange);
         }
@@ -85,7 +84,7 @@ public class HttpTransferEncoding {
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
                 pipeliningBuffer = new PipeliningBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
-                connection.putAttachment(PipeliningBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
+                connection.setPipelineBuffer(pipeliningBuffer);
                 pipeliningBuffer.setupPipelineBuffer(exchange);
             }
             // no content - immediately start the next request, returning an empty stream for this one
@@ -138,7 +137,7 @@ public class HttpTransferEncoding {
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
                 pipeliningBuffer = new PipeliningBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
-                connection.putAttachment(PipeliningBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
+                connection.setPipelineBuffer(pipeliningBuffer);
                 pipeliningBuffer.setupPipelineBuffer(exchange);
             }
 
