@@ -18,16 +18,12 @@
 
 package io.undertow;
 
-import io.undertow.util.AttachmentKey;
 import org.xnio.Option;
-import org.xnio.OptionMap;
 
 /**
  * @author Stuart Douglas
  */
 public class UndertowOptions {
-
-    public static final AttachmentKey<OptionMap> ATTACHMENT_KEY = AttachmentKey.create(OptionMap.class);
 
     /**
      * The maximum size in bytes of a http request header.

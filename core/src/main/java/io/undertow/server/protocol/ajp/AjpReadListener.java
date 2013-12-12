@@ -158,7 +158,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             channel.suspendReads();
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
-            httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
             final AjpServerResponseConduit responseConduit = new AjpServerResponseConduit(connection.getChannel().getSinkChannel().getConduit(), connection.getBufferPool(), httpServerExchange, new ConduitListener<AjpServerResponseConduit>() {
                 @Override
                 public void handleEvent(AjpServerResponseConduit channel) {

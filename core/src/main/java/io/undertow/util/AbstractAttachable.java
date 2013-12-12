@@ -32,14 +32,14 @@ import io.undertow.UndertowMessages;
  */
 public abstract class AbstractAttachable implements Attachable {
 
-    private final Map<AttachmentKey<?>, Object> attachments = new IdentityHashMap<AttachmentKey<?>, Object>(5);
+    private Map<AttachmentKey<?>, Object> attachments;
 
     /**
      * {@inheritDoc}
      */
     @Override
     public <T> T getAttachment(final AttachmentKey<T> key) {
-        if (key == null) {
+        if (key == null || attachments == null) {
             return null;
         }
         return key.cast(attachments.get(key));
@@ -50,8 +50,8 @@ public abstract class AbstractAttachable implements Attachable {
      */
     @Override
     public <T> List<T> getAttachmentList(AttachmentKey<? extends List<T>> key) {
-        if (key == null) {
-            return null;
+        if (key == null || attachments == null) {
+            return Collections.emptyList();
         }
         List<T> list = key.cast(attachments.get(key));
         if (list == null) {
@@ -68,6 +68,9 @@ public abstract class AbstractAttachable implements Attachable {
         if (key == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("key");
         }
+        if(attachments == null) {
+            attachments = new IdentityHashMap<AttachmentKey<?>, Object>(5);
+        }
         return key.cast(attachments.put(key, key.cast(value)));
     }
 
@@ -76,7 +79,7 @@ public abstract class AbstractAttachable implements Attachable {
      */
     @Override
     public <T> T removeAttachment(final AttachmentKey<T> key) {
-        if (key == null) {
+        if (key == null || attachments == null) {
             return null;
         }
         return key.cast(attachments.remove(key));
@@ -88,6 +91,9 @@ public abstract class AbstractAttachable implements Attachable {
     @Override
     public <T> void addToAttachmentList(final AttachmentKey<AttachmentList<T>> key, final T value) {
         if (key != null) {
+            if(attachments == null) {
+                attachments = new IdentityHashMap<AttachmentKey<?>, Object>(5);
+            }
             final Map<AttachmentKey<?>, Object> attachments = this.attachments;
             final AttachmentList<T> list = key.cast(attachments.get(key));
             if (list == null) {
