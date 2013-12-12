@@ -91,7 +91,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         headerValues = null;
         valueIdx = 0;
         charIndex = 0;
-        pooledBuffer = null;
     }
 
     /**
@@ -124,7 +123,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     return STATE_BUF_FLUSH;
                 }
             } while (byteBuffer.hasRemaining());
-            pooledBuffer.free();
+            bufferDone();
             return STATE_BODY;
         } else if (state != STATE_START) {
             return processStatefulWrite(state, userData);
@@ -133,7 +132,9 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         //merge the cookies into the header map
         Connectors.flattenCookies(exchange);
 
-        pooledBuffer = pool.allocate();
+        if(pooledBuffer == null) {
+            pooledBuffer = pool.allocate();
+        }
         ByteBuffer buffer = pooledBuffer.getResource();
 
 
@@ -209,8 +210,19 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 return STATE_BUF_FLUSH;
             }
         } while (buffer.hasRemaining());
-        pooledBuffer.free();
+        bufferDone();
         return STATE_BODY;
+    }
+
+    private void bufferDone() {
+        HttpServerConnection connection = (HttpServerConnection)exchange.getConnection();
+        if(connection.getExtraBytes() == null) {
+            //if we are pipelining we hold onto the buffer
+            pooledBuffer.free();
+            pooledBuffer = null;
+        } else {
+            pooledBuffer.getResource().clear();
+        }
     }
 
     private static void writeString(ByteBuffer buffer, String string) {
@@ -384,8 +396,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                                     }
                                 } while (buffer.hasRemaining());
                             }
-                            pooledBuffer.free();
-                            pooledBuffer = null;
+                            bufferDone();
                             return STATE_BODY;
                         }
                         // not reached
@@ -456,8 +467,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
                 case STATE_BUF_FLUSH: {
                     // buffer was successfully flushed above
-                    pooledBuffer.free();
-                    pooledBuffer = null;
+                    bufferDone();
                     return STATE_BODY;
                 }
                 default: {
@@ -634,8 +644,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 next.truncateWrites();
             } finally {
                 if (pooledBuffer != null) {
-                    pooledBuffer.free();
-                    pooledBuffer = null;
+                    bufferDone();
                 }
             }
             return;
@@ -646,5 +655,11 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
     public XnioWorker getWorker() {
         return next.getWorker();
+    }
+
+    void freeBuffers() {
+        if(pooledBuffer != null) {
+            bufferDone();
+        }
     }
 }

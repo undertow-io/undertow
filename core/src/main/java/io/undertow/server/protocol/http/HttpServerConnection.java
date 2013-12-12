@@ -27,6 +27,7 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.ServerConnection;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.xnio.OptionMap;
@@ -60,6 +61,13 @@ public final class HttpServerConnection extends AbstractServerConnection {
             sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel), this);
         }
         this.responseConduit = new HttpResponseConduit(channel.getSinkChannel().getConduit(), bufferPool);
+        //todo: do this without an allocation
+        addCloseListener(new CloseListener() {
+            @Override
+            public void closed(ServerConnection connection) {
+                responseConduit.freeBuffers();
+            }
+        });
     }
 
     @Override
