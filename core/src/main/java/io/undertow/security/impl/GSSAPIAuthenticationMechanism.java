@@ -36,6 +36,7 @@ import io.undertow.security.idm.GSSContextCredential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
+import io.undertow.server.handlers.proxy.LoadBalancingProxyClientWithExclusivity.ExclusivityChecker;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.FlexBase64;
 import org.ietf.jgss.GSSContext;
@@ -264,6 +265,26 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
             return principal;
         }
+
+    }
+
+    public static ExclusivityChecker createExclusivityChecker() {
+        return new ExclusivityChecker() {
+
+            @Override
+            public boolean isExclusivityRequired(HttpServerExchange exchange) {
+                List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
+                if (authHeaders != null) {
+                    for (String current : authHeaders) {
+                        if (current.startsWith(NEGOTIATE_PREFIX)) {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+        };
 
     }
 
