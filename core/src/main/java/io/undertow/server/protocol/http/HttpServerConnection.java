@@ -22,6 +22,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ConnectionSSLSessionInfo;
+import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -76,6 +77,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
         //apply transfer encoding rules
         HttpTransferEncoding.setupRequest(newExchange);
+        Connectors.terminateRequest(newExchange);
 
         //we restore the read channel immediately, as this out of band response has no read side
         channel.getSourceChannel().setConduit(source(state));
