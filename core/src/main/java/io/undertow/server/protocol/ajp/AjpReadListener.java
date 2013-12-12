@@ -7,7 +7,6 @@ import io.undertow.conduits.EmptyStreamSourceConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.Connectors;
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -34,7 +33,7 @@ import static org.xnio.IoUtils.safeClose;
  * @author Stuart Douglas
  */
 
-final class AjpReadListener implements ChannelListener<StreamSourceChannel>, ExchangeCompletionListener {
+final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
     private static final byte[] CPONG = {'A', 'B', 0, 1, 9}; //CPONG response data
 
@@ -63,7 +62,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
         connection.resetChannel();
         state = new AjpRequestParseState();
         httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
-        httpServerExchange.addExchangeCompleteListener(this);
         read = 0;
     }
 
@@ -235,9 +233,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
         }
     }
 
-
-    @Override
-    public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+    public void exchangeComplete(final HttpServerExchange exchange) {
         if (!exchange.isUpgrade() && exchange.isPersistent()) {
             startRequest();
             ConduitStreamSourceChannel channel = ((AjpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
@@ -246,7 +242,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
         } else if(!exchange.isPersistent()) {
             IoUtils.safeClose(exchange.getConnection());
         }
-        nextListener.proceed();
     }
 
     private StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpServerResponseConduit responseConduit, final HttpServerExchange exchange) {

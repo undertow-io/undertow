@@ -149,6 +149,11 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
 
     protected abstract boolean isUpgradeSupported();
 
+    /**
+     * Invoked when the exchange is complete.
+     */
+    protected abstract void exchangeComplete(HttpServerExchange exchange);
+
     public interface CloseListener {
 
         void closed(final ServerConnection connection);

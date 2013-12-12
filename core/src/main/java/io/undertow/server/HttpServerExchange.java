@@ -98,7 +98,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap responseHeaders = new HeaderMap();
 
     private int exchangeCompletionListenersCount = 0;
-    private ExchangeCompletionListener[] exchangeCompleteListeners = new ExchangeCompletionListener[2];
+    private ExchangeCompletionListener[] exchangeCompleteListeners;
     private DefaultResponseListener[] defaultResponseListeners = new DefaultResponseListener[2];
 
     private Map<String, Deque<String>> queryParameters;
@@ -717,10 +717,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
-        if (exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+        if (exchangeCompleteListeners == null ||exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
             ExchangeCompletionListener[] old = exchangeCompleteListeners;
             this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
-            System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
+            if(old != null) {
+                System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
+            }
             exchangeCompleteListeners[0] = upgradeCompleteListener;
         } else {
             for (int i = exchangeCompletionListenersCount - 1; i >= 0; --i) {
@@ -750,10 +752,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
-        if (exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+        if (exchangeCompleteListeners == null || exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
             ExchangeCompletionListener[] old = exchangeCompleteListeners;
             this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
-            System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
+            if(old != null) {
+                System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
+            }
             exchangeCompleteListeners[0] = upgradeCompleteListener;
         } else {
             for (int i = exchangeCompletionListenersCount - 1; i >= 0; --i) {
@@ -766,10 +770,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     public void addExchangeCompleteListener(final ExchangeCompletionListener listener) {
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
-        if (exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+        if (exchangeCompleteListeners == null || exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
             ExchangeCompletionListener[] old = exchangeCompleteListeners;
             this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
-            System.arraycopy(old, 0, exchangeCompleteListeners, 0, exchangeCompletionListenersCount);
+            if(old != null) {
+                System.arraycopy(old, 0, exchangeCompleteListeners, 0, exchangeCompletionListenersCount);
+            }
         }
         exchangeCompleteListeners[exchangeCompletionListenersCount] = listener;
     }
@@ -1044,6 +1050,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             int i = exchangeCompletionListenersCount - 1;
             ExchangeCompletionListener next = exchangeCompleteListeners[i];
             next.exchangeEvent(this, new ExchangeCompleteNextListener(exchangeCompleteListeners, this, i));
+        } else if (exchangeCompletionListenersCount == 0) {
+            exchangeCompletionListenersCount--;
+            connection.exchangeComplete(this);
         }
     }
 
@@ -1461,6 +1470,8 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (--i >= 0) {
                 final ExchangeCompletionListener next = list[i];
                 next.exchangeEvent(exchange, this);
+            } else if(i == -1) {
+                exchange.connection.exchangeComplete(exchange);
             }
         }
     }

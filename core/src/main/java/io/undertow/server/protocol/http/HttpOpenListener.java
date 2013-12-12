@@ -63,6 +63,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         }
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         HttpReadListener readListener = new HttpReadListener(connection, parser);
+        connection.setReadListener(readListener);
         readListener.newRequest();
         channel.getSourceChannel().setReadListener(readListener);
         readListener.handleEvent(channel.getSourceChannel());

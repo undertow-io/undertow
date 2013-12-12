@@ -21,7 +21,6 @@ package io.undertow.server.protocol.http;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.server.Connectors;
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
@@ -41,7 +40,7 @@ import java.util.concurrent.Executor;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class HttpReadListener implements ChannelListener<StreamSourceChannel>, ExchangeCompletionListener, Runnable {
+final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Runnable {
 
     private static final String BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 
@@ -66,7 +65,6 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
         state.reset();
         read = 0;
         httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
-        httpServerExchange.addExchangeCompleteListener(this);
     }
 
     public void handleEvent(final StreamSourceChannel channel) {
@@ -179,9 +177,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
         }.setup(channel.getSinkChannel());
     }
 
-
-    @Override
-    public void exchangeEvent(final HttpServerExchange exchange, final ExchangeCompletionListener.NextListener nextListener) {
+    public void exchangeComplete(final HttpServerExchange exchange) {
         connection.resetChannel();
         final HttpServerConnection connection = this.connection;
         if (exchange.isPersistent() && !exchange.isUpgrade()) {
@@ -221,7 +217,6 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
         } else if (!exchange.isPersistent()) {
             IoUtils.safeClose(connection);
         }
-        nextListener.proceed();
     }
 
     @Override

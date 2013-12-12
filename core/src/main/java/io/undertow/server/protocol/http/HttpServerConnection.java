@@ -50,6 +50,7 @@ import java.nio.ByteBuffer;
 public final class HttpServerConnection extends AbstractServerConnection {
 
     private SSLSessionInfo sslSessionInfo;
+    private HttpReadListener readListener;
 
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
@@ -175,5 +176,14 @@ public final class HttpServerConnection extends AbstractServerConnection {
     @Override
     protected boolean isUpgradeSupported() {
         return true;
+    }
+
+    void setReadListener(HttpReadListener readListener) {
+        this.readListener = readListener;
+    }
+
+    @Override
+    protected void exchangeComplete(HttpServerExchange exchange) {
+        readListener.exchangeComplete(exchange);
     }
 }

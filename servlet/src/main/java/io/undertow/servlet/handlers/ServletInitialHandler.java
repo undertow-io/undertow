@@ -423,6 +423,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         protected boolean isUpgradeSupported() {
             return false;
         }
+
+        @Override
+        protected void exchangeComplete(HttpServerExchange exchange) {
+        }
     }
 
 }

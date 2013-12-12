@@ -47,6 +47,7 @@ import java.nio.ByteBuffer;
 public final class AjpServerConnection extends AbstractServerConnection {
     private SSLSessionInfo sslSessionInfo;
     private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
+    private AjpReadListener ajpReadListener;
 
     public AjpServerConnection(StreamConnection channel, Pool<ByteBuffer> bufferPool, HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
@@ -122,5 +123,14 @@ public final class AjpServerConnection extends AbstractServerConnection {
     @Override
     protected boolean isUpgradeSupported() {
         return true; //TODO: should we support this?
+    }
+
+    void setAjpReadListener(AjpReadListener ajpReadListener) {
+        this.ajpReadListener = ajpReadListener;
+    }
+
+    @Override
+    protected void exchangeComplete(HttpServerExchange exchange) {
+        ajpReadListener.exchangeComplete(exchange);
     }
 }

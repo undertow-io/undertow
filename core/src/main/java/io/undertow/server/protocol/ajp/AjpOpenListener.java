@@ -48,6 +48,7 @@ public class AjpOpenListener implements OpenListener {
 
         AjpServerConnection connection = new AjpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         AjpReadListener readListener = new AjpReadListener(connection, scheme, parser);
+        connection.setAjpReadListener(readListener);
         readListener.startRequest();
         channel.getSourceChannel().setReadListener(readListener);
         readListener.handleEvent(channel.getSourceChannel());
