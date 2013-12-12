@@ -139,7 +139,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         if (host == null) {
             callback.failed(exchange);
         } else {
-            host.connect(target, exchange, callback, timeout, timeUnit);
+            host.connect(target, exchange, callback, timeout, timeUnit, false);
         }
     }
 

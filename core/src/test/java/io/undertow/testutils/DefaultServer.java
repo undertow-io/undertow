@@ -18,13 +18,17 @@
 
 package io.undertow.testutils;
 
+import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
+import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
+import static org.xnio.SslClientAuthMode.REQUESTED;
 import io.undertow.UndertowOptions;
+import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
 import io.undertow.server.handlers.RequestDumplingHandler;
 import io.undertow.server.handlers.SSLHeaderHandler;
-import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
+import io.undertow.server.handlers.proxy.LoadBalancingProxyClientWithExclusivity;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
@@ -32,6 +36,26 @@ import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -53,28 +77,6 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Inet4Address;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-
-import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
-import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
-import static org.xnio.SslClientAuthMode.REQUESTED;
 
 /**
  * A class that starts a server before the test suite. By swapping out the root handler
@@ -247,7 +249,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        proxyOpenListener.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient().addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000, HANDLE_404));
+                        proxyOpenListener.setRootHandler(new ProxyHandler(new LoadBalancingProxyClientWithExclusivity(GSSAPIAuthenticationMechanism.createExclusivityChecker()).addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000, HANDLE_404));
                         proxyServer.resumeAccepts();
 
                     }
@@ -263,7 +265,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient().addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
+                        ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClientWithExclusivity(GSSAPIAuthenticationMechanism.createExclusivityChecker()).addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
                         setupProxyHandlerForSSL(proxyHandler);
                         proxyOpenListener.setRootHandler(proxyHandler);
                         proxyServer.resumeAccepts();

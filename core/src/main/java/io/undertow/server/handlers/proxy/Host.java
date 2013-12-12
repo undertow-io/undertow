@@ -95,7 +95,8 @@ class Host {
                 if (callback.getTimeoutKey() != null) {
                     callback.getTimeoutKey().remove();
                 }
-                connectionReady(connection, callback.getCallback(), callback.getExchange());
+                // Anything waiting for a connection is not expecting exclusivity.
+                connectionReady(connection, callback.getCallback(), callback.getExchange(), false);
             } else {
                 hostData.availbleConnections.add(connection);
             }
@@ -118,29 +119,35 @@ class Host {
                 task = hostData.awaitingConnections.poll();
             }
             if (task != null) {
-                openConnection(task.exchange, task.callback, hostData);
+                openConnection(task.exchange, task.callback, hostData, false);
             }
         }
     }
 
-    private void openConnection(final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, final HostThreadData data) {
-        data.connections++;
+    private void openConnection(final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, final HostThreadData data, final boolean exclusive) {
+        if (exclusive == false) {
+            data.connections++;
+        }
         client.connect(new ClientCallback<ClientConnection>() {
             @Override
             public void completed(final ClientConnection result) {
                 problem = false;
-                result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
-                    @Override
-                    public void handleEvent(ClientConnection channel) {
-                        handleClosedConnection(data, channel);
-                    }
-                });
-                connectionReady(result, callback, exchange);
+                if (exclusive == false) {
+                    result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
+                        @Override
+                        public void handleEvent(ClientConnection channel) {
+                            handleClosedConnection(data, channel);
+                        }
+                    });
+                }
+                connectionReady(result, callback, exchange, exclusive);
             }
 
             @Override
             public void failed(IOException e) {
-                data.connections--;
+                if (exclusive == false) {
+                    data.connections--;
+                }
                 problem = true;
                 redistributeQueued(getData());
                 scheduleFailedHostRetry(exchange);
@@ -168,11 +175,13 @@ class Host {
         }
     }
 
-    private void connectionReady(final ClientConnection result, final ProxyCallback<ProxyConnection> callback, final HttpServerExchange exchange) {
+    private void connectionReady(final ClientConnection result, final ProxyCallback<ProxyConnection> callback, final HttpServerExchange exchange, final boolean exclusive) {
         exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                returnConnection(result);
+                if (exclusive == false) {
+                    returnConnection(result);
+                }
                 nextListener.proceed();
             }
         });
@@ -252,16 +261,23 @@ class Host {
         return data;
     }
 
-    public void connect(ProxyClient.ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit) {
+    /**
+     *
+     * @param exclusive - Is connection for the exclusive use of one client?
+     */
+    public void connect(ProxyClient.ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit, boolean exclusive) {
         HostThreadData data = getData();
         ClientConnection conn = data.availbleConnections.poll();
         while (conn != null && !conn.isOpen()) {
             conn = data.availbleConnections.poll();
         }
         if (conn != null) {
-            connectionReady(conn, callback, exchange);
-        } else if (data.connections < loadBalancingProxyClient.getConnectionsPerThread()) {
-            openConnection(exchange, callback, data);
+            if (exclusive) {
+                data.connections--;
+            }
+            connectionReady(conn, callback, exchange, exclusive);
+        } else if (exclusive || data.connections < loadBalancingProxyClient.getConnectionsPerThread()) {
+            openConnection(exchange, callback, data, exclusive);
         } else {
             CallbackHolder holder;
             if (timeout > 0) {

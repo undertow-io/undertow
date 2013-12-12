@@ -45,7 +45,6 @@ public class SimpleProxyClientProvider implements ProxyClient {
         if (existing != null) {
             if (existing.isOpen()) {
                 //this connection already has a client, re-use it
-
                 callback.completed(exchange, new ProxyConnection(existing, uri.getPath() == null ? "/" : uri.getPath()));
                 return;
             } else {
