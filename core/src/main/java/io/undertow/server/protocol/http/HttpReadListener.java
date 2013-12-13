@@ -30,6 +30,7 @@ import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,7 +41,7 @@ import java.util.concurrent.Executor;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Runnable {
+final class HttpReadListener implements ChannelListener<ConduitStreamSourceChannel>, Runnable {
 
     private static final String BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 
@@ -67,7 +68,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ru
         httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
     }
 
-    public void handleEvent(final StreamSourceChannel channel) {
+    public void handleEvent(final ConduitStreamSourceChannel channel) {
         if(httpServerExchange == null) {
             //spurious wakeup, a request is in progress (or about to finish)
             //and the next request has arrived. We just suspend in this case
@@ -135,10 +136,10 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ru
         }
     }
 
-    private void handleFailedRead(StreamSourceChannel channel, int res) {
+    private void handleFailedRead(ConduitStreamSourceChannel channel, int res) {
         if (res == 0) {
             if (!channel.isReadResumed()) {
-                channel.getReadSetter().set(this);
+                channel.setReadListener(this);
                 channel.resumeReads();
             }
         } else if (res == -1) {
@@ -190,23 +191,22 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ru
                         @Override
                         public void run() {
                             newRequest();
-                            channel.getSourceChannel().getReadSetter().set(HttpReadListener.this);
+                            channel.getSourceChannel().setReadListener(HttpReadListener.this);
                             channel.getSourceChannel().resumeReads();
                         }
                     });
                 } else {
                     newRequest();
-                    channel.getSourceChannel().getReadSetter().set(this);
+                    channel.getSourceChannel().setReadListener(this);
                     channel.getSourceChannel().resumeReads();
                 }
             } else {
                 newRequest();
-                if (channel.getSourceChannel().isReadResumed()) {
-                    channel.getSourceChannel().suspendReads();
-                }
                 if (exchange.isInIoThread()) {
+                    //no need to suspend reads here, the task will always run before the read listener anyway
                     channel.getIoThread().execute(this);
                 } else {
+                    channel.getSourceChannel().suspendReads();
                     Executor executor = exchange.getDispatchExecutor();
                     if (executor == null) {
                         executor = exchange.getConnection().getWorker();
