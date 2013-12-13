@@ -58,6 +58,8 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     private Pooled<ByteBuffer> pooledBuffer;
     private HttpServerExchange exchange;
 
+    private ByteBuffer[] writevBuffer;
+
     private static final int STATE_BODY = 0; // Message body, normal pass-through operation
     private static final int STATE_START = 1; // No headers written yet
     private static final int STATE_HDR_NAME = 2; // Header name indexed by charIndex
@@ -114,11 +116,16 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 long res = 0;
                 ByteBuffer[] data;
                 if (userData == null) {
-                    data = new ByteBuffer[]{byteBuffer};
+                    res = next.write(byteBuffer);
                 } else {
-                    data = new ByteBuffer[]{byteBuffer, userData};
+                    data = writevBuffer;
+                    if(data == null) {
+                        data = writevBuffer = new ByteBuffer[2];
+                    }
+                    data[0] = byteBuffer;
+                    data[1] = userData;
+                    res = next.write(data, 0, data.length);
                 }
-                res = next.write(data, 0, data.length);
                 if (res == 0) {
                     return STATE_BUF_FLUSH;
                 }
@@ -201,11 +208,16 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             long res = 0;
             ByteBuffer[] data;
             if (userData == null) {
-                data = new ByteBuffer[]{buffer};
+                res = next.write(buffer);
             } else {
-                data = new ByteBuffer[]{buffer, userData};
+                data = writevBuffer;
+                if(data == null) {
+                    data = writevBuffer = new ByteBuffer[2];
+                }
+                data[0] = buffer;
+                data[1] = userData;
+                res = next.write(data, 0, data.length);
             }
-            res = next.write(data, 0, data.length);
             if (res == 0) {
                 return STATE_BUF_FLUSH;
             }
