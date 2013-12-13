@@ -25,29 +25,11 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
 
 
     protected final StreamSinkChannel delegate;
-    protected final ChannelListener.SimpleSetter<DetachableStreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<DetachableStreamSinkChannel>();
-    protected final ChannelListener.SimpleSetter<DetachableStreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<DetachableStreamSinkChannel>();
+    protected ChannelListener.SimpleSetter<DetachableStreamSinkChannel> writeSetter;
+    protected ChannelListener.SimpleSetter<DetachableStreamSinkChannel> closeSetter;
 
     public DetachableStreamSinkChannel(final StreamSinkChannel delegate) {
         this.delegate = delegate;
-        delegate.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
-            @Override
-            public void handleEvent(final StreamSinkChannel channel) {
-                if(isFinished()) {
-                    channel.suspendWrites();
-                    return;
-                }
-                ChannelListener<? super DetachableStreamSinkChannel> listener = writeSetter.get();
-                if(listener == null) {
-                    channel.suspendWrites();
-                    return;
-                } else {
-                    listener.handleEvent(DetachableStreamSinkChannel.this);
-                }
-
-            }
-        });
-        delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
     }
 
     protected abstract boolean isFinished();
@@ -135,11 +117,23 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
 
     @Override
     public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
+        if (writeSetter == null) {
+            writeSetter = new ChannelListener.SimpleSetter<DetachableStreamSinkChannel>();
+            if (!isFinished()) {
+                delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
+            }
+        }
         return writeSetter;
     }
 
     @Override
     public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
+        if (closeSetter == null) {
+            closeSetter = new ChannelListener.SimpleSetter<DetachableStreamSinkChannel>();
+            if (!isFinished()) {
+                delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
+            }
+        }
         return closeSetter;
     }
 

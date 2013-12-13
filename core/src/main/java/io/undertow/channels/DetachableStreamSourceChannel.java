@@ -25,29 +25,11 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
 
     protected final StreamSourceChannel delegate;
 
-    protected final ChannelListener.SimpleSetter<DetachableStreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<DetachableStreamSourceChannel>();
-    protected final ChannelListener.SimpleSetter<DetachableStreamSourceChannel> closeSetter = new ChannelListener.SimpleSetter<DetachableStreamSourceChannel>();
+    protected ChannelListener.SimpleSetter<DetachableStreamSourceChannel> readSetter;
+    protected ChannelListener.SimpleSetter<DetachableStreamSourceChannel> closeSetter;
 
     public DetachableStreamSourceChannel(final StreamSourceChannel delegate) {
         this.delegate = delegate;
-        delegate.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
-            @Override
-            public void handleEvent(final StreamSourceChannel channel) {
-                if(isFinished()) {
-                    channel.suspendReads();
-                    return;
-                }
-                ChannelListener<? super DetachableStreamSourceChannel> listener = readSetter.get();
-                if(listener == null) {
-                    channel.suspendReads();
-                    return;
-                } else {
-                    listener.handleEvent(DetachableStreamSourceChannel.this);
-                }
-
-            }
-        });
-        delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
     }
 
     protected abstract boolean isFinished();
@@ -119,6 +101,12 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public ChannelListener.Setter<? extends StreamSourceChannel> getReadSetter() {
+        if (readSetter == null) {
+            readSetter = new ChannelListener.SimpleSetter<DetachableStreamSourceChannel>();
+            if (!isFinished()) {
+                delegate.getReadSetter().set(ChannelListeners.delegatingChannelListener(this, readSetter));
+            }
+        }
         return readSetter;
     }
 
@@ -162,6 +150,12 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public ChannelListener.Setter<? extends StreamSourceChannel> getCloseSetter() {
+        if (closeSetter == null) {
+            closeSetter = new ChannelListener.SimpleSetter<DetachableStreamSourceChannel>();
+            if (!isFinished()) {
+                delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
+            }
+        }
         return closeSetter;
     }
 
