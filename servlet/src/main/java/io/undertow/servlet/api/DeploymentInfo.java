@@ -45,6 +45,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.DefaultAuthorizationManager;
 import io.undertow.servlet.core.InMemorySessionManagerFactory;
 import io.undertow.servlet.util.DefaultClassIntrospector;
+import io.undertow.util.ImmediateAuthenticationMechanismFactory;
 
 /**
  * Represents a servlet deployment.
@@ -826,6 +827,66 @@ public class DeploymentInfo implements Cloneable {
 
     public Map<String, Set<String>> getPrincipalVersusRolesMap() {
         return Collections.unmodifiableMap(principalVersusRolesMap);
+    }
+
+    /**
+     * Removes all configured authentication mechanisms from the deployment.
+     *
+     * @return this deployment info
+     */
+    public DeploymentInfo clearLoginMethods() {
+        if(loginConfig != null) {
+            loginConfig.getAuthMethods().clear();
+        }
+        return this;
+    }
+
+    /**
+     * Adds an authentication mechanism directly to the deployment. This mechanism will be first in the list.
+     *
+     * In general you should just use {@link #addAuthenticationMechanism(String, io.undertow.security.api.AuthenticationMechanismFactory)}
+     * and allow the user to configure the methods they want by name.
+     *
+     * This method is essentially a convenience method, if is the same as registering a factory under the provided name that returns
+     * and authentication mechanism, and then adding it to the login config list.
+     *
+     * If you want your mechanism to be the only one in the deployment you should first invoke {@link #clearLoginMethods()}.
+     *
+     * @param name The authentication mechanism name
+     * @param mechanism The mechanism
+     * @return this deployment info
+     */
+    public DeploymentInfo addFirstAuthenticationMechanism(final String name, final AuthenticationMechanism mechanism) {
+        authenticationMechanisms.put(name, new ImmediateAuthenticationMechanismFactory(mechanism));
+        if(loginConfig == null) {
+            loginConfig = new LoginConfig(null);
+        }
+        loginConfig.addFirstAuthMethod(new AuthMethodConfig(name));
+        return this;
+    }
+
+    /**
+     * Adds an authentication mechanism directly to the deployment. This mechanism will be last in the list.
+     *
+     * In general you should just use {@link #addAuthenticationMechanism(String, io.undertow.security.api.AuthenticationMechanismFactory)}
+     * and allow the user to configure the methods they want by name.
+     *
+     * This method is essentially a convenience method, if is the same as registering a factory under the provided name that returns
+     * and authentication mechanism, and then adding it to the login config list.
+     *
+     * If you want your mechanism to be the only one in the deployment you should first invoke {@link #clearLoginMethods()}.
+     *
+     * @param name The authentication mechanism name
+     * @param mechanism The mechanism
+     * @return
+     */
+    public DeploymentInfo addLastAuthenticationMechanism(final String name, final AuthenticationMechanism mechanism) {
+        authenticationMechanisms.put(name, new ImmediateAuthenticationMechanismFactory(mechanism));
+        if(loginConfig == null) {
+            loginConfig = new LoginConfig(null);
+        }
+        loginConfig.addLastAuthMethod(new AuthMethodConfig(name));
+        return this;
     }
 
     /**
