@@ -27,7 +27,6 @@ import io.undertow.conduits.FinishableStreamSinkConduit;
 import io.undertow.conduits.FinishableStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
-import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -73,7 +72,7 @@ public class HttpTransferEncoding {
             pipeliningBuffer.setupPipelineBuffer(exchange);
         }
         ConduitStreamSourceChannel sourceChannel = connection.getChannel().getSourceChannel();
-        sourceChannel.setConduit(new ReadDataStreamSourceConduit(sourceChannel.getConduit(), connection));
+        sourceChannel.setConduit(connection.getReadDataStreamSourceConduit());
 
         boolean persistentConnection = persistentConnection(exchange, connectionHeader);
 

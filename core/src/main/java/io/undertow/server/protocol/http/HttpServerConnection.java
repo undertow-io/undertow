@@ -55,6 +55,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
     private PipeliningBufferingStreamSinkConduit pipelineBuffer;
     private HttpResponseConduit responseConduit;
     private ServerFixedLengthStreamSinkConduit fixedLengthStreamSinkConduit;
+    private ReadDataStreamSourceConduit readDataStreamSourceConduit;
 
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
@@ -64,6 +65,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
         this.responseConduit = new HttpResponseConduit(channel.getSinkChannel().getConduit(), bufferPool);
 
         fixedLengthStreamSinkConduit = new ServerFixedLengthStreamSinkConduit(responseConduit, false, false);
+        readDataStreamSourceConduit = new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this);
         //todo: do this without an allocation
         addCloseListener(new CloseListener() {
             @Override
@@ -209,6 +211,10 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     HttpReadListener getReadListener() {
         return readListener;
+    }
+
+    ReadDataStreamSourceConduit getReadDataStreamSourceConduit() {
+        return readDataStreamSourceConduit;
     }
 
     public PipeliningBufferingStreamSinkConduit getPipelineBuffer() {
