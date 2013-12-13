@@ -47,7 +47,7 @@ public class LoginConfig implements Cloneable {
     }
 
     public LoginConfig addFirstAuthMethod(AuthMethodConfig authMethodConfig) {
-        authMethods.add(authMethodConfig);
+        authMethods.addFirst(authMethodConfig);
         return this;
     }
 
@@ -56,7 +56,7 @@ public class LoginConfig implements Cloneable {
         return this;
     }
     public LoginConfig addFirstAuthMethod(String authMethodConfig) {
-        authMethods.add(new AuthMethodConfig(authMethodConfig));
+        authMethods.addFirst(new AuthMethodConfig(authMethodConfig));
         return this;
     }
 
