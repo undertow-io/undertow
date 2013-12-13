@@ -38,7 +38,7 @@ public class AccessControlListHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         String attribute = this.attribute.readAttribute(exchange);
-        if (attribute != null && isAllowed(attribute)) {
+        if (isAllowed(attribute)) {
             next.handleRequest(exchange);
         } else {
             exchange.setResponseCode(StatusCodes.FORBIDDEN);
@@ -48,9 +48,11 @@ public class AccessControlListHandler implements HttpHandler {
 
     //package private for unit tests
     boolean isAllowed(String attribute) {
-        for (AclMatch rule : acl) {
-            if (rule.matches(attribute)) {
-                return !rule.isDeny();
+        if (attribute != null) {
+            for (AclMatch rule : acl) {
+                if (rule.matches(attribute)) {
+                    return !rule.isDeny();
+                }
             }
         }
         return defaultAllow;

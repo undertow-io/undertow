@@ -57,6 +57,11 @@ public class UserAgentAccessControlHandlerUnitTestCase {
     }
 
     @Test
+    public void testNullUserAgent() {
+        assertTrue(new AccessControlListHandler(requestHeader(USER_AGENT)).setDefaultAllow(true).isAllowed(null));
+    }
+
+    @Test
     public void testAllowAllButOne() throws UnknownHostException {
         AccessControlListHandler handler = new AccessControlListHandler(requestHeader(USER_AGENT))
             .setDefaultAllow(true)
