@@ -104,15 +104,20 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                     long maxMessageSize = method.getAnnotation(OnMessage.class).maxMessageSize();
                     boolean messageHandled = false;
                     //this is a bit more complex
-                    for (int i = 0; i < method.getParameterTypes().length; ++i) {
-                        final Class<?> param = method.getParameterTypes()[i];
+                    Class<?>[] parameterTypes = method.getParameterTypes();
+                    for (int i = 0; i < parameterTypes.length; ++i) {
+                        if (hasAnnotation(PathParam.class, method.getParameterAnnotations()[i])) {
+                            continue;
+                        }
+
+                        final Class<?> param = parameterTypes[i];
                         if (param.equals(byte[].class)) {
                             if (binaryMessage != null) {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
                             binaryMessage = new BoundMethod(method, byte[].class, false, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
-                                    new BoundSingleParameter(method, byte[].class, false),
+                                    new BoundSingleParameter(i, byte[].class),
                                     createBoundPathParameters(method));
                             messageHandled = true;
                             break;
@@ -123,7 +128,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             binaryMessage = new BoundMethod(method, ByteBuffer.class, false,
                                     maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
-                                    new BoundSingleParameter(method, ByteBuffer.class, false),
+                                    new BoundSingleParameter(i, ByteBuffer.class),
                                     createBoundPathParameters(method));
                             messageHandled = true;
                             break;
@@ -135,7 +140,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             binaryMessage = new BoundMethod(method, InputStream.class, false,
                                     maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
-                                    new BoundSingleParameter(method, InputStream.class, false),
+                                    new BoundSingleParameter(i, InputStream.class),
                                     createBoundPathParameters(method));
                             messageHandled = true;
                             break;
@@ -146,7 +151,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             }
                             textMessage = new BoundMethod(method, String.class, false, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
-                                    new BoundSingleParameter(method, String.class, false),
+                                    new BoundSingleParameter(i, String.class),
                                     createBoundPathParameters(method));
                             messageHandled = true;
                             break;
@@ -158,7 +163,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             textMessage = new BoundMethod(method, Reader.class, false,
                                     maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
-                                    new BoundSingleParameter(method, Reader.class, false),
+                                    new BoundSingleParameter(i, Reader.class),
                                     createBoundPathParameters(method));
                             messageHandled = true;
                             break;
@@ -168,7 +173,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
                             pongMessage = new BoundMethod(method, PongMessage.class, false, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
-                                    new BoundSingleParameter(method, PongMessage.class, false),
+                                    new BoundSingleParameter(i, PongMessage.class),
                                     createBoundPathParameters(method));
                             messageHandled = true;
                             break;
@@ -178,15 +183,19 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                         //ok, now we need to look through again for encodable / decodable values
                         //we can't do this on the first pass, as we can't decide if a boolean is the payload
                         //or an indicator that the frame is complete
-                        for (int i = 0; i < method.getParameterTypes().length; ++i) {
-                            final Class<?> param = method.getParameterTypes()[i];
+                        for (int i = 0; i < parameterTypes.length; ++i) {
+                            if (hasAnnotation(PathParam.class, method.getParameterAnnotations()[i])) {
+                                continue;
+                            }
+
+                            final Class<?> param = parameterTypes[i];
                             if (encodingFactory.canDecodeText(param)) {
                                 if (textMessage != null) {
                                     throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                                 }
                                 textMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                         new BoundSingleParameter(method, boolean.class, true),
-                                        new BoundSingleParameter(method, param, false),
+                                        new BoundSingleParameter(i, param),
                                         createBoundPathParameters(method));
                                 messageHandled = true;
                                 break;
@@ -196,7 +205,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                                 }
                                 binaryMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                         new BoundSingleParameter(method, boolean.class, true),
-                                        new BoundSingleParameter(method, param, false),
+                                        new BoundSingleParameter(i, param),
                                         createBoundPathParameters(method));
                                 messageHandled = true;
                                 break;
@@ -238,6 +247,15 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
         return null;
     }
 
+    private static boolean hasAnnotation(Class<? extends Annotation> annotationType, Annotation[] annotations) {
+        for (Annotation annotation : annotations) {
+            if (annotation.annotationType().equals(annotationType)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     @Override
     public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -268,6 +286,11 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
         private final int position;
         private final Class<?> type;
+
+        public BoundSingleParameter(int position, final Class<?> type) {
+            this.position = position;
+            this.type = type;
+        }
 
         public BoundSingleParameter(final Method method, final Class<?> type, final boolean optional) {
             this.type = type;
