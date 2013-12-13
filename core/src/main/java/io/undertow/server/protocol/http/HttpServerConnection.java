@@ -21,6 +21,7 @@ package io.undertow.server.protocol.http;
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
+import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ConnectionSSLSessionInfo;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
@@ -28,6 +29,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.xnio.OptionMap;
@@ -93,11 +95,18 @@ public final class HttpServerConnection extends AbstractServerConnection {
         exchange.setRelativePath(exchange.getRelativePath());
         newExchange.getRequestHeaders().put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
         newExchange.getRequestHeaders().put(Headers.CONTENT_LENGTH, 0);
+        newExchange.setPersistent(true);
 
-
-        //apply transfer encoding rules
-        HttpTransferEncoding.setupRequest(newExchange);
         Connectors.terminateRequest(newExchange);
+        newExchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
+            @Override
+            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+
+                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(new HttpResponseConduit(getSinkChannel().getConduit(), getBufferPool(), exchange), false, false);
+                fixed.reset(0, exchange);
+                return fixed;
+            }
+        });
 
         //we restore the read channel immediately, as this out of band response has no read side
         channel.getSourceChannel().setConduit(source(state));
