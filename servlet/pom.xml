@@ -183,6 +183,7 @@
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                     </systemPropertyVariables>
+                                  <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
                                 </configuration>
                             </execution>
                             <execution>
@@ -204,6 +205,7 @@
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                     </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-ajp-reports</reportsDirectory>
                                 </configuration>
                             </execution>
                         </executions>
