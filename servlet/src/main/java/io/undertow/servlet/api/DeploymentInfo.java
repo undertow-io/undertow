@@ -906,6 +906,22 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
+     * Returns true if the specified mechanism is present in the login config
+     * @param mechanismName The mechanism name
+     * @return true if the mechanism is enabled
+     */
+    public boolean isAuthenticationMechanismPresent(final String mechanismName) {
+        if(loginConfig != null) {
+            for(AuthMethodConfig method : loginConfig.getAuthMethods()) {
+                if(method.equals(mechanismName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Adds an additional servlet extension to the deployment. Servlet extensions are generally discovered
      * using META-INF/services entries, however this may not be practical in all environments.
      * @param servletExtension The servlet extension
