@@ -11,4 +11,6 @@ import java.lang.annotation.RetentionPolicy;
 @Inherited
 public @interface AjpIgnore {
     boolean apacheOnly() default false;
+
+    String value() default "";
 }
