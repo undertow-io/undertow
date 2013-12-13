@@ -308,12 +308,14 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         }
         if (ajp && ajpIgnore != null) {
             if (!proxy || !ajpIgnore.apacheOnly()) {
+                notifier.fireTestIgnored(describeChild(method));
                 return;
             }
         }
         if (proxy) {
             if (method.getAnnotation(ProxyIgnore.class) != null ||
                     method.getMethod().getDeclaringClass().isAnnotationPresent(ProxyIgnore.class)) {
+                notifier.fireTestIgnored(describeChild(method));
                 return;
             }
         }
