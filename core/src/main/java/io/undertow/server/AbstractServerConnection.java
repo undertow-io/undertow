@@ -214,6 +214,14 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     }
 
     /**
+     * Resets the channel to its original state, effectively disabling all current conduit
+     * wrappers. The current state is lost.
+     */
+    public void clearChannel() {
+        channel.getSinkChannel().setConduit(originalSinkConduit);
+        channel.getSourceChannel().setConduit(originalSourceConduit);
+    }
+    /**
      * Resores the channel conduits to a previous state.
      *
      * @param state The original state

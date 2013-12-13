@@ -178,7 +178,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ru
     }
 
     public void exchangeComplete(final HttpServerExchange exchange) {
-        connection.resetChannel();
+        connection.clearChannel();
         final HttpServerConnection connection = this.connection;
         if (exchange.isPersistent() && !exchange.isUpgrade()) {
             final StreamConnection channel = connection.getChannel();

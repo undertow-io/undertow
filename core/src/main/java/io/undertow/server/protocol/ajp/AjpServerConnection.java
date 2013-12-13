@@ -93,6 +93,12 @@ public final class AjpServerConnection extends AbstractServerConnection {
     }
 
     @Override
+    public void clearChannel() {
+        super.clearChannel();
+        channel.getSinkChannel().getConduit().setWriteReadyHandler(writeReadyHandler);
+    }
+
+    @Override
     public SSLSessionInfo getSslSessionInfo() {
         return sslSessionInfo;
     }

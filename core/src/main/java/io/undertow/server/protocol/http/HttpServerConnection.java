@@ -179,7 +179,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     @Override
     protected StreamConnection upgradeChannel() {
-        resetChannel();
+        clearChannel();
         if (extraBytes != null) {
             channel.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this));
         }
