@@ -125,7 +125,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ru
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
             this.httpServerExchange = null;
-            HttpTransferEncoding.setupRequest(httpServerExchange, false);
+            HttpTransferEncoding.setupRequest(httpServerExchange);
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);

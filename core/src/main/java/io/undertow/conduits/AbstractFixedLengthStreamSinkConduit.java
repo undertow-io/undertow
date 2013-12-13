@@ -43,10 +43,8 @@ import static org.xnio.Bits.longBitMask;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
-    private final int config;
-
-    private final ConduitListener<? super FixedLengthStreamSinkConduit> finishListener;
+public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
+    private int config;
 
     private long state;
 
@@ -65,20 +63,26 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
      * @param contentLength  the content length
      * @param configurable   {@code true} if this instance should pass configuration to the next
      * @param propagateClose {@code true} if this instance should pass close to the next
-     * @param finishListener the listener to call when the channel is closed or the length is reached
      */
-    public FixedLengthStreamSinkConduit(final StreamSinkConduit next, final long contentLength, final boolean configurable, final boolean propagateClose, final ConduitListener<? super FixedLengthStreamSinkConduit> finishListener) {
+    public AbstractFixedLengthStreamSinkConduit(final StreamSinkConduit next, final long contentLength, final boolean configurable, final boolean propagateClose) {
         super(next);
         if (contentLength < 0L) {
             throw new IllegalArgumentException("Content length must be greater than or equal to zero");
         } else if (contentLength > MASK_COUNT) {
             throw new IllegalArgumentException("Content length is too long");
         }
-        this.finishListener = finishListener;
         config = (configurable ? CONF_FLAG_CONFIGURABLE : 0) | (propagateClose ? CONF_FLAG_PASS_CLOSE : 0);
         this.state = contentLength;
     }
 
+    protected void reset(long contentLength, boolean propagateClose) {
+        this.state = contentLength;
+        if(propagateClose) {
+            config |= CONF_FLAG_PASS_CLOSE;
+        } else {
+            config &= ~CONF_FLAG_PASS_CLOSE;
+        }
+    }
 
     public int write(final ByteBuffer src) throws IOException {
         long val = state;
@@ -242,11 +246,12 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
             }
             state = newVal;
             if (callFinish) {
-                if (finishListener != null) {
-                    finishListener.handleEvent(this);
-                }
+                channelFinished();
             }
         }
+    }
+
+    protected void channelFinished() {
     }
 
     private long enterShutdown() {

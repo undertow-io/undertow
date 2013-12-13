@@ -25,7 +25,6 @@ import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FinishableStreamSinkConduit;
 import io.undertow.conduits.FinishableStreamSourceConduit;
-import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
@@ -60,7 +59,7 @@ public class HttpTransferEncoding {
     private HttpTransferEncoding() {
     }
 
-    public static void setupRequest(final HttpServerExchange exchange, final boolean outOfBand) {
+    public static void setupRequest(final HttpServerExchange exchange) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         final String connectionHeader = requestHeaders.getFirst(Headers.CONNECTION);
         final String transferEncodingHeader = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
@@ -94,13 +93,6 @@ public class HttpTransferEncoding {
         }
 
         exchange.setPersistent(persistentConnection);
-        if(outOfBand) {
-            sinkChannel.setConduit(new HttpResponseConduit(sinkChannel.getConduit(), connection.getBufferPool(), exchange));
-        } else {
-            HttpResponseConduit responseConduit = connection.getResponseConduit();
-            responseConduit.reset(exchange);
-            sinkChannel.setConduit(responseConduit);
-        }
 
         if(!exchange.isRequestComplete() || connection.getExtraBytes() != null) {
             //if there is more data we suspend reads
@@ -111,6 +103,7 @@ public class HttpTransferEncoding {
     }
 
     private static boolean handleRequestEncoding(final HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipeliningBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
+
         HttpString transferEncoding = Headers.IDENTITY;
         if (transferEncodingHeader != null) {
             transferEncoding = new HttpString(transferEncodingHeader);
@@ -216,15 +209,18 @@ public class HttpTransferEncoding {
         };
     }
 
-    static StreamSinkConduit createSinkConduit(final StreamSinkConduit original, final HttpServerExchange exchange) {
-        final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
+    static StreamSinkConduit createSinkConduit(final HttpServerExchange exchange) {
         boolean headRequest = exchange.getRequestMethod().equals(Methods.HEAD);
-        StreamSinkConduit channel = original;
+        HttpServerConnection serverConnection = (HttpServerConnection) exchange.getConnection();
+
+        HttpResponseConduit responseConduit = serverConnection.getResponseConduit();
+        responseConduit.reset(exchange);
+        StreamSinkConduit channel = responseConduit;
         if (headRequest) {
             //if this is a head request we add a head channel underneath the content encoding channel
             //this will just discard the data
             //we still go through with the rest of the logic, to make sure all headers are set correctly
-            channel = new HeadStreamSinkConduit(channel, finishListener);
+            channel = new HeadStreamSinkConduit(channel, terminateResponseListener(exchange));
         }
 
         final HeaderMap responseHeaders = exchange.getResponseHeaders();
@@ -241,22 +237,24 @@ public class HttpTransferEncoding {
         }
         final String contentLengthHeader = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
         if (contentLengthHeader != null) {
-            StreamSinkConduit res = handleFixedLength(exchange, finishListener, headRequest, channel, responseHeaders, contentLengthHeader);
+            StreamSinkConduit res = handleFixedLength(exchange, headRequest, channel, responseHeaders, contentLengthHeader, serverConnection);
             if (res != null) {
                 return res;
             }
         }
-        return handleRequestConduit(exchange, headRequest, channel, responseHeaders, finishListener);
+        return handleRequestConduit(exchange, headRequest, channel, responseHeaders, terminateResponseListener(exchange));
     }
 
-    private static StreamSinkConduit handleFixedLength(HttpServerExchange exchange, ConduitListener<StreamSinkConduit> finishListener, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, String contentLengthHeader) {
+    private static StreamSinkConduit handleFixedLength(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, String contentLengthHeader, HttpServerConnection connection) {
         try {
             final long contentLength = Long.parseLong(contentLengthHeader);
             if (headRequest) {
                 return channel;
             }
             // fixed-length response
-            return new FixedLengthStreamSinkConduit(channel, contentLength, true, !exchange.isPersistent(), finishListener);
+            ServerFixedLengthStreamSinkConduit fixed = connection.getFixedLengthStreamSinkConduit();
+            fixed.reset(contentLength, exchange);
+            return fixed;
         } catch (NumberFormatException e) {
             //we just fix it for them
             responseHeaders.remove(Headers.CONTENT_LENGTH);

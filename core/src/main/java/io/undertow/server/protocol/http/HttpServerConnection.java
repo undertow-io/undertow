@@ -54,6 +54,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
     private HttpReadListener readListener;
     private PipeliningBufferingStreamSinkConduit pipelineBuffer;
     private HttpResponseConduit responseConduit;
+    private ServerFixedLengthStreamSinkConduit fixedLengthStreamSinkConduit;
 
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
@@ -61,6 +62,8 @@ public final class HttpServerConnection extends AbstractServerConnection {
             sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel), this);
         }
         this.responseConduit = new HttpResponseConduit(channel.getSinkChannel().getConduit(), bufferPool);
+
+        fixedLengthStreamSinkConduit = new ServerFixedLengthStreamSinkConduit(responseConduit, false, false);
         //todo: do this without an allocation
         addCloseListener(new CloseListener() {
             @Override
@@ -68,6 +71,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
                 responseConduit.freeBuffers();
             }
         });
+
     }
 
     @Override
@@ -88,8 +92,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
         newExchange.getRequestHeaders().put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
         newExchange.getRequestHeaders().put(Headers.CONTENT_LENGTH, 0);
 
+
         //apply transfer encoding rules
-        HttpTransferEncoding.setupRequest(newExchange, true);
+        HttpTransferEncoding.setupRequest(newExchange);
         Connectors.terminateRequest(newExchange);
 
         //we restore the read channel immediately, as this out of band response has no read side
@@ -181,7 +186,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     @Override
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
-        return HttpTransferEncoding.createSinkConduit(conduit, exchange);
+        return HttpTransferEncoding.createSinkConduit(exchange);
     }
 
     @Override
@@ -214,8 +219,13 @@ public final class HttpServerConnection extends AbstractServerConnection {
         return responseConduit;
     }
 
+    ServerFixedLengthStreamSinkConduit getFixedLengthStreamSinkConduit() {
+        return fixedLengthStreamSinkConduit;
+    }
+
     public void setPipelineBuffer(PipeliningBufferingStreamSinkConduit pipelineBuffer) {
         this.pipelineBuffer = pipelineBuffer;
         this.responseConduit = new HttpResponseConduit(pipelineBuffer, bufferPool);
+        this.fixedLengthStreamSinkConduit = new ServerFixedLengthStreamSinkConduit(responseConduit, false, false);
     }
 }

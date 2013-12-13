@@ -32,7 +32,6 @@ import io.undertow.client.UndertowClientMessages;
 import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
-import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
@@ -254,7 +253,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         if (fixedLengthString != null) {
             try {
                 long length = Long.parseLong(fixedLengthString);
-                conduit = new FixedLengthStreamSinkConduit(conduit, length, false, false, requestFinishListener);
+                conduit = new ClientFixedLengthStreamSinkConduit(conduit, length, false, false, currentRequest);
                 hasContent = length != 0;
             } catch (NumberFormatException e) {
                 handleError(new IOException(e));
@@ -267,7 +266,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
             }
             conduit = new ChunkedStreamSinkConduit(conduit, httpClientExchange.getConnection().getBufferPool(), false, false, httpClientExchange.getRequest().getRequestHeaders(), requestFinishListener, httpClientExchange);
         } else {
-            conduit = new FixedLengthStreamSinkConduit(conduit, 0, false, false, requestFinishListener);
+            conduit = new ClientFixedLengthStreamSinkConduit(conduit, 0, false, false, currentRequest);
             hasContent = false;
         }
         sinkChannel.setConduit(conduit);
