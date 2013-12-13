@@ -28,13 +28,14 @@ public class DateHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        long time = System.currentTimeMillis();
+        long time = System.nanoTime();
         if(time < nextUpdateTime) {
             exchange.getResponseHeaders().put(Headers.DATE, cachedDateString);
         } else {
-            String dateString = DateUtils.toDateString(new Date(time));
+            long realTime = System.currentTimeMillis();
+            String dateString = DateUtils.toDateString(new Date(realTime));
             cachedDateString = dateString;
-            nextUpdateTime = time + 1000;
+            nextUpdateTime = time + 1000000000;
             exchange.getResponseHeaders().put(Headers.DATE, dateString);
         }
         next.handleRequest(exchange);
