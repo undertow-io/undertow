@@ -33,6 +33,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.concurrent.Future;
 
 /**
@@ -41,6 +42,9 @@ import java.util.concurrent.Future;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
+
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
+
     private final WebSocketChannel webSocketChannel;
     private final EndpointConfig config;
     private final Async async = new AsyncWebSocketSessionRemoteEndpoint();
@@ -254,7 +258,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         @Override
         public Writer getSendWriter() throws IOException {
             assertNotInFragment();
-            return new OutputStreamWriter(new BinaryOutputStream(webSocketChannel.send(WebSocketFrameType.TEXT)));
+            return new OutputStreamWriter(new BinaryOutputStream(webSocketChannel.send(WebSocketFrameType.TEXT)), UTF_8);
         }
 
         @Override
