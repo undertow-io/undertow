@@ -591,7 +591,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public void unDispatch() {
         state &= ~FLAG_DISPATCHED;
-        dispatchExecutor = null;
         dispatchTask = null;
     }
 
@@ -629,11 +628,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException If this exchange has already been dispatched
      */
     public void dispatch(final Executor executor, final Runnable runnable) {
+        if (executor != null) {
+            this.dispatchExecutor = executor;
+        }
         if (isInCall()) {
             state |= FLAG_DISPATCHED;
-            if (executor != null) {
-                this.dispatchExecutor = executor;
-            }
             this.dispatchTask = runnable;
         } else {
             if (executor == null) {

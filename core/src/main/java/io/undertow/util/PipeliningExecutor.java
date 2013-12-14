@@ -11,13 +11,13 @@ import java.util.concurrent.Executor;
  *
  * @author Stuart Douglas
  */
-public class ContinuingExecutor implements Executor {
+public class PipeliningExecutor implements Executor {
 
     private final Executor executor;
 
     private static final ThreadLocal<LinkedList<Runnable>> THREAD_QUEUE = new ThreadLocal<LinkedList<Runnable>>();
 
-    public ContinuingExecutor(Executor executor) {
+    public PipeliningExecutor(Executor executor) {
         this.executor = executor;
     }
 
@@ -42,7 +42,7 @@ public class ContinuingExecutor implements Executor {
                     Runnable runnable = queue.poll();
                     while (runnable != null) {
                         try {
-                            command.run();
+                            runnable.run();
                         } catch (Throwable t) {
                             UndertowLogger.REQUEST_LOGGER.debugf(t, "Task %s failed", command);
                         }
