@@ -69,13 +69,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
     public void handleEvent(final ConduitStreamSourceChannel channel) {
-        if(httpServerExchange == null) {
-            //spurious wakeup, a request is in progress (or about to finish)
-            //and the next request has arrived. We just suspend in this case
-            //because resume always comes from the IO thread there is no chance of a race
-            channel.suspendReads();
-            return;
-        }
 
         Pooled<ByteBuffer> existing = connection.getExtraBytes();
 
@@ -99,7 +92,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     res = buffer.remaining();
                 }
 
-                if (res <= 0) {
+                if(res <= 0) {
                     handleFailedRead(channel, res);
                     return;
                 }
@@ -187,26 +180,16 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         connection.clearChannel();
         final HttpServerConnection connection = this.connection;
         if (exchange.isPersistent() && !exchange.isUpgrade()) {
-            final StreamConnection channel = connection.getChannel();
+            newRequest();
+            StreamConnection channel = connection.getChannel();
             if (connection.getExtraBytes() == null) {
                 //if we are not pipelining we just register a listener
-                //we have to resume from with the io thread
-                if (Thread.currentThread() != channel.getIoThread()) {
-                    channel.getIoThread().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            newRequest();
-                            channel.getSourceChannel().setReadListener(HttpReadListener.this);
-                            channel.getSourceChannel().resumeReads();
-                        }
-                    });
-                } else {
-                    newRequest();
-                    channel.getSourceChannel().setReadListener(this);
-                    channel.getSourceChannel().resumeReads();
-                }
+                channel.getSourceChannel().getReadSetter().set(this);
+                channel.getSourceChannel().resumeReads();
             } else {
-                newRequest();
+                if (channel.getSourceChannel().isReadResumed()) {
+                    channel.getSourceChannel().suspendReads();
+                }
                 if (exchange.isInIoThread()) {
                     //no need to suspend reads here, the task will always run before the read listener anyway
                     channel.getIoThread().execute(this);
@@ -219,7 +202,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     executor.execute(this);
                 }
             }
-        } else if (!exchange.isPersistent()) {
+        } else if(!exchange.isPersistent()) {
             IoUtils.safeClose(connection);
         }
     }
