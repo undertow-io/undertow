@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
@@ -153,11 +154,23 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
         })
 public abstract class HttpRequestParser {
 
+    private static final byte[] HTTP;
+    public static final int HTTP_LENGTH;
+
     private final int maxParameters;
     private final int maxHeaders;
     private final boolean allowEncodedSlash;
     private final boolean decode;
     private final String charset;
+
+    static {
+        try {
+            HTTP = "HTTP/1.".getBytes("ASCII");
+            HTTP_LENGTH = HTTP.length;
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public HttpRequestParser(OptionMap options) {
         maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, 1000);
@@ -181,7 +194,10 @@ public abstract class HttpRequestParser {
 
     public void handle(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) {
         if (currentState.state == ParseState.VERB) {
-            //fast path HTTP GET requests
+            //fast path, we assume that it will parse fully so we avoid all the if statements
+
+            //fast path HTTP GET requests, basically just assume all requests are get
+            //and fall out to the state machine if it is not
             final int position = buffer.position();
             if (buffer.remaining() > 3
                     && buffer.get(position) == 'G'
@@ -192,16 +208,44 @@ public abstract class HttpRequestParser {
             } else {
                 handleHttpVerb(buffer, currentState, builder);
             }
-            //fast path, we assume that it will parse fully so we avoid all the if statements
             handlePath(buffer, currentState, builder);
-            handleHttpVersion(buffer, currentState, builder);
-            if(buffer.remaining() > 1 && currentState.leftOver == '\r' && buffer.get(buffer.position()) == '\n') {
-                buffer.get();
-                currentState.leftOver = 0;
-                currentState.state = ParseState.HEADER;
+            boolean failed = false;
+            if (buffer.remaining() > HTTP_LENGTH + 3) {
+                int pos = buffer.position();
+                for (int i = 0; i < HTTP_LENGTH; ++i) {
+                    if (HTTP[i] != buffer.get(pos + i)) {
+                        failed = true;
+                        break;
+                    }
+                }
+                if (!failed) {
+                    final byte b = buffer.get(pos + HTTP_LENGTH);
+                    final byte b2 = buffer.get(pos + HTTP_LENGTH + 1);
+                    final byte b3 = buffer.get(pos + HTTP_LENGTH + 2);
+                    if(b2 == '\r' && b3 == '\n') {
+                        if(b == '1') {
+                            builder.setProtocol(Protocols.HTTP_1_1);
+                            buffer.position(pos + HTTP_LENGTH + 3);
+                            currentState.state = ParseState.HEADER;
+                        } else if (b == '0') {
+                            builder.setProtocol(Protocols.HTTP_1_0);
+                            buffer.position(pos + HTTP_LENGTH + 3);
+                            currentState.state = ParseState.HEADER;
+                        } else {
+                            failed = true;
+                        }
+                    } else {
+                        failed = true;
+                    }
+                }
             } else {
+                failed = true;
+            }
+            if(failed) {
+                handleHttpVersion(buffer, currentState, builder);
                 handleAfterVersion(buffer, currentState);
             }
+
             while (currentState.state != ParseState.PARSE_COMPLETE && buffer.hasRemaining()) {
                 handleHeader(buffer, currentState, builder);
                 if (currentState.state == ParseState.HEADER_VALUE) {
