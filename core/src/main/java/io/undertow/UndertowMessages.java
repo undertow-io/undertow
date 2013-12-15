@@ -266,4 +266,7 @@ public interface UndertowMessages {
 
     @Message(id = 80, value = "Not a valid regular expression pattern %s")
     IllegalArgumentException notAValidRegularExpressionPattern(String pattern);
+
+    @Message(id = 81, value = "Bad request")
+    RuntimeException badRequest();
 }

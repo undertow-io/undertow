@@ -195,7 +195,13 @@ public abstract class HttpRequestParser {
             //fast path, we assume that it will parse fully so we avoid all the if statements
             handlePath(buffer, currentState, builder);
             handleHttpVersion(buffer, currentState, builder);
-            handleAfterVersion(buffer, currentState, builder);
+            if(buffer.remaining() > 1 && currentState.leftOver == '\r' && buffer.get(buffer.position()) == '\n') {
+                buffer.get();
+                currentState.leftOver = 0;
+                currentState.state = ParseState.HEADER;
+            } else {
+                handleAfterVersion(buffer, currentState);
+            }
             while (currentState.state != ParseState.PARSE_COMPLETE && buffer.hasRemaining()) {
                 handleHeader(buffer, currentState, builder);
                 if (currentState.state == ParseState.HEADER_VALUE) {
@@ -236,7 +242,7 @@ public abstract class HttpRequestParser {
             }
         }
         if (currentState.state == ParseState.AFTER_VERSION) {
-            handleAfterVersion(buffer, currentState, builder);
+            handleAfterVersion(buffer, currentState);
             if (!buffer.hasRemaining()) {
                 return;
             }
@@ -653,7 +659,7 @@ public abstract class HttpRequestParser {
         return;
     }
 
-    protected void handleAfterVersion(ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
+    protected void handleAfterVersion(ByteBuffer buffer, ParseState state) {
         boolean newLine = state.leftOver == '\n';
         while (buffer.hasRemaining()) {
             final byte next = buffer.get();
@@ -673,6 +679,8 @@ public abstract class HttpRequestParser {
                     state.state = ParseState.HEADER;
                     state.leftOver = next;
                     return;
+                } else {
+                    throw UndertowMessages.MESSAGES.badRequest();
                 }
             }
         }
