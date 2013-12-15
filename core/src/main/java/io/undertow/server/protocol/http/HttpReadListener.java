@@ -35,6 +35,7 @@ import org.xnio.conduits.ConduitStreamSourceChannel;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Listener which reads requests and headers off of an HTTP stream.
@@ -55,6 +56,13 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     private final int maxRequestSize;
     private final long maxEntitySize;
 
+    //0 = new request ok, reads resumed
+    //1 = request running, new request not ok
+    //2 = suspending/resuming in pogress
+    private volatile int requestState;
+
+    private static final AtomicIntegerFieldUpdater<HttpReadListener> requestStateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpReadListener.class, "requestState");
+
     HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser) {
         this.connection = connection;
         this.parser = parser;
@@ -69,12 +77,14 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
     public void handleEvent(final ConduitStreamSourceChannel channel) {
-        if(httpServerExchange == null) {
-            //spurious wakeup, a request is in progress (or about to finish)
-            //and the next request has arrived. We just suspend in this case
-            //because resume always comes from the IO thread there is no chance of a race
-            channel.suspendReads();
-            return;
+        while (requestStateUpdater.get(this) != 0) {
+            //if the CAS fails it is because another thread is in the process of changing state
+            //we just immediately retry
+            if (requestStateUpdater.compareAndSet(this, 1, 2)) {
+                channel.suspendReads();
+                requestStateUpdater.set(this, 1);
+                return;
+            }
         }
 
         Pooled<ByteBuffer> existing = connection.getExtraBytes();
@@ -126,6 +136,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
             this.httpServerExchange = null;
+            requestStateUpdater.set(this, 1);
             HttpTransferEncoding.setupRequest(httpServerExchange);
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
@@ -162,9 +173,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             UndertowLogger.REQUEST_IO_LOGGER.debug("Error reading request", e);
             // fuck it, it's all ruined
             IoUtils.safeClose(connection);
-            return;
         }
-        return;
     }
 
     private void sendBadRequestAndClose(final StreamConnection channel, final Exception exception) {
@@ -186,21 +195,16 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             if (connection.getExtraBytes() == null) {
                 //if we are not pipelining we just register a listener
                 //we have to resume from with the io thread
-                if (Thread.currentThread() != channel.getIoThread()) {
-                    channel.getIoThread().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            newRequest();
-                            channel.getSourceChannel().setReadListener(HttpReadListener.this);
-                            channel.getSourceChannel().resumeReads();
-                        }
-                    });
-                } else {
-                    newRequest();
-                    channel.getSourceChannel().setReadListener(this);
-                    channel.getSourceChannel().resumeReads();
+                while (requestStateUpdater.get(this) != 0) {
+                    if (requestStateUpdater.compareAndSet(this, 1, 2)) {
+                        newRequest();
+                        channel.getSourceChannel().setReadListener(HttpReadListener.this);
+                        channel.getSourceChannel().resumeReads();
+                        requestStateUpdater.set(this, 0);
+                    }
                 }
             } else {
+                requestStateUpdater.set(this, 0); //no need to CAS, as we don't actually resume
                 newRequest();
                 if (exchange.isInIoThread()) {
                     //no need to suspend reads here, the task will always run before the read listener anyway
