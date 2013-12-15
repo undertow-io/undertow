@@ -35,8 +35,8 @@ public class HttpClientExchange extends AbstractAttachable implements ClientExch
     private IOException failedReason;
 
     private int state = 0;
-    private final int REQUEST_TERMINATED = 1;
-    private final int RESPONSE_TERMINATED = 1 << 1;
+    private static final int REQUEST_TERMINATED = 1;
+    private static final int RESPONSE_TERMINATED = 1 << 1;
 
     public HttpClientExchange(ClientCallback<ClientExchange> readyCallback, ClientRequest request, HttpClientConnection clientConnection) {
         this.readyCallback = readyCallback;
