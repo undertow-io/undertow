@@ -181,8 +181,18 @@ public abstract class HttpRequestParser {
 
     public void handle(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) {
         if (currentState.state == ParseState.VERB) {
+            //fast path HTTP GET requests
+            final int position = buffer.position();
+            if (buffer.remaining() > 3
+                    && buffer.get(position) == 'G'
+                    && buffer.get(position + 1) == 'E'
+                    && buffer.get(position + 2) == 'T') {
+                buffer.position(position + 3);
+                builder.setRequestMethod(Methods.GET);
+            } else {
+                handleHttpVerb(buffer, currentState, builder);
+            }
             //fast path, we assume that it will parse fully so we avoid all the if statements
-            handleHttpVerb(buffer, currentState, builder);
             handlePath(buffer, currentState, builder);
             handleHttpVersion(buffer, currentState, builder);
             handleAfterVersion(buffer, currentState, builder);
@@ -194,6 +204,10 @@ public abstract class HttpRequestParser {
             }
             return;
         }
+        handleStateful(buffer, currentState, builder);
+    }
+
+    private void handleStateful(ByteBuffer buffer, ParseState currentState, HttpServerExchange builder) {
         if (currentState.state == ParseState.PATH) {
             handlePath(buffer, currentState, builder);
             if (!buffer.hasRemaining()) {
