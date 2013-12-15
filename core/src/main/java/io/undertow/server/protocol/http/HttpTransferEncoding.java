@@ -93,6 +93,12 @@ public class HttpTransferEncoding {
 
         exchange.setPersistent(persistentConnection);
 
+        if(!exchange.isRequestComplete() || connection.getExtraBytes() != null) {
+            //if there is more data we suspend reads
+            sourceChannel.setReadListener(null);
+            sourceChannel.suspendReads();
+        }
+
     }
 
     private static boolean handleRequestEncoding(final HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipeliningBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
