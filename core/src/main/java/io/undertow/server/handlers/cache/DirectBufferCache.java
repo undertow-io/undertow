@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.undertow.util.ConcurrentDirectDeque;
 import org.xnio.BufferAllocator;
 
 /**

@@ -22,21 +22,24 @@
  * at http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package io.undertow.server.handlers.cache;
+package io.undertow.util;
 
+import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import sun.misc.Unsafe;
 
 /**
  * A modified version of ConcurrentLinkedDequeue which includes direct
- * removal and is portable accorss all JVMs. This is only a fallback if
- * the JVM does not offer access to Unsafe.
+ * removal. Like the original, it relies on Unsafe for better performance.
  *
- * More specifically, an unbounded concurrent {@linkplain java.util.Deque deque} based on linked nodes.
+ * More specifically, an unbounded concurrent {@linkplain Deque deque} based on linked nodes.
  * Concurrent insertion, removal, and access operations execute safely
  * across multiple threads.
  * A {@code ConcurrentLinkedDeque} is an appropriate choice when
@@ -64,7 +67,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * of the added elements.
  *
  * <p>This class and its iterator implement all of the <em>optional</em>
- * methods of the {@link java.util.Deque} and {@link java.util.Iterator} interfaces.
+ * methods of the {@link Deque} and {@link Iterator} interfaces.
  *
  * <p>Memory consistency effects: As with other concurrent collections,
  * actions in a thread prior to placing an object into a
@@ -84,8 +87,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * @param <E> the type of elements held in this collection
  */
 
-public class PortableConcurrentDirectDeque<E>
-    extends ConcurrentDirectDeque<E> implements Deque<E>, java.io.Serializable {
+public class FastConcurrentDirectDeque<E>
+    extends ConcurrentDirectDeque<E> implements Deque<E>, Serializable {
 
     /*
      * This is an implementation of a concurrent lock-free deque
@@ -269,9 +272,6 @@ public class PortableConcurrentDirectDeque<E>
      */
     private transient volatile Node<E> tail;
 
-    private static final AtomicReferenceFieldUpdater<PortableConcurrentDirectDeque, Node> headUpdater = AtomicReferenceFieldUpdater.newUpdater(PortableConcurrentDirectDeque.class, Node.class, "head");
-    private static final AtomicReferenceFieldUpdater<PortableConcurrentDirectDeque, Node> tailUpdater = AtomicReferenceFieldUpdater.newUpdater(PortableConcurrentDirectDeque.class, Node.class, "tail");
-
     private static final Node<Object> PREV_TERMINATOR, NEXT_TERMINATOR;
 
     @SuppressWarnings("unchecked")
@@ -285,11 +285,6 @@ public class PortableConcurrentDirectDeque<E>
     }
 
     static final class Node<E> {
-        private static final AtomicReferenceFieldUpdater<Node, Node> prevUpdater = AtomicReferenceFieldUpdater.newUpdater(Node.class, Node.class, "prev");
-        private static final AtomicReferenceFieldUpdater<Node, Node> nextUpdater = AtomicReferenceFieldUpdater.newUpdater(Node.class, Node.class, "next");
-        private static final AtomicReferenceFieldUpdater<Node, Object> itemUpdater = AtomicReferenceFieldUpdater.newUpdater(Node.class, Object.class, "item");
-
-
         volatile Node<E> prev;
         volatile E item;
         volatile Node<E> next;
@@ -302,27 +297,49 @@ public class PortableConcurrentDirectDeque<E>
          * only be seen after publication via casNext or casPrev.
          */
         Node(E item) {
-            this.item = item;
+            UNSAFE.putObject(this, itemOffset, item);
         }
 
         boolean casItem(E cmp, E val) {
-            return itemUpdater.compareAndSet(this, cmp, val);
+            return UNSAFE.compareAndSwapObject(this, itemOffset, cmp, val);
         }
 
         void lazySetNext(Node<E> val) {
-            next = val;
+            UNSAFE.putOrderedObject(this, nextOffset, val);
         }
 
         boolean casNext(Node<E> cmp, Node<E> val) {
-            return nextUpdater.compareAndSet(this, cmp, val);
+            return UNSAFE.compareAndSwapObject(this, nextOffset, cmp, val);
         }
 
         void lazySetPrev(Node<E> val) {
-            prev = val;
+            UNSAFE.putOrderedObject(this, prevOffset, val);
         }
 
         boolean casPrev(Node<E> cmp, Node<E> val) {
-            return prevUpdater.compareAndSet(this, cmp, val);
+            return UNSAFE.compareAndSwapObject(this, prevOffset, cmp, val);
+        }
+
+        // Unsafe mechanics
+
+        private static final sun.misc.Unsafe UNSAFE;
+        private static final long prevOffset;
+        private static final long itemOffset;
+        private static final long nextOffset;
+
+        static {
+            try {
+                UNSAFE = getUnsafe();
+                Class<?> k = Node.class;
+                prevOffset = UNSAFE.objectFieldOffset
+                    (k.getDeclaredField("prev"));
+                itemOffset = UNSAFE.objectFieldOffset
+                    (k.getDeclaredField("item"));
+                nextOffset = UNSAFE.objectFieldOffset
+                    (k.getDeclaredField("next"));
+            } catch (Exception e) {
+                throw new Error(e);
+            }
         }
     }
 
@@ -810,7 +827,7 @@ public class PortableConcurrentDirectDeque<E>
     /**
      * Constructs an empty deque.
      */
-    public PortableConcurrentDirectDeque() {
+    public FastConcurrentDirectDeque() {
         head = tail = new Node<E>(null);
     }
 
@@ -823,7 +840,7 @@ public class PortableConcurrentDirectDeque<E>
      * @throws NullPointerException if the specified collection or any
      *         of its elements are null
      */
-    public PortableConcurrentDirectDeque(Collection<? extends E> c) {
+    public FastConcurrentDirectDeque(Collection<? extends E> c) {
         // Copy c into a private chain of Nodes
         Node<E> h = null, t = null;
         for (E e : c) {
@@ -887,7 +904,7 @@ public class PortableConcurrentDirectDeque<E>
      * Inserts the specified element at the front of this deque.
      * As the deque is unbounded, this method will never return {@code false}.
      *
-     * @return {@code true} (as specified by {@link java.util.Deque#offerFirst})
+     * @return {@code true} (as specified by {@link Deque#offerFirst})
      * @throws NullPointerException if the specified element is null
      */
     public boolean offerFirst(E e) {
@@ -919,7 +936,7 @@ public class PortableConcurrentDirectDeque<E>
      *
      * <p>This method is equivalent to {@link #add}.
      *
-     * @return {@code true} (as specified by {@link java.util.Deque#offerLast})
+     * @return {@code true} (as specified by {@link Deque#offerLast})
      * @throws NullPointerException if the specified element is null
      */
     public boolean offerLast(E e) {
@@ -946,14 +963,14 @@ public class PortableConcurrentDirectDeque<E>
     }
 
     /**
-     * @throws java.util.NoSuchElementException {@inheritDoc}
+     * @throws NoSuchElementException {@inheritDoc}
      */
     public E getFirst() {
         return screenNullResult(peekFirst());
     }
 
     /**
-     * @throws java.util.NoSuchElementException {@inheritDoc}
+     * @throws NoSuchElementException {@inheritDoc}
      */
     public E getLast() {
         return screenNullResult(peekLast());
@@ -982,14 +999,14 @@ public class PortableConcurrentDirectDeque<E>
     }
 
     /**
-     * @throws java.util.NoSuchElementException {@inheritDoc}
+     * @throws NoSuchElementException {@inheritDoc}
      */
     public E removeFirst() {
         return screenNullResult(pollFirst());
     }
 
     /**
-     * @throws java.util.NoSuchElementException {@inheritDoc}
+     * @throws NoSuchElementException {@inheritDoc}
      */
     public E removeLast() {
         return screenNullResult(pollLast());
@@ -1013,7 +1030,7 @@ public class PortableConcurrentDirectDeque<E>
      * As the deque is unbounded, this method will never throw
      * {@link IllegalStateException} or return {@code false}.
      *
-     * @return {@code true} (as specified by {@link java.util.Collection#add})
+     * @return {@code true} (as specified by {@link Collection#add})
      * @throws NullPointerException if the specified element is null
      */
     public boolean add(E e) {
@@ -1429,19 +1446,53 @@ public class PortableConcurrentDirectDeque<E>
     }
 
     private boolean casHead(Node<E> cmp, Node<E> val) {
-        return headUpdater.compareAndSet(this, cmp, val);
+        return UNSAFE.compareAndSwapObject(this, headOffset, cmp, val);
     }
 
     private boolean casTail(Node<E> cmp, Node<E> val) {
-        return tailUpdater.compareAndSet(this, cmp, val);
+        return UNSAFE.compareAndSwapObject(this, tailOffset, cmp, val);
     }
 
     // Unsafe mechanics
 
+    private static final sun.misc.Unsafe UNSAFE;
+    private static final long headOffset;
+    private static final long tailOffset;
     static {
         PREV_TERMINATOR = new Node<Object>();
         PREV_TERMINATOR.next = PREV_TERMINATOR;
         NEXT_TERMINATOR = new Node<Object>();
         NEXT_TERMINATOR.prev = NEXT_TERMINATOR;
+        try {
+            UNSAFE = getUnsafe();
+            Class<?> k = FastConcurrentDirectDeque.class;
+            headOffset = UNSAFE.objectFieldOffset
+                (k.getDeclaredField("head"));
+            tailOffset = UNSAFE.objectFieldOffset
+                (k.getDeclaredField("tail"));
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+    }
+
+    private static Unsafe getUnsafe() {
+        if (System.getSecurityManager() != null) {
+            return new PrivilegedAction<Unsafe>() {
+                public Unsafe run() {
+                    return getUnsafe0();
+                }
+            }.run();
+        }
+        return getUnsafe0();
+    }
+
+    private static Unsafe getUnsafe0()  {
+        try {
+            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            return (Unsafe) theUnsafe.get(null);
+        } catch (Throwable t) {
+            throw new RuntimeException("JDK did not allow accessing unsafe", t);
+        }
     }
 }

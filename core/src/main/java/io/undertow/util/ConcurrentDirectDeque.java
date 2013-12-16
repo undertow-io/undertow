@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.server.handlers.cache;
+package io.undertow.util;
 
 import java.lang.reflect.Constructor;
 import java.util.AbstractCollection;

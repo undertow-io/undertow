@@ -29,8 +29,18 @@ import io.undertow.servlet.api.SessionManagerFactory;
  */
 public class InMemorySessionManagerFactory implements SessionManagerFactory {
 
+    private final int maxSessions;
+
+    public InMemorySessionManagerFactory() {
+        this(-1);
+    }
+
+    public InMemorySessionManagerFactory(int maxSessions) {
+        this.maxSessions = maxSessions;
+    }
+
     @Override
     public SessionManager createSessionManager(Deployment deployment) {
-        return new InMemorySessionManager();
+        return new InMemorySessionManager(maxSessions);
     }
 }

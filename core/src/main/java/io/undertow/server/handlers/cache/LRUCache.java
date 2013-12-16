@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.cache;
 
+import io.undertow.util.ConcurrentDirectDeque;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;

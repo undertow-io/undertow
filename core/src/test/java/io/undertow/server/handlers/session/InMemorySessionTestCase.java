@@ -101,4 +101,68 @@ public class InMemorySessionTestCase {
 
 
 
+    @Test
+    public void inMemoryMaxSessionsTest() throws IOException {
+
+        TestHttpClient client1 = new TestHttpClient();
+        client1.setCookieStore(new BasicCookieStore());
+        TestHttpClient client2 = new TestHttpClient();
+        client2.setCookieStore(new BasicCookieStore());
+
+        try {
+            final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(1), sessionConfig);
+            handler.setNext(new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+                    Session session = manager.getSession(exchange, sessionConfig);
+                    if (session == null) {
+                        session = manager.createSession(exchange, sessionConfig);
+                        session.setAttribute(COUNT, 0);
+                    }
+                    Integer count = (Integer) session.getAttribute(COUNT);
+                    exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
+                    session.setAttribute(COUNT, ++count);
+                }
+            });
+            DefaultServer.setRootHandler(handler);
+
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            HttpResponse result = client1.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            Header[] header = result.getHeaders(COUNT);
+            Assert.assertEquals("0", header[0].getValue());
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            result = client1.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            header = result.getHeaders(COUNT);
+            Assert.assertEquals("1", header[0].getValue());
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            result = client2.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            header = result.getHeaders(COUNT);
+            Assert.assertEquals("0", header[0].getValue());
+
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            result = client1.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            header = result.getHeaders(COUNT);
+            Assert.assertEquals("0", header[0].getValue());
+
+
+        } finally {
+            client1.getConnectionManager().shutdown();
+            client2.getConnectionManager().shutdown();
+        }
+    }
+
 }

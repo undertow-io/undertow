@@ -18,8 +18,12 @@
 
 package io.undertow.server.session;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcurrentDirectDeque;
+import io.undertow.util.FastConcurrentDirectDeque;
+import io.undertow.util.PortableConcurrentDirectDeque;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
 
@@ -29,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.
@@ -40,7 +45,7 @@ public class InMemorySessionManager implements SessionManager {
 
     private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
-    private final ConcurrentMap<String, InMemorySession> sessions = new ConcurrentHashMap<String, InMemorySession>();
+    private final ConcurrentMap<String, InMemorySession> sessions;
 
     private final SessionListeners sessionListeners = new SessionListeners();
 
@@ -48,6 +53,28 @@ public class InMemorySessionManager implements SessionManager {
      * 30 minute default
      */
     private volatile int defaultSessionTimeout = 30 * 60;
+
+    private final int maxSize;
+
+    private final ConcurrentDirectDeque<String> evictionQueue;
+
+    public InMemorySessionManager(int maxSessions) {
+        this.sessions = new ConcurrentHashMap<String, InMemorySession>();
+        this.maxSize = maxSessions;
+        ConcurrentDirectDeque<String> evictionQueue = null;
+        if (maxSessions > 0) {
+            try {
+                evictionQueue = new FastConcurrentDirectDeque<String>();
+            } catch (Throwable e) {
+                evictionQueue = new PortableConcurrentDirectDeque<String>();
+            }
+        }
+        this.evictionQueue = evictionQueue;
+    }
+
+    public InMemorySessionManager() {
+        this(-1);
+    }
 
     @Override
     public void start() {
@@ -65,11 +92,27 @@ public class InMemorySessionManager implements SessionManager {
 
     @Override
     public Session createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
+        if (evictionQueue != null) {
+            while (sessions.size() >= maxSize && !evictionQueue.isEmpty()) {
+                String key = evictionQueue.poll();
+                UndertowLogger.REQUEST_LOGGER.debugf("Removing session %s as max size has been hit", key);
+                InMemorySession toRemove = sessions.get(key);
+                if (toRemove != null) {
+                    toRemove.session.invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT); //todo: better reason
+                }
+            }
+        }
         if (config == null) {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
         String sessionID = sessionIdGenerator.createSessionId();
-        final SessionImpl session = new SessionImpl(sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker());
+        Object evictionToken;
+        if (evictionQueue != null) {
+            evictionToken = evictionQueue.offerLastAndReturnToken(sessionID);
+        } else {
+            evictionToken = null;
+        }
+        final SessionImpl session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken);
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
         config.setSessionId(serverExchange, session.getId());
@@ -132,9 +175,14 @@ public class InMemorySessionManager implements SessionManager {
     /**
      * session implementation for the in memory session manager
      */
-    private class SessionImpl implements Session {
+    private static class SessionImpl implements Session {
+
+        private final InMemorySessionManager sessionManager;
+
+        private static volatile AtomicReferenceFieldUpdater<SessionImpl, Object> evictionTokenUpdater = AtomicReferenceFieldUpdater.newUpdater(SessionImpl.class, Object.class, "evictionToken");
 
         private String sessionId;
+        private volatile Object evictionToken;
         private final SessionConfig sessionCookieConfig;
 
         final XnioExecutor executor;
@@ -154,11 +202,13 @@ public class InMemorySessionManager implements SessionManager {
             }
         };
 
-        private SessionImpl(final String sessionId, final SessionConfig sessionCookieConfig, final XnioExecutor executor, final XnioWorker worker) {
+        private SessionImpl(InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final XnioExecutor executor, final XnioWorker worker, final Object evictionToken) {
+            this.sessionManager = sessionManager;
             this.sessionId = sessionId;
             this.sessionCookieConfig = sessionCookieConfig;
             this.executor = executor;
             this.worker = worker;
+            this.evictionToken = evictionToken;
         }
 
         synchronized void bumpTimeout() {
@@ -167,8 +217,15 @@ public class InMemorySessionManager implements SessionManager {
                     return;
                 }
             }
-            if(getMaxInactiveInterval() > 0) {
+            if (getMaxInactiveInterval() > 0) {
                 cancelKey = executor.executeAfter(cancelTask, getMaxInactiveInterval(), TimeUnit.SECONDS);
+            }
+            if (evictionToken != null) {
+                Object token = evictionToken;
+                if (evictionTokenUpdater.compareAndSet(this, token, null)) {
+                    sessionManager.evictionQueue.removeToken(token);
+                    this.evictionToken = sessionManager.evictionQueue.offerLastAndReturnToken(sessionId);
+                }
             }
         }
 
@@ -180,7 +237,7 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public void requestDone(final HttpServerExchange serverExchange) {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess != null) {
                 sess.lastAccessed = System.currentTimeMillis();
             }
@@ -188,7 +245,7 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public long getCreationTime() {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
@@ -197,7 +254,7 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public long getLastAccessedTime() {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
@@ -206,7 +263,7 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public void setMaxInactiveInterval(final int interval) {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
@@ -216,7 +273,7 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public int getMaxInactiveInterval() {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
@@ -225,7 +282,7 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public Object getAttribute(final String name) {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
@@ -235,7 +292,7 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public Set<String> getAttributeNames() {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
@@ -245,15 +302,15 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public Object setAttribute(final String name, final Object value) {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             final Object existing = sess.attributes.put(name, value);
             if (existing == null) {
-                sessionListeners.attributeAdded(sess.session, name, value);
+                sessionManager.sessionListeners.attributeAdded(sess.session, name, value);
             } else {
-                sessionListeners.attributeUpdated(sess.session, name, value, existing);
+               sessionManager.sessionListeners.attributeUpdated(sess.session, name, value, existing);
             }
             bumpTimeout();
             return existing;
@@ -261,12 +318,12 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public Object removeAttribute(final String name) {
-            final InMemorySession sess = sessions.get(sessionId);
+            final InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             final Object existing = sess.attributes.remove(name);
-            sessionListeners.attributeRemoved(sess.session, name, existing);
+            sessionManager.sessionListeners.attributeRemoved(sess.session, name, existing);
             bumpTimeout();
             return existing;
         }
@@ -280,15 +337,15 @@ public class InMemorySessionManager implements SessionManager {
             if (cancelKey != null) {
                 cancelKey.remove();
             }
-            InMemorySession sess = sessions.get(sessionId);
+            InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
                 if (reason == SessionListener.SessionDestroyedReason.INVALIDATED) {
                     throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
                 }
                 return;
             }
-            sessionListeners.sessionDestroyed(sess.session, exchange, reason);
-            sessions.remove(sessionId);
+            sessionManager.sessionListeners.sessionDestroyed(sess.session, exchange, reason);
+            sessionManager.sessions.remove(sessionId);
             if (exchange != null) {
                 sessionCookieConfig.clearSession(exchange, this.getId());
             }
@@ -296,19 +353,19 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public SessionManager getSessionManager() {
-            return InMemorySessionManager.this;
+            return sessionManager;
         }
 
         @Override
         public String changeSessionId(final HttpServerExchange exchange, final SessionConfig config) {
             final String oldId = sessionId;
-            final InMemorySession sess = sessions.get(oldId);
-            String newId = sessionIdGenerator.createSessionId();
+            final InMemorySession sess = sessionManager.sessions.get(oldId);
+            String newId = sessionManager.sessionIdGenerator.createSessionId();
             this.sessionId = newId;
-            sessions.put(newId, sess);
-            sessions.remove(oldId);
+            sessionManager.sessions.put(newId, sess);
+            sessionManager.sessions.remove(oldId);
             config.setSessionId(exchange, this.getId());
-            sessionListeners.sessionIdChanged(sess.session, oldId);
+            sessionManager.sessionListeners.sessionIdChanged(sess.session, oldId);
             return newId;
         }
 
