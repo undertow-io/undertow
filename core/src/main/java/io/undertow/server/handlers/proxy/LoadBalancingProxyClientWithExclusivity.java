@@ -60,7 +60,7 @@ public class LoadBalancingProxyClientWithExclusivity extends LoadBalancingProxyC
             if (holder != null || checker.isExclusivityRequired(exchange)) {
                 // If we have a holder, even if the connection was closed we now exclusivity was already requested so our client
                 // may be assuming it still exists.
-                host.connect(target, exchange, new ProxyCallback<ProxyConnection>() {
+                host.connectionPool.connect(target, exchange, new ProxyCallback<ProxyConnection>() {
 
                     @Override
                     public void failed(HttpServerExchange exchange) {
@@ -91,7 +91,7 @@ public class LoadBalancingProxyClientWithExclusivity extends LoadBalancingProxyC
                     }
                 }, timeout, timeUnit, true);
             } else {
-                host.connect(target, exchange, callback, timeout, timeUnit, false);
+                host.connectionPool.connect(target, exchange, callback, timeout, timeUnit, false);
             }
         }
     }

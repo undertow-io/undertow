@@ -6,33 +6,33 @@ import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.CopyOnWriteMap;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * A pool of connections to a target host.
+ *
  * @author Stuart Douglas
  */
-class Host {
-
-    private final LoadBalancingProxyClient loadBalancingProxyClient;
+class ProxyConnectionPool implements Closeable {
 
     private final URI uri;
 
-    private final String jvmRoute;
-
-
     private final UndertowClient client;
+
+    private final ConnectionPoolManager connectionPoolManager;
 
     /**
      * flag that is set when a problem is detected with this host. It will be taken out of consideration
@@ -43,24 +43,23 @@ class Host {
     private volatile boolean problem;
 
     /**
-     * Set to true when the host is removed from this load balancer
+     * Set to true when the connection pool is closed.
      */
     private volatile boolean closed;
 
-    private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new ConcurrentHashMap<XnioIoThread, HostThreadData>();
+    private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<XnioIoThread, HostThreadData>();
 
-    public Host(LoadBalancingProxyClient loadBalancingProxyClient, URI uri, String jvmRoute, UndertowClient client) {
-        this.loadBalancingProxyClient = loadBalancingProxyClient;
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, UndertowClient client) {
+        this.connectionPoolManager = connectionPoolManager;
         this.uri = uri;
-        this.jvmRoute = jvmRoute;
         this.client = client;
     }
 
-    URI getUri() {
+    public URI getUri() {
         return uri;
     }
 
-    void close() {
+    public void close() {
         this.closed = true;
     }
 
@@ -100,7 +99,7 @@ class Host {
             } else {
                 hostData.availbleConnections.add(connection);
             }
-        } else if(connection.isOpen() && connection.isUpgraded()) {
+        } else if (connection.isOpen() && connection.isUpgraded()) {
             //we treat upgraded connections as closed
             //as we do not want the connection pool filled with upgraded connections
             //if the connection is actually closed the close setter will handle it
@@ -113,7 +112,7 @@ class Host {
 
         int connections = --hostData.connections;
         hostData.availbleConnections.remove(connection);
-        if (connections < loadBalancingProxyClient.getConnectionsPerThread()) {
+        if (connectionPoolManager.canCreateConnection(connections, this)) {
             CallbackHolder task = hostData.awaitingConnections.poll();
             while (task != null && task.isCancelled()) {
                 task = hostData.awaitingConnections.poll();
@@ -167,7 +166,7 @@ class Host {
                 if (callback.getExpireTime() > 0 && callback.getExpireTime() < time) {
                     callback.getCallback().failed(callback.getExchange());
                 } else {
-                    loadBalancingProxyClient.getConnection(callback.getProxyTarget(), callback.getExchange(), callback.getCallback(), callback.getExpireTime() > 0 ? time - callback.getExpireTime() : -1, TimeUnit.MILLISECONDS);
+                    connectionPoolManager.queuedConnectionFailed(callback.getProxyTarget(), callback.getExchange(), callback.getCallback(), callback.getExpireTime() > 0 ? time - callback.getExpireTime() : -1);
                     callback.getCallback().failed(callback.getExchange());
                 }
             }
@@ -189,7 +188,7 @@ class Host {
         callback.completed(exchange, new ProxyConnection(result, uri.getPath() == null ? "/" : uri.getPath()));
     }
 
-    AvailabilityType availible() {
+    public AvailabilityType availible() {
         if (closed) {
             return AvailabilityType.CLOSED;
         }
@@ -197,17 +196,13 @@ class Host {
             return AvailabilityType.PROBLEM;
         }
         HostThreadData data = getData();
-        if (data.connections < loadBalancingProxyClient.getConnectionsPerThread()) {
+        if (connectionPoolManager.canCreateConnection(data.connections, this)) {
             return AvailabilityType.AVAILABLE;
         }
         if (!data.availbleConnections.isEmpty()) {
             return AvailabilityType.AVAILABLE;
         }
         return AvailabilityType.FULL;
-    }
-
-    String getJvmRoute() {
-        return jvmRoute;
     }
 
     /**
@@ -235,7 +230,7 @@ class Host {
                     }
                 }, getUri(), exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
             }
-        }, loadBalancingProxyClient.getProblemServerRetry(), TimeUnit.SECONDS);
+        }, connectionPoolManager.getProblemServerRetry(), TimeUnit.SECONDS);
     }
 
     /**
@@ -262,7 +257,6 @@ class Host {
     }
 
     /**
-     *
      * @param exclusive - Is connection for the exclusive use of one client?
      */
     public void connect(ProxyClient.ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit, boolean exclusive) {
@@ -276,7 +270,7 @@ class Host {
                 data.connections--;
             }
             connectionReady(conn, callback, exchange, exclusive);
-        } else if (exclusive || data.connections < loadBalancingProxyClient.getConnectionsPerThread()) {
+        } else if (exclusive || connectionPoolManager.canCreateConnection(data.connections, this)) {
             openConnection(exchange, callback, data, exclusive);
         } else {
             CallbackHolder holder;

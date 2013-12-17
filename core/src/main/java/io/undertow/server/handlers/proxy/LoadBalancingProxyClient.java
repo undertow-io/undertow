@@ -12,9 +12,9 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.undertow.server.handlers.proxy.Host.AvailabilityType.AVAILABLE;
-import static io.undertow.server.handlers.proxy.Host.AvailabilityType.FULL;
-import static io.undertow.server.handlers.proxy.Host.AvailabilityType.PROBLEM;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.AVAILABLE;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.FULL;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.PROBLEM;
 
 /**
  * Initial implementation of a load balancing proxy client. This initial implementation is rather simplistic, and
@@ -48,6 +48,23 @@ public class LoadBalancingProxyClient implements ProxyClient {
     private final Map<String, Host> routes = new CopyOnWriteMap<String, Host>();
 
     private static final ProxyTarget PROXY_TARGET = new ProxyTarget() {};
+
+    private final ConnectionPoolManager manager = new ConnectionPoolManager() {
+        @Override
+        public boolean canCreateConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
+            return connections < connectionsPerThread;
+        }
+
+        @Override
+        public void queuedConnectionFailed(ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeoutMills) {
+            getConnection(proxyTarget, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS);
+        }
+
+        @Override
+        public int getProblemServerRetry() {
+            return problemServerRetry;
+        }
+    };
 
     public LoadBalancingProxyClient() {
         this(UndertowClient.getInstance());
@@ -91,7 +108,8 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute) {
-        Host h = new Host(this, host, jvmRoute, client);
+        ProxyConnectionPool pool = new ProxyConnectionPool(manager, host, client);
+        Host h = new Host(pool, jvmRoute, host);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];
         System.arraycopy(existing, 0, newHosts, 0, existing.length);
@@ -108,7 +126,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         Host[] existing = hosts;
         Host removedHost = null;
         for (int i = 0; i < existing.length; ++i) {
-            if (existing[i].getUri().equals(uri)) {
+            if (existing[i].uri.equals(uri)) {
                 found = i;
                 removedHost = existing[i];
                 break;
@@ -121,9 +139,9 @@ public class LoadBalancingProxyClient implements ProxyClient {
         System.arraycopy(existing, 0, newHosts, 0, found);
         System.arraycopy(existing, found + 1, newHosts, found, existing.length - found - 1);
         this.hosts = newHosts;
-        removedHost.close();
-        if (removedHost.getJvmRoute() != null) {
-            routes.remove(removedHost.getJvmRoute());
+        removedHost.connectionPool.close();
+        if (removedHost.jvmRoute != null) {
+            routes.remove(removedHost.jvmRoute);
         }
         return this;
     }
@@ -139,7 +157,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         if (host == null) {
             callback.failed(exchange);
         } else {
-            host.connect(target, exchange, callback, timeout, timeUnit, false);
+            host.connectionPool.connect(target, exchange, callback, timeout, timeUnit, false);
         }
     }
 
@@ -159,7 +177,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         Host problem = null;
         do {
             Host selected = hosts[host];
-            Host.AvailabilityType availble = selected.availible();
+            ProxyConnectionPool.AvailabilityType availble = selected.connectionPool.availible();
             if (availble == AVAILABLE) {
                 return selected;
             } else if (availble == FULL && full == null) {
@@ -198,5 +216,17 @@ public class LoadBalancingProxyClient implements ProxyClient {
             }
         }
         return null;
+    }
+
+    protected static final class Host {
+        final ProxyConnectionPool connectionPool;
+        final String jvmRoute;
+        final URI uri;
+
+        private Host(ProxyConnectionPool connectionPool, String jvmRoute, URI uri) {
+            this.connectionPool = connectionPool;
+            this.jvmRoute = jvmRoute;
+            this.uri = uri;
+        }
     }
 }
