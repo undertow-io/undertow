@@ -28,7 +28,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
 import io.undertow.server.handlers.RequestDumplingHandler;
 import io.undertow.server.handlers.SSLHeaderHandler;
-import io.undertow.server.handlers.proxy.LoadBalancingProxyClientWithExclusivity;
+import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
@@ -249,7 +249,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        proxyOpenListener.setRootHandler(new ProxyHandler(new LoadBalancingProxyClientWithExclusivity(GSSAPIAuthenticationMechanism.createExclusivityChecker()).addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000, HANDLE_404));
+                        proxyOpenListener.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000, HANDLE_404));
                         proxyServer.resumeAccepts();
 
                     }
@@ -265,7 +265,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClientWithExclusivity(GSSAPIAuthenticationMechanism.createExclusivityChecker()).addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
+                        ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
                         setupProxyHandlerForSSL(proxyHandler);
                         proxyOpenListener.setRootHandler(proxyHandler);
                         proxyServer.resumeAccepts();

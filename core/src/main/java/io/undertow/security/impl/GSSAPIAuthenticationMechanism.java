@@ -36,7 +36,7 @@ import io.undertow.security.idm.GSSContextCredential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
-import io.undertow.server.handlers.proxy.LoadBalancingProxyClientWithExclusivity.ExclusivityChecker;
+import io.undertow.server.handlers.proxy.ExclusivityChecker;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.FlexBase64;
 import org.ietf.jgss.GSSContext;
@@ -62,6 +62,23 @@ import static io.undertow.util.StatusCodes.UNAUTHORIZED;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
+
+    public static final ExclusivityChecker EXCLUSIVITY_CHECKER = new ExclusivityChecker() {
+
+        @Override
+        public boolean isExclusivityRequired(HttpServerExchange exchange) {
+            List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
+            if (authHeaders != null) {
+                for (String current : authHeaders) {
+                    if (current.startsWith(NEGOTIATE_PREFIX)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    };
 
     private static final String NEGOTIATION_PLAIN = NEGOTIATE.toString();
     private static final String NEGOTIATE_PREFIX = NEGOTIATE + " ";
@@ -267,25 +284,4 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         }
 
     }
-
-    public static ExclusivityChecker createExclusivityChecker() {
-        return new ExclusivityChecker() {
-
-            @Override
-            public boolean isExclusivityRequired(HttpServerExchange exchange) {
-                List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
-                if (authHeaders != null) {
-                    for (String current : authHeaders) {
-                        if (current.startsWith(NEGOTIATE_PREFIX)) {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
-            }
-        };
-
-    }
-
 }

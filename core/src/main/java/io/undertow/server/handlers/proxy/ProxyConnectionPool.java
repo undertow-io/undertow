@@ -24,6 +24,10 @@ import java.util.concurrent.TimeUnit;
 /**
  * A pool of connections to a target host.
  *
+ * This pool can also be used to open connections in exclusive mode, in which case they will not be added to the connection pool.
+ *
+ * In this case the caller is responsible for closing any connections.
+ *
  * @author Stuart Douglas
  */
 class ProxyConnectionPool implements Closeable {
@@ -68,7 +72,7 @@ class ProxyConnectionPool implements Closeable {
      *
      * @param connection The client connection
      */
-    void returnConnection(final ClientConnection connection) {
+    private void returnConnection(final ClientConnection connection) {
         HostThreadData hostData = getData();
         if (closed) {
             //the host has been closed
@@ -188,7 +192,7 @@ class ProxyConnectionPool implements Closeable {
         callback.completed(exchange, new ProxyConnection(result, uri.getPath() == null ? "/" : uri.getPath()));
     }
 
-    public AvailabilityType availible() {
+    public AvailabilityType available() {
         if (closed) {
             return AvailabilityType.CLOSED;
         }

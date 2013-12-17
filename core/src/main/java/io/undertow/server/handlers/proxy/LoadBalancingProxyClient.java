@@ -1,8 +1,11 @@
 package io.undertow.server.handlers.proxy;
 
+import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.CopyOnWriteMap;
 
 import java.net.URI;
@@ -15,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.AVAILABLE;
 import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.FULL;
 import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.PROBLEM;
+import static org.xnio.IoUtils.safeClose;
 
 /**
  * Initial implementation of a load balancing proxy client. This initial implementation is rather simplistic, and
@@ -24,6 +28,14 @@ import static io.undertow.server.handlers.proxy.ProxyConnectionPool.Availability
  * @author Stuart Douglas
  */
 public class LoadBalancingProxyClient implements ProxyClient {
+
+    /**
+     * The attachment key that is used to attach the proxy connection to the exchange.
+     * <p/>
+     * This cannot be static as otherwise a connection from a different client could be re-used.
+     */
+    private final AttachmentKey<ExclusiveConnectionHolder> exclusiveConnectionKey = AttachmentKey.create(ExclusiveConnectionHolder.class);
+
 
     /**
      * Time in seconds between retries for problem servers
@@ -47,7 +59,10 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     private final Map<String, Host> routes = new CopyOnWriteMap<String, Host>();
 
-    private static final ProxyTarget PROXY_TARGET = new ProxyTarget() {};
+    private final ExclusivityChecker exclusivityChecker;
+
+    private static final ProxyTarget PROXY_TARGET = new ProxyTarget() {
+    };
 
     private final ConnectionPoolManager manager = new ConnectionPoolManager() {
         @Override
@@ -71,7 +86,16 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     public LoadBalancingProxyClient(UndertowClient client) {
+        this(client, null);
+    }
+
+    public LoadBalancingProxyClient(ExclusivityChecker client) {
+        this(UndertowClient.getInstance(), client);
+    }
+
+    public LoadBalancingProxyClient(UndertowClient client, ExclusivityChecker exclusivityChecker) {
         this.client = client;
+        this.exclusivityChecker = exclusivityChecker;
         sessionCookieNames.add("JSESSIONID");
     }
 
@@ -152,12 +176,54 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     @Override
-    public void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
+    public void getConnection(ProxyTarget target, HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
+        final ExclusiveConnectionHolder holder = exchange.getConnection().getAttachment(exclusiveConnectionKey);
+        if (holder != null && holder.connection.getConnection().isOpen()) {
+            // Something has already caused an exclusive connection to be allocated so keep using it.
+            callback.completed(exchange, holder.connection);
+            return;
+        }
+
         final Host host = selectHost(exchange);
         if (host == null) {
             callback.failed(exchange);
         } else {
-            host.connectionPool.connect(target, exchange, callback, timeout, timeUnit, false);
+            if (holder != null || (exclusivityChecker != null && exclusivityChecker.isExclusivityRequired(exchange))) {
+                // If we have a holder, even if the connection was closed we now exclusivity was already requested so our client
+                // may be assuming it still exists.
+                host.connectionPool.connect(target, exchange, new ProxyCallback<ProxyConnection>() {
+
+                    @Override
+                    public void failed(HttpServerExchange exchange) {
+                        callback.failed(exchange);
+                    }
+
+                    @Override
+                    public void completed(HttpServerExchange exchange, ProxyConnection result) {
+                        if (holder != null) {
+                            holder.connection = result;
+                        } else {
+                            final ExclusiveConnectionHolder newHolder = new ExclusiveConnectionHolder();
+                            newHolder.connection = result;
+                            ServerConnection connection = exchange.getConnection();
+                            connection.putAttachment(exclusiveConnectionKey, newHolder);
+                            connection.addCloseListener(new ServerConnection.CloseListener() {
+
+                                @Override
+                                public void closed(ServerConnection connection) {
+                                    ClientConnection clientConnection = newHolder.connection.getConnection();
+                                    if (clientConnection.isOpen()) {
+                                        safeClose(clientConnection);
+                                    }
+                                }
+                            });
+                        }
+                        callback.completed(exchange, result);
+                    }
+                }, timeout, timeUnit, true);
+            } else {
+                host.connectionPool.connect(target, exchange, callback, timeout, timeUnit, false);
+            }
         }
     }
 
@@ -177,7 +243,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         Host problem = null;
         do {
             Host selected = hosts[host];
-            ProxyConnectionPool.AvailabilityType availble = selected.connectionPool.availible();
+            ProxyConnectionPool.AvailabilityType availble = selected.connectionPool.available();
             if (availble == AVAILABLE) {
                 return selected;
             } else if (availble == FULL && full == null) {
@@ -228,5 +294,11 @@ public class LoadBalancingProxyClient implements ProxyClient {
             this.jvmRoute = jvmRoute;
             this.uri = uri;
         }
+    }
+
+    private static class ExclusiveConnectionHolder {
+
+        private ProxyConnection connection;
+
     }
 }
