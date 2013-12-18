@@ -64,6 +64,11 @@ public class ServletFormAuthTestCase {
                         .addRoleAllowed("role1"))
                 .addMapping("/secured/echo");
 
+        ServletInfo echoParam = new ServletInfo("echoParam", RequestParamEchoServlet.class)
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("role1"))
+                .addMapping("/secured/echoParam");
+
         ServletInfo s1 = new ServletInfo("loginPage", FormLoginServlet.class)
                 .setServletSecurityInfo(new ServletSecurityInfo()
                         .addRoleAllowed("group1"))
@@ -80,7 +85,7 @@ public class ServletFormAuthTestCase {
                 .setDeploymentName("servletContext.war")
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
-                .addServlets(s, s1, echo);
+                .addServlets(s, s1, echo,echoParam);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -159,6 +164,46 @@ public class ServletFormAuthTestCase {
 
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("String Entity", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testServletFormAuthWithOriginalRequestParams() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        client.setRedirectStrategy(new DefaultRedirectStrategy() {
+            @Override
+            public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
+                if (response.getStatusLine().getStatusCode() == 302) {
+                    return true;
+                }
+                return super.isRedirected(request, response, context);
+            }
+        });
+        try {
+            final String uri = DefaultServer.getDefaultServerURL() + "/servletContext/secured/echoParam?param=developer";
+            HttpPost post = new HttpPost(uri);
+            post.setEntity(new StringEntity("String Entity"));
+            HttpResponse result = client.execute(post);
+            assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("Login Page", response);
+
+            BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
+            final List<NameValuePair> data = new ArrayList<NameValuePair>();
+            data.addAll(Arrays.asList(pairs));
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
+
+            post.setEntity(new UrlEncodedFormEntity(data));
+
+            result = client.execute(post);
+            assertEquals(200, result.getStatusLine().getStatusCode());
+
+            response = HttpClientUtils.readResponse(result);
+            assertEquals("Not Found", response);
+            //assertEquals("developer", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
