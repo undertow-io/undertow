@@ -913,7 +913,7 @@ public class DeploymentInfo implements Cloneable {
     public boolean isAuthenticationMechanismPresent(final String mechanismName) {
         if(loginConfig != null) {
             for(AuthMethodConfig method : loginConfig.getAuthMethods()) {
-                if(method.getName().equals(mechanismName)) {
+                if(method.getName().equalsIgnoreCase(mechanismName)) {
                     return true;
                 }
             }
