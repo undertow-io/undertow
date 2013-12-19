@@ -60,6 +60,8 @@ public final class HttpServerConnection extends AbstractServerConnection {
     private ServerFixedLengthStreamSinkConduit fixedLengthStreamSinkConduit;
     private ReadDataStreamSourceConduit readDataStreamSourceConduit;
 
+    private HttpUpgradeListener upgradeListener;
+
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         if (channel instanceof SslChannel) {
@@ -239,9 +241,13 @@ public final class HttpServerConnection extends AbstractServerConnection {
         return fixedLengthStreamSinkConduit;
     }
 
-    @Override
     protected HttpUpgradeListener getUpgradeListener() {
-        return super.getUpgradeListener();
+        return upgradeListener;
+    }
+
+    @Override
+    protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
+        this.upgradeListener = upgradeListener;
     }
 
     public void setPipelineBuffer(PipeliningBufferingStreamSinkConduit pipelineBuffer) {

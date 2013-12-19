@@ -19,6 +19,7 @@
 package io.undertow.server;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -54,8 +55,6 @@ public abstract class AbstractServerConnection  extends ServerConnection {
      * Any extra bytes that were read from the channel. This could be data for this requests, or the next response.
      */
     protected Pooled<ByteBuffer> extraBytes;
-
-    private HttpUpgradeListener upgradeListener;
 
     public AbstractServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         this.channel = channel;
@@ -267,12 +266,8 @@ public abstract class AbstractServerConnection  extends ServerConnection {
         return channel.getSourceChannel();
     }
 
-    protected HttpUpgradeListener getUpgradeListener() {
-        return upgradeListener;
-    }
-
     protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
-        this.upgradeListener = upgradeListener;
+        throw UndertowMessages.MESSAGES.upgradeNotSupported();
     }
 
     private class CloseSetter implements ChannelListener.Setter<ServerConnection>, ChannelListener<StreamConnection> {
