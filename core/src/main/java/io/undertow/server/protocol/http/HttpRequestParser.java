@@ -202,8 +202,9 @@ public abstract class HttpRequestParser {
             if (buffer.remaining() > 3
                     && buffer.get(position) == 'G'
                     && buffer.get(position + 1) == 'E'
-                    && buffer.get(position + 2) == 'T') {
-                buffer.position(position + 3);
+                    && buffer.get(position + 2) == 'T'
+                    && buffer.get(position + 3) == ' ') {
+                buffer.position(position + 4);
                 builder.setRequestMethod(Methods.GET);
             } else {
                 handleHttpVerb(buffer, currentState, builder);
