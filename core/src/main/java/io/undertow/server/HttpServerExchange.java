@@ -711,24 +711,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
-        ExchangeCompletionListener upgradeCompleteListener = new UpgradeCompletionListener(listener);
+        connection.setUpgradeListener(listener);
         setResponseCode(101);
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
-        final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
-        ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
-        if (exchangeCompleteListeners == null ||exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
-            ExchangeCompletionListener[] old = exchangeCompleteListeners;
-            this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
-            if(old != null) {
-                System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
-            }
-            exchangeCompleteListeners[0] = upgradeCompleteListener;
-        } else {
-            for (int i = exchangeCompletionListenersCount - 1; i >= 0; --i) {
-                exchangeCompleteListeners[i + 1] = exchangeCompleteListeners[i];
-            }
-            exchangeCompleteListeners[0] = upgradeCompleteListener;
-        }
     }
 
     /**
@@ -744,26 +729,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
-        ExchangeCompletionListener upgradeCompleteListener = new UpgradeCompletionListener(listener);
+        connection.setUpgradeListener(listener);
         setResponseCode(101);
         final HeaderMap headers = getResponseHeaders();
         headers.put(Headers.UPGRADE, productName);
         headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
-        final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
-        ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
-        if (exchangeCompleteListeners == null || exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
-            ExchangeCompletionListener[] old = exchangeCompleteListeners;
-            this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
-            if(old != null) {
-                System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
-            }
-            exchangeCompleteListeners[0] = upgradeCompleteListener;
-        } else {
-            for (int i = exchangeCompletionListenersCount - 1; i >= 0; --i) {
-                exchangeCompleteListeners[i + 1] = exchangeCompleteListeners[i];
-            }
-            exchangeCompleteListeners[0] = upgradeCompleteListener;
-        }
     }
 
     public void addExchangeCompleteListener(final ExchangeCompletionListener listener) {
@@ -1883,25 +1853,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
     }
+
     @Override
     public String toString() {
         return "HttpServerExchange{ " + getRequestMethod().toString() + " " + getRequestURI() + '}';
-    }
-
-    private final class UpgradeCompletionListener implements ExchangeCompletionListener {
-        private final HttpUpgradeListener listener;
-
-        private UpgradeCompletionListener(HttpUpgradeListener listener) {
-            this.listener = listener;
-        }
-
-        @Override
-        public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-            try {
-                listener.handleUpgrade(exchange.getConnection().upgradeChannel(), exchange);
-            } finally {
-                nextListener.proceed();
-            }
-        }
     }
 }

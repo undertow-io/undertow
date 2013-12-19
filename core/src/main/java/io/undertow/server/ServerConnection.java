@@ -154,6 +154,8 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      */
     protected abstract void exchangeComplete(HttpServerExchange exchange);
 
+    protected abstract void setUpgradeListener(HttpUpgradeListener upgradeListener);
+
     public interface CloseListener {
 
         void closed(final ServerConnection connection);

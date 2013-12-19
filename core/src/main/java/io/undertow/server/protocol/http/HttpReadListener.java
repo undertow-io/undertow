@@ -20,6 +20,7 @@ package io.undertow.server.protocol.http;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StringWriteChannelListener;
@@ -220,6 +221,11 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             }
         } else if (!exchange.isPersistent()) {
             IoUtils.safeClose(connection);
+        } else if(exchange.isUpgrade()) {
+            if(connection.getExtraBytes() != null) {
+                connection.getChannel().getSourceChannel().setConduit(new ReadDataStreamSourceConduit(connection.getChannel().getSourceChannel().getConduit(), connection));
+            }
+            connection.getUpgradeListener().handleUpgrade(connection.getChannel(), exchange);
         }
     }
 

@@ -21,6 +21,7 @@ package io.undertow.servlet.handlers;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
 import io.undertow.servlet.api.ServletDispatcher;
@@ -426,6 +427,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         @Override
         protected void exchangeComplete(HttpServerExchange exchange) {
+        }
+
+        @Override
+        protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
+            //ignore
         }
     }
 

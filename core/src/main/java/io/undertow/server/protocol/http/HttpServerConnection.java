@@ -27,6 +27,7 @@ import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.ConduitFactory;
@@ -236,6 +237,11 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     ServerFixedLengthStreamSinkConduit getFixedLengthStreamSinkConduit() {
         return fixedLengthStreamSinkConduit;
+    }
+
+    @Override
+    protected HttpUpgradeListener getUpgradeListener() {
+        return super.getUpgradeListener();
     }
 
     public void setPipelineBuffer(PipeliningBufferingStreamSinkConduit pipelineBuffer) {

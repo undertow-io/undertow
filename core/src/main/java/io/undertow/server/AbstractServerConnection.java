@@ -55,6 +55,8 @@ public abstract class AbstractServerConnection  extends ServerConnection {
      */
     protected Pooled<ByteBuffer> extraBytes;
 
+    private HttpUpgradeListener upgradeListener;
+
     public AbstractServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         this.channel = channel;
         this.bufferPool = bufferPool;
@@ -263,6 +265,14 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     @Override
     protected ConduitStreamSourceChannel getSourceChannel() {
         return channel.getSourceChannel();
+    }
+
+    protected HttpUpgradeListener getUpgradeListener() {
+        return upgradeListener;
+    }
+
+    protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
+        this.upgradeListener = upgradeListener;
     }
 
     private class CloseSetter implements ChannelListener.Setter<ServerConnection>, ChannelListener<StreamConnection> {
