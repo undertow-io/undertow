@@ -202,8 +202,7 @@ public class ServletFormAuthTestCase {
             assertEquals(200, result.getStatusLine().getStatusCode());
 
             response = HttpClientUtils.readResponse(result);
-            assertEquals("Not Found", response);
-            //assertEquals("developer", response);
+            assertEquals("developer", response);
         } finally {
             client.getConnectionManager().shutdown();
         }

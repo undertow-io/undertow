@@ -8,6 +8,7 @@ import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.SavedRequest;
 import io.undertow.util.Methods;
+import io.undertow.util.RedirectBuilder;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -70,7 +71,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     protected void storeInitialLocation(final HttpServerExchange exchange) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
-        req.getSession(true).setAttribute(SESSION_KEY, req.getContextPath() + req.getServletPath() + (req.getPathInfo() == null ? "" : req.getPathInfo()));
+        req.getSession(true).setAttribute(SESSION_KEY, RedirectBuilder.redirect(exchange, exchange.getRelativePath()));
         SavedRequest.trySaveRequest(exchange);
     }
 

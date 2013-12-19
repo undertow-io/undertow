@@ -35,6 +35,7 @@ import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.RedirectBuilder;
 
 import static io.undertow.UndertowMessages.MESSAGES;
 import static io.undertow.util.StatusCodes.TEMPORARY_REDIRECT;
@@ -162,7 +163,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     protected void storeInitialLocation(final HttpServerExchange exchange) {
-        exchange.setResponseCookie(new CookieImpl(LOCATION_COOKIE, exchange.getRequestURI()));
+        exchange.setResponseCookie(new CookieImpl(LOCATION_COOKIE, RedirectBuilder.redirect(exchange, exchange.getRelativePath())));
     }
 
     protected Integer servePage(final HttpServerExchange exchange, final String location) {
