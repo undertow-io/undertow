@@ -24,7 +24,6 @@ import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FinishableStreamSinkConduit;
-import io.undertow.conduits.FinishableStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.server.Connectors;
@@ -141,18 +140,10 @@ public class HttpTransferEncoding {
 
             // no content - immediately start the next request, returning an empty stream for this one
             Connectors.terminateRequest(exchange);
-        } else if (exchange.isHttp11()) {
-            //this is a http 1.1 non-persistent connection
+        } else {
+            //assume there is no content
             //we still know there is no content
             Connectors.terminateRequest(exchange);
-        } else {
-            ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
-            sourceChannel.setConduit(new FinishableStreamSourceConduit(sourceChannel.getConduit(), new ConduitListener<FinishableStreamSourceConduit>() {
-                @Override
-                public void handleEvent(FinishableStreamSourceConduit channel) {
-                    Connectors.terminateRequest(exchange);
-                }
-            }));
         }
         return persistentConnection;
     }
