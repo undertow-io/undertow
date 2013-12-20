@@ -40,10 +40,6 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     private volatile SessionManager sessionManager;
 
-    /**
-     * The config that is used for this session. It is possible for multiple session to be attached to the same
-     * HTTP request. Handlers that wish to share a session must also share the session configuration.
-     */
     private final SessionConfig sessionConfig;
 
     public SessionAttachmentHandler(final SessionManager sessionManager, final SessionConfig sessionConfig) {
@@ -65,11 +61,8 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        if (sessionManager == null) {
-            throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
-        }
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
-        sessionManager.getSession(exchange, sessionConfig);
+        exchange.putAttachment(SessionConfig.ATTACHMENT_KEY, sessionConfig);
         final UpdateLastAccessTimeListener handler = new UpdateLastAccessTimeListener(sessionConfig, sessionManager);
         exchange.addExchangeCompleteListener(handler);
         next.handleRequest(exchange);

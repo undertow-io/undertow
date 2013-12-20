@@ -17,9 +17,6 @@
  */
 package io.undertow.security.impl;
 
-import java.io.IOException;
-import java.util.Map;
-
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityContext;
@@ -28,25 +25,27 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.FormParserFactory;
+import io.undertow.server.session.Session;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
+import io.undertow.util.Sessions;
+
+import java.io.IOException;
 
 import static io.undertow.UndertowMessages.MESSAGES;
-import static io.undertow.util.StatusCodes.TEMPORARY_REDIRECT;
 import static io.undertow.util.StatusCodes.FOUND;
+import static io.undertow.util.StatusCodes.TEMPORARY_REDIRECT;
 
 /**
  * @author Stuart Douglas
  */
 public class FormAuthenticationMechanism implements AuthenticationMechanism {
 
-    public static final String LOCATION_COOKIE = "FORM_AUTH_ORIGINAL_URL";
+    public static final String LOCATION_ATTRIBUTE = FormAuthenticationMechanism.class.getName() + ".LOCATION";
 
     public static final String DEFAULT_POST_LOCATION = "/j_security_check";
 
@@ -128,22 +127,21 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     protected void handleRedirectBack(final HttpServerExchange exchange) {
-        final Map<String, Cookie> cookies = exchange.getRequestCookies();
-        if (cookies != null && cookies.containsKey(LOCATION_COOKIE)) {
-            final String location = cookies.get(LOCATION_COOKIE).getValue();
-            exchange.addDefaultResponseListener(new DefaultResponseListener() {
-                @Override
-                public boolean handleDefaultResponse(final HttpServerExchange exchange) {
-                    FormAuthenticationMechanism.sendRedirect(exchange, location);
-                    exchange.setResponseCode(FOUND);
-                    exchange.endExchange();
-                    return true;
-                }
-            });
+        final Session session = Sessions.getSession(exchange);
+        if (session != null) {
+            final String location = (String) session.removeAttribute(LOCATION_ATTRIBUTE);
+            if(location != null) {
+                exchange.addDefaultResponseListener(new DefaultResponseListener() {
+                    @Override
+                    public boolean handleDefaultResponse(final HttpServerExchange exchange) {
+                        FormAuthenticationMechanism.sendRedirect(exchange, location);
+                        exchange.setResponseCode(FOUND);
+                        exchange.endExchange();
+                        return true;
+                    }
+                });
+            }
 
-            final CookieImpl cookie = new CookieImpl(LOCATION_COOKIE);
-            cookie.setMaxAge(0);
-            exchange.setResponseCookie(cookie);
         }
     }
 
@@ -163,7 +161,8 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     protected void storeInitialLocation(final HttpServerExchange exchange) {
-        exchange.setResponseCookie(new CookieImpl(LOCATION_COOKIE, RedirectBuilder.redirect(exchange, exchange.getRelativePath())));
+        Session session = Sessions.getOrCreateSession(exchange);
+        session.setAttribute(LOCATION_ATTRIBUTE, RedirectBuilder.redirect(exchange, exchange.getRelativePath()));
     }
 
     protected Integer servePage(final HttpServerExchange exchange, final String location) {
