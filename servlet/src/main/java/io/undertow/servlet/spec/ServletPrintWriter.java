@@ -91,7 +91,7 @@ public class ServletPrintWriter {
     }
 
     public void write(final String s, final int off, final int len) {
-        final CharBuffer cb = CharBuffer.wrap(s, off, len);
+        final CharBuffer cb = CharBuffer.wrap(s, off, off + len);
         write(cb);
     }
 
