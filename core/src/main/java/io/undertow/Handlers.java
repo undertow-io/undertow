@@ -331,7 +331,7 @@ public class Handlers {
         return new ProxyPeerAddressHandler(next);
     }
 
-    public static JvmRouteHandler jvMRoute(final String sessionCookieName, final String jvmRoute, HttpHandler next) {
+    public static JvmRouteHandler jvmRoute(final String sessionCookieName, final String jvmRoute, HttpHandler next) {
         return new JvmRouteHandler(next, sessionCookieName, jvmRoute);
     }
 
