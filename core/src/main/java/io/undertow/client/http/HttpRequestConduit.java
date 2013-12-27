@@ -128,11 +128,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                     log.trace("Starting request");
                     // we assume that our buffer has enough space for the initial request line plus one more CR+LF
                     assert buffer.remaining() >= 0x100;
-                    string = request.getMethod().toString();
-                    length = string.length();
-                    for (charIndex = 0; charIndex < length; charIndex ++) {
-                        buffer.put((byte) string.charAt(charIndex));
-                    }
+                    request.getMethod().appendTo(buffer);
                     buffer.put((byte) ' ');
                     string = request.getPath();
                     length = string.length();
@@ -140,11 +136,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         buffer.put((byte) string.charAt(charIndex));
                     }
                     buffer.put((byte) ' ');
-                    string = request.getProtocol().toString();
-                    length = string.length();
-                    for (charIndex = 0; charIndex < length; charIndex ++) {
-                        buffer.put((byte) string.charAt(charIndex));
-                    }
+                    request.getProtocol().appendTo(buffer);
                     buffer.put((byte) '\r').put((byte) '\n');
                     HeaderMap headers = request.getRequestHeaders();
                     nameIterator = headers.getHeaderNames().iterator();

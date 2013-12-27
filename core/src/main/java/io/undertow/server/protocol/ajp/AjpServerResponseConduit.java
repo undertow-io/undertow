@@ -127,17 +127,24 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         state = FLAG_START;
     }
 
-    private void putInt(final ByteBuffer buf, int value) {
+    private static void putInt(final ByteBuffer buf, int value) {
         buf.put((byte) ((value >> 8) & 0xFF));
         buf.put((byte) (value & 0xFF));
     }
 
-    private void putString(final ByteBuffer buf, String value) {
+    private static void putString(final ByteBuffer buf, String value) {
         final int length = value.length();
         putInt(buf, length);
         for (int i = 0; i < length; ++i) {
             buf.put((byte) value.charAt(i));
         }
+        buf.put((byte) 0);
+    }
+
+    private void putHttpString(final ByteBuffer buf, HttpString value) {
+        final int length = value.length();
+        putInt(buf, length);
+        value.appendTo(buf);
         buf.put((byte) 0);
     }
 
@@ -197,7 +204,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
                     if (headerCode != null) {
                         putInt(buffer, headerCode);
                     } else {
-                        putString(buffer, header.toString());
+                        putHttpString(buffer, header);
                     }
                     putString(buffer, headerValue);
                 }
