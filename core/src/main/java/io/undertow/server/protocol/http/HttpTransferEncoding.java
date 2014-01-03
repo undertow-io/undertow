@@ -92,7 +92,7 @@ public class HttpTransferEncoding {
 
         exchange.setPersistent(persistentConnection);
 
-        if(!exchange.isRequestComplete() || connection.getExtraBytes() != null) {
+        if (!exchange.isRequestComplete() || connection.getExtraBytes() != null) {
             //if there is more data we suspend reads
             sourceChannel.setReadListener(null);
             sourceChannel.suspendReads();
@@ -111,7 +111,7 @@ public class HttpTransferEncoding {
             sourceChannel.setConduit(new ChunkedStreamSourceConduit(sourceChannel.getConduit(), exchange, chunkedDrainListener(exchange)));
         } else if (contentLengthHeader != null) {
             final long contentLength;
-            contentLength = Long.parseLong(contentLengthHeader);
+            contentLength = parsePositiveLong(contentLengthHeader);
             if (contentLength == 0L) {
                 log.trace("No content, starting next request");
                 // no content - immediately start the next request, returning an empty stream for this one
@@ -237,7 +237,7 @@ public class HttpTransferEncoding {
 
     private static StreamSinkConduit handleFixedLength(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, String contentLengthHeader, HttpServerConnection connection) {
         try {
-            final long contentLength = Long.parseLong(contentLengthHeader);
+            final long contentLength = parsePositiveLong(contentLengthHeader);
             if (headRequest) {
                 return channel;
             }
@@ -305,5 +305,32 @@ public class HttpTransferEncoding {
         }
     }
 
+    /**
+     * fast long parsing algorithm
+     *
+     * @param str The string
+     * @return The long
+     */
+    public static long parsePositiveLong(String str) {
+        long value = 0;
+        final int length = str.length();
+
+        if (length == 0) {
+            throw new NumberFormatException(str);
+        }
+
+        long multiplier = 1;
+        for (int i = length - 1; i >= 0; --i) {
+            char c = str.charAt(i);
+
+            if (c < '0' || c > '9') {
+                throw new NumberFormatException(str);
+            }
+            long digit = c - '0';
+            value += digit * multiplier;
+            multiplier *= 10;
+        }
+        return value;
+    }
 
 }
