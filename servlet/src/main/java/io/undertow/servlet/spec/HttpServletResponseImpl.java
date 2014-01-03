@@ -519,15 +519,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         }
         servletContext.updateSessionAccessTime(exchange);
         responseDone = true;
-        if (writer != null) {
-            writer.close();
-        }
         try {
-            if (servletOutputStream == null) {
-                getOutputStream().close();
-            } else {
-                servletOutputStream.close();
-            }
+            closeStreamAndWriter();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
