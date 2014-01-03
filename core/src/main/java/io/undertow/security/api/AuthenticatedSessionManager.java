@@ -21,6 +21,8 @@ import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 
+import java.io.Serializable;
+
 /**
  * Interface that represents a persistent authenticated session.
  *
@@ -36,7 +38,7 @@ public interface AuthenticatedSessionManager {
 
     AuthenticatedSession lookupSession(final HttpServerExchange exchange);
 
-    public static class AuthenticatedSession {
+    public static class AuthenticatedSession implements Serializable {
 
         private final Account account;
         private final String mechanism;
