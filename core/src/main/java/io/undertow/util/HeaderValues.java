@@ -232,23 +232,7 @@ public final class HeaderValues extends AbstractCollection<String> implements De
         if (headerValue == null || size == Byte.MAX_VALUE) return false;
         final Object value = this.value;
         if (value instanceof String[]) {
-            final String[] strings = (String[]) value;
-            final int len = strings.length;
-            final byte head = this.head;
-            final int end = head + size;
-            if (size == len) {
-                final String[] newStrings = Arrays.copyOfRange(strings, head, head + len + (len << 1));
-                if (end > len) {
-                    System.arraycopy(strings, 0, newStrings, len - head, end - len);
-                }
-                newStrings[len] = headerValue;
-                this.value = newStrings;
-            } else if (end >= len) {
-                strings[end - len] = headerValue;
-            } else {
-                strings[end] = headerValue;
-            }
-            this.size = (byte) (size + 1);
+            offerLastMultiValue(headerValue, size, (String[]) value);
         } else {
             if (size == 0) {
                 this.value = headerValue;
@@ -260,6 +244,26 @@ public final class HeaderValues extends AbstractCollection<String> implements De
             this.head = 0;
         }
         return true;
+    }
+
+    private void offerLastMultiValue(String headerValue, int size, String[] value) {
+        final String[] strings = (String[]) value;
+        final int len = strings.length;
+        final byte head = this.head;
+        final int end = head + size;
+        if (size == len) {
+            final String[] newStrings = Arrays.copyOfRange(strings, head, head + len + (len << 1));
+            if (end > len) {
+                System.arraycopy(strings, 0, newStrings, len - head, end - len);
+            }
+            newStrings[len] = headerValue;
+            this.value = newStrings;
+        } else if (end >= len) {
+            strings[end - len] = headerValue;
+        } else {
+            strings[end] = headerValue;
+        }
+        this.size = (byte) (size + 1);
     }
 
     private boolean offer(int idx, final String headerValue) {
