@@ -322,7 +322,8 @@ public abstract class HttpRequestParser {
     private static final int FIRST_COLON = 1;
     private static final int FIRST_SLASH = 2;
     private static final int SECOND_SLASH = 3;
-    private static final int HOST_DONE = 4;
+    private static final int IN_PATH = 4;
+    private static final int HOST_DONE = 5;
 
     /**
      * Parses a path value
@@ -362,10 +363,10 @@ public abstract class HttpRequestParser {
                 }
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
-            } else if (next == '?' && (parseState == START || parseState == HOST_DONE)) {
+            } else if (next == '?' && (parseState == START || parseState == HOST_DONE || parseState == IN_PATH)) {
                 beginQueryParameters(buffer, state, exchange, stringBuilder, parseState, canonicalPathStart, urlDecodeRequired);
                 return;
-            } else if (next == ';' && (parseState == START || parseState == HOST_DONE)) {
+            } else if (next == ';' && (parseState == START || parseState == HOST_DONE || parseState == IN_PATH)) {
                 beginPathParameters(state, exchange, stringBuilder, parseState, canonicalPathStart, urlDecodeRequired);
                 handlePathParameters(buffer, state, exchange);
                 return;
@@ -383,7 +384,9 @@ public abstract class HttpRequestParser {
                     parseState = HOST_DONE;
                     canonicalPathStart = stringBuilder.length();
                 } else if (parseState == FIRST_COLON || parseState == FIRST_SLASH) {
-                    parseState = START;
+                    parseState = IN_PATH;
+                } else if (next == '/' && parseState != HOST_DONE) {
+                    parseState = IN_PATH;
                 }
                 stringBuilder.append(next);
             }

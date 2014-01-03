@@ -68,6 +68,31 @@ public class SimpleParserTestCase {
     }
 
     @Test
+    public void testColonSlashInURL() {
+        byte[] in = "GET /a/http://myurl.com/b/c HTTP/1.1\r\n\r\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/a/http://myurl.com/b/c", result.getRequestPath());
+        Assert.assertEquals("/a/http://myurl.com/b/c", result.getRequestURI());
+    }
+
+    @Test
+    public void testColonSlashInFullURL() {
+        byte[] in = "GET http://foo.com/a/http://myurl.com/b/c HTTP/1.1\r\n\r\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/a/http://myurl.com/b/c", result.getRequestPath());
+        Assert.assertEquals("http://foo.com/a/http://myurl.com/b/c", result.getRequestURI());
+    }
+
+
+    @Test
     public void testPathParameters() {
         byte[] in = "GET /somepath;p1 HTTP/1.1\r\n\r\n".getBytes();
         ParseState context = new ParseState();
