@@ -624,8 +624,9 @@ public abstract class HttpRequestParser {
     final void handleHeaderValue(ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
         StringBuilder stringBuilder = state.stringBuilder;
         HttpString headerName = state.nextHeader;
+        HashMap<HttpString, String> headerValuesCache = state.headerValuesCache;
         if (stringBuilder.length() == 0) {
-            String existing = state.headerValuesCache.get(headerName);
+            String existing = headerValuesCache.get(headerName);
             if (existing != null) {
                 if (handleCachedHeader(existing, buffer, state, builder)) {
                     return;
@@ -695,7 +696,11 @@ public abstract class HttpRequestParser {
                         }
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
                         builder.getRequestHeaders().add(headerName, headerValue);
-                        state.headerValuesCache.put(headerName, headerValue);
+                        if(headerValuesCache.size() < maxHeaders) {
+                            //we have a limit on how many we can cache
+                            //to prevent memory filling and hash collision attacks
+                            headerValuesCache.put(headerName, headerValue);
+                        }
 
                         state.nextHeader = null;
 
