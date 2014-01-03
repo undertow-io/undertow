@@ -84,8 +84,11 @@ public class ManagedFilter implements Lifecycle {
     public synchronized void stop() {
         started = false;
         if (handle != null) {
+            filter.destroy();
             handle.release();
         }
+        filter = null;
+        handle = null;
     }
 
     @Override
