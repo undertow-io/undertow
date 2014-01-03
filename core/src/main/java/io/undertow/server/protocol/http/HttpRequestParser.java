@@ -223,8 +223,8 @@ public abstract class HttpRequestParser {
                     final byte b = buffer.get(pos + HTTP_LENGTH);
                     final byte b2 = buffer.get(pos + HTTP_LENGTH + 1);
                     final byte b3 = buffer.get(pos + HTTP_LENGTH + 2);
-                    if(b2 == '\r' && b3 == '\n') {
-                        if(b == '1') {
+                    if (b2 == '\r' && b3 == '\n') {
+                        if (b == '1') {
                             builder.setProtocol(Protocols.HTTP_1_1);
                             buffer.position(pos + HTTP_LENGTH + 3);
                             currentState.state = ParseState.HEADER;
@@ -242,7 +242,7 @@ public abstract class HttpRequestParser {
             } else {
                 failed = true;
             }
-            if(failed) {
+            if (failed) {
                 handleHttpVersion(buffer, currentState, builder);
                 handleAfterVersion(buffer, currentState);
             }
@@ -623,6 +623,15 @@ public abstract class HttpRequestParser {
     @SuppressWarnings("unused")
     final void handleHeaderValue(ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
         StringBuilder stringBuilder = state.stringBuilder;
+        HttpString headerName = state.nextHeader;
+        if (stringBuilder.length() == 0) {
+            String existing = state.headerValuesCache.get(headerName);
+            if (existing != null) {
+                if (handleCachedHeader(existing, buffer, state, builder)) {
+                    return;
+                }
+            }
+        }
 
         int parseState = state.parseState;
         while (buffer.hasRemaining() && parseState == NORMAL) {
@@ -678,7 +687,6 @@ public abstract class HttpRequestParser {
                         parseState = WHITESPACE;
                     } else {
                         //we have a header
-                        HttpString nextStandardHeader = state.nextHeader;
                         String headerValue = stringBuilder.toString();
 
 
@@ -686,7 +694,8 @@ public abstract class HttpRequestParser {
                             throw UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders);
                         }
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
-                        builder.getRequestHeaders().add(nextStandardHeader, headerValue);
+                        builder.getRequestHeaders().add(headerName, headerValue);
+                        state.headerValuesCache.put(headerName, headerValue);
 
                         state.nextHeader = null;
 
@@ -711,6 +720,47 @@ public abstract class HttpRequestParser {
         //we only write to the state if we did not finish parsing
         state.parseState = parseState;
         return;
+    }
+
+    protected boolean handleCachedHeader(String existing, ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
+        if (existing.length() + 3 > buffer.remaining()) {
+            return false;
+        }
+        int pos = buffer.position();
+        while (buffer.get(pos) == ' ') {
+            pos++;
+        }
+        int i = 0;
+        while (i < existing.length()) {
+            byte b = buffer.get(pos + i);
+            if (b != existing.charAt(i)) {
+                return false;
+            }
+            ++i;
+        }
+        if (buffer.get(pos + i++) != '\r') {
+            return false;
+        }
+        if (buffer.get(pos + i++) != '\n') {
+            return false;
+        }
+        int next = buffer.get(pos + i);
+        if (next == '\t' || next == ' ') {
+            //continuation
+            return false;
+        }
+        buffer.position(pos + i);
+        if (state.mapCount++ > maxHeaders) {
+            throw UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders);
+        }
+        //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
+        builder.getRequestHeaders().add(state.nextHeader, existing);
+
+        state.nextHeader = null;
+
+        state.state = ParseState.HEADER;
+        state.parseState = 0;
+        return true;
     }
 
     protected void handleAfterVersion(ByteBuffer buffer, ParseState state) {

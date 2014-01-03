@@ -20,6 +20,8 @@ package io.undertow.server.protocol.http;
 
 import io.undertow.util.HttpString;
 
+import java.util.HashMap;
+
 /**
  * The current state of the tokenizer state machine. This class is mutable and not thread safe.
  * <p/>
@@ -103,6 +105,12 @@ class ParseState {
     int mapCount;
 
     final StringBuilder decodeBuffer = new StringBuilder();
+
+    /**
+     * In general browsers will often send the same header with every request. This cache allows us to re-use the resulting
+     * strings.
+     */
+    final HashMap<HttpString, String> headerValuesCache = new HashMap<HttpString, String>();
 
     public ParseState() {
         this.parseState = 0;
