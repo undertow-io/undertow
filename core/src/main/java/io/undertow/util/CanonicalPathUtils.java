@@ -33,9 +33,7 @@ public class CanonicalPathUtils {
             final char c = path.charAt(i);
             switch (c) {
                 case '/':
-                    if (state == FIRST_SLASH) {
-                        return realCanonicalize(path, i + 1, FIRST_SLASH);
-                    } else if (state == ONE_DOT) {
+                    if (state == ONE_DOT) {
                         return realCanonicalize(path, i + 2, FIRST_SLASH);
                     } else if (state == TWO_DOT) {
                         return realCanonicalize(path, i + 3, FIRST_SLASH);
@@ -88,13 +86,7 @@ public class CanonicalPathUtils {
                     if (c == '.') {
                         state = ONE_DOT;
                     } else if (c == '/') {
-                        if (eatCount > 0) {
-                            --eatCount;
-                            tokenEnd = i;
-                        } else {
-                            parts.add(path.substring(i + 1, tokenEnd));
-                            tokenEnd = i;
-                        }
+                        state = FIRST_SLASH;
                     } else {
                         state = NORMAL;
                     }

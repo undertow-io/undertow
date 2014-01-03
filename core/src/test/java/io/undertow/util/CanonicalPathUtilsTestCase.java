@@ -39,11 +39,9 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("a./b", CanonicalPathUtils.canonicalize("a./b"));
         Assert.assertEquals("a./.b", CanonicalPathUtils.canonicalize("a./.b"));
 
-        //removing double slash
-
-        Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a//b"));
-        Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a///b"));
-        Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a////b"));
+        Assert.assertEquals("a//b/", CanonicalPathUtils.canonicalize("a//./b/./"));
+        Assert.assertEquals("a///b", CanonicalPathUtils.canonicalize("a///b"));
+        Assert.assertEquals("a////b", CanonicalPathUtils.canonicalize("a////b"));
 
         //removing /./
         Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a/./b"));
@@ -63,6 +61,8 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("/a/", CanonicalPathUtils.canonicalize("/a/"));
         Assert.assertEquals("/", CanonicalPathUtils.canonicalize("/"));
         Assert.assertEquals("/bbb/a", CanonicalPathUtils.canonicalize("/cc/../bbb/a/."));
+
+        Assert.assertEquals("/a/b/http://abc.com/some/thing", CanonicalPathUtils.canonicalize("/a/b/http://abc.com/some/thing"));
     }
 
 }
