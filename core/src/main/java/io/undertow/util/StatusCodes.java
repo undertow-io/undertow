@@ -25,7 +25,7 @@ public class StatusCodes {
 
     //chosen simply because it gives no collisions
     //if more codes are added this will need to be re-evaluated
-    private static final int SIZE = 64;
+    private static final int SIZE = 0x3f;
     private static final Entry[] TABLE = new Entry[SIZE];
 
     public static final int CONTINUE = 100;
@@ -156,7 +156,7 @@ public class StatusCodes {
 
     private static void putCode(int code, String reason) {
         Entry e = new Entry(reason, code);
-        int h = code % SIZE;
+        int h = code & SIZE;
         if(TABLE[h] != null) {
             throw new IllegalArgumentException("hash collision");
         }
@@ -167,7 +167,7 @@ public class StatusCodes {
     }
 
     public static final String getReason(final int code) {
-        final Entry result = TABLE[code % SIZE];
+        final Entry result = TABLE[code & SIZE];
         if (result == null || result.code != code) {
             return "Unknown";
         } else {
