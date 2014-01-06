@@ -323,7 +323,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServerInfo() {
-        return Version.getFullVersionString();
+        return deploymentInfo.getServerName() + " - " + Version.getVersionString();
     }
 
     @Override

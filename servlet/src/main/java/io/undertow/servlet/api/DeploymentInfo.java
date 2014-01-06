@@ -86,6 +86,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean ignoreFlush = true;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
     private AuthenticationMechanism jaspiAuthenticationMechanism;
+    private String serverName = "Undertow";
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -944,6 +945,15 @@ public class DeploymentInfo implements Cloneable {
         this.jaspiAuthenticationMechanism = jaspiAuthenticationMechanism;
     }
 
+    public String getServerName() {
+        return serverName;
+    }
+
+    public DeploymentInfo setServerName(String serverName) {
+        this.serverName = serverName;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1009,6 +1019,7 @@ public class DeploymentInfo implements Cloneable {
         info.authenticationMechanisms.putAll(authenticationMechanisms);
         info.servletExtensions.addAll(servletExtensions);
         info.jaspiAuthenticationMechanism = jaspiAuthenticationMechanism;
+        info.serverName = serverName;
         return info;
     }
 
