@@ -625,8 +625,8 @@ public abstract class HttpRequestParser {
      */
     @SuppressWarnings("unused")
     final void handleHeaderValue(ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
-        StringBuilder stringBuilder = state.stringBuilder;
         HttpString headerName = state.nextHeader;
+        StringBuilder stringBuilder = state.stringBuilder;
         HashMap<HttpString, String> headerValuesCache = state.headerValuesCache;
         if (stringBuilder.length() == 0) {
             String existing = headerValuesCache.get(headerName);
@@ -636,6 +636,11 @@ public abstract class HttpRequestParser {
                 }
             }
         }
+
+        handleHeaderValueCacheMiss(buffer, state, builder, headerName, headerValuesCache, stringBuilder);
+    }
+
+    private void handleHeaderValueCacheMiss(ByteBuffer buffer, ParseState state, HttpServerExchange builder, HttpString headerName, HashMap<HttpString, String> headerValuesCache, StringBuilder stringBuilder) {
 
         int parseState = state.parseState;
         while (buffer.hasRemaining() && parseState == NORMAL) {
@@ -727,7 +732,6 @@ public abstract class HttpRequestParser {
         }
         //we only write to the state if we did not finish parsing
         state.parseState = parseState;
-        return;
     }
 
     protected boolean handleCachedHeader(String existing, ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
