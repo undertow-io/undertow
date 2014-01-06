@@ -6,6 +6,7 @@ import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.util.SavedRequest;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
@@ -16,7 +17,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Map;
 
@@ -70,8 +70,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     @Override
     protected void storeInitialLocation(final HttpServerExchange exchange) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
-        req.getSession(true).setAttribute(SESSION_KEY, RedirectBuilder.redirect(exchange, exchange.getRelativePath()));
+        servletRequestContext.getCurrentServetContext().getSession(exchange, true).getSession().setAttribute(SESSION_KEY, RedirectBuilder.redirect(exchange, exchange.getRelativePath()));
         SavedRequest.trySaveRequest(exchange);
     }
 
@@ -80,9 +79,9 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
         HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
-        HttpSession session = req.getSession(false);
+        HttpSessionImpl session = servletRequestContext.getCurrentServetContext().getSession(exchange, false);
         if (session != null) {
-            String path = (String) session.getAttribute(SESSION_KEY);
+            String path = (String) session.getSession().getAttribute(SESSION_KEY);
             if (path != null) {
                 try {
                     resp.sendRedirect(path);

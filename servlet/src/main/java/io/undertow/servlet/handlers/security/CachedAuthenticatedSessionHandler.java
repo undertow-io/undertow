@@ -25,6 +25,8 @@ import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.session.Session;
+import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.SavedRequest;
 
@@ -75,7 +77,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
             switch (eventType) {
                 case AUTHENTICATED:
                     if (isCacheable(notification)) {
-                        HttpSession session = servletContext.getSession(notification.getExchange(), true);
+                        Session session = servletContext.getSession(notification.getExchange(), true).getSession();
                         // It is normal for this notification to be received when using a previously cached session - in that
                         // case the IDM would have been given an opportunity to re-load the Account so updating here ready for
                         // the next request is desired.
@@ -84,9 +86,9 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
                     }
                     break;
                 case LOGGED_OUT:
-                    HttpSession session = servletContext.getSession(notification.getExchange(), false);
+                    HttpSessionImpl session = servletContext.getSession(notification.getExchange(), false);
                     if (session != null) {
-                        session.removeAttribute(ATTRIBUTE_NAME);
+                        session.getSession().removeAttribute(ATTRIBUTE_NAME);
                     }
                     break;
             }
@@ -98,9 +100,9 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
 
         @Override
         public AuthenticatedSession lookupSession(HttpServerExchange exchange) {
-            HttpSession session = servletContext.getSession(exchange, false);
+            HttpSessionImpl session = servletContext.getSession(exchange, false);
             if (session != null) {
-                return (AuthenticatedSession) session.getAttribute(ATTRIBUTE_NAME);
+                return (AuthenticatedSession) session.getSession().getAttribute(ATTRIBUTE_NAME);
             }
 
             return null;

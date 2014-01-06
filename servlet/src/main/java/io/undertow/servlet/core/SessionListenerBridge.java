@@ -20,6 +20,7 @@ import java.util.HashSet;
  */
 public class SessionListenerBridge implements SessionListener {
 
+    public static final String IO_UNDERTOW = "io.undertow";
     private final ThreadSetupAction threadSetup;
     private final ApplicationListeners applicationListeners;
     private final ServletContext servletContext;
@@ -64,6 +65,9 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void attributeAdded(final Session session, final String name, final Object value) {
+        if(name.startsWith(IO_UNDERTOW)) {
+            return;
+        }
         final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
         applicationListeners.httpSessionAttributeAdded(httpSession, name, value);
         if (value instanceof HttpSessionBindingListener) {
@@ -73,6 +77,9 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void attributeUpdated(final Session session, final String name, final Object value, final Object old) {
+        if(name.startsWith(IO_UNDERTOW)) {
+            return;
+        }
         final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
         if (old != value) {
             if (old instanceof HttpSessionBindingListener) {
@@ -87,6 +94,9 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void attributeRemoved(final Session session, final String name, final Object old) {
+        if(name.startsWith(IO_UNDERTOW)) {
+            return;
+        }
         final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
         if (old != null) {
             applicationListeners.httpSessionAttributeRemoved(httpSession, name, old);

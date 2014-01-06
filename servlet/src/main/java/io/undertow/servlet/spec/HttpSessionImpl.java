@@ -18,7 +18,10 @@
 
 package io.undertow.servlet.spec;
 
+import java.security.AccessController;
 import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 import javax.servlet.ServletContext;
@@ -31,10 +34,17 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.IteratorEnumeration;
 
 /**
+ * The HTTP session implementation.
+ *
+ * Note that for security reasons no attribute names that start with io.undertow are allowed.
+ *
  * @author Stuart Douglas
  */
 public class HttpSessionImpl implements HttpSession {
 
+    private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.servlet.spec.UNWRAP_HTTTP_SESSION");
+
+    public static final String IO_UNDERTOW = "io.undertow";
     private final Session session;
     private final ServletContext servletContext;
     private final boolean newSession;
@@ -103,22 +113,40 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public Object getAttribute(final String name) {
+        if(name.startsWith(IO_UNDERTOW)) {
+            throw new SecurityException();
+        }
         return session.getAttribute(name);
     }
 
     @Override
     public Object getValue(final String name) {
+        if(name.startsWith(IO_UNDERTOW)) {
+            throw new SecurityException();
+        }
         return getAttribute(name);
     }
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        return new IteratorEnumeration<String>(session.getAttributeNames().iterator());
+        Set<String> attributeNames = getFilteredAttributeNames();
+        return new IteratorEnumeration<String>(attributeNames.iterator());
+    }
+
+    private Set<String> getFilteredAttributeNames() {
+        Set<String> attributeNames = new HashSet<String>(session.getAttributeNames());
+        Iterator<String> it = attributeNames.iterator();
+        while (it.hasNext()) {
+            if(it.next().startsWith(IO_UNDERTOW)) {
+                it.remove();
+            }
+        }
+        return attributeNames;
     }
 
     @Override
     public String[] getValueNames() {
-        Set<String> names = session.getAttributeNames();
+        Set<String> names = getFilteredAttributeNames();
         String[] ret = new String[names.size()];
         int i = 0;
         for (String name : names) {
@@ -129,6 +157,9 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public void setAttribute(final String name, final Object value) {
+        if(name.startsWith(IO_UNDERTOW)) {
+            throw new SecurityException();
+        }
         if (value == null) {
             removeAttribute(name);
         } else {
@@ -143,6 +174,9 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public void removeAttribute(final String name) {
+        if(name.startsWith(IO_UNDERTOW)) {
+            throw new SecurityException();
+        }
         session.removeAttribute(name);
     }
 
@@ -171,6 +205,9 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     public Session getSession() {
+        if(System.getSecurityManager() != null) {
+            AccessController.checkPermission(PERMISSION);
+        }
         return session;
     }
 

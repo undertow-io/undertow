@@ -4,6 +4,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.util.HttpString;
@@ -60,7 +61,7 @@ public class SavedRequest {
                     ByteBuffer data = ByteBuffer.wrap(buffer, 0, read);
                     SavedRequest request = new SavedRequest(data, exchange.getRequestMethod(), exchange.getRequestURI());
                     final ServletRequestContext sc = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-                    HttpSessionImpl session = sc.getCurrentServetContext().getSession(exchange, true);
+                    Session session = sc.getCurrentServetContext().getSession(exchange, true).getSession();
                     session.setAttribute(SESSION_KEY, request);
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
@@ -70,13 +71,16 @@ public class SavedRequest {
     }
 
     public static void tryRestoreRequest(final HttpServerExchange exchange, HttpSession session) {
-        SavedRequest request = (SavedRequest)session.getAttribute(SESSION_KEY);
-        if(request != null) {
-            if(request.requestUri.equals(exchange.getRequestURI())) {
-                UndertowLogger.REQUEST_LOGGER.debugf("restoring request body for request to %s", request.requestUri);
-                exchange.setRequestMethod(request.method);
-                Connectors.ungetRequestBytes(exchange, new ImmediatePooled<ByteBuffer>(request.data));
-                session.removeAttribute(SESSION_KEY);
+        if(session instanceof HttpSessionImpl) {
+            Session underlyingSession = ((HttpSessionImpl) session).getSession();
+            SavedRequest request = (SavedRequest) underlyingSession.getAttribute(SESSION_KEY);
+            if(request != null) {
+                if(request.requestUri.equals(exchange.getRequestURI())) {
+                    UndertowLogger.REQUEST_LOGGER.debugf("restoring request body for request to %s", request.requestUri);
+                    exchange.setRequestMethod(request.method);
+                    Connectors.ungetRequestBytes(exchange, new ImmediatePooled<ByteBuffer>(request.data));
+                    underlyingSession.removeAttribute(SESSION_KEY);
+                }
             }
         }
     }
