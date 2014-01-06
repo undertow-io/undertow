@@ -174,6 +174,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private Sender sender;
 
+    private long requestStartTime;
+
+
     /**
      * The maximum entity size. This can be modified before the request stream is obtained, however once the request
      * stream is obtained this cannot be modified further.
@@ -267,8 +270,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public HttpServerExchange(final ServerConnection connection) {
-        this.connection = connection;
-        this.maxEntitySize = 0;
+        this(connection, 0);
     }
 
     /**
@@ -1244,6 +1246,19 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
             invokeExchangeCompleteListeners();
         }
+    }
+
+    /**
+     *
+     * @return The request start time, or -1 if this was not recorded
+     */
+    public long getRequestStartTime() {
+        return requestStartTime;
+    }
+
+
+    void setRequestStartTime(long requestStartTime) {
+        this.requestStartTime = requestStartTime;
     }
 
     /**

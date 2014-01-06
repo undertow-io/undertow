@@ -56,6 +56,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     private int read = 0;
     private final int maxRequestSize;
     private final long maxEntitySize;
+    private final boolean recordRequestStartTime;
 
     //0 = new request ok, reads resumed
     //1 = request running, new request not ok
@@ -69,6 +70,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         this.parser = parser;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, 0);
+        this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
     }
 
     public void newRequest() {
@@ -139,6 +141,9 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             this.httpServerExchange = null;
             requestStateUpdater.set(this, 1);
             HttpTransferEncoding.setupRequest(httpServerExchange);
+            if(recordRequestStartTime) {
+                Connectors.setRequestStartTime(httpServerExchange);
+            }
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);

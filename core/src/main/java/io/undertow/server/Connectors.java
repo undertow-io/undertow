@@ -79,6 +79,10 @@ public class Connectors {
         }
     }
 
+    public static void setRequestStartTime(HttpServerExchange exchange) {
+        exchange.setRequestStartTime(System.nanoTime());
+    }
+
     private static String addVersion0ResponseCookieToExchange(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");

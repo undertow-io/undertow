@@ -39,6 +39,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
     private final AjpServerConnection connection;
     private final String scheme;
+    private final boolean recordRequestStartTime;
     private AjpRequestParseState state = new AjpRequestParseState();
     private HttpServerExchange httpServerExchange;
 
@@ -56,6 +57,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, 0);
         this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel>(connection.getChannel().getSinkChannel());
+        this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
     }
 
     public void startRequest() {
@@ -177,6 +179,9 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 this.httpServerExchange = null;
                 httpServerExchange.setPersistent(true);
 
+                if(recordRequestStartTime) {
+                    Connectors.setRequestStartTime(httpServerExchange);
+                }
                 Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
 
             } catch (Throwable t) {

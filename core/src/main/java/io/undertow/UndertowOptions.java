@@ -126,6 +126,15 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_BUFFERED_REQUEST_SIZE = Option.simple(UndertowOptions.class, "MAX_BUFFERED_REQUEST_SIZE", Integer.class);
 
+    /**
+     * If this is true then Undertow will record the request start time, to allow for request time to be logged
+     *
+     * This has a small but measurable performance impact
+     *
+     * default is false
+     */
+    public static final Option<Boolean> RECORD_REQUEST_START_TIME = Option.simple(UndertowOptions.class, "RECORD_REQUEST_START_TIME", Boolean.class);
+
     private UndertowOptions() {
 
     }
