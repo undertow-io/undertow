@@ -2,6 +2,8 @@ package io.undertow.attribute;
 
 import io.undertow.server.HttpServerExchange;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * The response time
  *
@@ -9,12 +11,15 @@ import io.undertow.server.HttpServerExchange;
  */
 public class ResponseTimeAttribute implements ExchangeAttribute {
 
-    public static final String RESPONSE_TIME_SHORT = "%D";
-    public static final String RESPONSE_TIME = "%{RESPONSE_TIME}";
+    public static final String RESPONSE_TIME_MILLIS_SHORT = "%D";
+    public static final String RESPONSE_TIME_SECONDS_SHORT = "%T";
+    public static final String RESPONSE_TIME_MILLIS = "%{RESPONSE_TIME}";
 
-    public static final ExchangeAttribute INSTANCE = new ResponseTimeAttribute();
+    private final TimeUnit timeUnit;
 
-    private ResponseTimeAttribute() {}
+    public ResponseTimeAttribute(TimeUnit timeUnit) {
+        this.timeUnit = timeUnit;
+    }
 
     @Override
     public String readAttribute(HttpServerExchange exchange) {
@@ -22,7 +27,7 @@ public class ResponseTimeAttribute implements ExchangeAttribute {
         if(requestStartTime == -1) {
             return null;
         }
-        return String.valueOf(System.nanoTime() - requestStartTime);
+        return String.valueOf(timeUnit.convert(System.nanoTime() - requestStartTime, TimeUnit.NANOSECONDS));
     }
 
     @Override
@@ -39,8 +44,11 @@ public class ResponseTimeAttribute implements ExchangeAttribute {
 
         @Override
         public ExchangeAttribute build(String token) {
-            if (token.equals(RESPONSE_TIME) || token.equals(RESPONSE_TIME_SHORT)) {
-                return ResponseTimeAttribute.INSTANCE;
+            if (token.equals(RESPONSE_TIME_MILLIS) || token.equals(RESPONSE_TIME_MILLIS_SHORT)) {
+                return new ResponseTimeAttribute(TimeUnit.MILLISECONDS);
+            }
+            if (token.equals(RESPONSE_TIME_SECONDS_SHORT)) {
+                return new ResponseTimeAttribute(TimeUnit.SECONDS);
             }
             return null;
         }
