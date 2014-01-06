@@ -287,8 +287,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param protocol
      */
-    public void setProtocol(final HttpString protocol) {
+    public HttpServerExchange setProtocol(final HttpString protocol) {
         this.protocol = protocol;
+        return this;
     }
 
     /**
@@ -332,8 +333,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param requestMethod the HTTP request method
      */
-    public void setRequestMethod(final HttpString requestMethod) {
+    public HttpServerExchange setRequestMethod(final HttpString requestMethod) {
         this.requestMethod = requestMethod;
+        return this;
     }
 
     /**
@@ -350,8 +352,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param requestScheme the request URI scheme
      */
-    public void setRequestScheme(final String requestScheme) {
+    public HttpServerExchange setRequestScheme(final String requestScheme) {
         this.requestScheme = requestScheme;
+        return this;
     }
 
     /**
@@ -373,8 +376,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param requestURI The new request URI
      */
-    public void setRequestURI(final String requestURI) {
+    public HttpServerExchange setRequestURI(final String requestURI) {
         this.requestURI = requestURI;
+        return this;
     }
 
     /**
@@ -383,13 +387,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param requestURI   The new request URI
      * @param containsHost If this is true the request URI containst the host part
      */
-    public void setRequestURI(final String requestURI, boolean containsHost) {
+    public HttpServerExchange setRequestURI(final String requestURI, boolean containsHost) {
         this.requestURI = requestURI;
         if (containsHost) {
             this.state |= FLAG_URI_CONTAINS_HOST;
         } else {
             this.state &= ~FLAG_URI_CONTAINS_HOST;
         }
+        return this;
     }
 
     /**
@@ -424,8 +429,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param requestPath the request URI path
      */
-    public void setRequestPath(final String requestPath) {
+    public HttpServerExchange setRequestPath(final String requestPath) {
         this.requestPath = requestPath;
+        return this;
     }
 
     /**
@@ -445,8 +451,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param relativePath the request relative path
      */
-    public void setRelativePath(final String relativePath) {
+    public HttpServerExchange setRelativePath(final String relativePath) {
         this.relativePath = relativePath;
+        return this;
     }
 
     /**
@@ -463,16 +470,18 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param resolvedPath the resolved path
      */
-    public void setResolvedPath(final String resolvedPath) {
+    public HttpServerExchange setResolvedPath(final String resolvedPath) {
         this.resolvedPath = resolvedPath;
+        return this;
     }
 
     public String getQueryString() {
         return queryString;
     }
 
-    public void setQueryString(final String queryString) {
+    public HttpServerExchange setQueryString(final String queryString) {
         this.queryString = queryString;
+        return this;
     }
 
     /**
@@ -579,28 +588,31 @@ public final class HttpServerExchange extends AbstractAttachable {
         return getResponseCode() == 101;
     }
 
-    public void setPersistent(final boolean persistent) {
+    public HttpServerExchange setPersistent(final boolean persistent) {
         if (persistent) {
             this.state = this.state | FLAG_PERSISTENT;
         } else {
             this.state = this.state & ~FLAG_PERSISTENT;
         }
+        return this;
     }
 
     public boolean isDispatched() {
         return anyAreSet(state, FLAG_DISPATCHED);
     }
 
-    public void unDispatch() {
+    public HttpServerExchange unDispatch() {
         state &= ~FLAG_DISPATCHED;
         dispatchTask = null;
+        return this;
     }
 
     /**
      *
      */
-    public void dispatch() {
+    public HttpServerExchange dispatch() {
         state |= FLAG_DISPATCHED;
+        return this;
     }
 
     /**
@@ -614,8 +626,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param runnable The task to run
      * @throws IllegalStateException If this exchange has already been dispatched
      */
-    public void dispatch(final Runnable runnable) {
+    public HttpServerExchange dispatch(final Runnable runnable) {
         dispatch(null, runnable);
+        return this;
     }
 
     /**
@@ -629,7 +642,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param runnable The task to run
      * @throws IllegalStateException If this exchange has already been dispatched
      */
-    public void dispatch(final Executor executor, final Runnable runnable) {
+    public HttpServerExchange dispatch(final Executor executor, final Runnable runnable) {
         if (executor != null) {
             this.dispatchExecutor = executor;
         }
@@ -643,13 +656,15 @@ public final class HttpServerExchange extends AbstractAttachable {
                 executor.execute(runnable);
             }
         }
+        return this;
     }
 
-    public void dispatch(final HttpHandler handler) {
+    public HttpServerExchange dispatch(final HttpHandler handler) {
         dispatch(null, handler);
+        return this;
     }
 
-    public void dispatch(final Executor executor, final HttpHandler handler) {
+    public HttpServerExchange dispatch(final Executor executor, final HttpHandler handler) {
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -657,6 +672,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         };
         dispatch(executor, runnable);
+        return this;
     }
 
     /**
@@ -664,12 +680,13 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param executor The executor to use
      */
-    public void setDispatchExecutor(final Executor executor) {
+    public HttpServerExchange setDispatchExecutor(final Executor executor) {
         if (executor == null) {
             dispatchExecutor = null;
         } else {
             dispatchExecutor = executor;
         }
+        return this;
     }
 
     /**
@@ -692,12 +709,13 @@ public final class HttpServerExchange extends AbstractAttachable {
         return anyAreSet(state, FLAG_IN_CALL);
     }
 
-    void setInCall(boolean value) {
+    HttpServerExchange setInCall(boolean value) {
         if (value) {
             state |= FLAG_IN_CALL;
         } else {
             state &= ~FLAG_IN_CALL;
         }
+        return this;
     }
 
 
@@ -709,13 +727,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
      */
-    public void upgradeChannel(final HttpUpgradeListener listener) {
+    public HttpServerExchange upgradeChannel(final HttpUpgradeListener listener) {
         if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
         connection.setUpgradeListener(listener);
         setResponseCode(101);
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
+        return this;
     }
 
     /**
@@ -727,7 +746,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
      */
-    public void upgradeChannel(String productName, final HttpUpgradeListener listener) {
+    public HttpServerExchange upgradeChannel(String productName, final HttpUpgradeListener listener) {
         if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
@@ -736,9 +755,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         final HeaderMap headers = getResponseHeaders();
         headers.put(Headers.UPGRADE, productName);
         headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
+        return this;
     }
 
-    public void addExchangeCompleteListener(final ExchangeCompletionListener listener) {
+    public HttpServerExchange addExchangeCompleteListener(final ExchangeCompletionListener listener) {
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
         if (exchangeCompleteListeners == null || exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
@@ -749,9 +769,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
         exchangeCompleteListeners[exchangeCompletionListenersCount] = listener;
+        return this;
     }
 
-    public void addDefaultResponseListener(final DefaultResponseListener listener) {
+    public HttpServerExchange addDefaultResponseListener(final DefaultResponseListener listener) {
         int i = 0;
         if(defaultResponseListeners == null) {
             defaultResponseListeners = new DefaultResponseListener[2];
@@ -766,6 +787,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
         defaultResponseListeners[i] = listener;
+        return this;
     }
 
     /**
@@ -786,8 +808,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param sourceAddress The address
      */
-    public void setSourceAddress(InetSocketAddress sourceAddress) {
+    public HttpServerExchange setSourceAddress(InetSocketAddress sourceAddress) {
         this.sourceAddress = sourceAddress;
+        return this;
     }
 
     /**
@@ -844,12 +867,13 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param length The content length
      */
-    public void setResponseContentLength(long length) {
+    public HttpServerExchange setResponseContentLength(long length) {
         if (length == -1) {
             responseHeaders.remove(Headers.CONTENT_LENGTH);
         } else {
             responseHeaders.put(Headers.CONTENT_LENGTH, Long.toString(length));
         }
+        return this;
     }
 
     /**
@@ -864,7 +888,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return queryParameters;
     }
 
-    public void addQueryParam(final String name, final String param) {
+    public HttpServerExchange addQueryParam(final String name, final String param) {
         if (queryParameters == null) {
             queryParameters = new TreeMap<String, Deque<String>>();
         }
@@ -873,6 +897,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             queryParameters.put(name, list = new ArrayDeque<String>(2));
         }
         list.add(param);
+        return this;
     }
 
 
@@ -888,7 +913,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return pathParameters;
     }
 
-    public void addPathParam(final String name, final String param) {
+    public HttpServerExchange addPathParam(final String name, final String param) {
         if (pathParameters == null) {
             pathParameters = new TreeMap<String, Deque<String>>();
         }
@@ -897,6 +922,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             pathParameters.put(name, list = new ArrayDeque<String>(2));
         }
         list.add(param);
+        return this;
     }
 
     /**
@@ -914,11 +940,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param cookie The cookie
      */
-    public void setResponseCookie(final Cookie cookie) {
+    public HttpServerExchange setResponseCookie(final Cookie cookie) {
         if (responseCookies == null) {
             responseCookies = new TreeMap<String, Cookie>(); //hashmap is slow to allocate in JDK7
         }
         responseCookies.put(cookie.getName(), cookie);
+        return this;
     }
 
     /**
@@ -1104,7 +1131,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param responseCode the new code
      * @throws IllegalStateException if a response or upgrade was already sent
      */
-    public void setResponseCode(final int responseCode) {
+    public HttpServerExchange setResponseCode(final int responseCode) {
         if (responseCode < 0 || responseCode > 999) {
             throw new IllegalArgumentException("Invalid response code");
         }
@@ -1113,6 +1140,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw UndertowMessages.MESSAGES.responseAlreadyStarted();
         }
         this.state = oldVal & ~MASK_RESPONSE_CODE | responseCode & MASK_RESPONSE_CODE;
+        return this;
     }
 
     /**
@@ -1120,7 +1148,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param wrapper the wrapper
      */
-    public void addRequestWrapper(final ConduitWrapper<StreamSourceConduit> wrapper) {
+    public HttpServerExchange addRequestWrapper(final ConduitWrapper<StreamSourceConduit> wrapper) {
         ConduitWrapper<StreamSourceConduit>[] wrappers = requestWrappers;
         if (requestChannel != null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
@@ -1133,6 +1161,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             wrappers = requestWrappers;
         }
         wrappers[requestWrapperCount++] = wrapper;
+        return this;
     }
 
     /**
@@ -1140,7 +1169,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param wrapper the wrapper
      */
-    public void addResponseWrapper(final ConduitWrapper<StreamSinkConduit> wrapper) {
+    public HttpServerExchange addResponseWrapper(final ConduitWrapper<StreamSinkConduit> wrapper) {
         ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
         if (responseChannel != null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
@@ -1153,6 +1182,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             wrappers = responseWrappers;
         }
         wrappers[responseWrapperCount++] = wrapper;
+        return this;
     }
 
     /**
@@ -1235,17 +1265,18 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Force the codec to treat the response as fully written.  Should only be invoked by handlers which downgrade
      * the socket or implement a transfer coding.
      */
-    void terminateResponse() {
+    HttpServerExchange terminateResponse() {
         int oldVal = state;
         if (allAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
             // idempotent
-            return;
+            return this;
         }
         responseChannel.responseDone();
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
         if (anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
             invokeExchangeCompleteListeners();
         }
+        return this;
     }
 
     /**
@@ -1257,8 +1288,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
 
-    void setRequestStartTime(long requestStartTime) {
+    HttpServerExchange setRequestStartTime(long requestStartTime) {
         this.requestStartTime = requestStartTime;
+        return this;
     }
 
     /**
@@ -1269,10 +1301,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * <p/>
      * If the exchange is already complete this method is a noop
      */
-    public void endExchange() {
+    public HttpServerExchange endExchange() {
         final int state = this.state;
         if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
-            return;
+            return this;
         }
         if(defaultResponseListeners != null) {
             int i = defaultResponseListeners.length - 1;
@@ -1282,7 +1314,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                     defaultResponseListeners[i] = null;
                     try {
                         if (listener.handleDefaultResponse(this)) {
-                            return;
+                            return this;
                         }
                     } catch (Exception e) {
                         UndertowLogger.REQUEST_LOGGER.debug("Exception running default response listener", e);
@@ -1341,7 +1373,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                                     }
                             ));
                             requestChannel.resumeReads();
-                            return;
+                            return this;
                         } else {
                             break;
                         }
@@ -1359,6 +1391,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
             closeAndFlushResponse();
         }
+        return this;
     }
 
     private void closeAndFlushResponse() {
@@ -1411,7 +1444,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @throws IllegalStateException if the response headers were already sent
      */
-    void startResponse() throws IllegalStateException {
+    HttpServerExchange startResponse() throws IllegalStateException {
         int oldVal = state;
         if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
             throw UndertowMessages.MESSAGES.responseAlreadyStarted();
@@ -1419,6 +1452,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.state = oldVal | FLAG_RESPONSE_SENT;
 
         log.tracef("Starting to write response for %s", this);
+        return this;
     }
 
     public XnioIoThread getIoThread() {
@@ -1437,11 +1471,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param maxEntitySize The max entity size
      */
-    public void setMaxEntitySize(final long maxEntitySize) {
+    public HttpServerExchange setMaxEntitySize(final long maxEntitySize) {
         if (!isRequestChannelAvailable()) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
         this.maxEntitySize = maxEntitySize;
+        return this;
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
