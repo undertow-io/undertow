@@ -606,7 +606,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
         private static final long serialVersionUID = 4123187263595319747L;
 
-        // TODO - Remove unused constrcutors and maybe even move exception to higher level.
+        // TODO - Remove unused constructors and maybe even move exception to higher level.
 
         public AuthenticationException() {
             super();

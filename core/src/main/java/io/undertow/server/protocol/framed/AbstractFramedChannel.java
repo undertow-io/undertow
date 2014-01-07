@@ -211,7 +211,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * channel that can be used to read the frame contents.
      * <p/>
      * Calling this method can also have the side effect of making additional data available to
-     * existing source channels. In general if you suspend recieves or don't have some other way
+     * existing source channels. In general if you suspend receives or don't have some other way
      * of calling this method then it can prevent frame channels for being fully consumed.
      */
     public synchronized R receive() throws IOException {
@@ -319,7 +319,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * <p/>
      * Frames will be batched up, to allow them all to be written out via a gathering
      * write. The {@link #framePriority} implementation will be invoked to decide which
-     * frames are eligable for sending and in what order.
+     * frames are eligible for sending and in what order.
      *
      * @throws IOException
      */

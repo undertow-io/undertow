@@ -36,7 +36,7 @@ public class CachedHttpRequest {
             this.lastModified = DateUtils.parseDate(lmString);
         }
         //the content encoding can be decided dynamically, based on the current state of the request
-        //as the decision to compress generally dependends on size and mime type
+        //as the decision to compress generally depends on size and mime type
         final AllowedContentEncodings encoding = exchange.getAttachment(AllowedContentEncodings.ATTACHMENT_KEY);
         if(encoding != null) {
             this.contentEncoding = encoding.getCurrentContentEncoding();

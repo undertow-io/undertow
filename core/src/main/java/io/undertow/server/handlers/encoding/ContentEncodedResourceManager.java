@@ -116,10 +116,10 @@ public class ContentEncodedResourceManager {
 
             StreamSinkConduit conduit = encoding.getEncoding().getResponseWrapper().wrap(new ImmediateConduitFactory<StreamSinkConduit>(new FileConduitTarget(targetFileChannel, exchange)), exchange);
             final ConduitStreamSinkChannel targetChannel = new ConduitStreamSinkChannel(null, conduit);
-            long transfered = sourceFileChannel.transferTo(0, resource.getContentLength(), targetChannel);
+            long transferred = sourceFileChannel.transferTo(0, resource.getContentLength(), targetChannel);
             targetChannel.shutdownWrites();
             org.xnio.channels.Channels.flushBlocking(targetChannel);
-            if (transfered != resource.getContentLength()) {
+            if (transferred != resource.getContentLength()) {
                 UndertowLogger.REQUEST_LOGGER.error("Failed to write pre-cached file");
             }
             tempTarget.renameTo(finalTarget);

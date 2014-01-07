@@ -25,7 +25,7 @@ public interface FramePriority<C extends AbstractFramedChannel<C, R, S>, R exten
      *
      * @param newFrame The new frame to insert into the pending frame list
      * @param pendingFrames The pending frame list
-     * @return true if the frame can be instered into the pending frame list
+     * @return true if the frame can be inserted into the pending frame list
      */
     boolean insertFrame(S newFrame, final List<S> pendingFrames);
 

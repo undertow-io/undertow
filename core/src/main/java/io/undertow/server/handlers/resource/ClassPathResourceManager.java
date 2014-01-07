@@ -15,7 +15,7 @@ public class ClassPathResourceManager implements ResourceManager {
      */
     private final ClassLoader classLoader;
     /**
-     * The prefiex that is appended to resources that are to be loaded.
+     * The prefix that is appended to resources that are to be loaded.
      */
     private final String prefix;
 

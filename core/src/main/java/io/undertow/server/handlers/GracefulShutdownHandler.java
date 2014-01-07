@@ -165,8 +165,8 @@ public class GracefulShutdownHandler implements HttpHandler {
         /**
          * Notification that the container has shutdown.
          *
-         * @param shutdownSucessful If the shutdown suceeded or not
+         * @param shutdownSuccessful If the shutdown succeeded or not
          */
-        void shutdown(boolean shutdownSucessful);
+        void shutdown(boolean shutdownSuccessful);
     }
 }

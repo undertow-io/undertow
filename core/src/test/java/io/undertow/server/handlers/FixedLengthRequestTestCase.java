@@ -71,10 +71,10 @@ public class FixedLengthRequestTestCase {
                         return;
                     }
                     final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputSream =  exchange.getInputStream();
-                    String m = HttpClientUtils.readResponse(inputSream);
+                    final InputStream inputStream =  exchange.getInputStream();
+                    String m = HttpClientUtils.readResponse(inputStream);
                     Assert.assertEquals(message, m);
-                    inputSream.close();
+                    inputStream.close();
                     outputStream.close();
                 } catch (IOException e) {
                     exchange.getResponseHeaders().put(Headers.CONNECTION, "close");

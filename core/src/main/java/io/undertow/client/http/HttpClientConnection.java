@@ -210,13 +210,13 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         }
         final HttpClientExchange httpClientExchange = new HttpClientExchange(clientCallback, request, this);
         if (currentRequest == null) {
-            inititateRequest(httpClientExchange);
+            initiateRequest(httpClientExchange);
         } else {
             pendingQueue.add(httpClientExchange);
         }
     }
 
-    private void inititateRequest(HttpClientExchange httpClientExchange) {
+    private void initiateRequest(HttpClientExchange httpClientExchange) {
         currentRequest = httpClientExchange;
         pendingResponse = new HttpResponseBuilder();
         ClientRequest request = httpClientExchange.getRequest();
@@ -364,7 +364,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
             connection.getSourceChannel().setReadListener(clientReadListener);
             connection.getSourceChannel().resumeReads();
         } else {
-            inititateRequest(next);
+            initiateRequest(next);
         }
     }
 

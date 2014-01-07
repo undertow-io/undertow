@@ -104,12 +104,12 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
     }
 
     /**
-     * Caled after data was read into the {@link ByteBuffer}
+     * Called after data was read into the {@link ByteBuffer}
      *
      * @param buffer   the {@link ByteBuffer} into which the data was read
      * @param position the position it was written to
      * @param length   the number of bytes there were written
-     * @throws IOException thrown if an error accour
+     * @throws IOException thrown if an error occurs
      */
     protected void afterRead(ByteBuffer buffer, int position, int length) throws IOException {
         try {

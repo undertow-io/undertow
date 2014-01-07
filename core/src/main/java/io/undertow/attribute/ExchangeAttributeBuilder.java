@@ -28,7 +28,7 @@ package io.undertow.attribute;
 public interface ExchangeAttributeBuilder {
 
     /**
-     * The string representation of the attribute name. This is used solelfy for debugging / informational purposes
+     * The string representation of the attribute name. This is used solely for debugging / informational purposes
      *
      * @return The attribute name
      */

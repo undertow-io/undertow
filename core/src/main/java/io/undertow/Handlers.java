@@ -66,7 +66,7 @@ public class Handlers {
 
     /**
      *
-     * @param rewriteQueryParams If the query params should be rewitten
+     * @param rewriteQueryParams If the query params should be rewritten
      * @return The path template handler
      */
     public static PathTemplateHandler pathTemplate(boolean rewriteQueryParams) {
@@ -160,7 +160,7 @@ public class Handlers {
      * Returns a new HTTP trace handler. This handler will handle HTTP TRACE
      * requests as per the RFC.
      * <p/>
-     * WARNING: enabling trace requests may leak information, in general it is recomended that
+     * WARNING: enabling trace requests may leak information, in general it is recommended that
      * these be disabled for security reasons.
      *
      * @param next The next handler in the chain
@@ -323,7 +323,7 @@ public class Handlers {
 
     /**
      * Returns a new handler that sets the peer address based on the X-Forwarded-For and
-     * X-Forwared-Proto header
+     * X-Forwarded-Proto header
      * @param next The next http handler
      * @return The handler
      */

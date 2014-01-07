@@ -70,9 +70,9 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
      */
     @Override
     protected List<AuthenticationMechanism> getTestMechanisms() {
-        AuthenticationMechanism mechanims = getTestMechanism();
+        AuthenticationMechanism mechanism = getTestMechanism();
 
-        return Collections.singletonList(mechanims);
+        return Collections.singletonList(mechanism);
     }
 
     private static String createNonce() {
