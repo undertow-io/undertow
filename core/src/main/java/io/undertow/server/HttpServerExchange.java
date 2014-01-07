@@ -1080,7 +1080,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Get the response channel. The channel must be closed and fully flushed before the next response can be started.
      * In order to close the channel you must first call {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()},
-     * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternativly you can
+     * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternatively you can
      * call {@link #endExchange()}, which will close the channel as part of its cleanup.
      * <p/>
      * Closing a fixed-length response before the corresponding number of bytes has been written will cause the connection

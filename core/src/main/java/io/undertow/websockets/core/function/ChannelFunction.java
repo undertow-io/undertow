@@ -35,8 +35,8 @@ public interface ChannelFunction {
      *
      * @param buf           the {@link ByteBuffer} to operate on
      * @param position      the index in the {@link ByteBuffer} to start from
-     * @param length        the number of byted to operate on
-     * @throws IOException  thrown if an error accour
+     * @param length        the number of bytes to operate on
+     * @throws IOException  thrown if an error occurs
      */
     void afterRead(ByteBuffer buf, int position, int length) throws IOException;
 
@@ -45,8 +45,8 @@ public interface ChannelFunction {
      *
      * @param buf           the {@link ByteBuffer} to operate on
      * @param position      the index in the {@link ByteBuffer} to start from
-     * @param length        the number of byted to operate on
-     * @throws IOException  thrown if an error accour
+     * @param length        the number of bytes to operate on
+     * @throws IOException  thrown if an error occurs
      */
     void beforeWrite(ByteBuffer buf, int position, int length) throws IOException;
 
@@ -54,7 +54,7 @@ public interface ChannelFunction {
      * Is called to complete the {@link ChannelFunction}. Access it after complete
      * is called may result in unexpected behavior.
      *
-     * @throws IOException  thrown if an error accour
+     * @throws IOException  thrown if an error occurs
      */
     void complete() throws IOException;
 }

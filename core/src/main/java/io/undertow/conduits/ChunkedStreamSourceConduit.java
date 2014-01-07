@@ -314,7 +314,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                 }
                 //there is still more to read
                 //we attempt to just read it directly into the destination buffer
-                //adjusting the limit as nessesary to make sure we do not read too much
+                //adjusting the limit as necessary to make sure we do not read too much
                 if (chunkRemaining > 0) {
                     int old = dst.limit();
                     try {

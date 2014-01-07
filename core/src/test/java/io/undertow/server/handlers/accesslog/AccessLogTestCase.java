@@ -27,7 +27,7 @@ public class AccessLogTestCase {
     private volatile CountDownLatch latch;
 
 
-    private final AccessLogReceiver RECIEVER = new AccessLogReceiver() {
+    private final AccessLogReceiver RECEIVER = new AccessLogReceiver() {
 
 
         @Override
@@ -47,7 +47,7 @@ public class AccessLogTestCase {
     @Test
     public void testRemoteAddress() throws IOException, InterruptedException {
         latch = new CountDownLatch(1);
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, RECIEVER, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
+        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, RECEIVER, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");

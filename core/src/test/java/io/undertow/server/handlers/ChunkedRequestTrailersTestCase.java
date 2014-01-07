@@ -64,8 +64,8 @@ public class ChunkedRequestTrailersTestCase {
                         return;
                     }
                     final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputSream = exchange.getInputStream();
-                    String m = HttpClientUtils.readResponse(inputSream);
+                    final InputStream inputStream = exchange.getInputStream();
+                    String m = HttpClientUtils.readResponse(inputStream);
                     Assert.assertEquals("abcdefghi", m);
 
                     HeaderMap headers = exchange.getAttachment(ChunkedStreamSourceConduit.TRAILERS);
@@ -78,7 +78,7 @@ public class ChunkedRequestTrailersTestCase {
                         }
                     }
 
-                    inputSream.close();
+                    inputStream.close();
                     outputStream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -97,7 +97,7 @@ public class ChunkedRequestTrailersTestCase {
     public void testChunkedRequestsWithTrailers() throws IOException {
         connection = null;
         String request = "POST / HTTP/1.1\r\nTrailer:foo, bar\r\nTransfer-Encoding: chunked\r\n\r\n9\r\nabcdefghi\r\n0\r\nfoo: fooVal\r\n bar: barVal\r\n\r\n";
-        String response1 = "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 26\r\n\r\nfoo: fooVal\r\nbar: barVal\r\n"; //header order is not guarenteed, we really should be parsing this properly
+        String response1 = "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 26\r\n\r\nfoo: fooVal\r\nbar: barVal\r\n"; //header order is not guaranteed, we really should be parsing this properly
         String response2 = "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 26\r\n\r\nfoo: fooVal\r\nbar: barVal\r\n"; //TODO: parse the response properly, or better yet ues a client that supports trailers
         Socket s = new Socket(DefaultServer.getDefaultServerAddress().getAddress(), DefaultServer.getDefaultServerAddress().getPort());
         try {

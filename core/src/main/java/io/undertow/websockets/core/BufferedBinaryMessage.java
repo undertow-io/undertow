@@ -130,7 +130,7 @@ public class BufferedBinaryMessage {
     private void handleNewFrame(StreamSourceFrameChannel channel, final WebSocketCallback<BufferedBinaryMessage> callback) {
         //TODO: remove this crap
         //basically some bogus web sockets TCK tests assume that messages will be broken up into frames
-        //even if we have the full message availble.
+        //even if we have the full message available.
         if(!bufferFullMessage) {
             if(channel.getWebSocketFrameCount() != frameCount && current != null && !channel.isFinalFragment()) {
                 frameCount = channel.getWebSocketFrameCount();

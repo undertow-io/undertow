@@ -254,7 +254,7 @@ public class HandlerParser {
             return Byte.valueOf(token.token);
         } else if (type.equals(Character.class) || type.equals(char.class)) {
             if (token.token.length() != 1) {
-                throw error(string, token.position, "Cannot cooerce " + token.token + " to a Character");
+                throw error(string, token.position, "Cannot coerce " + token.token + " to a Character");
             }
             return Character.valueOf(token.token.charAt(0));
         } else if (type.equals(Short.class) || type.equals(short.class)) {
@@ -274,7 +274,7 @@ public class HandlerParser {
         return token.token;
     }
 
-    private static int precidence(String operator) {
+    private static int precedence(String operator) {
         if (operator.equals("not")) {
             return 3;
         } else if (operator.equals("and")) {

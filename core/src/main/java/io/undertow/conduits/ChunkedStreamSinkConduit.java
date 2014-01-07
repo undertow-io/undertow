@@ -83,7 +83,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
      * Flag that is set when {@link #terminateWrites()} or @{link #close()} is called
      */
     private static final int FLAG_WRITES_SHUTDOWN = 1;
-    private static final int FLAG_NEXT_SHUTDWON = 1 << 2;
+    private static final int FLAG_NEXT_SHUTDOWN = 1 << 2;
     private static final int FLAG_WRITTEN_FIRST_CHUNK = 1 << 3;
     private static final int FLAG_FIRST_DATA_WRITTEN = 1 << 4; //set on first flush or write call
     private static final int FLAG_FINISHED = 1 << 5;
@@ -143,7 +143,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         try {
             int chunkingSize = chunkingBuffer.remaining();
             if (chunkingSize > 0 || lastChunkBuffer != null) {
-                int origialRemaining = src.remaining();
+                int originalRemaining = src.remaining();
                 long result;
                 if (lastChunkBuffer == null) {
                     final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src};
@@ -159,11 +159,11 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                         state |= FLAG_WRITES_SHUTDOWN;
                     }
                     if (!lastChunkBuffer.getResource().hasRemaining()) {
-                        state |= FLAG_NEXT_SHUTDWON;
+                        state |= FLAG_NEXT_SHUTDOWN;
                         lastChunkBuffer.free();
                     }
                 }
-                int srcWritten = origialRemaining - src.remaining();
+                int srcWritten = originalRemaining - src.remaining();
                 chunkleft -= srcWritten;
                 if (result < chunkingSize) {
                     return 0;
@@ -231,7 +231,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     public boolean flush() throws IOException {
         this.state |= FLAG_FIRST_DATA_WRITTEN;
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
-            if (anyAreSet(state, FLAG_NEXT_SHUTDWON)) {
+            if (anyAreSet(state, FLAG_NEXT_SHUTDOWN)) {
                 boolean val = next.flush();
                 if (val && allAreClear(state, FLAG_FINISHED)) {
                     invokeFinishListener();
@@ -244,7 +244,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                     if (anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
                         next.terminateWrites();
                     }
-                    state |= FLAG_NEXT_SHUTDWON;
+                    state |= FLAG_NEXT_SHUTDOWN;
                     boolean val = next.flush();
                     if (val && allAreClear(state, FLAG_FINISHED)) {
                         invokeFinishListener();
@@ -277,7 +277,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             //todo: should we make this behaviour configurable?
             responseHeaders.put(Headers.CONTENT_LENGTH, "0"); //according to the spec we don't actually need this, but better to be safe
             responseHeaders.remove(Headers.TRANSFER_ENCODING);
-            state |= FLAG_NEXT_SHUTDWON | FLAG_WRITES_SHUTDOWN;
+            state |= FLAG_NEXT_SHUTDOWN | FLAG_WRITES_SHUTDOWN;
             if(anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
                 next.terminateWrites();
             }

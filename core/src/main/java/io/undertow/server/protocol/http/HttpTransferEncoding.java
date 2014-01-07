@@ -39,7 +39,7 @@ import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
 /**
- * Class that is  responsible for HTTP transfer encooding, this could be part of the {@link HttpReadListener},
+ * Class that is  responsible for HTTP transfer encoding, this could be part of the {@link HttpReadListener},
  * but is separated out for clarity.
  * <p/>
  * For more info see http://tools.ietf.org/html/rfc2616#section-4.4

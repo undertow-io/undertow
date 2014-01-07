@@ -84,7 +84,7 @@ public class EncodingSelectionTestCase {
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            get.setHeader(Headers.ACCEPT_ENCODING_STRING, "bzip compress identity someOtherEndcoding");
+            get.setHeader(Headers.ACCEPT_ENCODING_STRING, "bzip compress identity someOtherEncoding");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
@@ -92,7 +92,7 @@ public class EncodingSelectionTestCase {
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            get.setHeader(Headers.ACCEPT_ENCODING_STRING, " compress, identity, someOtherEndcoding,  bzip  , ");
+            get.setHeader(Headers.ACCEPT_ENCODING_STRING, " compress, identity, someOtherEncoding,  bzip  , ");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
@@ -101,7 +101,7 @@ public class EncodingSelectionTestCase {
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            get.setHeader(Headers.ACCEPT_ENCODING_STRING, "boo; compress, identity; someOtherEndcoding,   , ");
+            get.setHeader(Headers.ACCEPT_ENCODING_STRING, "boo; compress, identity; someOtherEncoding,   , ");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
@@ -109,7 +109,7 @@ public class EncodingSelectionTestCase {
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            get.setHeader(Headers.ACCEPT_ENCODING_STRING, "boo; compress; identity; someOtherEndcoding,   , ");
+            get.setHeader(Headers.ACCEPT_ENCODING_STRING, "boo; compress; identity; someOtherEncoding,   , ");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);

@@ -264,7 +264,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         }
         final String requestContentLength = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
         if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
-            length = null; //unkown length
+            length = null; //unknown length
         } else if (requestContentLength != null) {
             final long contentLength = Long.parseLong(requestContentLength);
             if (contentLength == 0L) {

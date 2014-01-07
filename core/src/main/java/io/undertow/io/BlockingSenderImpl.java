@@ -256,7 +256,7 @@ public class BlockingSenderImpl implements Sender {
     }
 
     private void queue(final ByteBuffer[] byteBuffers, final IoCallback ioCallback) {
-        //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitly
+        //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitely
         if (next != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
@@ -265,7 +265,7 @@ public class BlockingSenderImpl implements Sender {
     }
 
     private void queue(final FileChannel source, final IoCallback ioCallback) {
-        //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitly
+        //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitely
         if (pendingFile != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }

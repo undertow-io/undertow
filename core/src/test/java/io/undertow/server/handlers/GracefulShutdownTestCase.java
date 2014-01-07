@@ -157,7 +157,7 @@ public class GracefulShutdownTestCase {
         private volatile boolean invoked = false;
 
         @Override
-        public synchronized void shutdown(boolean sucessful) {
+        public synchronized void shutdown(boolean successful) {
             invoked = true;
         }
     }

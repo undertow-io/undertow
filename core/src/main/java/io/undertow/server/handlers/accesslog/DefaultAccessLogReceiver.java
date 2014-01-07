@@ -23,7 +23,7 @@ import io.undertow.UndertowLogger;
  * midnight.
  * <p/>
  * Web threads do not touch the log file, but simply queue messages to be written later by a worker thread.
- * A lightwieght CAS based locking mechanism is used to ensure than only 1 thread is active writing messages at
+ * A lightweight CAS based locking mechanism is used to ensure than only 1 thread is active writing messages at
  * any given time
  *
  * @author Stuart Douglas
@@ -94,7 +94,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         if (forceLogRotation) {
             doRotate();
         }
-        List<String> messsages = new ArrayList<String>();
+        List<String> messages = new ArrayList<String>();
         String msg = null;
         //only grab at most 1000 messages at a time
         for (int i = 0; i < 1000; ++i) {
@@ -102,11 +102,11 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             if (msg == null) {
                 break;
             }
-            messsages.add(msg);
+            messages.add(msg);
         }
         try {
-            if (!messsages.isEmpty()) {
-                writeMessage(messsages);
+            if (!messages.isEmpty()) {
+                writeMessage(messages);
             }
         } finally {
             stateUpdater.set(this, 0);

@@ -201,13 +201,13 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         }
         final AjpClientExchange AjpClientExchange = new AjpClientExchange(clientCallback, request, this);
         if (currentRequest == null) {
-            inititateRequest(AjpClientExchange);
+            initiateRequest(AjpClientExchange);
         } else {
             pendingQueue.add(AjpClientExchange);
         }
     }
 
-    private void inititateRequest(AjpClientExchange AjpClientExchange) {
+    private void initiateRequest(AjpClientExchange AjpClientExchange) {
         currentRequest = AjpClientExchange;
         pendingResponse = new AjpResponseBuilder();
         ClientRequest request = AjpClientExchange.getRequest();
@@ -334,7 +334,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             connection.getSourceChannel().setReadListener(clientReadListener);
             connection.getSourceChannel().resumeReads();
         } else {
-            inititateRequest(next);
+            initiateRequest(next);
         }
     }
 
@@ -344,7 +344,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     public void installReadBodyListener() {
         connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
-        connection.getSourceChannel().setReadListener(new ResponseRecievedReadListener());
+        connection.getSourceChannel().setReadListener(new ResponseReceivedReadListener());
         connection.getSourceChannel().resumeReads();
     }
 
@@ -480,10 +480,10 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     }
 
     /**
-     * listner that only listens for read body chunk messages, as even after the response is done the server
+     * Listener that only listens for read body chunk messages, as even after the response is done the server
      * can still be reading the request.
      */
-    class ResponseRecievedReadListener implements ChannelListener<StreamSourceChannel> {
+    class ResponseReceivedReadListener implements ChannelListener<StreamSourceChannel> {
 
         private AjpResponseBuilder builder = new AjpResponseBuilder();
 

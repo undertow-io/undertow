@@ -19,7 +19,7 @@ import io.undertow.UndertowMessages;
  */
 public class ExchangeAttributeParser {
 
-    private final List<ExchangeAttributeBuilder> buiders;
+    private final List<ExchangeAttributeBuilder> builders;
 
     ExchangeAttributeParser(final ClassLoader classLoader) {
         ServiceLoader<ExchangeAttributeBuilder> loader = ServiceLoader.load(ExchangeAttributeBuilder.class, classLoader);
@@ -27,7 +27,7 @@ public class ExchangeAttributeParser {
         for (ExchangeAttributeBuilder instance : loader) {
             builders.add(instance);
         }
-        this.buiders = Collections.unmodifiableList(builders);
+        this.builders = Collections.unmodifiableList(builders);
 
     }
 
@@ -127,7 +127,7 @@ public class ExchangeAttributeParser {
     }
 
     public ExchangeAttribute parseSingleToken(final String token) {
-        for (final ExchangeAttributeBuilder builder : buiders) {
+        for (final ExchangeAttributeBuilder builder : builders) {
             ExchangeAttribute res = builder.build(token);
             if (res != null) {
                 return res;

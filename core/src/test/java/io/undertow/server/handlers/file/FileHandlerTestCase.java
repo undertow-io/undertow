@@ -68,7 +68,7 @@ public class FileHandlerTestCase {
     }
 
     @Test
-    public void testFileTranfer() throws IOException, URISyntaxException {
+    public void testFileTransfer() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
         File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
         try {

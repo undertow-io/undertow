@@ -60,7 +60,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
     //0 = new request ok, reads resumed
     //1 = request running, new request not ok
-    //2 = suspending/resuming in pogress
+    //2 = suspending/resuming in progress
     private volatile int requestState;
 
     private static final AtomicIntegerFieldUpdater<HttpReadListener> requestStateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpReadListener.class, "requestState");

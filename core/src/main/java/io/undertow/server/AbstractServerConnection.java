@@ -223,7 +223,7 @@ public abstract class AbstractServerConnection  extends ServerConnection {
         channel.getSourceChannel().setConduit(originalSourceConduit);
     }
     /**
-     * Resores the channel conduits to a previous state.
+     * Restores the channel conduits to a previous state.
      *
      * @param state The original state
      * @see #resetChannel()

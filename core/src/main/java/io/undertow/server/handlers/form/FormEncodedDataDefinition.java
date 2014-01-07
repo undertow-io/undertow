@@ -35,7 +35,7 @@ import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * Parser defintion for form encoded data. This handler takes effect for any request that has a mime type
+ * Parser definition for form encoded data. This handler takes effect for any request that has a mime type
  * of application/x-www-form-urlencoded. The handler attaches a {@link FormDataParser} to the chain
  * that can parse the underlying form data asynchronously.
  *

@@ -141,7 +141,7 @@ public class CachedResource implements Resource {
 
         final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
         final Long length = getContentLength();
-        //if it is not eligable to be served from the cache
+        //if it is not eligible to be served from the cache
         if (length == null || length > cachingResourceManager.getMaxFileSize()) {
             underlyingResource.serve(sender, exchange, completionCallback);
             return;
