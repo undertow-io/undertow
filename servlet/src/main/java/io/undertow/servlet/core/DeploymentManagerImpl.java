@@ -189,13 +189,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             HttpHandler outerHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
             wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, outerHandlers, wrappedHandlers);
+            wrappedHandlers = handleDevelopmentModePersistentSessions(wrappedHandlers, deploymentInfo, deployment.getSessionManager(), servletContext);
 
             final ServletInitialHandler servletInitialHandler = new ServletInitialHandler(deployment.getServletPaths(), wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
 
 
             HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
             initialHandler = new HttpContinueReadHandler(initialHandler);
-            initialHandler = handleDevelopmentModePersistentSessions(initialHandler, deploymentInfo, deployment.getSessionManager(), servletContext);
             if(deploymentInfo.getUrlEncoding() != null) {
                 initialHandler = Handlers.urlDecodingHandler(deploymentInfo.getUrlEncoding(), initialHandler);
             }
