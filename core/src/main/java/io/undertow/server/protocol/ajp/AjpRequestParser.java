@@ -255,7 +255,7 @@ public class AjpRequestParser extends AbstractAjpParser {
             case AjpRequestParseState.READING_SERVER_NAME: {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
-                    //exchange.setRequestURI(result.value);
+                    state.serverAddress = result.value;
                 } else {
                     state.state = AjpRequestParseState.READING_SERVER_NAME;
                     return;
@@ -264,7 +264,7 @@ public class AjpRequestParser extends AbstractAjpParser {
             case AjpRequestParseState.READING_SERVER_PORT: {
                 IntegerHolder result = parse16BitInteger(buf, state);
                 if (result.readComplete) {
-                    //exchange.setRequestURI(result.value);
+                    state.serverPort = result.value;
                 } else {
                     state.state = AjpRequestParseState.READING_SERVER_PORT;
                     return;

@@ -50,6 +50,8 @@ class AjpRequestParseState extends AbstractAjpParseState {
     Map<String, String> attributes = new HashMap<String, String>();
 
     String remoteAddress;
+    int serverPort = 80;
+    String serverAddress;
 
     public boolean isComplete() {
         return state == 15;
@@ -86,6 +88,18 @@ class AjpRequestParseState extends AbstractAjpParseState {
         try {
             InetAddress address = InetAddress.getByName(remoteAddress);
             return new InetSocketAddress(address, port);
+        } catch (UnknownHostException e) {
+            return null;
+        }
+    }
+
+    InetSocketAddress createDestinationAddress() {
+        if(serverAddress == null) {
+            return null;
+        }
+        try {
+            InetAddress address = InetAddress.getByName(serverAddress);
+            return new InetSocketAddress(address, serverPort);
         } catch (UnknownHostException e) {
             return null;
         }

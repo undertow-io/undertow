@@ -264,6 +264,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private InetSocketAddress sourceAddress;
 
+    /**
+     * The destination address for the request. If this is null then the actual source address from the channel is used
+     */
+    private InetSocketAddress destinationAddress;
+
     public HttpServerExchange(final ServerConnection connection, long maxEntitySize) {
         this.connection = connection;
         this.maxEntitySize = maxEntitySize;
@@ -814,12 +819,26 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the destination address of the HTTP request.
+     * Get the source address of the HTTP request.
      *
-     * @return the destination address of the HTTP request
+     * @return the source address of the HTTP request
      */
     public InetSocketAddress getDestinationAddress() {
+        if (destinationAddress != null) {
+            return destinationAddress;
+        }
         return connection.getLocalAddress(InetSocketAddress.class);
+    }
+
+    /**
+     * Sets the destination address of the HTTP request. If this is not explicitly set
+     * the actual destination address of the channel is used.
+     *
+     * @param destinationAddress The address
+     */
+    public HttpServerExchange setDestinationAddress(InetSocketAddress destinationAddress) {
+        this.destinationAddress = destinationAddress;
+        return this;
     }
 
     /**
