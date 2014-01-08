@@ -1638,8 +1638,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         public void responseDone() {
-            delegate.getCloseSetter().set(null);
-            delegate.getWriteSetter().set(null);
             if (delegate.isWriteResumed()) {
                 delegate.suspendWrites();
             }
