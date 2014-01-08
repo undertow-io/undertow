@@ -215,7 +215,7 @@ public class SecurityContextImpl implements SecurityContext {
 
     @Override
     public void logout() {
-        if(!isAuthenticated()) {
+        if (!isAuthenticated()) {
             return;
         }
         sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName, true,
@@ -245,25 +245,19 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     private void sendNoticiation(final SecurityNotification notification) {
-        synchronized (notificationReceivers) {
-            for (NotificationReceiver current : notificationReceivers) {
-                current.handleNotification(notification);
-            }
+        for (NotificationReceiver current : notificationReceivers) {
+            current.handleNotification(notification);
         }
     }
 
     @Override
     public void registerNotificationReceiver(NotificationReceiver receiver) {
-        synchronized (notificationReceivers) {
-            notificationReceivers.add(receiver);
-        }
+        notificationReceivers.add(receiver);
     }
 
     @Override
     public void removeNotificationReceiver(NotificationReceiver receiver) {
-        synchronized (notificationReceivers) {
-            notificationReceivers.remove(receiver);
-        }
+        notificationReceivers.remove(receiver);
     }
 
     private class AuthAttempter {
