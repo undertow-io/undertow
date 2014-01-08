@@ -55,7 +55,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        SecurityContext securityContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext securityContext = exchange.getSecurityContext();
         securityContext.registerNotificationReceiver(NOTIFICATION_RECEIVER);
 
         HttpSession session = servletContext.getSession(exchange, false);

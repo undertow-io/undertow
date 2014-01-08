@@ -18,7 +18,6 @@
 package io.undertow.security.handlers;
 
 import io.undertow.security.api.AuthenticationMode;
-import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.SecurityContextImpl;
 import io.undertow.server.HttpHandler;
@@ -66,7 +65,7 @@ public class SecurityInitialHandler implements HttpHandler {
         if (programaticMechName != null) {
             newContext.setProgramaticMechName(programaticMechName);
         }
-        exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
+        exchange.setSecurityContext(newContext);
         next.handleRequest(exchange);
     }
 

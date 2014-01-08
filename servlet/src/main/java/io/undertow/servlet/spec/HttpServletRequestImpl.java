@@ -122,7 +122,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getAuthType() {
-        SecurityContext securityContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext securityContext = exchange.getSecurityContext();
 
         return securityContext != null ? securityContext.getMechanismName() : null;
     }
@@ -248,7 +248,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isUserInRole(final String role) {
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getSecurityContext();
         Account account = sc.getAuthenticatedAccount();
         if (account == null) {
             return false;
@@ -262,7 +262,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Principal getUserPrincipal() {
-        SecurityContext securityContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext securityContext = exchange.getSecurityContext();
         Principal result = null;
         Account account = null;
         if (securityContext != null && (account = securityContext.getAuthenticatedAccount()) != null) {
@@ -361,7 +361,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
 
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getSecurityContext();
         sc.setAuthenticationRequired();
         // TODO: this will set the status code and headers without going through any potential
         // wrappers, is this a problem?
@@ -384,7 +384,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (username == null || password == null) {
             throw UndertowServletMessages.MESSAGES.loginFailed();
         }
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getSecurityContext();
         if (sc.isAuthenticated()) {
             throw UndertowServletMessages.MESSAGES.userAlreadyLoggedIn();
         }
@@ -395,7 +395,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void logout() throws ServletException {
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getSecurityContext();
         sc.logout();
         if(servletContext.getDeployment().getDeploymentInfo().isInvalidateSessionOnLogout()) {
             HttpSession session = getSession(false);

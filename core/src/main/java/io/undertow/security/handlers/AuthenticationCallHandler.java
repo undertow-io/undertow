@@ -46,7 +46,7 @@ public class AuthenticationCallHandler implements HttpHandler {
             exchange.dispatch(this);
             return;
         }
-        SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext context = exchange.getSecurityContext();
         if (context.authenticate()) {
             if(!exchange.isComplete()) {
                next.handleRequest(exchange);

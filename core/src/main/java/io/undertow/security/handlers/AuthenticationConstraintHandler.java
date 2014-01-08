@@ -44,7 +44,7 @@ public class AuthenticationConstraintHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         if (isAuthenticationRequired(exchange)) {
-            SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+            SecurityContext context = exchange.getSecurityContext();
             context.setAuthenticationRequired();
         }
 

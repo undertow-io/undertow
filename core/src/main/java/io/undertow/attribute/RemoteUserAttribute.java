@@ -21,7 +21,7 @@ public class RemoteUserAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getSecurityContext();
         if (sc == null || !sc.isAuthenticated()) {
             return null;
         }

@@ -260,7 +260,7 @@ public abstract class AuthenticationTestBase {
     }
 
     protected static String getAuthenticatedUser(final HttpServerExchange exchange) {
-        SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext context = exchange.getSecurityContext();
         if (context != null) {
             Account account = context.getAuthenticatedAccount();
             if (account != null) {

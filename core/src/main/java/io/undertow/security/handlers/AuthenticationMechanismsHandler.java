@@ -49,7 +49,7 @@ public class AuthenticationMechanismsHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        final SecurityContext sc = exchange.getSecurityContext();
         if(sc != null) {
             for(AuthenticationMechanism mechanism : authenticationMechanisms) {
                 sc.addAuthenticationMechanism(mechanism);

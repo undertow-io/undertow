@@ -21,7 +21,6 @@ import java.util.List;
 
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.util.AttachmentKey;
 
 /**
  * The security context.
@@ -37,11 +36,6 @@ public interface SecurityContext {
     // TODO - Some of this is used within the core of undertow, some by the servlet integration and some by the mechanisms -
     // once released the use by mechanisms will require the greatest level of backwards compatibility maintenace so may be
     // better to split the rest out.
-
-    /**
-     * The attachment key that is used to attach this context to the exchange
-     */
-    AttachmentKey<SecurityContext> ATTACHMENT_KEY = AttachmentKey.create(SecurityContext.class);
 
     /*
      * Methods Used To Run Authentication Process
@@ -96,7 +90,7 @@ public interface SecurityContext {
 
     /**
      * Marks this request as requiring authentication. Authentication challenge headers will only be sent if this
-     * method has been called. If {@link #authenticate(io.undertow.server.HttpCompletionHandler, io.undertow.server.HttpHandler)}
+     * method has been called. If {@link #authenticate()}
      * is called without first calling this method then the request will continue as normal even if the authentication
      * was not successful.
      */

@@ -28,6 +28,7 @@ import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Sender;
 import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
@@ -64,6 +65,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
+import java.security.AccessController;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
@@ -87,6 +89,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     // immutable state
 
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
+
+    private static final RuntimePermission SET_SECURITY_CONTEXT = new RuntimePermission("io.undertow.SET_SECURITY_CONTEXT");
 
     /**
      * The attachment key that buffered request data is attached under.
@@ -119,6 +123,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     private BlockingHttpExchange blockingHttpExchange;
 
     private HttpString protocol;
+
+    /**
+     * The security context
+     */
+    private SecurityContext securityContext;
 
     // mutable state
 
@@ -1496,6 +1505,17 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         this.maxEntitySize = maxEntitySize;
         return this;
+    }
+
+    public SecurityContext getSecurityContext() {
+        return securityContext;
+    }
+
+    public void setSecurityContext(SecurityContext securityContext) {
+        if(System.getSecurityManager() != null) {
+            AccessController.checkPermission(SET_SECURITY_CONTEXT);
+        }
+        this.securityContext = securityContext;
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {

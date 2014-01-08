@@ -50,7 +50,7 @@ public class ServletSecurityRoleHandler implements HttpHandler {
         ServletRequest request = servletRequestContext.getServletRequest();
         if (request.getDispatcherType() == DispatcherType.REQUEST) {
             List<SingleConstraintMatch> constraints = servletRequestContext.getRequiredConstrains();
-            SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+            SecurityContext sc = exchange.getSecurityContext();
             if (!authorizationManager.canAccessResource(constraints, sc.getAuthenticatedAccount(), servletRequestContext.getCurrentServlet().getManagedServlet().getServletInfo(), servletRequestContext.getOriginalRequest(), servletRequestContext.getDeployment())) {
 
                 HttpServletResponse response = (HttpServletResponse) servletRequestContext.getServletResponse();

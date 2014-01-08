@@ -42,7 +42,7 @@ public class NotificationReceiverHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getSecurityContext();
         for (NotificationReceiver receiver : receivers) {
             sc.registerNotificationReceiver(receiver);
         }

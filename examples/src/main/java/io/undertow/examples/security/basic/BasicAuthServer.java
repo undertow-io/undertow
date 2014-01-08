@@ -47,7 +47,7 @@ public class BasicAuthServer {
                 .setHandler(addSecurity(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                        final SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+                        final SecurityContext context = exchange.getSecurityContext();
                         exchange.getResponseSender().send("Hello " + context.getAuthenticatedAccount().getPrincipal().getName(), IoCallback.END_EXCHANGE);
                     }
                 }, identityManager))

@@ -99,7 +99,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
             jdbcLogAttribute.pattern = pattern;
         }
         jdbcLogAttribute.remoteHost = ((InetSocketAddress) exchange.getConnection().getPeerAddress()).getAddress().getHostAddress();
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getSecurityContext();
         if (sc == null || !sc.isAuthenticated()) {
             jdbcLogAttribute.user = null;
         } else {

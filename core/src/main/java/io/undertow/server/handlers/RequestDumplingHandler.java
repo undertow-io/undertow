@@ -30,7 +30,7 @@ public class RequestDumplingHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final StringBuilder sb = new StringBuilder();
 // Log pre-service information
-        final SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        final SecurityContext sc = exchange.getSecurityContext();
         sb.append("\n----------------------------REQUEST---------------------------\n");
         sb.append("               URI=" + exchange.getRequestURI() + "\n");
         sb.append(" characterEncoding=" + exchange.getRequestHeaders().get(Headers.CONTENT_ENCODING) + "\n");

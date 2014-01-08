@@ -88,7 +88,7 @@ public abstract class AbstractSingleSignOnAuthenticationMechanism implements Aut
 
         @Override
         public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-            SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+            SecurityContext sc = exchange.getSecurityContext();
             Account account = sc.getAuthenticatedAccount();
             if(account != null) {
                 String ssoId = SECURE_RANDOM_SESSION_ID_GENERATOR.createSessionId();
