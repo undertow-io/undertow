@@ -57,7 +57,7 @@ public class SSLSessionTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             final SslSessionConfig sessionConfig = new SslSessionConfig();
-            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(), sessionConfig)
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), sessionConfig)
                     .setNext(new HttpHandler() {
                         @Override
                         public void handleRequest(final HttpServerExchange exchange) throws Exception {

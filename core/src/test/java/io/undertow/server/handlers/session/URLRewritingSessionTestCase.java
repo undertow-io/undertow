@@ -55,7 +55,7 @@ public class URLRewritingSessionTestCase {
     @BeforeClass
     public static void setup() {
         final PathParameterSessionConfig sessionConfig = new PathParameterSessionConfig();
-        final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(), sessionConfig);
+        final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), sessionConfig);
         handler.setNext(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {

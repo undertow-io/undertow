@@ -55,7 +55,7 @@ public class InMemorySessionTestCase {
         client.setCookieStore(new BasicCookieStore());
         try {
             final SessionCookieConfig sessionConfig = new SessionCookieConfig();
-            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(), sessionConfig);
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), sessionConfig);
             handler.setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -111,7 +111,7 @@ public class InMemorySessionTestCase {
 
         try {
             final SessionCookieConfig sessionConfig = new SessionCookieConfig();
-            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(1), sessionConfig);
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager("", 1), sessionConfig);
             handler.setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange) throws Exception {

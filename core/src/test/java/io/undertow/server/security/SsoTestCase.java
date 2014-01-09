@@ -11,6 +11,7 @@ import io.undertow.security.handlers.NotificationReceiverHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.FormAuthenticationMechanism;
+import io.undertow.security.impl.InMemorySingleSignOnManager;
 import io.undertow.security.impl.SingleSignOnAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
@@ -21,6 +22,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -48,7 +50,7 @@ public class SsoTestCase extends AuthenticationTestBase {
     @BeforeClass
     public static void setup() {
 
-        final SingleSignOnAuthenticationMechanism sso = new SingleSignOnAuthenticationMechanism();
+        final SingleSignOnAuthenticationMechanism sso = new SingleSignOnAuthenticationMechanism(new InMemorySingleSignOnManager());
         final PathHandler path = new PathHandler();
         HttpHandler current = new ResponseHandler();
         current = new AuthenticationCallHandler(current);
@@ -80,7 +82,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         path.addPrefixPath("/test2", current);
 
 
-        DefaultServer.setRootHandler(new SessionAttachmentHandler(path, new InMemorySessionManager(), new SessionCookieConfig()));
+        DefaultServer.setRootHandler(new SessionAttachmentHandler(path, new InMemorySessionManager(""), new SessionCookieConfig()));
     }
 
     @Override
