@@ -40,6 +40,12 @@ public interface SessionManager {
     AttachmentKey<SessionManager> ATTACHMENT_KEY = AttachmentKey.create(SessionManager.class);
 
     /**
+     * Uniquely identifies this session manager
+     * @return a unique identifier
+     */
+    String getDeploymentName();
+
+    /**
      * Starts the session manager
      */
     void start();
