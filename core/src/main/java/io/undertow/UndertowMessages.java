@@ -269,4 +269,10 @@ public interface UndertowMessages {
 
     @Message(id = 81, value = "Bad request")
     RuntimeException badRequest();
+
+    @Message(id = 82, value = "Host %s already registered")
+    RuntimeException hostAlreadyRegistered(Object host);
+
+    @Message(id = 83, value = "Host %s has not been registered")
+    RuntimeException hostHasNotBeenRegistered(Object host);
 }

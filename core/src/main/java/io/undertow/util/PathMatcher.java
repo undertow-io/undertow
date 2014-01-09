@@ -19,7 +19,6 @@
 package io.undertow.util;
 
 import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerExchange;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -58,11 +57,10 @@ public class PathMatcher<T> {
 
     /**
      * Matches a path against the registered handlers.
-     * @param exchange The exchange
+     * @param path The relative path to match
      * @return The match match. This will never be null, however if none matched its value field will be
      */
-    public PathMatch<T> match(HttpServerExchange exchange){
-        final String path = exchange.getRelativePath();
+    public PathMatch<T> match(String path){
         if (!exactPathMatches.isEmpty()) {
             T match = exactPathMatches.get(path);
             if (match != null) {
@@ -90,7 +88,7 @@ public class PathMatcher<T> {
                 }
             }
         }
-        return new PathMatch<T>(exchange.getRelativePath(), defaultHandler);
+        return new PathMatch<T>(path, defaultHandler);
     }
 
     /**
@@ -133,6 +131,22 @@ public class PathMatcher<T> {
             exactPathMatches.put(path, handler);
         }
         return this;
+    }
+
+    public T getExactPath(final String path) {
+        if (path.charAt(0) != '/') {
+            return exactPathMatches.get("/" + path);
+        } else {
+            return exactPathMatches.get(path);
+        }
+    }
+
+    public T getPrefixPath(final String path) {
+        if (path.charAt(0) != '/') {
+            return paths.get("/" + path);
+        } else {
+            return paths.get(path);
+        }
     }
 
     private void buildLengths() {
