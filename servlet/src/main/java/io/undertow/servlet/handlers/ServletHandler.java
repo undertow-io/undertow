@@ -45,7 +45,6 @@ import io.undertow.servlet.spec.AsyncContextImpl;
 public class ServletHandler implements HttpHandler {
 
     private final ManagedServlet managedServlet;
-    private final boolean asyncSupported;
 
     private static final AtomicLongFieldUpdater<ServletHandler> unavailableUntilUpdater = AtomicLongFieldUpdater.newUpdater(ServletHandler.class, "unavailableUntil");
 
@@ -54,7 +53,6 @@ public class ServletHandler implements HttpHandler {
 
     public ServletHandler(final ManagedServlet managedServlet) {
         this.managedServlet = managedServlet;
-        this.asyncSupported = managedServlet.getServletInfo().isAsyncSupported();
     }
 
     @Override
@@ -75,7 +73,7 @@ public class ServletHandler implements HttpHandler {
                 unavailableUntilUpdater.compareAndSet(this, until, 0);
             }
         }
-        if(!asyncSupported) {
+        if(!managedServlet.getServletInfo().isAsyncSupported()) {
             exchange.putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false);
         }
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
