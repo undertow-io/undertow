@@ -24,6 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcurrentDirectDeque;
 import io.undertow.util.FastConcurrentDirectDeque;
 import io.undertow.util.PortableConcurrentDirectDeque;
+
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
 
@@ -58,7 +59,10 @@ public class InMemorySessionManager implements SessionManager {
 
     private final ConcurrentDirectDeque<String> evictionQueue;
 
-    public InMemorySessionManager(int maxSessions) {
+    private final String deploymentName;
+
+    public InMemorySessionManager(String deploymentName, int maxSessions) {
+        this.deploymentName = deploymentName;
         this.sessions = new ConcurrentHashMap<String, InMemorySession>();
         this.maxSize = maxSessions;
         ConcurrentDirectDeque<String> evictionQueue = null;
@@ -72,8 +76,13 @@ public class InMemorySessionManager implements SessionManager {
         this.evictionQueue = evictionQueue;
     }
 
-    public InMemorySessionManager() {
-        this(-1);
+    public InMemorySessionManager(String id) {
+        this(id, -1);
+    }
+
+    @Override
+    public String getDeploymentName() {
+        return this.deploymentName;
     }
 
     @Override
@@ -170,6 +179,23 @@ public class InMemorySessionManager implements SessionManager {
     @Override
     public Set<String> getAllSessions() {
         return new HashSet<String>(sessions.keySet());
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof SessionManager)) return false;
+        SessionManager manager = (SessionManager) object;
+        return this.deploymentName.equals(manager.getDeploymentName());
+    }
+
+    @Override
+    public int hashCode() {
+        return this.deploymentName.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return this.deploymentName.toString();
     }
 
     /**

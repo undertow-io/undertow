@@ -1,29 +1,180 @@
 package io.undertow.security.impl;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.server.ConduitWrapper;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
+import io.undertow.server.session.Session;
+import io.undertow.server.session.SessionListener;
+import io.undertow.server.session.SessionManager;
+import io.undertow.util.ConduitFactory;
+import io.undertow.util.Sessions;
+
+import org.xnio.conduits.StreamSinkConduit;
+
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * Authenticator that can be used to configure single sign on.
  *
  * @author Stuart Douglas
+ * @author Paul Ferraro
  */
-public class SingleSignOnAuthenticationMechanism extends AbstractSingleSignOnAuthenticationMechanism {
+public class SingleSignOnAuthenticationMechanism implements AuthenticationMechanism {
 
-    private final Map<String, SingleSignOnEntry> ssoEntries = new ConcurrentHashMap<String, SingleSignOnEntry>();
+    private static final String SSO_SESSION_ATTRIBUTE = SingleSignOnAuthenticationMechanism.class.getName() + ".SSOID";
 
-    @Override
-    protected SingleSignOnEntry findSsoEntry(String ssoId) {
-        return ssoEntries.get(ssoId);
+    // Use weak references to prevent memory leaks following undeployment
+    private final Set<SessionManager> seenSessionManagers = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<SessionManager, Boolean>()));
+
+    private String cookieName = "JSESSIONIDSSO";
+    private boolean httpOnly;
+    private boolean secure;
+    private String domain;
+    private final SessionInvalidationListener listener = new SessionInvalidationListener();
+    private final ResponseListener responseListener = new ResponseListener();
+    private final SingleSignOnManager manager;
+
+    public SingleSignOnAuthenticationMechanism(SingleSignOnManager storage) {
+        this.manager = storage;
     }
 
     @Override
-    protected void storeSsoEntry(String ssoId, SingleSignOnEntry entry) {
-        ssoEntries.put(ssoId, entry);
+    public AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange, SecurityContext securityContext) {
+        Cookie cookie = exchange.getRequestCookies().get(cookieName);
+        if (cookie != null) {
+            SingleSignOn sso = this.manager.findSingleSignOn(cookie.getValue());
+            if (sso != null) {
+                registerSessionIfRequired(exchange, sso);
+                securityContext.authenticationComplete(sso.getAccount(), sso.getMechanismName(), false);
+                return AuthenticationMechanismOutcome.AUTHENTICATED;
+            }
+            clearSsoCookie(exchange);
+        }
+        exchange.addResponseWrapper(responseListener);
+        return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
+    }
+
+    private void registerSessionIfRequired(HttpServerExchange exchange, SingleSignOn sso) {
+        Session session = getSession(exchange);
+        if (!sso.contains(session)) {
+            sso.add(session);
+            session.setAttribute(SSO_SESSION_ATTRIBUTE, sso.getId());
+            SessionManager manager = session.getSessionManager();
+            if (seenSessionManagers.add(manager)) {
+                manager.registerSessionListener(listener);
+            }
+        }
+    }
+
+    private void clearSsoCookie(HttpServerExchange exchange) {
+        exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName).setMaxAge(0).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain));
     }
 
     @Override
-    protected void removeSsoEntry(String sso) {
-        ssoEntries.remove(sso);
+    public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
+        return new ChallengeResult(false);
+    }
+
+    protected Session getSession(final HttpServerExchange exchange) {
+        return Sessions.getOrCreateSession(exchange);
+    }
+
+    final class ResponseListener implements ConduitWrapper<StreamSinkConduit> {
+
+        @Override
+        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+            SecurityContext sc = exchange.getSecurityContext();
+            Account account = sc.getAuthenticatedAccount();
+            if(account != null) {
+                SingleSignOn sso = manager.createSingleSignOn(account, sc.getMechanismName());
+                registerSessionIfRequired(exchange, sso);
+                exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain));
+            }
+            return factory.create();
+        }
+    }
+
+
+    final class SessionInvalidationListener implements SessionListener {
+
+        @Override
+        public void sessionCreated(Session session, HttpServerExchange exchange) {
+        }
+
+        @Override
+        public void sessionDestroyed(Session session, HttpServerExchange exchange, SessionDestroyedReason reason) {
+            String ssoId = (String) session.getAttribute(SSO_SESSION_ATTRIBUTE);
+            if (ssoId != null) {
+                SingleSignOn sso = manager.findSingleSignOn(ssoId);
+                if (sso != null) {
+                    sso.remove(session);
+                    if (reason == SessionDestroyedReason.INVALIDATED) {
+                        for (Session associatedSession: sso) {
+                            associatedSession.invalidate(null);
+                        }
+                        manager.removeSingleSignOn(ssoId);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void attributeAdded(Session session, String name, Object value) {
+        }
+
+        @Override
+        public void attributeUpdated(Session session, String name, Object newValue, Object oldValue) {
+        }
+
+        @Override
+        public void attributeRemoved(Session session, String name, Object oldValue) {
+        }
+
+        @Override
+        public void sessionIdChanged(Session session, String oldSessionId) {
+        }
+    }
+
+
+    public String getCookieName() {
+        return cookieName;
+    }
+
+    public SingleSignOnAuthenticationMechanism setCookieName(String cookieName) {
+        this.cookieName = cookieName;
+        return this;
+    }
+
+    public boolean isHttpOnly() {
+        return httpOnly;
+    }
+
+    public SingleSignOnAuthenticationMechanism setHttpOnly(boolean httpOnly) {
+        this.httpOnly = httpOnly;
+        return this;
+    }
+
+    public boolean isSecure() {
+        return secure;
+    }
+
+    public SingleSignOnAuthenticationMechanism setSecure(boolean secure) {
+        this.secure = secure;
+        return this;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public SingleSignOnAuthenticationMechanism setDomain(String domain) {
+        this.domain = domain;
+        return this;
     }
 }

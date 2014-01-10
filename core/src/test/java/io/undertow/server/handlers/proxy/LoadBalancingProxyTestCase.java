@@ -66,14 +66,14 @@ public class LoadBalancingProxyTestCase {
         server1 = Undertow.builder()
                 .addListener(port + 1, DefaultServer.getHostAddress("default"))
                 .setHandler(jvmRoute("JSESSIONID", "s1", path()
-                        .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(), sessionConfig))
+                        .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new StringSendHandler("server1"))))
                 .build();
 
         server2 = Undertow.builder()
                 .addListener(port + 2, DefaultServer.getHostAddress("default"))
                 .setHandler(jvmRoute("JSESSIONID", "s2", path()
-                        .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(), sessionConfig))
+                        .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new StringSendHandler("server2"))))
                 .build();
         server1.start();
