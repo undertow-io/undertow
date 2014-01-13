@@ -27,8 +27,10 @@ import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoUtils;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.websocket.Endpoint;
 import java.net.URI;
+import java.security.Principal;
 
 /**
  * {@link WebSocketConnectionCallback} implementation which will setuo the {@link UndertowSession} and notify
@@ -63,8 +65,14 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
             }
 
             ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+            Principal principal;
+            if(src.getServletRequest() instanceof HttpServletRequest) {
+                principal = ((HttpServletRequest)src.getServletRequest()).getUserPrincipal();
+            } else {
+                principal = src.getOriginalRequest().getUserPrincipal();
+            }
 
-            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, src.getOriginalRequest().getUserPrincipal(), instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions());
+            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions());
             config.getOpenSessions().add(session);
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
