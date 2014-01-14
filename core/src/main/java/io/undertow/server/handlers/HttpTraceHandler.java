@@ -40,6 +40,7 @@ public class HttpTraceHandler implements HttpHandler {
                 }
             }
             body.append("\r\n");
+            exchange.getResponseSender().send(body.toString());
         } else {
             handler.handleRequest(exchange);
         }
