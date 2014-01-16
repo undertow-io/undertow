@@ -28,6 +28,9 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.TrustManager;
+
 /**
  * Convenience class used to build an Undertow server.
  * <p/>
@@ -154,11 +157,15 @@ public class Undertow {
         final ListenerType type;
         final int port;
         final String host;
+        final KeyManager[] keyManagers;
+        final TrustManager[] trustManagers;
 
-        private ListenerConfig(final ListenerType type, final int port, final String host) {
+        private ListenerConfig(final ListenerType type, final int port, final String host, KeyManager[] keyManagers, TrustManager[] trustManagers) {
             this.type = type;
             this.port = port;
             this.host = host;
+            this.keyManagers = keyManagers;
+            this.trustManagers = trustManagers;
         }
     }
 
@@ -266,13 +273,30 @@ public class Undertow {
             return new Undertow(this);
         }
 
+        @Deprecated
         public Builder addListener(int port, String host) {
-            listeners.add(new ListenerConfig(ListenerType.HTTP, port, host));
+            listeners.add(new ListenerConfig(ListenerType.HTTP, port, host, null, null));
             return this;
         }
 
+        public Builder addHttpListener(int port, String host) {
+            listeners.add(new ListenerConfig(ListenerType.HTTP, port, host, null, null));
+            return this;
+        }
+
+        public Builder addHttpsListener(int port, String host, KeyManager[] keyManagers, TrustManager[] trustManagers) {
+            listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, keyManagers, trustManagers));
+            return this;
+        }
+
+        public Builder addAjpListener(int port, String host) {
+            listeners.add(new ListenerConfig(ListenerType.AJP, port, host, null, null));
+            return this;
+        }
+
+        @Deprecated
         public Builder addListener(int port, String host, ListenerType listenerType) {
-            listeners.add(new ListenerConfig(listenerType, port, host));
+            listeners.add(new ListenerConfig(listenerType, port, host, null, null));
             return this;
         }
 
