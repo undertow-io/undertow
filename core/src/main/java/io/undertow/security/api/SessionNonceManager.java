@@ -22,7 +22,7 @@ package io.undertow.security.api;
  * hash against a currently valid nonce.
  *
  * If the nonce manager replaces in-use nonces as old ones expire then the associated session hash should be migrated to the
- * replacment nonce.
+ * replacement nonce.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */

@@ -40,7 +40,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
     private final Executor executor;
     private final InstanceFactory<?> underlyingFactory;
-    private final Class<?> endpontClass;
+    private final Class<?> endpointClass;
     private final BoundMethod OnOpen;
     private final BoundMethod OnClose;
     private final BoundMethod OnError;
@@ -51,7 +51,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     private AnnotatedEndpointFactory(Executor executor, final Class<?> endpointClass, final InstanceFactory<?> underlyingFactory, final BoundMethod OnOpen, final BoundMethod OnClose, final BoundMethod OnError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
         this.executor = executor;
         this.underlyingFactory = underlyingFactory;
-        this.endpontClass = endpointClass;
+        this.endpointClass = endpointClass;
         this.OnOpen = OnOpen;
         this.OnClose = OnClose;
         this.OnError = OnError;
@@ -348,17 +348,17 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
      */
     private static class BoundPathParameters implements BoundParameter {
 
-        private final String[] postions;
+        private final String[] positions;
         private final Encoding[] encoders;
         private final Class[] types;
 
-        public BoundPathParameters(final String[] postions, final Method method) throws DeploymentException {
-            this.postions = postions;
-            this.encoders = new Encoding[postions.length];
-            this.types = new Class[postions.length];
-            for (int i = 0; i < postions.length; ++i) {
+        public BoundPathParameters(final String[] positions, final Method method) throws DeploymentException {
+            this.positions = positions;
+            this.encoders = new Encoding[positions.length];
+            this.types = new Class[positions.length];
+            for (int i = 0; i < positions.length; ++i) {
                 Class type = method.getParameterTypes()[i];
-                if (postions[i] == null || type == null || type == String.class) {
+                if (positions[i] == null || type == null || type == String.class) {
                     continue;
                 }
                 if (EncodingFactory.DEFAULT.canEncodeText(type)) {
@@ -373,8 +373,8 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
         public Set<Integer> positions() {
             HashSet<Integer> ret = new HashSet<Integer>();
-            for (int i = 0; i < postions.length; ++i) {
-                if (postions[i] != null) {
+            for (int i = 0; i < positions.length; ++i) {
+                if (positions[i] != null) {
                     ret.add(i);
                 }
             }
@@ -384,8 +384,8 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
         public void populate(final Object[] params, final Map<Class<?>, Object> value) throws DecodeException {
             final Map<String, String> data = (Map<String, String>) value.get(Map.class);
-            for (int i = 0; i < postions.length; ++i) {
-                String name = postions[i];
+            for (int i = 0; i < positions.length; ++i) {
+                String name = positions[i];
                 if (name != null) {
                     Encoding encoding = encoders[i];
                     if (encoding == null) {

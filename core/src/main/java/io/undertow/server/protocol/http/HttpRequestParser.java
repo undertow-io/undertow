@@ -463,7 +463,7 @@ public abstract class HttpRequestParser {
         //also deals with URL decoding the query parameters as well, while also
         //maintaining a non-decoded version to use as the query string
         //In most cases these string will be the same, and as we do not want to
-        //build up two seperate strings we don't use encodedStringBuilder unless
+        //build up two separate strings we don't use encodedStringBuilder unless
         //we encounter an encoded character
 
         while (buffer.hasRemaining()) {

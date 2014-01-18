@@ -39,18 +39,18 @@ public interface PredicateBuilder {
     String name();
 
     /**
-     * Returns a map of paramters and their types.
+     * Returns a map of parameters and their types.
      */
     Map<String, Class<?>> parameters();
 
     /**
      *
-     * @return The required paramaters
+     * @return The required parameters
      */
     Set<String> requiredParameters();
 
     /**
-     * @return The default parameter name, or null if it does not have a default paramter
+     * @return The default parameter name, or null if it does not have a default parameter
      */
     String defaultParameter();
 

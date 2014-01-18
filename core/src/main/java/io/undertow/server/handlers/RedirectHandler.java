@@ -8,7 +8,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
 /**
- * A redirect handler that redirects to the specifed location via a 302 redirect.
+ * A redirect handler that redirects to the specified location via a 302 redirect.
  * <p/>
  * The location is specified as an exchange attribute string.
  *

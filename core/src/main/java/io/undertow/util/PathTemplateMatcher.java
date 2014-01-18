@@ -82,14 +82,14 @@ public class PathTemplateMatcher<T> {
         }
         PathTemplateHolder holder = new PathTemplateHolder(value, template);
         if (newValues.contains(holder)) {
-            PathTemplate equivilent = null;
+            PathTemplate equivalent = null;
             for (PathTemplateHolder item : newValues) {
                 if (item.compareTo(holder) == 0) {
-                    equivilent = item.template;
+                    equivalent = item.template;
                     break;
                 }
             }
-            throw UndertowMessages.MESSAGES.matcherAlreadyContainsTemplate(template.getTemplateString(), equivilent.getTemplateString());
+            throw UndertowMessages.MESSAGES.matcherAlreadyContainsTemplate(template.getTemplateString(), equivalent.getTemplateString());
         }
         newValues.add(holder);
         pathTemplateMap.put(trimBase(template), newValues);

@@ -135,7 +135,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         }
     }
 
-    private void writeMessage(final List<String> messsages) {
+    private void writeMessage(final List<String> messages) {
         if (System.currentTimeMillis() > changeOverPoint) {
             doRotate();
         }
@@ -143,7 +143,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             if (writer == null) {
                 writer = new BufferedWriter(new FileWriter(defaultLogFile));
             }
-            for (String message : messsages) {
+            for (String message : messages) {
                 writer.write(message);
                 writer.write('\n');
             }

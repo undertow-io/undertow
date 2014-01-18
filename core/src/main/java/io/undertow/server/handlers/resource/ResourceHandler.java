@@ -56,7 +56,7 @@ public class ResourceHandler implements HttpHandler {
      * we do not calculate a new expiry date every request. Instead calculate it once
      * and cache it until it is in the past.
      * <p/>
-     * TODO: do we need this policy to be plugable
+     * TODO: do we need this policy to be pluggable
      */
     private volatile long lastExpiryDate;
     private volatile String lastExpiryHeader;

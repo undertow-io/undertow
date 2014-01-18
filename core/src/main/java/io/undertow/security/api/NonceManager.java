@@ -54,7 +54,7 @@ public interface NonceManager {
      * This method is expected to ONLY be called if the users credentials are valid as a storage overhead could be incurred
      * this overhead must not be accessible to unauthenticated clients.
      *
-     * @param nonce - The nonce receieved from the client.
+     * @param nonce - The nonce received from the client.
      * @param nonceCount - The nonce count from the client or -1 of none specified.
      * @return true if the nonce can be used otherwise return false.
      */

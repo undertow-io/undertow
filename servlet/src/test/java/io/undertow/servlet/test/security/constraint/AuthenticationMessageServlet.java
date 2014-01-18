@@ -52,7 +52,7 @@ public class AuthenticationMessageServlet extends MessageServlet {
         }
         if (expectedMechanism.equals("None")) {
             if (req.getAuthType() != null) {
-                throw new IllegalStateException("Authentication occured when not expected.");
+                throw new IllegalStateException("Authentication occurred when not expected.");
             }
         } else if (expectedMechanism.equals("BASIC")) {
             if (req.getAuthType() != HttpServletRequest.BASIC_AUTH) {

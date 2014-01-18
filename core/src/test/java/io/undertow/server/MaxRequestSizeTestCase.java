@@ -58,10 +58,10 @@ public class MaxRequestSizeTestCase {
             public void handleRequest(final HttpServerExchange exchange) {
                 try {
                     final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputSream = exchange.getInputStream();
-                    String m = HttpClientUtils.readResponse(inputSream);
+                    final InputStream inputStream = exchange.getInputStream();
+                    String m = HttpClientUtils.readResponse(inputStream);
                     Assert.assertEquals(A_MESSAGE, m);
-                    inputSream.close();
+                    inputStream.close();
                     outputStream.close();
                 } catch (IOException e) {
                     try {

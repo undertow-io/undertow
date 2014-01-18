@@ -99,7 +99,7 @@ public interface UndertowMessages {
     @Message(id = 22, value = "The specified hash algorithm '%s' can not be found.")
     IllegalArgumentException hashAlgorithmNotFound(String algorithmName);
 
-    @Message(id = 23, value = "An invalid Base64 token has been recieved.")
+    @Message(id = 23, value = "An invalid Base64 token has been received.")
     IllegalArgumentException invalidBase64Token(@Cause final IOException cause);
 
     @Message(id = 24, value = "An invalidly formatted nonce has been received.")
@@ -120,7 +120,7 @@ public interface UndertowMessages {
     @Message(id = 29, value = "Channel was closed mid chunk, if you have attempted to write chunked data you cannot shutdown the channel until after it has all been written.")
     IOException chunkedChannelClosedMidChunk();
 
-    @Message(id = 30, value = "User %s successfuly authenticated.")
+    @Message(id = 30, value = "User %s successfully authenticated.")
     String userAuthenticated(final String userName);
 
     @Message(id = 31, value = "User %s has logged out.")
@@ -222,7 +222,7 @@ public interface UndertowMessages {
     @Message(id = 65, value = "SSL must be specified to connect to a https URL")
     IllegalArgumentException sslWasNull();
 
-    @Message(id = 66, value = "Incorect magic number for AJP packet header")
+    @Message(id = 66, value = "Incorrect magic number for AJP packet header")
     IOException wrongMagicNumber();
 
     @Message(id = 67, value = "No client cert was provided")

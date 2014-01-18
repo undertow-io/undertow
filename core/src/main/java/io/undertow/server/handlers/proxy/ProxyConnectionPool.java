@@ -77,10 +77,10 @@ class ProxyConnectionPool implements Closeable {
         if (closed) {
             //the host has been closed
             IoUtils.safeClose(connection);
-            ClientConnection con = hostData.availbleConnections.poll();
+            ClientConnection con = hostData.availableConnections.poll();
             while (con != null) {
                 IoUtils.safeClose(con);
-                con = hostData.availbleConnections.poll();
+                con = hostData.availableConnections.poll();
             }
             redistributeQueued(hostData);
             return;
@@ -101,7 +101,7 @@ class ProxyConnectionPool implements Closeable {
                 // Anything waiting for a connection is not expecting exclusivity.
                 connectionReady(connection, callback.getCallback(), callback.getExchange(), false);
             } else {
-                hostData.availbleConnections.add(connection);
+                hostData.availableConnections.add(connection);
             }
         } else if (connection.isOpen() && connection.isUpgraded()) {
             //we treat upgraded connections as closed
@@ -115,7 +115,7 @@ class ProxyConnectionPool implements Closeable {
     private void handleClosedConnection(HostThreadData hostData, final ClientConnection connection) {
 
         int connections = --hostData.connections;
-        hostData.availbleConnections.remove(connection);
+        hostData.availableConnections.remove(connection);
         if (connectionPoolManager.canCreateConnection(connections, this)) {
             CallbackHolder task = hostData.awaitingConnections.poll();
             while (task != null && task.isCancelled()) {
@@ -203,7 +203,7 @@ class ProxyConnectionPool implements Closeable {
         if (connectionPoolManager.canCreateConnection(data.connections, this)) {
             return AvailabilityType.AVAILABLE;
         }
-        if (!data.availbleConnections.isEmpty()) {
+        if (!data.availableConnections.isEmpty()) {
             return AvailabilityType.AVAILABLE;
         }
         return AvailabilityType.FULL;
@@ -265,9 +265,9 @@ class ProxyConnectionPool implements Closeable {
      */
     public void connect(ProxyClient.ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit, boolean exclusive) {
         HostThreadData data = getData();
-        ClientConnection conn = data.availbleConnections.poll();
+        ClientConnection conn = data.availableConnections.poll();
         while (conn != null && !conn.isOpen()) {
-            conn = data.availbleConnections.poll();
+            conn = data.availableConnections.poll();
         }
         if (conn != null) {
             if (exclusive) {
@@ -292,7 +292,7 @@ class ProxyConnectionPool implements Closeable {
     private static final class HostThreadData {
 
         int connections = 0;
-        final Deque<ClientConnection> availbleConnections = new ArrayDeque<ClientConnection>();
+        final Deque<ClientConnection> availableConnections = new ArrayDeque<ClientConnection>();
         final Deque<CallbackHolder> awaitingConnections = new ArrayDeque<CallbackHolder>();
 
     }

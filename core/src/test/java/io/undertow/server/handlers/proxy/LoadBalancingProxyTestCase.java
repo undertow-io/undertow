@@ -138,7 +138,7 @@ public class LoadBalancingProxyTestCase {
     }
 
     @Test
-    public void testStickeySessions() throws IOException {
+    public void testStickySessions() throws IOException {
         int expected = 0;
         TestHttpClient client = new TestHttpClient();
         try {

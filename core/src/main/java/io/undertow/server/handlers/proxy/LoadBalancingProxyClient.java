@@ -243,12 +243,12 @@ public class LoadBalancingProxyClient implements ProxyClient {
         Host problem = null;
         do {
             Host selected = hosts[host];
-            ProxyConnectionPool.AvailabilityType availble = selected.connectionPool.available();
-            if (availble == AVAILABLE) {
+            ProxyConnectionPool.AvailabilityType available = selected.connectionPool.available();
+            if (available == AVAILABLE) {
                 return selected;
-            } else if (availble == FULL && full == null) {
+            } else if (available == FULL && full == null) {
                 full = selected;
-            } else if (availble == PROBLEM && problem == null) {
+            } else if (available == PROBLEM && problem == null) {
                 problem = selected;
             }
             host = (host + 1) % hosts.length;

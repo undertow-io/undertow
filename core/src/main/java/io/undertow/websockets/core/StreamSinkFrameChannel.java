@@ -58,14 +58,14 @@ public abstract class StreamSinkFrameChannel extends AbstractFramedStreamSinkCha
     }
 
     /**
-     * {@code true} if fragementation is supported for the {@link WebSocketFrameType}.
+     * {@code true} if fragmentation is supported for the {@link WebSocketFrameType}.
      */
     public boolean isFragmentationSupported() {
         return false;
     }
 
     /**
-     * {@code true} if extendsions are supported for the {@link WebSocketFrameType}.
+     * {@code true} if extensions are supported for the {@link WebSocketFrameType}.
      */
     public boolean areExtensionsSupported() {
         return false;
