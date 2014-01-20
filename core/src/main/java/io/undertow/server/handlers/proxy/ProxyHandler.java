@@ -215,7 +215,7 @@ public final class ProxyHandler implements HttpHandler {
         @Override
         public void failed(HttpServerExchange exchange) {
             if (!exchange.isResponseStarted()) {
-                exchange.setResponseCode(500);
+                exchange.setResponseCode(503);
                 exchange.endExchange();
             } else {
                 IoUtils.safeClose(exchange.getConnection());
