@@ -493,7 +493,7 @@ public final class ProxyHandler implements HttpHandler {
     /**
      * perform URL encoding
      * <p/>
-     * TODO: this whole thing is kinda crapy.
+     * TODO: this whole thing is kinda crappy.
      *
      * @return
      */

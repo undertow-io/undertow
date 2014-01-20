@@ -129,13 +129,13 @@ public class PredicateParser {
                 }
             } else {
                 if (isOperator(token.token)) {
-                    int prec = precidence(token.token);
+                    int prec = precedence(token.token);
                     String top = operatorStack.peek();
                     while (top != null) {
                         if (top.equals("(")) {
                             break;
                         }
-                        int exitingPrec = precidence(top);
+                        int exitingPrec = precedence(top);
                         if (prec <= exitingPrec) {
                             output.push(operatorStack.pop());
                         } else {
@@ -351,7 +351,7 @@ public class PredicateParser {
             return Byte.valueOf(token.token);
         } else if (type.equals(Character.class) || type.equals(char.class)) {
             if (token.token.length() != 1) {
-                throw error(string, token.position, "Cannot cooerce " + token.token + " to a Character");
+                throw error(string, token.position, "Cannot coerce " + token.token + " to a Character");
             }
             return Character.valueOf(token.token.charAt(0));
         } else if (type.equals(Short.class) || type.equals(short.class)) {
@@ -371,7 +371,7 @@ public class PredicateParser {
         return token.token;
     }
 
-    private static int precidence(String operator) {
+    private static int precedence(String operator) {
         if (operator.equals("not")) {
             return 3;
         } else if (operator.equals("and")) {

@@ -34,7 +34,7 @@ import io.undertow.security.idm.IdentityManager;
 public interface SecurityContext {
 
     // TODO - Some of this is used within the core of undertow, some by the servlet integration and some by the mechanisms -
-    // once released the use by mechanisms will require the greatest level of backwards compatibility maintenace so may be
+    // once released the use by mechanisms will require the greatest level of backwards compatibility maintenance so may be
     // better to split the rest out.
 
     /*
@@ -49,7 +49,7 @@ public interface SecurityContext {
      * If the result indicates that a response has been sent to the client then no further attempts should be made to modify the
      * response. The caller of this method is responsible for ending the exchange.
      *
-     * If this method returns <code>true</code> it can still have committedd the response (e.g. form auth redirects back to the original
+     * If this method returns <code>true</code> it can still have committed the response (e.g. form auth redirects back to the original
      * page). Callers should check that the exchange has not been ended before proceeding.
      *
      * @return <code>true</code> if either the request is successfully authenticated or if there is no failure validating the

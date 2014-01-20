@@ -225,7 +225,7 @@ public class AsyncContextImpl implements AsyncContext {
         }
         String newRequestUri = context.getContextPath() + newServletPath;
 
-        //todo: a more efficent impl
+        //todo: a more efficient impl
         Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
         for (String part : newQueryString.split("&")) {
             String name = part;

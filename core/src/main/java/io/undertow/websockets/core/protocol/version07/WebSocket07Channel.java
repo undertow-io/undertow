@@ -174,10 +174,10 @@ public class WebSocket07Channel extends WebSocketChannel {
                 }
 
                 if (!frameFinalFlag) {
-                    // if this is not the final fragment store the used checker to use it in later fragements also
+                    // if this is not the final fragment store the used checker to use it in later fragments also
                     WebSocket07Channel.this.checker = checker;
                 } else {
-                    // was the final fragement reset the checker to null
+                    // was the final fragment reset the checker to null
                     WebSocket07Channel.this.checker = null;
                 }
 
@@ -236,7 +236,7 @@ public class WebSocket07Channel extends WebSocketChannel {
                             WebSocketLogger.REQUEST_LOGGER.decodingFrameWithOpCode(frameOpcode);
                         }
                         state = State.READING_SECOND;
-                        // clear the lenghtbuffer to reuse it later
+                        // clear the lengthBuffer to reuse it later
                         lengthBuffer.clear();
                     case READING_SECOND:
                         if (!buffer.hasRemaining()) {

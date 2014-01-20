@@ -62,7 +62,7 @@ public class ResponseCache {
      * If this returns true then the caller should not modify the exchange any more, as this
      * can result in a handoff to an IO thread
      *
-     * @return <code>true</code> if serving suceeded,
+     * @return <code>true</code> if serving succeeded,
      */
     public boolean tryServeResponse() {
         return tryServeResponse(true);
@@ -78,7 +78,7 @@ public class ResponseCache {
      * can result in a handoff to an IO thread
      *
      * @param markCacheable If this is true then the resulting response will be considered cachable
-     * @return <code>true</code> if serving suceeded,
+     * @return <code>true</code> if serving succeeded,
      */
     public boolean tryServeResponse(boolean markCacheable) {
         final CachedHttpRequest key = new CachedHttpRequest(exchange);

@@ -118,7 +118,7 @@ public final class WebSocketUtils {
     }
 
     /**
-     * Transfer the data from the source to the sink using the given throughbuffer to pass data through.
+     * Transfer the data from the source to the sink using the given through buffer to pass data through.
      */
     public static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
         long total = 0L;

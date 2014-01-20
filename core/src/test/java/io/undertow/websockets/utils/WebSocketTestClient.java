@@ -100,7 +100,7 @@ public final class WebSocketTestClient {
     }
 
     /**
-     * Send the WebSocketFrame and call the FrameListener once a frame was received as resposne or
+     * Send the WebSocketFrame and call the FrameListener once a frame was received as response or
      * when an Exception was caught.
      */
     public WebSocketTestClient send(WebSocketFrame frame, final FrameListener listener) {
@@ -141,7 +141,7 @@ public final class WebSocketTestClient {
         void onFrame(WebSocketFrame frame);
 
         /**
-         * Is called if an error accured
+         * Is called if an error occurred
          */
         void onError(Throwable t);
     }

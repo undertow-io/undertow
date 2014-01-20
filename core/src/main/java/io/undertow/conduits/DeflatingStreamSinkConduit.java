@@ -54,7 +54,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     private static final int FLUSHING_BUFFER = 1 << 2;
     private static final int WRITES_RESUMED = 1 << 3;
     private static final int CLOSED = 1 << 4;
-    private static final int WRITTEN_TRAILIER = 1 << 5;
+    private static final int WRITTEN_TRAILER = 1 << 5;
 
     public DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange) {
         this(conduitFactory, exchange, Deflater.DEFLATED);
@@ -263,8 +263,8 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                         }
                     }
                     final ByteBuffer buffer = currentBuffer.getResource();
-                    if (allAreClear(WRITTEN_TRAILIER, state)) {
-                        state |= WRITTEN_TRAILIER;
+                    if (allAreClear(WRITTEN_TRAILER, state)) {
+                        state |= WRITTEN_TRAILER;
                         byte[] data  = getTrailer();
                         if(data != null) {
                             if(data.length <= buffer.remaining()) {

@@ -399,7 +399,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Sets the request URI
      *
      * @param requestURI   The new request URI
-     * @param containsHost If this is true the request URI containst the host part
+     * @param containsHost If this is true the request URI contains the host part
      */
     public HttpServerExchange setRequestURI(final String requestURI, boolean containsHost) {
         this.requestURI = requestURI;

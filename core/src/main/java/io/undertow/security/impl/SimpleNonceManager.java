@@ -91,7 +91,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     /**
      * A pseudo-random generator for creating the nonces, a secure random is not required here as this is used purely to
-     * minimise the chance of colisions should two nonces be generated at exactly the same time.
+     * minimise the chance of collisions should two nonces be generated at exactly the same time.
      */
     private final Random random = new Random();
 
@@ -238,7 +238,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         XnioExecutor executor = exchange.getIoThread();
         if (nonceCount < 0) {
             if (invalidNonces.contains(nonce)) {
-                // Without a nonce count the nonce is only useable once.
+                // Without a nonce count the nonce is only usable once.
                 return false;
             }
             // Not already known so will drop into first use validation.

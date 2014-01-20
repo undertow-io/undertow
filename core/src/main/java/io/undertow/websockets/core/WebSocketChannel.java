@@ -329,7 +329,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * Create a new StreamSinkFrameChannel which can be used to send a WebSocket Frame of the type {@link WebSocketFrameType}.
      *
      * @param type        The {@link WebSocketFrameType} of the WebSocketFrame which will be send over this {@link StreamSinkFrameChannel}
-     * @param payloadSize The size of the payload to transmit. May be 0 if non payload at all should be included, or -1 if unkown
+     * @param payloadSize The size of the payload to transmit. May be 0 if non payload at all should be included, or -1 if unknown
      */
     protected abstract StreamSinkFrameChannel createStreamSinkChannel(WebSocketFrameType type, long payloadSize);
 

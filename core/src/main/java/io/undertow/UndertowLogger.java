@@ -109,7 +109,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5017, value = "Unknown variable %s")
-    void unkownVariable(String token);
+    void unknownVariable(String token);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5018, value = "Exception invoking close listener %s")

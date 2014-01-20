@@ -72,7 +72,7 @@ final class UTF8Checker implements ChannelFunction {
      *
      * @param buf           the ByteBuffer to check
      * @param position      the index in the {@link ByteBuffer} to start from
-     * @param length        the number of byted to operate on
+     * @param length        the number of bytes to operate on
      * @throws UnsupportedEncodingException     is thrown if non UTF-8 data is found
      */
     private void checkUTF8(ByteBuffer buf, int position, int length) throws UnsupportedEncodingException {

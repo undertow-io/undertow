@@ -85,7 +85,7 @@ public class RedirectBuilder {
     /**
      * perform URL encoding
      * <p/>
-     * TODO: this whole thing is kinda crapy.
+     * TODO: this whole thing is kinda crappy.
      *
      * @return
      */

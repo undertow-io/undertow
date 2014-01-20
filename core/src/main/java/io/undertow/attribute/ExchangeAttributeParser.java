@@ -134,7 +134,7 @@ public class ExchangeAttributeParser {
             }
         }
         if (token.startsWith("%")) {
-            UndertowLogger.ROOT_LOGGER.unkownVariable(token);
+            UndertowLogger.ROOT_LOGGER.unknownVariable(token);
         }
         return new ConstantExchangeAttribute(token);
     }

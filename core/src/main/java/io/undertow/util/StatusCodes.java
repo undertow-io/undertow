@@ -79,7 +79,7 @@ public class StatusCodes {
     public static final String RESET_CONTENT_STRING = "Reset Content";
     public static final String PARTIAL_CONTENT_STRING = "Partial Content";
     public static final String MULTIPLE_CHOICES_STRING = "Multiple Choices";
-    public static final String MOVED_PERMENANTLY_STRING = "Moved Permanently";
+    public static final String MOVED_PERMANENTLY_STRING = "Moved Permanently";
     public static final String FOUND_STRING = "Found";
     public static final String SEE_OTHER_STRING = "See Other";
     public static final String NOT_MODIFIED_STRING = "Not Modified";
@@ -121,7 +121,7 @@ public class StatusCodes {
         putCode(RESET_CONTENT, RESET_CONTENT_STRING);
         putCode(PARTIAL_CONTENT, PARTIAL_CONTENT_STRING);
         putCode(MULTIPLE_CHOICES, MULTIPLE_CHOICES_STRING);
-        putCode(MOVED_PERMENANTLY, MOVED_PERMENANTLY_STRING);
+        putCode(MOVED_PERMENANTLY, MOVED_PERMANENTLY_STRING);
         putCode(FOUND, FOUND_STRING);
         putCode(SEE_OTHER, SEE_OTHER_STRING);
         putCode(NOT_MODIFIED, NOT_MODIFIED_STRING);

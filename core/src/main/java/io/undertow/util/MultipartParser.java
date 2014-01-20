@@ -150,7 +150,7 @@ public class MultipartParser {
                 } else if (subState == -2) {
                     if (b == LF) {
                         subState = 0;
-                        state = 1;//preaamble is done
+                        state = 1;//preamble is done
                         headers = new HeaderMap();
                         return;
                     } else {
@@ -186,7 +186,7 @@ public class MultipartParser {
                     state = 3;
                     subState = 0;
                     partHandler.beginPart(headers);
-                    //select the approriate encoding
+                    //select the appropriate encoding
                     String encoding = headers.getFirst(Headers.CONTENT_TRANSFER_ENCODING);
                     if (encoding == null) {
                         encodingHandler = new IdentityEncoding();

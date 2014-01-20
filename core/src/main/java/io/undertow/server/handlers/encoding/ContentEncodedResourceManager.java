@@ -94,7 +94,7 @@ public class ContentEncodedResourceManager {
         FileChannel targetFileChannel = null;
         FileChannel sourceFileChannel = null;
         try {
-            //double check, the compressing thread could have finished just before we aquired the lock
+            //double check, the compressing thread could have finished just before we acquired the lock
             preCompressed = encoded.getResource(newPath);
             if (preCompressed != null) {
                 return new ContentEncodedResource(preCompressed, encoding.getName());

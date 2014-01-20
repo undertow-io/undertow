@@ -160,8 +160,8 @@ public class StreamSinkChannelAdapter implements StreamSinkChannel {
 
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        long transfered = 0;
-        while (transfered < count) {
+        long transferred = 0;
+        while (transferred < count) {
             int r = source.read(throughBuffer);
             if (r > 0) {
                 throughBuffer.flip();
@@ -169,16 +169,16 @@ public class StreamSinkChannelAdapter implements StreamSinkChannel {
                     int w = write(throughBuffer);
                     if (w < 1) {
                         throughBuffer.flip();
-                        return transfered;
+                        return transferred;
                     } else {
-                        transfered += w;
+                        transferred += w;
                     }
                 }
                 throughBuffer.clear();
             }
-            return transfered;
+            return transferred;
         }
-        return transfered;
+        return transferred;
     }
 
     @Override

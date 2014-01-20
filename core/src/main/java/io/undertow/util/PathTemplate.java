@@ -146,7 +146,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
      * Check if the given uri matches the template. If so then it will return true and
      * place the value of any path parameters into the given map.
      * <p/>
-     * Note the map may be modified even if the match in unsucessful, however in this case
+     * Note the map may be modified even if the match in unsuccessful, however in this case
      * it will be emptied before the method returns
      *
      * @param path           The request path, relative to the context root

@@ -42,10 +42,10 @@ public interface UndertowClientMessages {
     @Message(id = 1033, value = "Invalid connection state")
     IllegalStateException invalidConnectionState();
 
-    @Message(id = 1034, value = "Unkown AJP packet type %s")
+    @Message(id = 1034, value = "Unknown AJP packet type %s")
     IOException unknownAjpMessageType(byte packetType);
 
-    @Message(id = 1035, value = "Unkown method type for AJP request %s")
+    @Message(id = 1035, value = "Unknown method type for AJP request %s")
     IOException unknownMethod(HttpString method);
 
     @Message(id = 1036, value = "Data still remaining in chunk %s")

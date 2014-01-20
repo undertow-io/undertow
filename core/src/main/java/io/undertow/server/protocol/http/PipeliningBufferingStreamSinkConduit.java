@@ -183,7 +183,7 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
      * <p/>
      * If this returns false the read thread should suspend reads and resume writes
      *
-     * @return <code>true</code> If the flush suceeded, false otherwise
+     * @return <code>true</code> If the flush succeeded, false otherwise
      * @throws IOException
      */
     public boolean flushPipelinedData() throws IOException {
