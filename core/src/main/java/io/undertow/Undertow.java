@@ -25,10 +25,12 @@ import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
+import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
 import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
 /**
@@ -122,7 +124,12 @@ public class Undertow {
                     HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap(), bufferSize);
                     openListener.setRootHandler(rootHandler);
                     ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                    XnioSsl xnioSsl = xnio.getSslProvider(OptionMap.create(Options.USE_DIRECT_BUFFERS, true));
+                    XnioSsl xnioSsl;
+                    if(listener.sslContext != null) {
+                        xnioSsl = new JsseXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), listener.sslContext);
+                    } else {
+                        xnioSsl = xnio.getSslProvider(listener.keyManagers, listener.trustManagers, OptionMap.create(Options.USE_DIRECT_BUFFERS, true));
+                    }
                     AcceptingChannel <SslConnection> sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptions);
                     sslServer.resumeAccepts();
                     channels.add(sslServer);
@@ -159,6 +166,7 @@ public class Undertow {
         final String host;
         final KeyManager[] keyManagers;
         final TrustManager[] trustManagers;
+        final SSLContext sslContext;
 
         private ListenerConfig(final ListenerType type, final int port, final String host, KeyManager[] keyManagers, TrustManager[] trustManagers) {
             this.type = type;
@@ -166,6 +174,15 @@ public class Undertow {
             this.host = host;
             this.keyManagers = keyManagers;
             this.trustManagers = trustManagers;
+            this.sslContext = null;
+        }
+        private ListenerConfig(final ListenerType type, final int port, final String host, SSLContext sslContext) {
+            this.type = type;
+            this.port = port;
+            this.host = host;
+            this.keyManagers = null;
+            this.trustManagers = null;
+            this.sslContext = sslContext;
         }
     }
 
@@ -288,6 +305,12 @@ public class Undertow {
             listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, keyManagers, trustManagers));
             return this;
         }
+
+        public Builder addHttpsListener(int port, String host, SSLContext sslContext) {
+            listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, sslContext));
+            return this;
+        }
+
 
         public Builder addAjpListener(int port, String host) {
             listeners.add(new ListenerConfig(ListenerType.AJP, port, host, null, null));
