@@ -35,7 +35,7 @@ public class InMemorySessionPersistence implements SessionPersistenceManager {
                         objectOutputStream.close();
                         data.put(sessionAttribute.getKey(), out.toByteArray());
                     } catch (Exception e) {
-                        UndertowServletLogger.ROOT_LOGGER.failedToPersistSessionAttribute(sessionAttribute.getKey(), sessionAttribute.getValue(), sessionEntry.getKey());
+                        UndertowServletLogger.ROOT_LOGGER.failedToPersistSessionAttribute(sessionAttribute.getKey(), sessionAttribute.getValue(), sessionEntry.getKey(), e);
                     }
                 }
                 serializedData.put(sessionEntry.getKey(), new SessionEntry(sessionEntry.getValue().getExpiration(), data));
