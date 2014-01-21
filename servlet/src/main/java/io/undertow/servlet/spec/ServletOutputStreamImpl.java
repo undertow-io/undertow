@@ -613,10 +613,12 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 if (channel == null) {
                     channel = servletRequestContext.getExchange().getResponseChannel();
                 }
-                StreamSinkChannel channel = this.channel;
-                channel.shutdownWrites();
                 state |= FLAG_DELEGATE_SHUTDOWN;
-                Channels.flushBlocking(channel);
+                StreamSinkChannel channel = this.channel;
+                if(channel != null) { //mock requests
+                    channel.shutdownWrites();
+                    Channels.flushBlocking(channel);
+                }
             } finally {
                 if (pooledBuffer != null) {
                     pooledBuffer.free();
