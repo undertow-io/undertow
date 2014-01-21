@@ -60,7 +60,15 @@ public class Encoding implements Closeable {
         if (EncodingFactory.isPrimitiveOrBoxed(type)) {
             return true;
         }
-        return textEncoders.containsKey(type);
+        if(textEncoders.containsKey(type)) {
+            return true;
+        }
+        for(Class<?> key : textEncoders.keySet()) {
+            if(key.isAssignableFrom(type)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -73,7 +81,16 @@ public class Encoding implements Closeable {
 
 
     public boolean canEncodeBinary(final Class<?> type) {
-        return binaryEncoders.containsKey(type);
+        if(binaryEncoders.containsKey(type)) {
+            return true;
+        }
+
+        for(Class<?> key : binaryEncoders.keySet()) {
+            if(key.isAssignableFrom(type)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -155,9 +172,17 @@ public class Encoding implements Closeable {
         if (EncodingFactory.isPrimitiveOrBoxed(o.getClass())) {
             return o.toString();
         }
-        List<InstanceHandle<? extends Encoder>> decoders = textEncoders.get(o.getClass());
-        if (decoders != null) {
-            for (InstanceHandle<? extends Encoder> decoderHandle : decoders) {
+        List<InstanceHandle<? extends Encoder>> encoders = textEncoders.get(o.getClass());
+        if(encoders == null) {
+            for(Map.Entry<Class<?>, List<InstanceHandle<? extends Encoder>>> entry : textEncoders.entrySet()) {
+                if(entry.getKey().isAssignableFrom(o.getClass())) {
+                    encoders = entry.getValue();
+                    break;
+                }
+            }
+        }
+        if (encoders != null) {
+            for (InstanceHandle<? extends Encoder> decoderHandle : encoders) {
                 Encoder decoder = decoderHandle.getInstance();
                 if (decoder instanceof Encoder.Text) {
                     return ((Encoder.Text) decoder).encode(o);
@@ -176,9 +201,18 @@ public class Encoding implements Closeable {
     }
 
     public ByteBuffer encodeBinary(final Object o) throws EncodeException {
-        List<InstanceHandle<? extends Encoder>> decoders = binaryEncoders.get(o.getClass());
-        if (decoders != null) {
-            for (InstanceHandle<? extends Encoder> decoderHandle : decoders) {
+        List<InstanceHandle<? extends Encoder>> encoders = binaryEncoders.get(o.getClass());
+
+        if(encoders == null) {
+            for(Map.Entry<Class<?>, List<InstanceHandle<? extends Encoder>>> entry : binaryEncoders.entrySet()) {
+                if(entry.getKey().isAssignableFrom(o.getClass())) {
+                    encoders = entry.getValue();
+                    break;
+                }
+            }
+        }
+        if (encoders != null) {
+            for (InstanceHandle<? extends Encoder> decoderHandle : encoders) {
                 Encoder decoder = decoderHandle.getInstance();
                 if (decoder instanceof Encoder.Binary) {
                     return ((Encoder.Binary) decoder).encode(o);

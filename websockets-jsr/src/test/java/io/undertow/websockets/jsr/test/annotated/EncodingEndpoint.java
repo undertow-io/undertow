@@ -30,7 +30,7 @@ public class EncodingEndpoint {
 
     @OnMessage
     public EncodableObject handleMessage(final EncodableObject message, @PathParam("user") String user) {
-        return new EncodableObject(message.getValue() + " " + user);
+        return new EncodableObjectSubClass(message.getValue() + " " + user);
     }
 
 }
