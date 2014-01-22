@@ -81,6 +81,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
     public void handleEvent(final ConduitStreamSourceChannel channel) {
         if(!channel.isOpen()) {
+            channel.suspendReads();
             return;
         }
         while (requestStateUpdater.get(this) != 0) {

@@ -69,6 +69,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
     public void handleEvent(final StreamSourceChannel channel) {
         if(!channel.isOpen()) {
+            channel.suspendReads();
             return;
         }
         Pooled<ByteBuffer> existing = connection.getExtraBytes();
