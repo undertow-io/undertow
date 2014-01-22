@@ -13,6 +13,7 @@ import io.undertow.util.ImmediatePooled;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 
 /**
@@ -20,16 +21,18 @@ import java.nio.ByteBuffer;
  *
  * @author Stuart Douglas
  */
-public class SavedRequest {
+public class SavedRequest implements Serializable {
 
     private static final String SESSION_KEY = SavedRequest.class.getName();
 
-    private final ByteBuffer data;
+    private final byte[] data;
+    private final int dataLength;
     private final HttpString method;
     private final String requestUri;
 
-    public SavedRequest(ByteBuffer data, HttpString method, String requestUri) {
+    public SavedRequest(byte[] data, int dataLength, HttpString method, String requestUri) {
         this.data = data;
+        this.dataLength = dataLength;
         this.method = method;
         this.requestUri = requestUri;
     }
@@ -58,8 +61,7 @@ public class SavedRequest {
                             return;//failed to save the request, we just return
                         }
                     }
-                    ByteBuffer data = ByteBuffer.wrap(buffer, 0, read);
-                    SavedRequest request = new SavedRequest(data, exchange.getRequestMethod(), exchange.getRequestURI());
+                    SavedRequest request = new SavedRequest(buffer, read, exchange.getRequestMethod(), exchange.getRequestURI());
                     final ServletRequestContext sc = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
                     Session session = sc.getCurrentServetContext().getSession(exchange, true).getSession();
                     session.setAttribute(SESSION_KEY, request);
@@ -78,10 +80,11 @@ public class SavedRequest {
                 if(request.requestUri.equals(exchange.getRequestURI())) {
                     UndertowLogger.REQUEST_LOGGER.debugf("restoring request body for request to %s", request.requestUri);
                     exchange.setRequestMethod(request.method);
-                    Connectors.ungetRequestBytes(exchange, new ImmediatePooled<ByteBuffer>(request.data));
+                    Connectors.ungetRequestBytes(exchange, new ImmediatePooled<ByteBuffer>(ByteBuffer.wrap(request.data, 0, request.dataLength)));
                     underlyingSession.removeAttribute(SESSION_KEY);
                 }
             }
         }
     }
+
 }
