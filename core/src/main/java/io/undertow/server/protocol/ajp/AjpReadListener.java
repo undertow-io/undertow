@@ -68,7 +68,8 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     }
 
     public void handleEvent(final StreamSourceChannel channel) {
-        if(!channel.isOpen()) {
+        if(connection.getOriginalSinkConduit().isWriteShutdown() || connection.getOriginalSourceConduit().isReadShutdown()) {
+            IoUtils.safeClose(connection);
             channel.suspendReads();
             return;
         }

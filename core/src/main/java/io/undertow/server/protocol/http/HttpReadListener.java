@@ -80,10 +80,12 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
     public void handleEvent(final ConduitStreamSourceChannel channel) {
-        if(!channel.isOpen()) {
+        if(connection.getOriginalSinkConduit().isWriteShutdown() || connection.getOriginalSourceConduit().isReadShutdown()) {
+            IoUtils.safeClose(connection);
             channel.suspendReads();
             return;
         }
+
         while (requestStateUpdater.get(this) != 0) {
             //if the CAS fails it is because another thread is in the process of changing state
             //we just immediately retry
