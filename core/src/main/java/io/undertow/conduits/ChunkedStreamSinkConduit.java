@@ -65,8 +65,16 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private final int config;
 
     private final Pool<ByteBuffer> bufferPool;
-    private static final byte[] LAST_CHUNK = "0\r\n".getBytes();
-    public static final byte[] CRLF = "\r\n".getBytes();
+
+    /**
+     * "0\r\n" as bytes in US ASCII encoding.
+     */
+    private static final byte[] LAST_CHUNK = new byte[] {(byte) 48, (byte) 13, (byte) 10};
+
+    /**
+     * "\r\n" as bytes in US ASCII encoding.
+     */
+    private static final byte[] CRLF = new byte[] {(byte) 13, (byte) 10};
 
     private final Attachable attachable;
     private int state;
@@ -130,7 +138,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                 chunkingBuffer.put(CRLF);
             }
             written += src.remaining();
-            chunkingBuffer.put(Integer.toHexString(src.remaining()).getBytes());
+            putIntAsHexString(chunkingBuffer, src.remaining());
             chunkingBuffer.put(CRLF);
             chunkingBuffer.flip();
             state |= FLAG_WRITTEN_FIRST_CHUNK;
@@ -328,4 +336,34 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         }
         next.awaitWritable(time, timeUnit);
     }
+
+    private static void putIntAsHexString(final ByteBuffer buf, final int v) {
+        byte int3 = (byte) (v >> 24);
+        byte int2 = (byte) (v >> 16);
+        byte int1 = (byte) (v >>  8);
+        byte int0 = (byte) (v      );
+        if (int3 != 0) {
+            buf.put(DIGITS[(0xF0 & int3) >>> 4])
+               .put(DIGITS[0x0F & int3]);
+        }
+        if (int2 != 0) {
+            buf.put(DIGITS[(0xF0 & int2) >>> 4])
+               .put(DIGITS[0x0F & int2]);
+        }
+        if (int1 != 0) {
+            buf.put(DIGITS[(0xF0 & int1) >>> 4])
+               .put(DIGITS[0x0F & int1]);
+        }
+        buf.put(DIGITS[(0xF0 & int0) >>> 4])
+           .put(DIGITS[0x0F & int0]);
+    }
+
+    /**
+     * hexadecimal digits "0123456789abcdef" as bytes in US ASCII encoding.
+     */
+    private static final byte[] DIGITS = new byte[] {
+        (byte) 48, (byte) 49, (byte) 50, (byte) 51, (byte) 52, (byte) 53,
+        (byte) 54, (byte) 55, (byte) 56, (byte) 57, (byte) 97, (byte) 98,
+        (byte) 99, (byte) 100, (byte) 101, (byte) 102};
+
 }
