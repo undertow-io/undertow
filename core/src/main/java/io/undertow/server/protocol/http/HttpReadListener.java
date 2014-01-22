@@ -80,7 +80,8 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
     public void handleEvent(final ConduitStreamSourceChannel channel) {
-        if(connection.getOriginalSinkConduit().isWriteShutdown() || connection.getOriginalSourceConduit().isReadShutdown()) {
+        Pooled<ByteBuffer> existing = connection.getExtraBytes();
+        if(existing == null && (connection.getOriginalSinkConduit().isWriteShutdown() || connection.getOriginalSourceConduit().isReadShutdown())) {
             IoUtils.safeClose(connection);
             channel.suspendReads();
             return;
@@ -96,7 +97,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             }
         }
 
-        Pooled<ByteBuffer> existing = connection.getExtraBytes();
 
         final Pooled<ByteBuffer> pooled = existing == null ? connection.getBufferPool().allocate() : existing;
         final ByteBuffer buffer = pooled.getResource();
