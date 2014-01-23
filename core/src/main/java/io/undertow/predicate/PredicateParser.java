@@ -193,7 +193,8 @@ public class PredicateParser {
         } else {
             PredicateBuilder builder = builders.get(token.token);
             if (builder == null) {
-                throw error(string, token.position, "no predicate named " + token.token);
+
+                throw error(string, token.position, "no predicate named " + token.token + " known predicates: " + builders.keySet());
             }
             Token next = tokens.peek();
             if (next.token.equals("[")) {
