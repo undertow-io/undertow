@@ -5,33 +5,28 @@ import java.util.Map;
 import java.util.Set;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.PathMatcher;
 
 /**
  * @author Stuart Douglas
  */
 class PathPrefixPredicate implements Predicate {
 
-    private final String slashPath;
-    private final String path;
+    private final PathMatcher<Boolean> pathMatcher;
 
-    public PathPrefixPredicate(final String path) {
-        if (path.startsWith("/")) {
-            this.slashPath = path;
-            this.path = path.substring(1);
-        } else {
-            this.slashPath = "/" + path;
-            this.path = path;
+    public PathPrefixPredicate(final String... paths) {
+        PathMatcher<Boolean> matcher = new PathMatcher<Boolean>();
+        for(String path : paths) {
+            matcher.addPrefixPath(path, Boolean.TRUE);
         }
+        this.pathMatcher = matcher;
     }
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
         final String relativePath = value.getRelativePath();
-        if (relativePath.startsWith("/")) {
-            return relativePath.startsWith(slashPath);
-        } else {
-            return relativePath.startsWith(path);
-        }
+        PathMatcher.PathMatch<Boolean> result = pathMatcher.match(relativePath);
+        return result.getValue() == Boolean.TRUE;
     }
 
     public static class Builder implements PredicateBuilder {
@@ -43,7 +38,7 @@ class PathPrefixPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.<String, Class<?>>singletonMap("path", String.class);
+            return Collections.<String, Class<?>>singletonMap("path", String[].class);
         }
 
         @Override
@@ -58,7 +53,7 @@ class PathPrefixPredicate implements Predicate {
 
         @Override
         public Predicate build(final Map<String, Object> config) {
-            String path = (String) config.get("path");
+            String[] path = (String[]) config.get("path");
             return new PathPrefixPredicate(path);
         }
     }

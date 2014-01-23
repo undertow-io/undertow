@@ -32,7 +32,7 @@ class PathSuffixPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.<String, Class<?>>singletonMap("path", String.class);
+            return Collections.<String, Class<?>>singletonMap("path", String[].class);
         }
 
         @Override
@@ -47,8 +47,8 @@ class PathSuffixPredicate implements Predicate {
 
         @Override
         public Predicate build(final Map<String, Object> config) {
-            String path = (String) config.get("path");
-            return new PathSuffixPredicate(path);
+            String[] path = (String[]) config.get("path");
+            return Predicates.suffixes(path);
         }
     }
 }

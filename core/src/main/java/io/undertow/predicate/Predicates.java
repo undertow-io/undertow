@@ -61,6 +61,9 @@ public class Predicates {
      * creates a predicate that returns true if the request path ends with any of the provided suffixes
      */
     public static Predicate suffixes(final String... paths) {
+        if(paths.length == 1) {
+            return suffix(paths[0]);
+        }
         final PathSuffixPredicate[] predicates = new PathSuffixPredicate[paths.length];
         for (int i = 0; i < paths.length; ++i) {
             predicates[i] = new PathSuffixPredicate(paths[i]);
@@ -79,11 +82,7 @@ public class Predicates {
      * creates a predicate that returns true if the relative request path matches any of the provided prefixes
      */
     public static Predicate prefixes(final String... paths) {
-        final PathPrefixPredicate[] predicates = new PathPrefixPredicate[paths.length];
-        for (int i = 0; i < paths.length; ++i) {
-            predicates[i] = new PathPrefixPredicate(paths[i]);
-        }
-        return or(predicates);
+        return new PathPrefixPredicate(paths);
     }
 
     /**
