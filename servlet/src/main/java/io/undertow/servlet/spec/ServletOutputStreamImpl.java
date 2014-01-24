@@ -603,9 +603,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
                 if(servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
                     if (buffer == null) {
-                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
+                        servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                     } else {
-                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                        servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
                     }
                 }
             }

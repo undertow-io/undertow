@@ -380,7 +380,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                     //we only change the charset if the writer has not been retrieved yet
                     this.charset = type.substring(pos + "charset=".length(), i);
                     //it is valid for the charset to be enclosed in quotes
-                    if(this.charset.startsWith("\"") && this.charset.endsWith("\"") && this.charset.length() > 1) {
+                    if (this.charset.startsWith("\"") && this.charset.endsWith("\"") && this.charset.length() > 1) {
                         this.charset = this.charset.substring(1, this.charset.length() - 1);
                     }
                 }
@@ -443,11 +443,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 writer.flush();
             }
             writer.close();
-        } else if (servletOutputStream == null) {
-            createOutputStream();
+        } else {
+            if (servletOutputStream == null) {
+                createOutputStream();
+            }
+            //close also flushes
+            servletOutputStream.close();
         }
-        //close also flushes
-        servletOutputStream.close();
     }
 
     @Override
