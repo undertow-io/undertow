@@ -5,6 +5,7 @@ import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
+import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.util.SavedRequest;
@@ -15,9 +16,9 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.security.AccessController;
 import java.util.Map;
 
 /**
@@ -70,18 +71,30 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     @Override
     protected void storeInitialLocation(final HttpServerExchange exchange) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        servletRequestContext.getCurrentServetContext().getSession(exchange, true).getSession().setAttribute(SESSION_KEY, RedirectBuilder.redirect(exchange, exchange.getRelativePath()));
+        HttpSessionImpl httpSession = servletRequestContext.getCurrentServetContext().getSession(exchange, true);
+        Session session;
+        if (System.getSecurityManager() == null) {
+            session = httpSession.getSession();
+        } else {
+            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+        }
+        session.setAttribute(SESSION_KEY, RedirectBuilder.redirect(exchange, exchange.getRelativePath()));
         SavedRequest.trySaveRequest(exchange);
     }
 
     @Override
     protected void handleRedirectBack(final HttpServerExchange exchange) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
         HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
-        HttpSessionImpl session = servletRequestContext.getCurrentServetContext().getSession(exchange, false);
-        if (session != null) {
-            String path = (String) session.getSession().getAttribute(SESSION_KEY);
+        HttpSessionImpl httpSession = servletRequestContext.getCurrentServetContext().getSession(exchange, false);
+        if (httpSession != null) {
+            Session session;
+            if (System.getSecurityManager() == null) {
+                session = httpSession.getSession();
+            } else {
+                session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+            }
+            String path = (String) session.getAttribute(SESSION_KEY);
             if (path != null) {
                 try {
                     resp.sendRedirect(path);
@@ -90,10 +103,10 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
                 }
             }
         }
+
     }
 
     public static class Factory implements AuthenticationMechanismFactory {
-
         @Override
         public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
             return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE));

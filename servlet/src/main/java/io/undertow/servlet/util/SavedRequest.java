@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
 
 /**
  * Saved servlet request.
@@ -63,8 +64,14 @@ public class SavedRequest implements Serializable {
                     }
                     SavedRequest request = new SavedRequest(buffer, read, exchange.getRequestMethod(), exchange.getRequestURI());
                     final ServletRequestContext sc = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-                    Session session = sc.getCurrentServetContext().getSession(exchange, true).getSession();
-                    session.setAttribute(SESSION_KEY, request);
+                    HttpSessionImpl session = sc.getCurrentServetContext().getSession(exchange, true);
+                    Session underlyingSession;
+                    if(System.getSecurityManager() == null) {
+                        underlyingSession = session.getSession();
+                    } else {
+                        underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+                    }
+                    underlyingSession.setAttribute(SESSION_KEY, request);
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 }
@@ -74,7 +81,13 @@ public class SavedRequest implements Serializable {
 
     public static void tryRestoreRequest(final HttpServerExchange exchange, HttpSession session) {
         if(session instanceof HttpSessionImpl) {
-            Session underlyingSession = ((HttpSessionImpl) session).getSession();
+
+            Session underlyingSession;
+            if(System.getSecurityManager() == null) {
+                underlyingSession = ((HttpSessionImpl) session).getSession();
+            } else {
+                underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+            }
             SavedRequest request = (SavedRequest) underlyingSession.getAttribute(SESSION_KEY);
             if(request != null) {
                 if(request.requestUri.equals(exchange.getRequestURI())) {

@@ -694,7 +694,13 @@ public class ServletContextImpl implements ServletContext {
     public void updateSessionAccessTime(final HttpServerExchange exchange) {
         HttpSessionImpl httpSession = getSession(exchange, false);
         if (httpSession != null) {
-            httpSession.getSession().requestDone(exchange);
+            Session underlyingSession;
+            if(System.getSecurityManager() == null) {
+                underlyingSession = httpSession.getSession();
+            } else {
+                underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+            }
+            underlyingSession.requestDone(exchange);
         }
     }
 

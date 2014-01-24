@@ -24,6 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
+import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.AuthorizationManager;
@@ -70,6 +71,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
+import java.security.AccessController;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -284,7 +286,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.noSession();
         }
         String oldId = session.getId();
-        String newId = session.getSession().changeSessionId(exchange, originalServletContext.getSessionCookieConfig());
+        Session underlyingSession;
+        if(System.getSecurityManager() == null) {
+            underlyingSession = session.getSession();
+        } else {
+            underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+        }
+        String newId = underlyingSession.changeSessionId(exchange, originalServletContext.getSessionCookieConfig());
         servletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
         return newId;
     }

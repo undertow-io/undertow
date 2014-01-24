@@ -31,6 +31,7 @@ import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.SavedRequest;
 
 import javax.servlet.http.HttpSession;
+import java.security.AccessController;
 
 /**
  * {@link HttpHandler} responsible for setting up the {@link AuthenticatedSessionManager} for cached authentications and
@@ -77,7 +78,13 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
             switch (eventType) {
                 case AUTHENTICATED:
                     if (isCacheable(notification)) {
-                        Session session = servletContext.getSession(notification.getExchange(), true).getSession();
+                        HttpSessionImpl httpSession = servletContext.getSession(notification.getExchange(), true);
+                        Session session;
+                        if(System.getSecurityManager() == null) {
+                            session = httpSession.getSession();
+                        } else {
+                            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+                        }
                         // It is normal for this notification to be received when using a previously cached session - in that
                         // case the IDM would have been given an opportunity to re-load the Account so updating here ready for
                         // the next request is desired.
@@ -86,9 +93,15 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
                     }
                     break;
                 case LOGGED_OUT:
-                    HttpSessionImpl session = servletContext.getSession(notification.getExchange(), false);
-                    if (session != null) {
-                        session.getSession().removeAttribute(ATTRIBUTE_NAME);
+                    HttpSessionImpl httpSession = servletContext.getSession(notification.getExchange(), false);
+                    if (httpSession != null) {
+                        Session session;
+                        if (System.getSecurityManager() == null) {
+                            session = httpSession.getSession();
+                        } else {
+                            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+                        }
+                        session.removeAttribute(ATTRIBUTE_NAME);
                     }
                     break;
             }
@@ -100,11 +113,16 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
 
         @Override
         public AuthenticatedSession lookupSession(HttpServerExchange exchange) {
-            HttpSessionImpl session = servletContext.getSession(exchange, false);
-            if (session != null) {
-                return (AuthenticatedSession) session.getSession().getAttribute(ATTRIBUTE_NAME);
+            HttpSessionImpl httpSession = servletContext.getSession(exchange, false);
+            if (httpSession != null) {
+                Session session;
+                if (System.getSecurityManager() == null) {
+                    session = httpSession.getSession();
+                } else {
+                    session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+                }
+                return (AuthenticatedSession) session.getAttribute(ATTRIBUTE_NAME);
             }
-
             return null;
         }
 

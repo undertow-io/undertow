@@ -19,6 +19,7 @@
 package io.undertow.servlet.spec;
 
 import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -213,5 +214,19 @@ public class HttpSessionImpl implements HttpSession {
 
     public boolean isInvalid() {
         return invalid;
+    }
+
+    public static class UnwrapSessionAction implements PrivilegedAction<Session> {
+
+        private final HttpSessionImpl session;
+
+        public UnwrapSessionAction(HttpSession session) {
+            this.session = (HttpSessionImpl) session;
+        }
+
+        @Override
+        public Session run() {
+            return session.getSession();
+        }
     }
 }
