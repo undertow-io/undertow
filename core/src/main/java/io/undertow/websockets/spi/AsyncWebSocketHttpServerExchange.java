@@ -200,7 +200,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public String getRequestURI() {
-        return exchange.getRequestURI();
+        return exchange.getRequestURI() + exchange.getQueryString();
     }
 
     @Override

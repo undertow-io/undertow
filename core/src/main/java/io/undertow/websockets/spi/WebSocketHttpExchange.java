@@ -111,7 +111,7 @@ public interface WebSocketHttpExchange extends Closeable {
     String getRequestScheme();
 
     /**
-     * @return The request URI
+     * @return The request URI, including the query string
      */
     String getRequestURI();
 

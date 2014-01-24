@@ -182,7 +182,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public String getRequestURI() {
-        return request.getRequestURI();
+        return request.getRequestURI() + (request.getQueryString() == null ? "" : "?" + request.getQueryString());
     }
 
     @Override

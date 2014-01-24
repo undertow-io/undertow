@@ -66,6 +66,7 @@ public class AnnotatedEndpointTest {
                                 .addEndpoint(AnnotatedClientEndpoint.class)
                                 .addEndpoint(IncrementEndpoint.class)
                                 .addEndpoint(EncodingEndpoint.class)
+                                .addEndpoint(RequestUriEndpoint.class)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override
                                     public void ready(ServerWebSocketContainer container) {
@@ -134,6 +135,18 @@ public class AnnotatedEndpointTest {
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/encoding/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+
+    @org.junit.Test
+    public void testRequestUri() throws Exception {
+        final byte[] payload = "hello".getBytes();
+        final FutureResult latch = new FutureResult();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/request?a=b"));
+        client.connect();
+        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/request?a=b".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
