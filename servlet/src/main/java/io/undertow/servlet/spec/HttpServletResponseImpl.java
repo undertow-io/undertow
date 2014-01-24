@@ -186,7 +186,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
 
     public void setHeader(final HttpString name, final String value) {
-        if (insideInclude) {
+        if (insideInclude || ignoredFlushPerformed) {
             return;
         }
         exchange.getResponseHeaders().put(name, value);
@@ -198,7 +198,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void addHeader(final HttpString name, final String value) {
-        if (insideInclude) {
+        if (insideInclude || ignoredFlushPerformed) {
             return;
         }
         exchange.getResponseHeaders().add(name, value);
