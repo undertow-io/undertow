@@ -167,6 +167,7 @@ public class Connectors {
             exchange.setInCall(true);
             handler.handleRequest(exchange);
             exchange.setInCall(false);
+            boolean resumed = exchange.runResumeReadWrite();
             if (exchange.isDispatched()) {
                 final Runnable dispatchTask = exchange.getDispatchTask();
                 Executor executor = exchange.getDispatchExecutor();
@@ -175,7 +176,7 @@ public class Connectors {
                     executor = executor == null ? exchange.getConnection().getWorker() : executor;
                     executor.execute(dispatchTask);
                 }
-            } else {
+            } else if(!resumed) {
                 exchange.endExchange();
             }
         } catch (Throwable t) {

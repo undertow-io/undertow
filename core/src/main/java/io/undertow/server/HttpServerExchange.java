@@ -39,7 +39,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
-import io.undertow.util.SameThreadExecutor;
 import org.jboss.logging.Logger;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
@@ -267,6 +266,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      * or the exchange will be ended.
      */
     private static final int FLAG_IN_CALL = 1 << 17;
+    private static final int FLAG_SHOULD_RESUME_READS = 1 << 18;
+    private static final int FLAG_SHOLD_RESUME_WRITES = 1 << 19;
 
     /**
      * The source address for the request. If this is null then the actual source address from the channel is used
@@ -1518,6 +1519,25 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.securityContext = securityContext;
     }
 
+    /**
+     * Actually resumes reads or writes, if the relevant method has been called.
+     *
+     * @return <code>true</code> if reads or writes were resumed
+     */
+    boolean runResumeReadWrite() {
+        boolean ret = false;
+        if(anyAreSet(state, FLAG_SHOLD_RESUME_WRITES)) {
+            responseChannel.runResume();
+            ret = true;
+        }
+        if(anyAreSet(state, FLAG_SHOULD_RESUME_READS)) {
+            requestChannel.runResume();
+            ret = true;
+        }
+        state &= ~(FLAG_SHOULD_RESUME_READS | FLAG_SHOLD_RESUME_WRITES);
+        return ret;
+    }
+
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
         private final ExchangeCompletionListener[] list;
         private final HttpServerExchange exchange;
@@ -1589,7 +1609,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * It also delays a wakeup/resumesWrites calls until the current call stack has returned, thus ensuring that only 1 thread is
      * active in the exchange at any one time.
      */
-    private class WriteDispatchChannel extends DetachableStreamSinkChannel implements StreamSinkChannel, Runnable {
+    private class WriteDispatchChannel extends DetachableStreamSinkChannel implements StreamSinkChannel {
 
         private boolean wakeup;
 
@@ -1609,7 +1629,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             if (isInCall()) {
                 wakeup = false;
-                dispatch(SameThreadExecutor.INSTANCE, this);
+                state |= FLAG_SHOLD_RESUME_WRITES;
             } else {
                 delegate.resumeWrites();
             }
@@ -1622,24 +1642,30 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             if (isInCall()) {
                 wakeup = true;
-                dispatch(SameThreadExecutor.INSTANCE, this);
+                state |= FLAG_SHOLD_RESUME_WRITES;
             } else {
                 delegate.wakeupWrites();
-            }
-        }
-
-        @Override
-        public void run() {
-            if (wakeup) {
-                delegate.wakeupWrites();
-            } else {
-                delegate.resumeWrites();
             }
         }
 
         public void responseDone() {
             if (delegate.isWriteResumed()) {
                 delegate.suspendWrites();
+            }
+        }
+
+        @Override
+        public boolean isWriteResumed() {
+            return anyAreSet(state, FLAG_SHOLD_RESUME_WRITES) || super.isWriteResumed();
+        }
+
+        public void runResume() {
+            if (!isFinished() && isWriteResumed()) {
+                if (wakeup) {
+                    delegate.wakeupWrites();
+                } else {
+                    delegate.resumeWrites();
+                }
             }
         }
     }
@@ -1654,7 +1680,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * <p/>
      * It also handles buffered request data.
      */
-    private final class ReadDispatchChannel extends DetachableStreamSourceChannel implements StreamSourceChannel, Runnable {
+    private final class ReadDispatchChannel extends DetachableStreamSourceChannel implements StreamSourceChannel {
 
         private boolean wakeup = true;
         private boolean readsResumed = false;
@@ -1677,7 +1703,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             if (isInCall()) {
                 wakeup = false;
-                dispatch(SameThreadExecutor.INSTANCE, this);
+                state |= FLAG_SHOULD_RESUME_READS;
             } else {
                 delegate.resumeReads();
             }
@@ -1689,20 +1715,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             if (isInCall()) {
                 wakeup = true;
-                dispatch(SameThreadExecutor.INSTANCE, this);
+                state |= FLAG_SHOULD_RESUME_READS;
             } else {
                 delegate.wakeupReads();
-            }
-        }
-
-        @Override
-        public void run() {
-            if (!isFinished()) {
-                if (wakeup) {
-                    delegate.wakeupReads();
-                } else {
-                    delegate.resumeReads();
-                }
             }
         }
 
@@ -1853,7 +1868,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (buffered != null) {
                 return readsResumed;
             }
-            return super.isReadResumed();
+            if(isFinished()) {
+                return false;
+            }
+            return anyAreClear(state, FLAG_SHOULD_RESUME_READS) || super.isReadResumed();
         }
 
         @Override
@@ -1887,6 +1905,16 @@ public final class HttpServerExchange extends AbstractAttachable {
                 return super.read(dst);
             } else {
                 return copied;
+            }
+        }
+
+        public void runResume() {
+            if (isReadResumed()) {
+                if (wakeup) {
+                    delegate.wakeupReads();
+                } else {
+                    delegate.resumeReads();
+                }
             }
         }
     }
