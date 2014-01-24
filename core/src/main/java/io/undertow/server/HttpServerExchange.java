@@ -1871,7 +1871,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             if(isFinished()) {
                 return false;
             }
-            return anyAreClear(state, FLAG_SHOULD_RESUME_READS) || super.isReadResumed();
+            return anyAreSet(state, FLAG_SHOULD_RESUME_READS) || super.isReadResumed();
         }
 
         @Override
