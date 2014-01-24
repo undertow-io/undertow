@@ -55,7 +55,7 @@ public class SavedRequest implements Serializable {
                 int res = 0;
                 InputStream in = exchange.getInputStream();
                 try {
-                    while ((res = in.read(buffer)) > 0) {
+                    while ((res = in.read(buffer, read, buffer.length - read)) > 0) {
                         read += res;
                         if (read == maxSize) {
                             UndertowLogger.REQUEST_LOGGER.debugf("Request to %s was to large to save", exchange.getRequestURI());
