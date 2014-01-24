@@ -497,7 +497,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (contentType == null) {
             return null;
         }
-        return Headers.extractTokenFromHeader(contentType, "charset");
+        return Headers.extractQuotedValueFromHeader(contentType, "charset");
     }
 
     @Override
@@ -737,7 +737,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             } else {
                 String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
                 if (contentType != null) {
-                    String c = Headers.extractTokenFromHeader(contentType, "charset");
+                    String c = Headers.extractQuotedValueFromHeader(contentType, "charset");
                     if (c != null) {
                         try {
                             charSet = Charset.forName(c);
