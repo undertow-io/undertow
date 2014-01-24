@@ -42,7 +42,7 @@ import io.undertow.servlet.util.IteratorEnumeration;
  */
 public class HttpSessionImpl implements HttpSession {
 
-    private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.servlet.spec.UNWRAP_HTTTP_SESSION");
+    private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.servlet.spec.UNWRAP_HTTP_SESSION");
 
     public static final String IO_UNDERTOW = "io.undertow";
     private final Session session;
