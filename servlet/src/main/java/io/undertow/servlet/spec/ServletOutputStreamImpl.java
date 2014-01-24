@@ -600,10 +600,12 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             state |= FLAG_CLOSED;
             state &= ~FLAG_READY;
             if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
-                if (buffer == null) {
-                    servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
-                } else {
-                    servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                if(servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
+                    if (buffer == null) {
+                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
+                    } else {
+                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                    }
                 }
             }
             try {
@@ -647,10 +649,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         state |= FLAG_CLOSED;
         state &= ~FLAG_READY;
         if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
-            if (buffer == null) {
-                servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
-            } else {
-                servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+
+            if(servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
+                if (buffer == null) {
+                    servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
+                } else {
+                    servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                }
             }
         }
         createChannel();
