@@ -161,10 +161,8 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
     private void handleFailedRead(ConduitStreamSourceChannel channel, int res) {
         if (res == 0) {
-            if (!channel.isReadResumed()) {
-                channel.setReadListener(this);
-                channel.resumeReads();
-            }
+            channel.setReadListener(this);
+            channel.resumeReads();
         } else if (res == -1) {
             handleConnectionClose(channel);
         }
