@@ -9,6 +9,7 @@ import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,12 +24,12 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class DetachableStreamSourceChannel implements StreamSourceChannel{
 
-    protected final StreamSourceChannel delegate;
+    protected final ConduitStreamSourceChannel delegate;
 
     protected ChannelListener.SimpleSetter<DetachableStreamSourceChannel> readSetter;
     protected ChannelListener.SimpleSetter<DetachableStreamSourceChannel> closeSetter;
 
-    public DetachableStreamSourceChannel(final StreamSourceChannel delegate) {
+    public DetachableStreamSourceChannel(final ConduitStreamSourceChannel delegate) {
         this.delegate = delegate;
     }
 
@@ -104,7 +105,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
         if (readSetter == null) {
             readSetter = new ChannelListener.SimpleSetter<DetachableStreamSourceChannel>();
             if (!isFinished()) {
-                delegate.getReadSetter().set(ChannelListeners.delegatingChannelListener(this, readSetter));
+                delegate.setReadListener(ChannelListeners.delegatingChannelListener(this, readSetter));
             }
         }
         return readSetter;
@@ -153,7 +154,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
         if (closeSetter == null) {
             closeSetter = new ChannelListener.SimpleSetter<DetachableStreamSourceChannel>();
             if (!isFinished()) {
-                delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
+                delegate.setCloseListener(ChannelListeners.delegatingChannelListener(this, closeSetter));
             }
         }
         return closeSetter;

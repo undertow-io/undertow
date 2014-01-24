@@ -23,6 +23,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.channels.DetachableStreamSinkChannel;
 import io.undertow.channels.DetachableStreamSourceChannel;
+import io.undertow.conduits.EmptyStreamSourceConduit;
 import io.undertow.io.AsyncSenderImpl;
 import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Sender;
@@ -48,7 +49,7 @@ import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.XnioIoThread;
 import org.xnio.channels.Channels;
-import org.xnio.channels.EmptyStreamSourceChannel;
+import org.xnio.channels.Configurable;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.Conduit;
@@ -1016,7 +1017,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return null;
         }
         if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
-            return requestChannel = new ReadDispatchChannel(new EmptyStreamSourceChannel(getIoThread()));
+            return requestChannel = new ReadDispatchChannel(new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(getIoThread())));
         }
         final ConduitWrapper<StreamSourceConduit>[] wrappers = this.requestWrappers;
         final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
@@ -1613,7 +1614,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         private boolean wakeup;
 
-        public WriteDispatchChannel(final StreamSinkChannel delegate) {
+        public WriteDispatchChannel(final ConduitStreamSinkChannel delegate) {
             super(delegate);
         }
 
@@ -1645,12 +1646,6 @@ public final class HttpServerExchange extends AbstractAttachable {
                 state |= FLAG_SHOLD_RESUME_WRITES;
             } else {
                 delegate.wakeupWrites();
-            }
-        }
-
-        public void responseDone() {
-            if (delegate.isWriteResumed()) {
-                delegate.suspendWrites();
             }
         }
 
@@ -1686,7 +1681,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         private boolean readsResumed = false;
 
 
-        public ReadDispatchChannel(final StreamSourceChannel delegate) {
+        public ReadDispatchChannel(final ConduitStreamSourceChannel delegate) {
             super(delegate);
         }
 
@@ -1722,11 +1717,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         public void requestDone() {
-            delegate.getReadSetter().set(null);
-            delegate.getCloseSetter().set(null);
-            if (delegate.isReadResumed()) {
-                delegate.suspendReads();
-            }
+            delegate.setReadListener(null);
+            delegate.setCloseListener(null);
         }
 
         @Override
