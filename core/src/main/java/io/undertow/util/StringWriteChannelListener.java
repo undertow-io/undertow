@@ -62,9 +62,13 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
                 writeDone(channel);
             }
         } catch (IOException e) {
-            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-            IoUtils.safeClose(channel);
+            handleError(channel, e);
         }
+    }
+
+    protected void handleError(StreamSinkChannel channel, IOException e) {
+        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+        IoUtils.safeClose(channel);
     }
 
     @Override
@@ -81,8 +85,7 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
                 writeDone(channel);
             }
         } catch (IOException e) {
-            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-            IoUtils.safeClose(channel);
+            handleError(channel, e);
         }
     }
 
@@ -105,8 +108,7 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
 
             }
         } catch (IOException e) {
-            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-            IoUtils.safeClose(channel);
+            handleError(channel, e);
         }
     }
 }

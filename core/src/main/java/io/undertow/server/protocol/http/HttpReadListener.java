@@ -186,15 +186,22 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         }
     }
 
-    private void sendBadRequestAndClose(final StreamConnection channel, final Exception exception) {
+    private void sendBadRequestAndClose(final StreamConnection connection, final Exception exception) {
         UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(exception);
-        channel.getSourceChannel().suspendReads();
+        connection.getSourceChannel().suspendReads();
         new StringWriteChannelListener(BAD_REQUEST) {
             @Override
             protected void writeDone(final StreamSinkChannel c) {
-                IoUtils.safeClose(channel);
+                super.writeDone(c);
+                c.suspendWrites();
+                IoUtils.safeClose(connection);
             }
-        }.setup(channel.getSinkChannel());
+
+            @Override
+            protected void handleError(StreamSinkChannel channel, IOException e) {
+                IoUtils.safeClose(connection);
+            }
+        }.setup(connection.getSinkChannel());
     }
 
     public void exchangeComplete(final HttpServerExchange exchange) {
