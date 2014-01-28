@@ -271,7 +271,6 @@ public final class Headers {
 
         int end;
         int start = pos + key.length() + 1;
-        boolean quotes = false;
         if (header.charAt(start) == '"') {
             start++;
             for (end = start; end < header.length(); ++end) {

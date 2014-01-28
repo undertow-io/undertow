@@ -57,7 +57,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
             String charset = defaultEncoding;
             String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (contentType != null) {
-                String cs = Headers.extractTokenFromHeader(contentType, "charset");
+                String cs = Headers.extractQuotedValueFromHeader(contentType, "charset");
                 if (cs != null) {
                     charset = cs;
                 }
