@@ -57,12 +57,12 @@ public class SecurityInitialHandler implements HttpHandler {
 
     public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
             final String programaticMechName, final HttpHandler next) {
-        this(authenticationMode, identityManager, programaticMechName, new SecurityContextFactoryImpl(), next);
+        this(authenticationMode, identityManager, programaticMechName, SecurityContextFactoryImpl.INSTANCE, next);
     }
 
     public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
             final HttpHandler next) {
-        this(authenticationMode, identityManager, null, new SecurityContextFactoryImpl(), next);
+        this(authenticationMode, identityManager, null, SecurityContextFactoryImpl.INSTANCE, next);
     }
 
     /**

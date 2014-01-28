@@ -34,6 +34,12 @@ import io.undertow.server.HttpServerExchange;
  */
 public class SecurityContextFactoryImpl implements SecurityContextFactory {
 
+    public static final SecurityContextFactory INSTANCE = new SecurityContextFactoryImpl();
+
+    private SecurityContextFactoryImpl() {
+
+    }
+
     @Override
     public SecurityContext createSecurityContext(final HttpServerExchange exchange, final AuthenticationMode mode,
         final IdentityManager identityManager, final String programmaticMechName) {

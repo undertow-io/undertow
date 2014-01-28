@@ -345,8 +345,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         // TODO - A switch to constraint driven could be configurable, however before we can support that with servlets we would
         // need additional tracking within sessions if a servlet has specifically requested that authentication occurs.
         SecurityContextFactory contextFactory = deploymentInfo.getSecurityContextFactory();
-        if (contextFactory == null)
-            contextFactory = new SecurityContextFactoryImpl();
+        if (contextFactory == null) {
+            contextFactory = SecurityContextFactoryImpl.INSTANCE;
+        }
         current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), mechName,
                 contextFactory, current);
         return current;
