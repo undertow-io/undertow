@@ -104,6 +104,10 @@ public class ManagedServlet implements Lifecycle {
 
 
     public synchronized void start() throws ServletException {
+
+    }
+
+    public void createServlet() throws ServletException {
         if (permanentlyUnavailable) {
             return;
         }

@@ -64,6 +64,7 @@ import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
+import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.SessionRestoringHandler;
 import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;
@@ -93,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.TreeMap;
 
 import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
 import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
@@ -462,6 +464,26 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 object.start();
             }
             HttpHandler root = deployment.getHandler();
+            final TreeMap<Integer, List<ManagedServlet>> loadOnStartup = new TreeMap<Integer, List<ManagedServlet>>();
+            for(Map.Entry<String, ServletHandler> entry: deployment.getServlets().getServletHandlers().entrySet()) {
+                ManagedServlet servlet = entry.getValue().getManagedServlet();
+                Integer loadOnStartupNumber = servlet.getServletInfo().getLoadOnStartup();
+                if(loadOnStartupNumber != null) {
+                    if(loadOnStartupNumber < 0) {
+                        continue;
+                    }
+                    List<ManagedServlet> list = loadOnStartup.get(loadOnStartupNumber);
+                    if(list == null) {
+                        loadOnStartup.put(loadOnStartupNumber, list = new ArrayList<ManagedServlet>());
+                    }
+                    list.add(servlet);
+                }
+            }
+            for(Map.Entry<Integer, List<ManagedServlet>> load : loadOnStartup.entrySet()) {
+                for(ManagedServlet servlet : load.getValue()) {
+                    servlet.createServlet();
+                }
+            }
 
             state = State.STARTED;
             return root;
