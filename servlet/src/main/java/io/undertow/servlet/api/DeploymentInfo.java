@@ -37,6 +37,7 @@ import javax.servlet.descriptor.JspConfigDescriptor;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.NotificationReceiver;
+import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.handlers.resource.ResourceManager;
@@ -86,6 +87,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean ignoreFlush = true;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
     private AuthenticationMechanism jaspiAuthenticationMechanism;
+    private SecurityContextFactory securityContextFactory;
     private String serverName = "Undertow";
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -945,6 +947,14 @@ public class DeploymentInfo implements Cloneable {
         this.jaspiAuthenticationMechanism = jaspiAuthenticationMechanism;
     }
 
+    public SecurityContextFactory getSecurityContextFactory() {
+        return this.securityContextFactory;
+    }
+
+    public void setSecurityContextFactory(final SecurityContextFactory securityContextFactory) {
+        this.securityContextFactory = securityContextFactory;
+    }
+
     public String getServerName() {
         return serverName;
     }
@@ -1019,6 +1029,7 @@ public class DeploymentInfo implements Cloneable {
         info.authenticationMechanisms.putAll(authenticationMechanisms);
         info.servletExtensions.addAll(servletExtensions);
         info.jaspiAuthenticationMechanism = jaspiAuthenticationMechanism;
+        info.securityContextFactory = securityContextFactory;
         info.serverName = serverName;
         return info;
     }

@@ -23,6 +23,7 @@ import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
+import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
 import io.undertow.security.handlers.NotificationReceiverHandler;
@@ -31,6 +32,7 @@ import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.security.impl.DigestAuthenticationMechanism;
+import io.undertow.security.impl.SecurityContextFactoryImpl;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
@@ -342,7 +344,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         // TODO - A switch to constraint driven could be configurable, however before we can support that with servlets we would
         // need additional tracking within sessions if a servlet has specifically requested that authentication occurs.
-        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), mechName, current);
+        SecurityContextFactory contextFactory = deploymentInfo.getSecurityContextFactory();
+        if (contextFactory == null)
+            contextFactory = new SecurityContextFactoryImpl();
+        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), mechName,
+                contextFactory, current);
         return current;
     }
 

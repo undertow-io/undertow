@@ -396,7 +396,16 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (sc.isAuthenticated()) {
             throw UndertowServletMessages.MESSAGES.userAlreadyLoggedIn();
         }
-        if (!sc.login(username, password)) {
+        boolean login = false;
+        try {
+            login = sc.login(username, password);
+        }
+        catch (SecurityException se) {
+            if (se.getCause() instanceof ServletException)
+                throw (ServletException) se.getCause();
+            throw new ServletException(se);
+        }
+        if (!login) {
             throw UndertowServletMessages.MESSAGES.loginFailed();
         }
     }

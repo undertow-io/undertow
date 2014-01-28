@@ -18,8 +18,10 @@
 package io.undertow.security.handlers;
 
 import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.security.impl.SecurityContextImpl;
+import io.undertow.security.impl.SecurityContextFactoryImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
@@ -42,18 +44,25 @@ public class SecurityInitialHandler implements HttpHandler {
     private final IdentityManager identityManager;
     private final HttpHandler next;
     private final String programaticMechName;
+    private final SecurityContextFactory contextFactory;
 
     public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
-            final String programaticMechName, final HttpHandler next) {
+            final String programaticMechName, final SecurityContextFactory contextFactory, final HttpHandler next) {
         this.authenticationMode = authenticationMode;
         this.identityManager = identityManager;
         this.programaticMechName = programaticMechName;
+        this.contextFactory = contextFactory;
         this.next = next;
     }
 
     public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
+            final String programaticMechName, final HttpHandler next) {
+        this(authenticationMode, identityManager, programaticMechName, new SecurityContextFactoryImpl(), next);
+    }
+
+    public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
             final HttpHandler next) {
-        this(authenticationMode, identityManager, null, next);
+        this(authenticationMode, identityManager, null, new SecurityContextFactoryImpl(), next);
     }
 
     /**
@@ -61,10 +70,8 @@ public class SecurityInitialHandler implements HttpHandler {
      */
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        SecurityContextImpl newContext = new SecurityContextImpl(exchange, authenticationMode, identityManager);
-        if (programaticMechName != null) {
-            newContext.setProgramaticMechName(programaticMechName);
-        }
+        SecurityContext newContext = this.contextFactory.createSecurityContext(exchange, authenticationMode, identityManager,
+                programaticMechName);
         exchange.setSecurityContext(newContext);
         next.handleRequest(exchange);
     }
