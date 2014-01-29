@@ -45,6 +45,7 @@ import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.DefaultAuthorizationManager;
 import io.undertow.servlet.core.InMemorySessionManagerFactory;
+import io.undertow.servlet.core.MetricsChainHandler;
 import io.undertow.servlet.util.DefaultClassIntrospector;
 import io.undertow.util.ImmediateAuthenticationMechanismFactory;
 
@@ -89,6 +90,7 @@ public class DeploymentInfo implements Cloneable {
     private AuthenticationMechanism jaspiAuthenticationMechanism;
     private SecurityContextFactory securityContextFactory;
     private String serverName = "Undertow";
+    private MetricsCollector metricsCollector = null;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -285,14 +287,14 @@ public class DeploymentInfo implements Cloneable {
 
     public DeploymentInfo addServlets(final ServletInfo... servlets) {
         for (final ServletInfo servlet : servlets) {
-            this.servlets.put(servlet.getName(), servlet);
+            addServlet(servlet);
         }
         return this;
     }
 
     public DeploymentInfo addServlets(final Collection<ServletInfo> servlets) {
         for (final ServletInfo servlet : servlets) {
-            this.servlets.put(servlet.getName(), servlet);
+            addServlet(servlet);
         }
         return this;
     }
@@ -309,14 +311,14 @@ public class DeploymentInfo implements Cloneable {
 
     public DeploymentInfo addFilters(final FilterInfo... filters) {
         for (final FilterInfo filter : filters) {
-            this.filters.put(filter.getName(), filter);
+            addFilter(filter);
         }
         return this;
     }
 
     public DeploymentInfo addFilters(final Collection<FilterInfo> filters) {
         for (final FilterInfo filter : filters) {
-            this.filters.put(filter.getName(), filter);
+            addFilter(filter);
         }
         return this;
     }
@@ -964,6 +966,16 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public DeploymentInfo registerMetricsCollector(MetricsCollector metricsCollector){
+        this.metricsCollector = metricsCollector;
+        addOuterHandlerChainWrapper(MetricsChainHandler.WRAPPER);
+        return this;
+    }
+
+    public MetricsCollector getMetricsCollector() {
+        return metricsCollector;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1031,6 +1043,7 @@ public class DeploymentInfo implements Cloneable {
         info.jaspiAuthenticationMechanism = jaspiAuthenticationMechanism;
         info.securityContextFactory = securityContextFactory;
         info.serverName = serverName;
+        info.metricsCollector = metricsCollector;
         return info;
     }
 
