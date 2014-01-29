@@ -17,7 +17,11 @@ class PathMatchPredicate implements Predicate {
     public PathMatchPredicate(final String... paths) {
         PathMatcher<Boolean> matcher = new PathMatcher<Boolean>();
         for(String path : paths) {
-            matcher.addExactPath(path, Boolean.TRUE);
+            if(!path.startsWith("/")) {
+                matcher.addExactPath("/" + path, Boolean.TRUE);
+            } else {
+                matcher.addExactPath(path, Boolean.TRUE);
+            }
         }
         this.pathMatcher = matcher;
     }
