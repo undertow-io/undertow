@@ -14,7 +14,6 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.defaultservlet.DefaultServletTestCase;
 import io.undertow.servlet.test.defaultservlet.HelloFilter;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
-import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
@@ -48,7 +47,7 @@ public class ServletMetricsHandlerTestCase {
                 .setDeploymentName("servletContext.war")
                 .setResourceManager(new TestResourceLoader(DefaultServletTestCase.class));
 
-        builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
+        builder.addServlet(new ServletInfo("MetricTestServlet", MetricTestServlet.class)
                 .addMapping("/path/default"));
 
         builder.addFilter(new FilterInfo("Filter", HelloFilter.class));
@@ -70,9 +69,9 @@ public class ServletMetricsHandlerTestCase {
         try {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            Assert.assertTrue(HttpClientUtils.readResponse(result).contains("pathInfo"));
+            Assert.assertTrue(HttpClientUtils.readResponse(result).contains("metric"));
 
-            MetricsHandler.MetricResult metrics = metricsCollector.getMetrics("DefaultTestServlet");
+            MetricsHandler.MetricResult metrics = metricsCollector.getMetrics("MetricTestServlet");
             Assert.assertEquals(1, metrics.getTotalRequests());
             Assert.assertTrue(metrics.getMaxRequestTime() > 0);
             Assert.assertEquals(metrics.getMinRequestTime(), metrics.getMaxRequestTime());
@@ -81,10 +80,10 @@ public class ServletMetricsHandlerTestCase {
 
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            Assert.assertTrue(HttpClientUtils.readResponse(result).contains("pathInfo"));
+            Assert.assertTrue(HttpClientUtils.readResponse(result).contains("metric"));
 
 
-            metrics = metricsCollector.getMetrics("DefaultTestServlet");
+            metrics = metricsCollector.getMetrics("MetricTestServlet");
             Assert.assertEquals(2, metrics.getTotalRequests());
 
         } finally {
