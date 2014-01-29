@@ -59,7 +59,6 @@ public class ServletInfo implements Cloneable {
     private Executor executor;
     private boolean requireWelcomeFileMapping;
 
-
     public ServletInfo(final String name, final Class<? extends Servlet> servletClass) {
         if (name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("name");
