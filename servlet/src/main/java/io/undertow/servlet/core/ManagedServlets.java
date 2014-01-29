@@ -30,6 +30,7 @@ public class ManagedServlets {
         managedServletMap.put(servletInfo.getName(), servletHandler);
         deployment.addLifecycleObjects(managedServlet);
         this.servletPaths.invalidate();
+
         return servletHandler;
     }
 
