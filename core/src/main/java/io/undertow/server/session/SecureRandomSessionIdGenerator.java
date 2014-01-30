@@ -40,7 +40,7 @@ public class SecureRandomSessionIdGenerator implements SessionIdGenerator {
 
     @Override
     public String createSessionId() {
-        final byte[] bytes = new byte[18];
+        final byte[] bytes = new byte[length];
         random.nextBytes(bytes);
         return new String(encode(bytes));
     }
