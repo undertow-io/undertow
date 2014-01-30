@@ -53,6 +53,7 @@ import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.api.MetricsCollector;
 import io.undertow.servlet.api.MimeMapping;
 import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.SecurityInfo.EmptyRoleSemantic;
@@ -194,6 +195,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
             HttpHandler outerHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
             wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, outerHandlers, wrappedHandlers);
             wrappedHandlers = handleDevelopmentModePersistentSessions(wrappedHandlers, deploymentInfo, deployment.getSessionManager(), servletContext);
+
+            MetricsCollector metrics = deploymentInfo.getMetricsCollector();
+            if(metrics != null) {
+                wrappedHandlers = new MetricsChainHandler(wrappedHandlers, metrics, deployment);
+            }
 
             final ServletInitialHandler servletInitialHandler = new ServletInitialHandler(deployment.getServletPaths(), wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
 

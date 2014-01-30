@@ -45,7 +45,6 @@ import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.DefaultAuthorizationManager;
 import io.undertow.servlet.core.InMemorySessionManagerFactory;
-import io.undertow.servlet.core.MetricsChainHandler;
 import io.undertow.servlet.util.DefaultClassIntrospector;
 import io.undertow.util.ImmediateAuthenticationMechanismFactory;
 
@@ -966,9 +965,8 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public DeploymentInfo registerMetricsCollector(MetricsCollector metricsCollector){
+    public DeploymentInfo setMetricsCollector(MetricsCollector metricsCollector){
         this.metricsCollector = metricsCollector;
-        addOuterHandlerChainWrapper(MetricsChainHandler.WRAPPER);
         return this;
     }
 

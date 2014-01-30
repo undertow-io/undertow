@@ -52,7 +52,7 @@ public class ServletMetricsHandlerTestCase {
 
         builder.addFilter(new FilterInfo("Filter", HelloFilter.class));
         builder.addFilterUrlMapping("Filter", "/filterpath/*", DispatcherType.REQUEST);
-        builder.registerMetricsCollector(metricsCollector);
+        builder.setMetricsCollector(metricsCollector);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
