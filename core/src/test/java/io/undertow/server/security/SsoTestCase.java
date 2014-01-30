@@ -15,9 +15,9 @@ import io.undertow.security.impl.InMemorySingleSignOnManager;
 import io.undertow.security.impl.SingleSignOnAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.session.CookieSessionConfig;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -82,7 +82,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         path.addPrefixPath("/test2", current);
 
 
-        DefaultServer.setRootHandler(new SessionAttachmentHandler(path, new InMemorySessionManager(""), new SessionCookieConfig()));
+        DefaultServer.setRootHandler(new SessionAttachmentHandler(path, new InMemorySessionManager(""), new CookieSessionConfig()));
     }
 
     @Override

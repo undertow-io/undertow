@@ -69,6 +69,7 @@ public class DeploymentInfo implements Cloneable {
     private JspConfigDescriptor jspConfigDescriptor;
     private DefaultServletConfig defaultServletConfig;
     private SessionManagerFactory sessionManagerFactory = new InMemorySessionManagerFactory();
+    private SessionIdentifierCodecFactory sessionIdentifierCodecFactory;
     private LoginConfig loginConfig;
     private IdentityManager identityManager;
     private ConfidentialPortManager confidentialPortManager;
@@ -600,6 +601,15 @@ public class DeploymentInfo implements Cloneable {
 
     public DeploymentInfo setSessionManagerFactory(final SessionManagerFactory sessionManagerFactory) {
         this.sessionManagerFactory = sessionManagerFactory;
+        return this;
+    }
+
+    public SessionIdentifierCodecFactory getSessionIdentifierCodecFactory() {
+        return sessionIdentifierCodecFactory;
+    }
+
+    public DeploymentInfo setSessionIdentifierCodecFactory(final SessionIdentifierCodecFactory sessionIdentifierCodecFactory) {
+        this.sessionIdentifierCodecFactory = sessionIdentifierCodecFactory;
         return this;
     }
 

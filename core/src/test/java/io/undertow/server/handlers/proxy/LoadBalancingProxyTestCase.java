@@ -22,14 +22,16 @@ import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.session.CookieSessionConfig;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
+import io.undertow.server.session.SessionConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -61,7 +63,7 @@ public class LoadBalancingProxyTestCase {
     @BeforeClass
     public static void setup() throws URISyntaxException {
 
-        final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+        final CookieSessionConfig sessionConfig = new CookieSessionConfig();
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addListener(port + 1, DefaultServer.getHostAddress("default"))
@@ -158,9 +160,9 @@ public class LoadBalancingProxyTestCase {
 
     private static final class SessionTestHandler implements HttpHandler {
 
-        private final SessionCookieConfig sessionConfig;
+        private final SessionConfig sessionConfig;
 
-        private SessionTestHandler(SessionCookieConfig sessionConfig) {
+        private SessionTestHandler(SessionConfig sessionConfig) {
             this.sessionConfig = sessionConfig;
         }
 

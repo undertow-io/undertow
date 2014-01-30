@@ -63,6 +63,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.ServletSessionConfig;
 import io.undertow.servlet.api.ServletStackTraces;
+import io.undertow.servlet.api.SessionIdentifierCodecFactory;
 import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
@@ -79,13 +80,14 @@ import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler;
 import io.undertow.servlet.predicate.DispatcherTypePredicate;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.servlet.spec.SessionCookieConfigImpl;
 import io.undertow.util.MimeMappings;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
+
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -151,6 +153,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
         deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
+
+        SessionIdentifierCodecFactory codecFactory = deploymentInfo.getSessionIdentifierCodecFactory();
+        if (codecFactory != null) {
+            deployment.setSessionIdentifierCodec(codecFactory.createSessionIdentifierCodec(deployment));
+        }
 
         final List<ThreadSetupAction> setup = new ArrayList<ThreadSetupAction>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
@@ -530,7 +537,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     public void handleDeploymentSessionConfig(DeploymentInfo deploymentInfo, ServletContextImpl servletContext) {
-        SessionCookieConfigImpl sessionCookieConfig = servletContext.getSessionCookieConfig();
+        SessionCookieConfig sessionCookieConfig = servletContext.getSessionCookieConfig();
         ServletSessionConfig sc = deploymentInfo.getServletSessionConfig();
         if (sc != null) {
             sessionCookieConfig.setName(sc.getName());

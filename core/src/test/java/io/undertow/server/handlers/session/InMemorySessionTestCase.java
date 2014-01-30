@@ -22,19 +22,22 @@ import java.io.IOException;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.session.CookieSessionConfig;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.HttpString;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCookieStore;
+
 import io.undertow.testutils.TestHttpClient;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,7 +57,7 @@ public class InMemorySessionTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setCookieStore(new BasicCookieStore());
         try {
-            final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+            final CookieSessionConfig sessionConfig = new CookieSessionConfig();
             final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), sessionConfig);
             handler.setNext(new HttpHandler() {
                 @Override
@@ -110,7 +113,7 @@ public class InMemorySessionTestCase {
         client2.setCookieStore(new BasicCookieStore());
 
         try {
-            final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+            final CookieSessionConfig sessionConfig = new CookieSessionConfig();
             final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager("", 1), sessionConfig);
             handler.setNext(new HttpHandler() {
                 @Override

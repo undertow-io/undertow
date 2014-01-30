@@ -18,11 +18,6 @@
 
 package io.undertow.server.session;
 
-import java.util.Map;
-
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
 
 /**
  * Encapsulation of session cookie configuration. This removes the need for the session manager to
@@ -30,7 +25,7 @@ import io.undertow.server.handlers.CookieImpl;
  *
  * @author Stuart Douglas
  */
-public class SessionCookieConfig implements SessionConfig {
+public class SessionCookieConfig {
 
     public static final String DEFAULT_SESSION_ID = "JSESSIONID";
 
@@ -42,56 +37,6 @@ public class SessionCookieConfig implements SessionConfig {
     private boolean httpOnly;
     private int maxAge;
     private String comment;
-
-
-    @Override
-    public String rewriteUrl(final String originalUrl, final String sessionId) {
-        return originalUrl;
-    }
-
-    @Override
-    public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
-        Cookie cookie = new CookieImpl(cookieName, sessionId)
-                .setPath(path)
-                .setDomain(domain)
-                .setDiscard(discard)
-                .setSecure(secure)
-                .setHttpOnly(httpOnly)
-                .setComment(comment);
-        if (maxAge > 0) {
-            cookie.setMaxAge(maxAge);
-        }
-        exchange.setResponseCookie(cookie);
-    }
-
-    @Override
-    public void clearSession(final HttpServerExchange exchange, final String sessionId) {
-        Cookie cookie = new CookieImpl(cookieName, sessionId)
-                .setPath(path)
-                .setDomain(domain)
-                .setDiscard(discard)
-                .setSecure(secure)
-                .setHttpOnly(httpOnly)
-                .setMaxAge(0);
-        exchange.setResponseCookie(cookie);
-    }
-
-    @Override
-    public String findSessionId(final HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = exchange.getRequestCookies();
-        if (cookies != null) {
-            Cookie sessionId = cookies.get(cookieName);
-            if (sessionId != null) {
-                return sessionId.getValue();
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public SessionCookieSource sessionCookieSource(HttpServerExchange exchange) {
-        return findSessionId(exchange) != null ? SessionCookieSource.COOKIE : SessionCookieSource.NONE;
-    }
 
     public String getCookieName() {
         return cookieName;

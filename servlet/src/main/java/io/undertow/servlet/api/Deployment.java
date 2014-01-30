@@ -71,6 +71,8 @@ public interface Deployment {
      */
     SessionManager getSessionManager();
 
+    SessionIdentifierCodec getSessionIdentifierCodec();
+
     /**
      *
      * @return The executor used for servlet requests. May be null in which case the XNIO worker is used
