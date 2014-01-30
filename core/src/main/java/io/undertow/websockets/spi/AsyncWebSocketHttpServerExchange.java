@@ -3,6 +3,8 @@ package io.undertow.websockets.spi;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
@@ -20,6 +22,7 @@ import org.xnio.channels.StreamSourceChannel;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
@@ -225,5 +228,31 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
             params.put(param.getKey(), new ArrayList<String>(param.getValue()));
         }
         return params;
+    }
+
+    @Override
+    public Principal getUserPrincipal() {
+        SecurityContext sc = exchange.getSecurityContext();
+        if(sc == null) {
+            return null;
+        }
+        Account authenticatedAccount = sc.getAuthenticatedAccount();
+        if(authenticatedAccount == null) {
+            return null;
+        }
+        return authenticatedAccount.getPrincipal();
+    }
+
+    @Override
+    public boolean isUserInRole(String role) {
+        SecurityContext sc = exchange.getSecurityContext();
+        if(sc == null) {
+            return false;
+        }
+        Account authenticatedAccount = sc.getAuthenticatedAccount();
+        if(authenticatedAccount == null) {
+            return false;
+        }
+        return authenticatedAccount.getRoles().contains(role);
     }
 }

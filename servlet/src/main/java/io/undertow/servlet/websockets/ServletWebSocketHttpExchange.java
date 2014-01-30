@@ -36,6 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -207,5 +208,15 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
             params.put(param.getKey(), new ArrayList<String>(Arrays.asList(param.getValue())));
         }
         return params;
+    }
+
+    @Override
+    public Principal getUserPrincipal() {
+        return request.getUserPrincipal();
+    }
+
+    @Override
+    public boolean isUserInRole(String role) {
+        return request.isUserInRole(role);
     }
 }

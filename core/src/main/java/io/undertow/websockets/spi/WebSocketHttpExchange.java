@@ -7,6 +7,7 @@ import org.xnio.Pool;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -133,4 +134,8 @@ public interface WebSocketHttpExchange extends Closeable {
     Object getSession();
 
     Map<String,List<String>> getRequestParameters();
+
+    Principal getUserPrincipal();
+
+    boolean isUserInRole(String role);
 }

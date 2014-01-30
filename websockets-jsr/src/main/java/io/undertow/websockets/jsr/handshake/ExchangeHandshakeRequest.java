@@ -19,7 +19,6 @@ package io.undertow.websockets.jsr.handshake;
 
 import java.net.URI;
 import java.security.Principal;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +51,7 @@ public final class ExchangeHandshakeRequest implements HandshakeRequest {
 
     @Override
     public Principal getUserPrincipal() {
-        return null;
+        return exchange.getUserPrincipal();
     }
 
     @Override
@@ -62,7 +61,7 @@ public final class ExchangeHandshakeRequest implements HandshakeRequest {
 
     @Override
     public boolean isUserInRole(String role) {
-        return false;
+        return exchange.isUserInRole(role);
     }
 
     @Override
@@ -72,7 +71,7 @@ public final class ExchangeHandshakeRequest implements HandshakeRequest {
 
     @Override
     public Map<String, List<String>> getParameterMap() {
-        return Collections.emptyMap();
+        return exchange.getRequestParameters();
     }
 
     @Override
