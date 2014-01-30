@@ -35,6 +35,7 @@ import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
+import io.undertow.servlet.api.SessionIdentifierCodec;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
@@ -67,6 +68,7 @@ public class DeploymentImpl implements Deployment {
     private volatile ErrorPages errorPages;
     private volatile Map<String, String> mimeExtensionMappings;
     private volatile SessionManager sessionManager;
+    private volatile SessionIdentifierCodec sessionIdentifierCodec;
     private volatile Charset defaultCharset;
     private volatile List<AuthenticationMechanism> authenticationMechanisms;
 
@@ -141,6 +143,10 @@ public class DeploymentImpl implements Deployment {
         this.sessionManager = sessionManager;
     }
 
+    void setSessionIdentifierCodec(final SessionIdentifierCodec sessionIdentifierCodec) {
+        this.sessionIdentifierCodec = sessionIdentifierCodec;
+    }
+
     public List<Lifecycle> getLifecycleObjects() {
         return Collections.unmodifiableList(lifecycleObjects);
     }
@@ -183,6 +189,11 @@ public class DeploymentImpl implements Deployment {
     @Override
     public SessionManager getSessionManager() {
         return sessionManager;
+    }
+
+    @Override
+    public SessionIdentifierCodec getSessionIdentifierCodec() {
+        return sessionIdentifierCodec;
     }
 
     @Override

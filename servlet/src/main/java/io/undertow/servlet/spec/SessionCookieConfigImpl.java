@@ -18,180 +18,111 @@
 
 package io.undertow.servlet.spec;
 
-import java.util.Map;
-
-import javax.servlet.SessionCookieConfig;
-
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
-import io.undertow.server.session.SessionConfig;
+import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.servlet.UndertowServletMessages;
 
 /**
- * @author Stuart Douglas
+ * Adapts a {@link SessionCookieConfig} to a {@link javax.servlet.SessionCookieConfig}.
+ * @author Paul Ferraro
  */
-public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConfig {
+public class SessionCookieConfigImpl implements javax.servlet.SessionCookieConfig {
 
-    public static final String DEFAULT_SESSION_ID = "JSESSIONID";
+    private final SessionCookieConfig config;
+    private final ServletContextImpl context;
 
-    private final ServletContextImpl servletContext;
-    private String name = DEFAULT_SESSION_ID;
-    private String path = "/";
-    private String domain;
-    private boolean secure;
-    private boolean httpOnly;
-    private int maxAge;
-    private String comment;
-    private SessionConfig fallback;
-
-    public SessionCookieConfigImpl(final ServletContextImpl servletContext) {
-        this.servletContext = servletContext;
+    public SessionCookieConfigImpl(SessionCookieConfig config, ServletContextImpl context) {
+        this.config = config;
+        this.context = context;
     }
 
     @Override
-    public String rewriteUrl(final String originalUrl, final String sessionid) {
-        return originalUrl;
+    public void setName(String name) {
+        if (this.context.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
+        this.config.setCookieName(name);
     }
 
     @Override
-    public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
-        Cookie cookie = new CookieImpl(name, sessionId)
-                .setPath(path)
-                .setDomain(domain)
-                .setSecure(secure)
-                .setHttpOnly(httpOnly)
-                .setComment(comment);
-        if (maxAge > 0) {
-            cookie.setMaxAge(maxAge);
-        }
-        exchange.setResponseCookie(cookie);
-    }
-
-    @Override
-    public void clearSession(final HttpServerExchange exchange, final String sessionId) {
-        Cookie cookie = new CookieImpl(name, sessionId)
-                .setPath(path)
-                .setDomain(domain)
-                .setSecure(secure)
-                .setHttpOnly(httpOnly)
-                .setMaxAge(0);
-        exchange.setResponseCookie(cookie);
-    }
-
-    @Override
-    public String findSessionId(final HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = exchange.getRequestCookies();
-        if (cookies != null) {
-            Cookie sessionId = cookies.get(name);
-            if (sessionId != null) {
-                return sessionId.getValue();
-            }
-        }
-        if(fallback != null) {
-            return fallback.findSessionId(exchange);
-        }
-        return null;
-    }
-
-    @Override
-    public SessionCookieSource sessionCookieSource(HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = exchange.getRequestCookies();
-        if (cookies != null) {
-            Cookie sessionId = cookies.get(name);
-            if (sessionId != null) {
-                return SessionCookieSource.COOKIE;
-            }
-        }
-        if(fallback != null) {
-            String id =  fallback.findSessionId(exchange);
-            return id != null ? fallback.sessionCookieSource(exchange) : SessionCookieSource.NONE;
-        }
-        return SessionCookieSource.NONE;
-    }
-
     public String getName() {
-        return name;
+        return this.config.getCookieName();
     }
 
-    public void setName(final String name) {
-        if(servletContext.isInitialized()) {
+    @Override
+    public void setDomain(String domain) {
+        if (this.context.isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
-        this.name = name;
+        this.config.setDomain(domain);
     }
 
+    @Override
     public String getDomain() {
-        return domain;
+        return this.config.getDomain();
     }
 
-    public void setDomain(final String domain) {
-        if(servletContext.isInitialized()) {
+    @Override
+    public void setPath(String path) {
+        if (this.context.isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
-        this.domain = domain;
+        this.config.setPath(path);
     }
 
+    @Override
     public String getPath() {
-        return path;
+        return this.config.getPath();
     }
 
-    public void setPath(final String path) {
-        if(servletContext.isInitialized()) {
+    @Override
+    public void setComment(String comment) {
+        if (this.context.isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
-        this.path = path;
+        this.config.setComment(comment);
     }
 
+    @Override
     public String getComment() {
-        return comment;
+        return this.config.getComment();
     }
 
-    public void setComment(final String comment) {
-        if(servletContext.isInitialized()) {
+    @Override
+    public void setHttpOnly(boolean httpOnly) {
+        if (this.context.isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
-        this.comment = comment;
+        this.config.setHttpOnly(httpOnly);
     }
 
+    @Override
     public boolean isHttpOnly() {
-        return httpOnly;
+        return this.config.isHttpOnly();
     }
 
-    public void setHttpOnly(final boolean httpOnly) {
-        if(servletContext.isInitialized()) {
+    @Override
+    public void setSecure(boolean secure) {
+        if (this.context.isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
-        this.httpOnly = httpOnly;
+        this.config.setSecure(secure);
     }
 
+    @Override
     public boolean isSecure() {
-        return secure;
+        return this.config.isSecure();
     }
 
-    public void setSecure(final boolean secure) {
-        if(servletContext.isInitialized()) {
+    @Override
+    public void setMaxAge(int maxAge) {
+        if (this.context.isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
-        this.secure = secure;
+        this.config.setMaxAge(maxAge);
     }
 
+    @Override
     public int getMaxAge() {
-        return maxAge;
-    }
-
-    public void setMaxAge(final int maxAge) {
-        if(servletContext.isInitialized()) {
-            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
-        }
-        this.maxAge = maxAge;
-    }
-
-    public SessionConfig getFallback() {
-        return fallback;
-    }
-
-    public void setFallback(final SessionConfig fallback) {
-        this.fallback = fallback;
+        return this.config.getMaxAge();
     }
 }

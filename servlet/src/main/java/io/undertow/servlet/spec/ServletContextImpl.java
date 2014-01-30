@@ -60,9 +60,11 @@ import javax.servlet.descriptor.JspConfigDescriptor;
 import io.undertow.Version;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.Resource;
+import io.undertow.server.session.CookieSessionConfig;
 import io.undertow.server.session.PathParameterSessionConfig;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
+import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.server.session.SslSessionConfig;
 import io.undertow.servlet.UndertowServletLogger;
@@ -78,15 +80,16 @@ import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
+import io.undertow.servlet.api.SessionIdentifierCodec;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.core.ApplicationListeners;
+import io.undertow.servlet.core.CodecSessionConfig;
 import io.undertow.servlet.core.ManagedListener;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
-
 import static io.undertow.servlet.core.ApplicationListeners.ListenerState.NO_LISTENER;
 import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRAMATIC_LISTENER;
 
@@ -99,7 +102,8 @@ public class ServletContextImpl implements ServletContext {
     private final Deployment deployment;
     private DeploymentInfo deploymentInfo;
     private final ConcurrentMap<String, Object> attributes;
-    private final SessionCookieConfigImpl sessionCookieConfig;
+    private final SessionCookieConfig cookieConfig;
+    private final javax.servlet.SessionCookieConfig sessionCookieConfig;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
     private volatile Set<SessionTrackingMode> sessionTrackingModes = new HashSet<SessionTrackingMode>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
     private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = new HashSet<SessionTrackingMode>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
@@ -111,8 +115,9 @@ public class ServletContextImpl implements ServletContext {
         this.servletContainer = servletContainer;
         this.deployment = deployment;
         this.deploymentInfo = deployment.getDeploymentInfo();
-        sessionCookieConfig = new SessionCookieConfigImpl(this);
-        sessionCookieConfig.setPath(deploymentInfo.getContextPath());
+        this.cookieConfig = new SessionCookieConfig();
+        this.cookieConfig.setPath(deploymentInfo.getContextPath());
+        this.sessionCookieConfig = new SessionCookieConfigImpl(this.cookieConfig, this);
         if (deploymentInfo.getServletContextAttributeBackingMap() == null) {
             this.attributes = new ConcurrentHashMap<String, Object>();
         } else {
@@ -123,24 +128,22 @@ public class ServletContextImpl implements ServletContext {
 
     public void initDone() {
         initialized = true;
-        Set<SessionTrackingMode> trackingMethods = sessionTrackingModes;
-        if (trackingMethods == null || trackingMethods.isEmpty()) {
-            sessionConfig = sessionCookieConfig;
-        } else {
-
-            if (sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
-                sessionConfig = new SslSessionConfig(sessionCookieConfig);
-            } else {
-                if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE) && sessionTrackingModes.contains(SessionTrackingMode.URL)) {
-                    sessionConfig = sessionCookieConfig;
-                    sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH)));
-                } else if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE)) {
-                    sessionConfig = sessionCookieConfig;
-                } else if (sessionTrackingModes.contains(SessionTrackingMode.URL)) {
-                    sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH));
-                }
-            }
+        Set<SessionTrackingMode> modes = this.sessionTrackingModes;
+        SessionConfig config = null;
+        if (modes.contains(SessionTrackingMode.URL)) {
+            config = new PathParameterSessionConfig(this.cookieConfig.getCookieName().toLowerCase(Locale.ENGLISH));
         }
+        if (modes.contains(SessionTrackingMode.COOKIE)) {
+            config = new CookieSessionConfig(this.cookieConfig, config);
+        }
+        if (modes.contains(SessionTrackingMode.SSL)) {
+            config = new SslSessionConfig(config);
+        }
+        if (config == null) { // Is this ever the case?
+            config = new CookieSessionConfig(this.cookieConfig);
+        }
+        SessionIdentifierCodec codec = this.deployment.getSessionIdentifierCodec();
+        this.sessionConfig = (codec != null) ? new CodecSessionConfig(config, codec) : config;
     }
 
     @Override
@@ -544,7 +547,7 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public SessionCookieConfigImpl getSessionCookieConfig() {
+    public javax.servlet.SessionCookieConfig getSessionCookieConfig() {
         ensureNotProgramaticListener();
         return sessionCookieConfig;
     }
