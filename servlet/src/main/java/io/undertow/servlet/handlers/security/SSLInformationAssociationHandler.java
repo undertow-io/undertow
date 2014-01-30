@@ -36,7 +36,7 @@ public class SSLInformationAssociationHandler implements HttpHandler {
      * @param cipherSuite String name of the TLS cipher suite.
      * @return int indicating the effective key entropy bit-length.
      */
-    public static int getKeyLenght(String cipherSuite) {
+    public static int getKeyLength(String cipherSuite) {
         // Roughly ordered from most common to least common.
         if (cipherSuite == null) {
             return 0;
@@ -102,7 +102,7 @@ public class SSLInformationAssociationHandler implements HttpHandler {
         SSLSessionInfo ssl = exchange.getConnection().getSslSessionInfo();
         if (ssl != null) {
             request.setAttribute("javax.servlet.request.cipher_suite", ssl.getCipherSuite());
-            request.setAttribute("javax.servlet.request.key_size", getKeyLenght(ssl.getCipherSuite()));
+            request.setAttribute("javax.servlet.request.key_size", getKeyLength(ssl.getCipherSuite()));
             request.setAttribute("javax.servlet.request.ssl_session_id", ssl.getSessionId());
             X509Certificate[] certs = getCerts(ssl);
             if (certs != null) {
