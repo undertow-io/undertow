@@ -78,6 +78,7 @@ import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
+import io.undertow.servlet.api.SessionConfigWrapper;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.ManagedListener;
@@ -124,23 +125,23 @@ public class ServletContextImpl implements ServletContext {
     public void initDone() {
         initialized = true;
         Set<SessionTrackingMode> trackingMethods = sessionTrackingModes;
-        if (trackingMethods == null || trackingMethods.isEmpty()) {
-            sessionConfig = sessionCookieConfig;
-        } else {
-
+        SessionConfig sessionConfig = sessionCookieConfig;
+        if (trackingMethods != null && !trackingMethods.isEmpty()) {
             if (sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
                 sessionConfig = new SslSessionConfig(sessionCookieConfig);
             } else {
                 if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE) && sessionTrackingModes.contains(SessionTrackingMode.URL)) {
-                    sessionConfig = sessionCookieConfig;
                     sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH)));
-                } else if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE)) {
-                    sessionConfig = sessionCookieConfig;
                 } else if (sessionTrackingModes.contains(SessionTrackingMode.URL)) {
                     sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH));
                 }
             }
         }
+        SessionConfigWrapper wrapper = deploymentInfo.getSessionConfigWrapper();
+        if(wrapper != null) {
+            sessionConfig = wrapper.wrap(sessionConfig, deployment);
+        }
+        this.sessionConfig = sessionConfig;
     }
 
     @Override

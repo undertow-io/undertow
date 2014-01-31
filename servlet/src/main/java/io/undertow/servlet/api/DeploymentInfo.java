@@ -90,6 +90,7 @@ public class DeploymentInfo implements Cloneable {
     private SecurityContextFactory securityContextFactory;
     private String serverName = "Undertow";
     private MetricsCollector metricsCollector = null;
+    private SessionConfigWrapper sessionConfigWrapper = null;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -974,6 +975,15 @@ public class DeploymentInfo implements Cloneable {
         return metricsCollector;
     }
 
+    public SessionConfigWrapper getSessionConfigWrapper() {
+        return sessionConfigWrapper;
+    }
+
+    public DeploymentInfo setSessionConfigWrapper(SessionConfigWrapper sessionConfigWrapper) {
+        this.sessionConfigWrapper = sessionConfigWrapper;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1042,6 +1052,7 @@ public class DeploymentInfo implements Cloneable {
         info.securityContextFactory = securityContextFactory;
         info.serverName = serverName;
         info.metricsCollector = metricsCollector;
+        info.sessionConfigWrapper = sessionConfigWrapper;
         return info;
     }
 
