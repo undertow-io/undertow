@@ -292,7 +292,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         } else {
             underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
         }
-        String newId = underlyingSession.changeSessionId(exchange, originalServletContext.getSessionCookieConfig());
+        String newId = underlyingSession.changeSessionId(exchange, originalServletContext.getSessionConfig());
         servletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
         return newId;
     }
@@ -1030,7 +1030,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private SessionConfig.SessionCookieSource sessionCookieSource() {
         if(sessionCookieSource == null) {
-            sessionCookieSource = originalServletContext.getSessionCookieConfig().sessionCookieSource(exchange);
+            sessionCookieSource = originalServletContext.getSessionConfig().sessionCookieSource(exchange);
         }
         return sessionCookieSource;
     }
