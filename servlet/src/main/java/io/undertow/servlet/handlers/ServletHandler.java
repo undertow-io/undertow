@@ -83,6 +83,17 @@ public class ServletHandler implements HttpHandler {
         try {
             servlet = managedServlet.getServlet();
             servlet.getInstance().service(request, response);
+
+            //according to the spec we have to call AsyncContext.complete() at this point
+            //straight after the service method
+            //not super sure about this, surely it would make more sense to do this when the request has returned to the container, however the spec is quite clear wording wise
+            //todo: should we actually enable this? Apparently other containers do not do it
+            //if(!request.isAsyncStarted()) {
+            //    AsyncContextImpl existingAsyncContext = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
+            //    if (existingAsyncContext != null) {
+            //        existingAsyncContext.complete();
+            //    }
+            //}
         } catch (UnavailableException e) {
             if (e.isPermanent()) {
                 UndertowServletLogger.REQUEST_LOGGER.stoppingServletDueToPermanentUnavailability(managedServlet.getServletInfo().getName(), e);

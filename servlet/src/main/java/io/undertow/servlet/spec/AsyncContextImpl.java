@@ -51,7 +51,6 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
-import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.handlers.ServletDebugPageHandler;
@@ -94,6 +93,7 @@ public class AsyncContextImpl implements AsyncContext {
 
     private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<Runnable>();
     private boolean processingAsyncTask = false;
+    private boolean complete = false;
 
     public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse, final ServletRequestContext servletRequestContext, boolean requestSupplied, final AsyncContextImpl previousAsyncContext) {
         this.exchange = exchange;
@@ -259,8 +259,18 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public synchronized void complete() {
+        if(complete) {
+            UndertowLogger.REQUEST_LOGGER.trace("Ignoring call to AsyncContext.complete() as it has already been called");
+            return;
+        }
+        complete = true;
         onAsyncComplete();
-        completeInternal();
+        if(!dispatched) {
+            completeInternal();
+        }
+        if(previousAsyncContext != null) {
+            previousAsyncContext.complete();
+        }
     }
 
     public synchronized void completeInternal() {
@@ -272,7 +282,6 @@ public class AsyncContextImpl implements AsyncContext {
             }
             exchange.unDispatch();
             dispatched = true;
-            final HttpServletRequestImpl request = servletRequestContext.getOriginalRequest();
             initialRequestDone();
         } else {
             doDispatch(new Runnable() {
@@ -360,7 +369,6 @@ public class AsyncContextImpl implements AsyncContext {
         if (!dispatched) {
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
             try {
-                ServletStackTraces devMode = servletRequestContext.getDeployment().getDeploymentInfo().getServletStackTraces();
                 boolean errorPage = servletRequestContext.displayStackTraces();
                 if(errorPage) {
                     ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, error);
