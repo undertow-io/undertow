@@ -1,7 +1,5 @@
 package io.undertow.server.session;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.Deque;
 import java.util.Locale;
 
@@ -48,28 +46,40 @@ public class PathParameterSessionConfig implements SessionConfig {
         return findSessionId(exchange) != null ? SessionCookieSource.URL : SessionCookieSource.NONE;
     }
 
+    /**
+     * Return the specified URL with the specified session identifier
+     * suitably encoded.
+     *
+     * @param url       URL to be encoded with the session id
+     * @param sessionId Session id to be included in the encoded URL
+     */
     @Override
-    public String rewriteUrl(final String originalUrl, final String sessionId) {
-        try {
-            int pos = originalUrl.indexOf("?");
-            if (pos != -1) {
-                return new StringBuilder(originalUrl.substring(0, pos))
-                        .append(";")
-                        .append(name)
-                        .append("=")
-                        .append(URLEncoder.encode(sessionId, "UTF-8"))
-                        .append(originalUrl.substring(pos))
-                        .toString();
-            } else {
-                return new StringBuilder(originalUrl)
-                        .append(";")
-                        .append(name)
-                        .append("=")
-                        .append(URLEncoder.encode(sessionId, "UTF-8"))
-                        .toString();
-            }
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
+    public String rewriteUrl(final String url, final String sessionId) {
+        if ((url == null) || (sessionId == null))
+            return (url);
+
+        String path = url;
+        String query = "";
+        String anchor = "";
+        int question = url.indexOf('?');
+        if (question >= 0) {
+            path = url.substring(0, question);
+            query = url.substring(question);
         }
+        int pound = path.indexOf('#');
+        if (pound >= 0) {
+            anchor = path.substring(pound);
+            path = path.substring(0, pound);
+        }
+        StringBuilder sb = new StringBuilder(path);
+        if (sb.length() > 0) { // jsessionid can't be first.
+            sb.append(';');
+            sb.append(name.toLowerCase(Locale.ENGLISH));
+            sb.append('=');
+            sb.append(sessionId);
+        }
+        sb.append(anchor);
+        sb.append(query);
+        return (sb.toString());
     }
 }

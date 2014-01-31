@@ -551,7 +551,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             if (url.equalsIgnoreCase("")) {
                 url = absolute;
             }
-            return (toEncoded(url, servletContext.getSession(originalServletContext.getSessionConfig(), exchange, true).getId()));
+            return originalServletContext.getSessionConfig().rewriteUrl(url, servletContext.getSession(originalServletContext.getSessionConfig(), exchange, true).getId());
         } else {
             return (url);
         }
@@ -566,11 +566,10 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
      */
     public String encodeRedirectURL(String url) {
         if (isEncodeable(toAbsolute(url))) {
-            return (toEncoded(url, servletContext.getSession(originalServletContext.getSessionConfig(), exchange, true).getId()));
+            return originalServletContext.getSessionConfig().rewriteUrl(url, servletContext.getSession(originalServletContext.getSessionConfig(), exchange, true).getId());
         } else {
             return (url);
         }
-
     }
 
     /**
@@ -704,46 +703,6 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         return true;
 
     }
-
-
-    /**
-     * Return the specified URL with the specified session identifier
-     * suitably encoded.
-     *
-     * @param url       URL to be encoded with the session id
-     * @param sessionId Session id to be included in the encoded URL
-     */
-    protected String toEncoded(String url, String sessionId) {
-
-        if ((url == null) || (sessionId == null))
-            return (url);
-
-        String path = url;
-        String query = "";
-        String anchor = "";
-        int question = url.indexOf('?');
-        if (question >= 0) {
-            path = url.substring(0, question);
-            query = url.substring(question);
-        }
-        int pound = path.indexOf('#');
-        if (pound >= 0) {
-            anchor = path.substring(pound);
-            path = path.substring(0, pound);
-        }
-        StringBuilder sb = new StringBuilder(path);
-        if (sb.length() > 0) { // jsessionid can't be first.
-            sb.append(';');
-            sb.append(originalServletContext.getSessionCookieConfig().getName().toLowerCase(Locale.ENGLISH));
-            sb.append('=');
-            sb.append(sessionId);
-        }
-        sb.append(anchor);
-        sb.append(query);
-        return (sb.toString());
-
-    }
-
 
     public static enum ResponseState {
         NONE,
