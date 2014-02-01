@@ -97,6 +97,13 @@ public interface SecurityContext {
     void setAuthenticationRequired();
 
     /**
+     * Returns true if authentication is required
+     *
+     * @return <code>true</code> If authentication is required
+     */
+    boolean isAuthenticationRequired();
+
+    /**
      * Adds an authentication mechanism to this context. When {@link #authenticate()} is
      * called mechanisms will be iterated over in the order they are added, and given a chance to authenticate the user.
      *

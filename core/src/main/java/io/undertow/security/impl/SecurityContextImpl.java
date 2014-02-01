@@ -158,6 +158,11 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     @Override
+    public boolean isAuthenticationRequired() {
+        return authenticationRequired;
+    }
+
+    @Override
     public boolean isAuthenticated() {
         return authenticationState == AuthenticationState.AUTHENTICATED;
     }

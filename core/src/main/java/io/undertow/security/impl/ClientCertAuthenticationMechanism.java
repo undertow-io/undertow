@@ -77,7 +77,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession != null) {
             try {
-                Certificate[] clientCerts = getPeerCertificates(exchange, sslSession);
+                Certificate[] clientCerts = getPeerCertificates(exchange, sslSession, securityContext);
                 if (clientCerts[0] instanceof X509Certificate) {
                     Credential credential = new X509CertificateCredential((X509Certificate) clientCerts[0]);
 
@@ -103,11 +103,12 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
     }
 
-    private Certificate[] getPeerCertificates(final HttpServerExchange exchange, SSLSessionInfo sslSession) throws SSLPeerUnverifiedException {
+    private Certificate[] getPeerCertificates(final HttpServerExchange exchange, SSLSessionInfo sslSession, SecurityContext securityContext) throws SSLPeerUnverifiedException {
         try {
             return sslSession.getPeerCertificates();
         } catch (RenegotiationRequiredException e) {
-            if (forceRenegotiation) {
+            //we only renegotiate if authentication is required
+            if (forceRenegotiation && securityContext.isAuthenticationRequired()) {
                 try {
                     sslSession.renegotiate(exchange, SslClientAuthMode.REQUESTED);
                     return sslSession.getPeerCertificates();
