@@ -20,6 +20,6 @@ public class ImmediateAuthenticationMechanismFactory implements AuthenticationMe
 
     @Override
     public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
-        return null;
+        return authenticationMechanism;
     }
 }
