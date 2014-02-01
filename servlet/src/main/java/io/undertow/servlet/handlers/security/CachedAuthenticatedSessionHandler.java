@@ -35,7 +35,7 @@ import java.security.AccessController;
 
 /**
  * {@link HttpHandler} responsible for setting up the {@link AuthenticatedSessionManager} for cached authentications and
- * registering a {@link NotificationHandler} to receive the security notifications.
+ * registering a {@link NotificationReceiver} to receive the security notifications.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
@@ -124,6 +124,20 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
                 return (AuthenticatedSession) session.getAttribute(ATTRIBUTE_NAME);
             }
             return null;
+        }
+
+        @Override
+        public void clearSession(HttpServerExchange exchange) {
+            HttpSessionImpl httpSession = servletContext.getSession(exchange, false);
+            if (httpSession != null) {
+                Session session;
+                if (System.getSecurityManager() == null) {
+                    session = httpSession.getSession();
+                } else {
+                    session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+                }
+                session.removeAttribute(ATTRIBUTE_NAME);
+            }
         }
 
     }
