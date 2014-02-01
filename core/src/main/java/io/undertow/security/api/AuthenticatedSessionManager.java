@@ -38,6 +38,8 @@ public interface AuthenticatedSessionManager {
 
     AuthenticatedSession lookupSession(final HttpServerExchange exchange);
 
+    void clearSession(final HttpServerExchange exchange);
+
     public static class AuthenticatedSession implements Serializable {
 
         private final Account account;

@@ -126,6 +126,24 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
             return null;
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void clearSession(HttpServerExchange exchange) {
+          HttpSessionImpl httpSession = servletContext.getSession(exchange, false);
+          if (httpSession == null) {
+            return;
+          }
+          Session session;
+          if (System.getSecurityManager() == null) {
+              session = httpSession.getSession();
+          } else {
+              session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+          }
+          session.removeAttribute(ATTRIBUTE_NAME);
+        }
+
     }
 
     private boolean isCacheable(final SecurityNotification notification) {
