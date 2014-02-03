@@ -1,2 +1,3 @@
 io.undertow.server.handlers.builder.RewriteHandlerBuilder
 io.undertow.server.handlers.builder.SetHandlerBuilder
+io.undertow.server.handlers.builder.ResponseCodeHandlerBuilder
