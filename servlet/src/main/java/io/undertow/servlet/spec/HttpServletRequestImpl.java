@@ -250,13 +250,28 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isUserInRole(final String role) {
+        if (role == null) {
+            return false;
+        }
+        //according to the servlet spec this aways returns false
+        if (role.equals("*")) {
+            return false;
+        }
         SecurityContext sc = exchange.getSecurityContext();
         Account account = sc.getAuthenticatedAccount();
         if (account == null) {
             return false;
         }
+        ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 
-        final ServletChain servlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet();
+        if (role.equals("**")) {
+            Set<String> roles = servletRequestContext.getDeployment().getDeploymentInfo().getSecurityRoles();
+            if (!roles.contains("**")) {
+                return true;
+            }
+        }
+
+        final ServletChain servlet = servletRequestContext.getCurrentServlet();
         final Deployment deployment = servletContext.getDeployment();
         final AuthorizationManager authorizationManager = deployment.getDeploymentInfo().getAuthorizationManager();
         return authorizationManager.isUserInRole(role, account, servlet.getManagedServlet().getServletInfo(), this, deployment);
