@@ -84,7 +84,7 @@ public class DeploymentInfo implements Cloneable {
     private SessionPersistenceManager sessionPersistenceManager;
     private String defaultEncoding = "ISO-8859-1";
     private String urlEncoding = null;
-    private boolean ignoreFlush = true;
+    private boolean ignoreFlush = false;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
     private AuthenticationMechanism jaspiAuthenticationMechanism;
     private SecurityContextFactory securityContextFactory;
