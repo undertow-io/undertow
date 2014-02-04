@@ -89,7 +89,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         asyncContext.addAsyncTask(new Runnable() {
             @Override
             public void run() {
-                channel.resumeReads();
+                channel.wakeupReads();
             }
         });
     }

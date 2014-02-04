@@ -1629,7 +1629,6 @@ public final class HttpServerExchange extends AbstractAttachable {
                 return;
             }
             if (isInCall()) {
-                wakeup = false;
                 state |= FLAG_SHOLD_RESUME_WRITES;
             } else {
                 delegate.resumeWrites();
@@ -1657,11 +1656,24 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void runResume() {
             if (!isFinished() && isWriteResumed()) {
                 if (wakeup) {
+                    wakeup = false;
                     delegate.wakeupWrites();
                 } else {
                     delegate.resumeWrites();
                 }
+            } else if(wakeup) {
+                wakeup = false;
+                invokeListener();
             }
+        }
+
+        private void invokeListener() {
+            getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ChannelListeners.invokeChannelListener(WriteDispatchChannel.this, writeSetter.get());
+                }
+            });
         }
     }
 
@@ -1697,7 +1709,6 @@ public final class HttpServerExchange extends AbstractAttachable {
                 return;
             }
             if (isInCall()) {
-                wakeup = false;
                 state |= FLAG_SHOULD_RESUME_READS;
             } else {
                 delegate.resumeReads();
@@ -1705,15 +1716,25 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         public void wakeupReads() {
-            if (isFinished()) {
-                return;
-            }
             if (isInCall()) {
                 wakeup = true;
                 state |= FLAG_SHOULD_RESUME_READS;
             } else {
-                delegate.wakeupReads();
+                if(isFinished()) {
+                    invokeListener();
+                } else {
+                    delegate.wakeupReads();
+                }
             }
+        }
+
+        private void invokeListener() {
+            getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ChannelListeners.invokeChannelListener(ReadDispatchChannel.this, readSetter.get());
+                }
+            });
         }
 
         public void requestDone() {
@@ -1903,10 +1924,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void runResume() {
             if (isReadResumed()) {
                 if (wakeup) {
+                    wakeup = false;
                     delegate.wakeupReads();
                 } else {
                     delegate.resumeReads();
                 }
+            } else if(wakeup) {
+                wakeup = false;
+                invokeListener();
             }
         }
     }
