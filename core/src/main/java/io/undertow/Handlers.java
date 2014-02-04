@@ -9,6 +9,7 @@ import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.handlers.AccessControlListHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
+import io.undertow.server.handlers.HttpContinueAcceptingHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.HttpTraceHandler;
 import io.undertow.server.handlers.IPAddressAccessControlHandler;
@@ -254,6 +255,33 @@ public class Handlers {
      */
     public static final HttpContinueReadHandler httpContinueRead(final HttpHandler next) {
         return new HttpContinueReadHandler(next);
+    }
+
+    /**
+     * Returns a handler that sends back a HTTP 100 continue response if the given predicate resolves to true.
+     *
+     * This handler differs from the one returned by {@link #httpContinueRead(io.undertow.server.HttpHandler)} in
+     * that it will eagerly send the response, and not wait for the first read attempt.
+     *
+     * @param next The next handler
+     * @param accept The predicate used to determine if the request should be accepted
+     * @return The accepting handler
+     */
+    public static final HttpContinueAcceptingHandler httpContinueAccepting(final HttpHandler next, final Predicate accept) {
+        return new HttpContinueAcceptingHandler(next, accept);
+    }
+
+    /**
+     * Returns a handler that sends back a HTTP 100 continue response to all requests.
+     *
+     * This handler differs from the one returned by {@link #httpContinueRead(io.undertow.server.HttpHandler)} in
+     * that it will eagerly send the response, and not wait for the first read attempt.
+     *
+     * @param next The next handler
+     * @return The accepting handler
+     */
+    public static final HttpContinueAcceptingHandler httpContinueAccepting(final HttpHandler next) {
+        return new HttpContinueAcceptingHandler(next);
     }
 
     /**

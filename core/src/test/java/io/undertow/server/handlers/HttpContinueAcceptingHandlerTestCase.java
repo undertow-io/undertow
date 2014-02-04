@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpHandler;
 import io.undertow.testutils.AjpIgnore;
@@ -51,12 +52,12 @@ public class HttpContinueAcceptingHandlerTestCase {
     @BeforeClass
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
-        final HttpContinueAcceptingHandler handler = new HttpContinueAcceptingHandler(blockingHandler) {
+        final HttpContinueAcceptingHandler handler = new HttpContinueAcceptingHandler(blockingHandler, new Predicate() {
             @Override
-            protected boolean acceptRequest(final HttpServerExchange exchange) {
+            public boolean resolve(HttpServerExchange value) {
                 return accept;
             }
-        };
+        });
         DefaultServer.setRootHandler(handler);
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
