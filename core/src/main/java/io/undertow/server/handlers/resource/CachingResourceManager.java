@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.LRUCache;
 
@@ -59,14 +60,18 @@ public class CachingResourceManager implements ResourceManager {
         this.cache = new LRUCache<String, Object>(metadataCacheSize, maxAge);
         this.maxAge = maxAge;
         if(underlyingResourceManager.isResourceChangeListenerSupported()) {
-            underlyingResourceManager.registerResourceChangeListener(new ResourceChangeListener() {
-                @Override
-                public void handleChanges(Collection<ResourceChangeEvent> changes) {
-                    for(ResourceChangeEvent change : changes) {
-                        invalidate(change.getResource());
+            try {
+                underlyingResourceManager.registerResourceChangeListener(new ResourceChangeListener() {
+                    @Override
+                    public void handleChanges(Collection<ResourceChangeEvent> changes) {
+                        for(ResourceChangeEvent change : changes) {
+                            invalidate(change.getResource());
+                        }
                     }
-                }
-            });
+                });
+            } catch (Exception e) {
+                UndertowLogger.ROOT_LOGGER.couldNotRegisterChangeListener(e);
+            }
         }
     }
 
