@@ -50,8 +50,13 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         if (cookie != null) {
             SingleSignOn sso = this.manager.findSingleSignOn(cookie.getValue());
             if (sso != null) {
+                Account verified = securityContext.getIdentityManager().verify(sso.getAccount());
+                if(verified == null) {
+                    //we return not attempted here to allow other mechanisms to proceed as normal
+                    return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
+                }
                 registerSessionIfRequired(exchange, sso);
-                securityContext.authenticationComplete(sso.getAccount(), sso.getMechanismName(), false);
+                securityContext.authenticationComplete(verified, sso.getMechanismName(), false);
                 return AuthenticationMechanismOutcome.AUTHENTICATED;
             }
             clearSsoCookie(exchange);
