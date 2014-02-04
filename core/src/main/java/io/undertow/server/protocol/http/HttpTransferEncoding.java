@@ -33,7 +33,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
-import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
@@ -64,7 +63,6 @@ public class HttpTransferEncoding {
         final String contentLengthHeader = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
 
         final HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
-        ConduitStreamSinkChannel sinkChannel = connection.getChannel().getSinkChannel();
         //if we are already using the pipelineing buffer add it to the exchange
         PipeliningBufferingStreamSinkConduit pipeliningBuffer = connection.getPipelineBuffer();
         if (pipeliningBuffer != null) {
@@ -75,7 +73,7 @@ public class HttpTransferEncoding {
 
         boolean persistentConnection = persistentConnection(exchange, connectionHeader);
 
-        if (exchange.getRequestMethod().equals(Methods.GET)) {
+        if (transferEncodingHeader == null && contentLengthHeader == null) {
             if (persistentConnection
                     && connection.getExtraBytes() != null
                     && pipeliningBuffer == null
@@ -122,11 +120,10 @@ public class HttpTransferEncoding {
                 sourceChannel.setConduit(fixedLengthStreamSourceConduitWrapper(contentLength, sourceChannel.getConduit(), exchange));
             }
         } else if (transferEncodingHeader != null) {
-            if (transferEncoding.equals(Headers.IDENTITY)) {
-                log.trace("Connection not persistent (no content length and identity transfer encoding)");
-                // make it not persistent
-                persistentConnection = false;
-            }
+            //identity transfer encoding
+            log.trace("Connection not persistent (no content length and identity transfer encoding)");
+            // make it not persistent
+            persistentConnection = false;
         } else if (persistentConnection) {
             //we have no content and a persistent request. This may mean we need to use the pipelining buffer to improve
             //performance
