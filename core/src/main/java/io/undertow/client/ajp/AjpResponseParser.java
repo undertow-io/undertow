@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 /**
  * @author Stuart Douglas
  */
-public class AjpResponseParser extends AbstractAjpParser {
+class AjpResponseParser extends AbstractAjpParser {
 
     public static final AjpResponseParser INSTANCE = new AjpResponseParser();
 

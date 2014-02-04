@@ -20,7 +20,7 @@ import static org.xnio.Bits.anyAreSet;
 /**
  * @author Stuart Douglas
  */
-public class AjpClientExchange extends AbstractAttachable implements ClientExchange {
+class AjpClientExchange extends AbstractAttachable implements ClientExchange {
 
     private final ClientRequest request;
     private final boolean requiresContinue;

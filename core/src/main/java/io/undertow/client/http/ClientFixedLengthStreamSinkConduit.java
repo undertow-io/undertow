@@ -3,7 +3,7 @@ package io.undertow.client.http;
 import io.undertow.conduits.AbstractFixedLengthStreamSinkConduit;
 import org.xnio.conduits.StreamSinkConduit;
 
-public class ClientFixedLengthStreamSinkConduit extends AbstractFixedLengthStreamSinkConduit {
+class ClientFixedLengthStreamSinkConduit extends AbstractFixedLengthStreamSinkConduit {
 
     private final HttpClientExchange exchange;
 

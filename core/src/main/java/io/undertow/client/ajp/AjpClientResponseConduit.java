@@ -22,7 +22,7 @@ import static org.xnio.Bits.longBitMask;
  *
  * @author Stuart Douglas
  */
-public class AjpClientResponseConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
+class AjpClientResponseConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
     private final AjpClientConnection connection;
     private final AjpClientRequestConduit ajpClientRequestConduit;
