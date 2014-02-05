@@ -4,6 +4,9 @@ import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 
 /**
+ * Utility class used for creating predicates
+ *
+ *
  * @author Stuart Douglas
  */
 public class Predicates {
