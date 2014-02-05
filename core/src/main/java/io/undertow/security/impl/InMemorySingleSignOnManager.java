@@ -90,5 +90,10 @@ public class InMemorySingleSignOnManager implements SingleSignOnManager {
         public void remove(Session session) {
             this.sessions.remove(session.getSessionManager());
         }
+
+        @Override
+        public void close() {
+            // Do nothing
+        }
     }
 }

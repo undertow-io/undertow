@@ -1,5 +1,7 @@
 package io.undertow.security.impl;
 
+import java.io.Closeable;
+
 import io.undertow.security.idm.Account;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
@@ -8,7 +10,7 @@ import io.undertow.server.session.SessionManager;
  * @author Stuart Douglas
  * @author Paul Ferraro
  */
-public interface SingleSignOn extends Iterable<Session> {
+public interface SingleSignOn extends Iterable<Session>, Closeable {
 
     /**
      * Returns the unique identifier for this SSO.
@@ -53,4 +55,11 @@ public interface SingleSignOn extends Iterable<Session> {
      * @return a session
      */
     Session getSession(SessionManager manager);
+
+    /**
+     * Releases any resources acquired by this object.
+     * Must be called after this object is no longer in use.
+     */
+    @Override
+    void close();
 }
