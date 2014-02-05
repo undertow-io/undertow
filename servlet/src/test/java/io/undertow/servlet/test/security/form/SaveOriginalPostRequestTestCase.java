@@ -108,7 +108,8 @@ public class SaveOriginalPostRequestTestCase {
         response = HttpClientUtils.readResponse(result);
 
         // let's check if the original request was saved, including its parameters.
-        assertTrue(response.contains("securedParam1=securedParam1Value/securedParam2=securedParam2Value"));
+        assertTrue(response.contains("securedParam1=securedParam1Value"));
+        assertTrue(response.contains("securedParam2=securedParam2Value"));
     }
 
     private TestHttpClient createHttpClient() {
