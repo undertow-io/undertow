@@ -50,14 +50,18 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         if (cookie != null) {
             SingleSignOn sso = this.manager.findSingleSignOn(cookie.getValue());
             if (sso != null) {
-                Account verified = securityContext.getIdentityManager().verify(sso.getAccount());
-                if(verified == null) {
-                    //we return not attempted here to allow other mechanisms to proceed as normal
-                    return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
+                try {
+                    Account verified = securityContext.getIdentityManager().verify(sso.getAccount());
+                    if(verified == null) {
+                        //we return not attempted here to allow other mechanisms to proceed as normal
+                        return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
+                    }
+                    registerSessionIfRequired(exchange, sso);
+                    securityContext.authenticationComplete(verified, sso.getMechanismName(), false);
+                    return AuthenticationMechanismOutcome.AUTHENTICATED;
+                } finally {
+                    sso.close();
                 }
-                registerSessionIfRequired(exchange, sso);
-                securityContext.authenticationComplete(verified, sso.getMechanismName(), false);
-                return AuthenticationMechanismOutcome.AUTHENTICATED;
             }
             clearSsoCookie(exchange);
         }
@@ -98,8 +102,12 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
             Account account = sc.getAuthenticatedAccount();
             if(account != null) {
                 SingleSignOn sso = manager.createSingleSignOn(account, sc.getMechanismName());
-                registerSessionIfRequired(exchange, sso);
-                exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain));
+                try {
+                    registerSessionIfRequired(exchange, sso);
+                    exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain));
+                } finally {
+                    sso.close();
+                }
             }
             return factory.create();
         }
@@ -118,12 +126,16 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
             if (ssoId != null) {
                 SingleSignOn sso = manager.findSingleSignOn(ssoId);
                 if (sso != null) {
-                    sso.remove(session);
-                    if (reason == SessionDestroyedReason.INVALIDATED) {
-                        for (Session associatedSession: sso) {
-                            associatedSession.invalidate(null);
+                    try {
+                        sso.remove(session);
+                        if (reason == SessionDestroyedReason.INVALIDATED) {
+                            for (Session associatedSession: sso) {
+                                associatedSession.invalidate(null);
+                            }
+                            manager.removeSingleSignOn(ssoId);
                         }
-                        manager.removeSingleSignOn(ssoId);
+                    } finally {
+                        sso.close();
                     }
                 }
             }
