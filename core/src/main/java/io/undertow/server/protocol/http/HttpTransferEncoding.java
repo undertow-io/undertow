@@ -222,14 +222,18 @@ public class HttpTransferEncoding {
         } else if (exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, true)) {
             responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
         }
-        final String contentLengthHeader = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
-        if (contentLengthHeader != null) {
-            StreamSinkConduit res = handleFixedLength(exchange, headRequest, channel, responseHeaders, contentLengthHeader, serverConnection);
-            if (res != null) {
-                return res;
+        //according to the HTTP RFC we should ignore content length if a transfer coding is specified
+        final String transferEncodingHeader = responseHeaders.getLast(Headers.TRANSFER_ENCODING);
+        if(transferEncodingHeader == null) {
+            final String contentLengthHeader = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
+            if (contentLengthHeader != null) {
+                StreamSinkConduit res = handleFixedLength(exchange, headRequest, channel, responseHeaders, contentLengthHeader, serverConnection);
+                if (res != null) {
+                    return res;
+                }
             }
         }
-        return handleRequestConduit(exchange, headRequest, channel, responseHeaders, terminateResponseListener(exchange));
+        return handleResponseConduit(exchange, headRequest, channel, responseHeaders, terminateResponseListener(exchange), transferEncodingHeader);
     }
 
     private static StreamSinkConduit handleFixedLength(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, String contentLengthHeader, HttpServerConnection connection) {
@@ -249,9 +253,8 @@ public class HttpTransferEncoding {
         return null;
     }
 
-    private static StreamSinkConduit handleRequestConduit(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, ConduitListener<StreamSinkConduit> finishListener) {
+    private static StreamSinkConduit handleResponseConduit(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, ConduitListener<StreamSinkConduit> finishListener, String transferEncodingHeader) {
 
-        final String transferEncodingHeader = responseHeaders.getLast(Headers.TRANSFER_ENCODING);
         if (transferEncodingHeader == null) {
             if (exchange.isHttp11()) {
                 if (exchange.isPersistent()) {
