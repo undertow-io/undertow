@@ -7,6 +7,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooled;
@@ -17,6 +19,7 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
+import java.util.Iterator;
 
 /**
  * Saved servlet request.
@@ -31,14 +34,14 @@ public class SavedRequest implements Serializable {
     private final int dataLength;
     private final HttpString method;
     private final String requestUri;
-    private final String contentType;
+    private final HeaderMap headerMap;
 
-    public SavedRequest(byte[] data, int dataLength, HttpString method, String requestUri, String contentType) {
+    public SavedRequest(byte[] data, int dataLength, HttpString method, String requestUri, HeaderMap headerMap) {
         this.data = data;
         this.dataLength = dataLength;
         this.method = method;
         this.requestUri = requestUri;
-        this.contentType = contentType;
+        this.headerMap = headerMap;
     }
 
     public static void trySaveRequest(final HttpServerExchange exchange) {
@@ -65,7 +68,16 @@ public class SavedRequest implements Serializable {
                             return;//failed to save the request, we just return
                         }
                     }
-                    SavedRequest request = new SavedRequest(buffer, read, exchange.getRequestMethod(), exchange.getRequestURI(), exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE));
+                    HeaderMap headers = new HeaderMap();
+                    for(HeaderValues entry : exchange.getRequestHeaders()) {
+                        if(entry.getHeaderName().equals(Headers.CONTENT_LENGTH) ||
+                                entry.getHeaderName().equals(Headers.TRANSFER_ENCODING) ||
+                                entry.getHeaderName().equals(Headers.CONNECTION)) {
+                            continue;
+                        }
+                        headers.putAll(entry.getHeaderName(), entry);
+                    }
+                    SavedRequest request = new SavedRequest(buffer, read, exchange.getRequestMethod(), exchange.getRequestURI(), exchange.getRequestHeaders());
                     final ServletRequestContext sc = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
                     HttpSessionImpl session = sc.getCurrentServetContext().getSession(exchange, true);
                     Session underlyingSession;
@@ -93,12 +105,23 @@ public class SavedRequest implements Serializable {
             }
             SavedRequest request = (SavedRequest) underlyingSession.getAttribute(SESSION_KEY);
             if(request != null) {
-                if(request.requestUri.equals(exchange.getRequestURI())) {
+                if(request.requestUri.equals(exchange.getRequestURI()) && exchange.isRequestComplete()) {
                     UndertowLogger.REQUEST_LOGGER.debugf("restoring request body for request to %s", request.requestUri);
                     exchange.setRequestMethod(request.method);
                     Connectors.ungetRequestBytes(exchange, new ImmediatePooled<ByteBuffer>(ByteBuffer.wrap(request.data, 0, request.dataLength)));
                     underlyingSession.removeAttribute(SESSION_KEY);
-                    exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, request.contentType);
+                    //clear the existing header map of everything except the connection header
+                    //TODO: are there other headers we should preserve?
+                    Iterator<HeaderValues> headerIterator = exchange.getRequestHeaders().iterator();
+                    while (headerIterator.hasNext()) {
+                        HeaderValues header = headerIterator.next();
+                        if(!header.getHeaderName().equals(Headers.CONNECTION)) {
+                            headerIterator.remove();
+                        }
+                    }
+                    for(HeaderValues header : request.headerMap) {
+                        exchange.getRequestHeaders().putAll(header.getHeaderName(), header);
+                    }
                 }
             }
         }
