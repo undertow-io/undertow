@@ -7,6 +7,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooled;
 
@@ -30,12 +31,14 @@ public class SavedRequest implements Serializable {
     private final int dataLength;
     private final HttpString method;
     private final String requestUri;
+    private final String contentType;
 
-    public SavedRequest(byte[] data, int dataLength, HttpString method, String requestUri) {
+    public SavedRequest(byte[] data, int dataLength, HttpString method, String requestUri, String contentType) {
         this.data = data;
         this.dataLength = dataLength;
         this.method = method;
         this.requestUri = requestUri;
+        this.contentType = contentType;
     }
 
     public static void trySaveRequest(final HttpServerExchange exchange) {
@@ -62,7 +65,7 @@ public class SavedRequest implements Serializable {
                             return;//failed to save the request, we just return
                         }
                     }
-                    SavedRequest request = new SavedRequest(buffer, read, exchange.getRequestMethod(), exchange.getRequestURI());
+                    SavedRequest request = new SavedRequest(buffer, read, exchange.getRequestMethod(), exchange.getRequestURI(), exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE));
                     final ServletRequestContext sc = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
                     HttpSessionImpl session = sc.getCurrentServetContext().getSession(exchange, true);
                     Session underlyingSession;
@@ -95,6 +98,7 @@ public class SavedRequest implements Serializable {
                     exchange.setRequestMethod(request.method);
                     Connectors.ungetRequestBytes(exchange, new ImmediatePooled<ByteBuffer>(ByteBuffer.wrap(request.data, 0, request.dataLength)));
                     underlyingSession.removeAttribute(SESSION_KEY);
+                    exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, request.contentType);
                 }
             }
         }
