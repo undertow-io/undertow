@@ -20,6 +20,8 @@ import io.undertow.server.handlers.PredicateContextHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.RedirectHandler;
+import io.undertow.server.handlers.RequestLimit;
+import io.undertow.server.handlers.RequestLimitingHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
@@ -361,6 +363,29 @@ public class Handlers {
 
     public static JvmRouteHandler jvmRoute(final String sessionCookieName, final String jvmRoute, HttpHandler next) {
         return new JvmRouteHandler(next, sessionCookieName, jvmRoute);
+    }
+
+    /**
+     * Returns a handler that limits the maximum number of requests that can run at a time.
+     *
+     * @param maxRequest The maximum number of requests
+     * @param queueSize  The maximum number of queued requests
+     * @param next       The next handler
+     * @return           The handler
+     */
+    public static RequestLimitingHandler requestLimitingHandler(final int maxRequest, final int queueSize, HttpHandler next) {
+        return new RequestLimitingHandler(maxRequest, queueSize, next);
+    }
+
+    /**
+     * Returns a handler that limits the maximum number of requests that can run at a time.
+     *
+     * @param requestLimit The request limit object that can be shared between handlers, to apply the same limits across multiple handlers
+     * @param next         The next handler
+     * @return             The handler
+     */
+    public static RequestLimitingHandler requestLimitingHandler(final RequestLimit requestLimit, HttpHandler next) {
+        return new RequestLimitingHandler(requestLimit, next);
     }
 
     private Handlers() {

@@ -18,17 +18,8 @@
 
 package io.undertow.server.handlers;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import io.undertow.Handlers;
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-
-import static org.xnio.Bits.longBitMask;
 
 /**
  * A handler which limits the maximum number of concurrent requests.  Requests beyond the limit will
@@ -37,46 +28,9 @@ import static org.xnio.Bits.longBitMask;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class RequestLimitingHandler implements HttpHandler {
-    @SuppressWarnings("unused")
-    private volatile long state;
-    private volatile HttpHandler nextHandler = ResponseCodeHandler.HANDLE_404;
+    private final HttpHandler nextHandler;
 
-    private static final AtomicLongFieldUpdater<RequestLimitingHandler> stateUpdater = AtomicLongFieldUpdater.newUpdater(RequestLimitingHandler.class, "state");
-    private static final AtomicReferenceFieldUpdater<RequestLimitingHandler, HttpHandler> nextHandlerUpdater = AtomicReferenceFieldUpdater.newUpdater(RequestLimitingHandler.class, HttpHandler.class, "nextHandler");
-
-    private static final long MASK_MAX = longBitMask(32, 63);
-    private static final long MASK_CURRENT = longBitMask(0, 30);
-
-    private final Queue<HttpServerExchange> queue;
-
-    private static final Class<Queue> linkedTransferQueue;
-
-    private final ExchangeCompletionListener COMPLETION_LISTENER = new ExchangeCompletionListener() {
-
-        @Override
-        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-            try {
-                final HttpServerExchange task = queue.poll();
-                if (task != null) {
-                    task.dispatch(nextHandler);
-                } else {
-                    decrementRequests();
-                }
-            } finally {
-                nextListener.proceed();
-            }
-        }
-    };
-
-    static {
-        Class<Queue> q;
-        try {
-            q = (Class<Queue>) Class.forName("java.util.concurrent.LinkedTransferQueue");
-        } catch (ClassNotFoundException e) {
-            q = null;
-        }
-        linkedTransferQueue = q;
-    }
+    private final RequestLimit requestLimit;
 
     /**
      * Construct a new instance. The maximum number of concurrent requests must be at least one.  The next handler
@@ -86,105 +40,48 @@ public final class RequestLimitingHandler implements HttpHandler {
      * @param nextHandler               the next handler
      */
     public RequestLimitingHandler(int maximumConcurrentRequests, HttpHandler nextHandler) {
+        this(maximumConcurrentRequests, -1, nextHandler);
+    }
+
+    /**
+     * Construct a new instance. The maximum number of concurrent requests must be at least one.  The next handler
+     * must not be {@code null}.
+     *
+     * @param maximumConcurrentRequests the maximum concurrent requests
+     * @param queueSize                 the maximum number of requests to queue
+     * @param nextHandler               the next handler
+     */
+    public RequestLimitingHandler(int maximumConcurrentRequests, int queueSize, HttpHandler nextHandler) {
         if (nextHandler == null) {
             throw new IllegalArgumentException("nextHandler is null");
         }
         if (maximumConcurrentRequests < 1) {
             throw new IllegalArgumentException("Maximum concurrent requests must be at least 1");
         }
-        state = (maximumConcurrentRequests & 0xFFFFFFFFL) << 32;
+        this.requestLimit = new RequestLimit(maximumConcurrentRequests, queueSize);
         this.nextHandler = nextHandler;
-        Queue<HttpServerExchange> queue;
-        if (linkedTransferQueue == null) {
-            queue = new ConcurrentLinkedQueue<HttpServerExchange>();
-        } else {
-            try {
-                queue = linkedTransferQueue.newInstance();
-            } catch (Throwable t) {
-                queue = new ConcurrentLinkedQueue<HttpServerExchange>();
-            }
+    }
+
+    /**
+     * Construct a new instance. This version takes a {@link RequestLimit} directly which may be shared with other
+     * handlers.
+     *
+     * @param requestLimit              the request limit information.
+     * @param nextHandler               the next handler
+     */
+    public RequestLimitingHandler(RequestLimit requestLimit, HttpHandler nextHandler) {
+        if (nextHandler == null) {
+            throw new IllegalArgumentException("nextHandler is null");
         }
-        this.queue = queue;
+        this.requestLimit = requestLimit;
+        this.nextHandler = nextHandler;
     }
 
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
-        long oldVal, newVal;
-        do {
-            oldVal = state;
-            final long current = oldVal & MASK_CURRENT;
-            final long max = (oldVal & MASK_MAX) >> 32L;
-            if (current >= max) {
-                queue.add(exchange);
-                return;
-            }
-            newVal = oldVal + 1;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
-        nextHandler.handleRequest(exchange);
+        requestLimit.handleRequest(exchange, nextHandler);
     }
 
-    /**
-     * Get the maximum concurrent requests.
-     *
-     * @return the maximum concurrent requests
-     */
-    public int getMaximumConcurrentRequests() {
-        return (int) (state >> 32L);
+    public RequestLimit getRequestLimit() {
+        return requestLimit;
     }
-
-    /**
-     * Set the maximum concurrent requests.  The value must be greater than or equal to one.
-     *
-     * @param newMax the maximum concurrent requests
-     */
-    public int setMaximumConcurrentRequests(int newMax) {
-        if (newMax < 1) {
-            throw new IllegalArgumentException("Maximum concurrent requests must be at least 1");
-        }
-        long oldVal, newVal;
-        int current, oldMax;
-        do {
-            oldVal = state;
-            current = (int) (oldVal & MASK_CURRENT);
-            oldMax = (int) ((oldVal & MASK_MAX) >> 32L);
-            newVal = current | newMax & 0xFFFFFFFFL << 32L;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
-        while (current < newMax) {
-            // more space opened up!  Process queue entries for a while
-            final HttpServerExchange request = queue.poll();
-            if (request != null) {
-                // now bump up the counter by one; this *could* put us over the max if it changed in the meantime but that's OK
-                newVal = stateUpdater.getAndIncrement(this);
-                current = (int) (newVal & MASK_CURRENT);
-                request.dispatch(nextHandler);
-            }
-        }
-        return oldMax;
-    }
-
-    private void decrementRequests() {
-        stateUpdater.decrementAndGet(this);
-    }
-
-    /**
-     * Get the next handler.  Will not be {@code null}.
-     *
-     * @return the next handler
-     */
-    public HttpHandler getNextHandler() {
-        return nextHandler;
-    }
-
-    /**
-     * Set the next handler.  The value must not be {@code null}.
-     *
-     *
-     * @param nextHandler the next handler
-     */
-    public RequestLimitingHandler setNextHandler(final HttpHandler nextHandler) {
-        Handlers.handlerNotNull(nextHandler);
-        return this;
-    }
-
-
 }
