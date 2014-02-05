@@ -19,6 +19,7 @@ import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.CompletionLatchHandler;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -33,6 +34,8 @@ import org.junit.runner.RunWith;
 public class ServletMetricsHandlerTestCase {
 
     private static TestMetricsCollector metricsCollector = new TestMetricsCollector();
+
+    private static CompletionLatchHandler completionLatchHandler;
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -58,7 +61,7 @@ public class ServletMetricsHandlerTestCase {
         manager.deploy();
         root.addPrefixPath(builder.getContextPath(), manager.start());
 
-        DefaultServer.setRootHandler(root);
+        DefaultServer.setRootHandler(completionLatchHandler = new CompletionLatchHandler(root));
     }
 
 
@@ -70,6 +73,8 @@ public class ServletMetricsHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertTrue(HttpClientUtils.readResponse(result).contains("metric"));
+            completionLatchHandler.await();
+            completionLatchHandler.reset();
 
             MetricsHandler.MetricResult metrics = metricsCollector.getMetrics("MetricTestServlet");
             Assert.assertEquals(1, metrics.getTotalRequests());
@@ -81,6 +86,8 @@ public class ServletMetricsHandlerTestCase {
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertTrue(HttpClientUtils.readResponse(result).contains("metric"));
+            completionLatchHandler.await();
+            completionLatchHandler.reset();
 
 
             metrics = metricsCollector.getMetrics("MetricTestServlet");
