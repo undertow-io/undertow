@@ -89,7 +89,7 @@ public class ServletRequestContext {
     private TransportGuaranteeType transportGuarenteeType;
     private HttpSessionImpl session;
 
-    private ServletContextImpl currentServetContext;
+    private ServletContextImpl currentServletContext;
 
     public ServletRequestContext(final Deployment deployment, final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse, final ServletPathMatch originalServletPathMatch) {
         this.deployment = deployment;
@@ -98,7 +98,7 @@ public class ServletRequestContext {
         this.servletRequest = originalRequest;
         this.servletResponse = originalResponse;
         this.originalServletPathMatch = originalServletPathMatch;
-        this.currentServetContext = deployment.getServletContext();
+        this.currentServletContext = deployment.getServletContext();
     }
 
     public Deployment getDeployment() {
@@ -185,12 +185,12 @@ public class ServletRequestContext {
         return originalServletPathMatch;
     }
 
-    public ServletContextImpl getCurrentServetContext() {
-        return currentServetContext;
+    public ServletContextImpl getCurrentServletContext() {
+        return currentServletContext;
     }
 
-    public void setCurrentServetContext(ServletContextImpl currentServetContext) {
-        this.currentServetContext = currentServetContext;
+    public void setCurrentServletContext(ServletContextImpl currentServletContext) {
+        this.currentServletContext = currentServletContext;
     }
 
     public boolean displayStackTraces() {

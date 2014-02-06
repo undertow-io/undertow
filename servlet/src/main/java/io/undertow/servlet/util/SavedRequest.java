@@ -79,7 +79,7 @@ public class SavedRequest implements Serializable {
                     }
                     SavedRequest request = new SavedRequest(buffer, read, exchange.getRequestMethod(), exchange.getRequestURI(), exchange.getRequestHeaders());
                     final ServletRequestContext sc = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-                    HttpSessionImpl session = sc.getCurrentServetContext().getSession(exchange, true);
+                    HttpSessionImpl session = sc.getCurrentServletContext().getSession(exchange, true);
                     Session underlyingSession;
                     if(System.getSecurityManager() == null) {
                         underlyingSession = session.getSession();
