@@ -71,7 +71,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     @Override
     protected void storeInitialLocation(final HttpServerExchange exchange) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        HttpSessionImpl httpSession = servletRequestContext.getCurrentServetContext().getSession(exchange, true);
+        HttpSessionImpl httpSession = servletRequestContext.getCurrentServletContext().getSession(exchange, true);
         Session session;
         if (System.getSecurityManager() == null) {
             session = httpSession.getSession();
@@ -86,7 +86,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     protected void handleRedirectBack(final HttpServerExchange exchange) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
-        HttpSessionImpl httpSession = servletRequestContext.getCurrentServetContext().getSession(exchange, false);
+        HttpSessionImpl httpSession = servletRequestContext.getCurrentServletContext().getSession(exchange, false);
         if (httpSession != null) {
             Session session;
             if (System.getSecurityManager() == null) {

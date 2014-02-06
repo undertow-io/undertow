@@ -84,13 +84,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         ThreadSetupAction.Handle handle = null;
         ServletContextImpl oldServletContext = null;
         HttpSessionImpl oldSession = null;
-        if (servletRequestContext.getCurrentServetContext() != this.servletContext) {
+        if (servletRequestContext.getCurrentServletContext() != this.servletContext) {
             //cross context request, we need to run the thread setup actions
-            oldServletContext = servletRequestContext.getCurrentServetContext();
+            oldServletContext = servletRequestContext.getCurrentServletContext();
             oldSession = servletRequestContext.getSession();
             servletRequestContext.setSession(null);
             handle = this.servletContext.getDeployment().getThreadSetupAction().setup(servletRequestContext.getExchange());
-            servletRequestContext.setCurrentServetContext(this.servletContext);
+            servletRequestContext.setCurrentServletContext(this.servletContext);
         }
 
         try {
@@ -187,7 +187,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         } finally {
             if (handle != null) {
                 servletRequestContext.setSession(oldSession);
-                servletRequestContext.setCurrentServetContext(oldServletContext);
+                servletRequestContext.setCurrentServletContext(oldServletContext);
                 handle.tearDown();
             }
         }
@@ -202,13 +202,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         ThreadSetupAction.Handle handle = null;
         ServletContextImpl oldServletContext = null;
         HttpSessionImpl oldSession = null;
-        if (servletRequestContext.getCurrentServetContext() != this.servletContext) {
+        if (servletRequestContext.getCurrentServletContext() != this.servletContext) {
             //cross context request, we need to run the thread setup actions
-            oldServletContext = servletRequestContext.getCurrentServetContext();
+            oldServletContext = servletRequestContext.getCurrentServletContext();
             oldSession = servletRequestContext.getSession();
             servletRequestContext.setSession(null);
             handle = this.servletContext.getDeployment().getThreadSetupAction().setup(servletRequestContext.getExchange());
-            servletRequestContext.setCurrentServetContext(this.servletContext);
+            servletRequestContext.setCurrentServletContext(this.servletContext);
         }
 
         try {
@@ -300,7 +300,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         } finally {
             if(handle != null) {
                 servletRequestContext.setSession(oldSession);
-                servletRequestContext.setCurrentServetContext(oldServletContext);
+                servletRequestContext.setCurrentServletContext(oldServletContext);
                 handle.tearDown();
             }
         }
