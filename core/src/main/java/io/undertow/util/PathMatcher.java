@@ -62,7 +62,7 @@ public class PathMatcher<T> {
      */
     public PathMatch<T> match(String path){
         if (!exactPathMatches.isEmpty()) {
-            T match = exactPathMatches.get(path);
+            T match = getExactPath(path);
             if (match != null) {
                 return new PathMatch<T>("", match);
             }
@@ -134,7 +134,7 @@ public class PathMatcher<T> {
     }
 
     public T getExactPath(final String path) {
-        if (path.charAt(0) != '/') {
+        if (path.isEmpty() || path.charAt(0) != '/') {
             return exactPathMatches.get("/" + path);
         } else {
             return exactPathMatches.get(path);
