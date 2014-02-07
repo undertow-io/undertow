@@ -125,10 +125,11 @@ public class Cookies {
     /**
      * Parses the cookies from a list of cookie headers
      * @param maxCookies The maximum number of cookies. Used to prevent hash collision attacks
+     * @param allowEqualInValue if true equal characters are allowed in cookie values
      * @param cookies The cookie values to parse
      * @return A pared cookie map
      */
-    public static Map<String, Cookie> parseRequestCookies(int maxCookies, List<String> cookies) {
+    public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
 
         if (cookies == null) {
             return new TreeMap<String, Cookie>();
@@ -136,7 +137,7 @@ public class Cookies {
         final Map<String, Cookie> parsedCookies = new TreeMap<String, Cookie>();
 
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies, maxCookies);
+            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue);
         }
         return parsedCookies;
     }
@@ -144,8 +145,10 @@ public class Cookies {
     /**
      * @param cookie        The cookie
      * @param parsedCookies The map of cookies
+     * @param maxCookies The maximum number of cookies. Used to prevent hash collision attacks
+     * @param allowEqualInValue if true equal characters are allowed in cookie values
      */
-    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies) {
+    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue) {
         int state = 0;
         String name = null;
         int start = 0;
@@ -165,72 +168,55 @@ public class Cookies {
                     //fall through
                 }
                 case 1: {
+                    //extract key
                     if (c == '=') {
                         name = cookie.substring(start, i);
                         start = i + 1;
                         state = 2;
                     } else if (c == ';') {
-                        final String value = cookie.substring(start, i);
-                        if (++cookieCount == maxCookies) {
-                            throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
-                        }
-                        if (name.startsWith("$")) {
-                            additional.put(name, value);
-                        } else {
-                            cookies.put(name, value);
-                        }
+                        createCookie(name, cookie.substring(start, i), maxCookies, ++cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
                     }
                     break;
                 }
                 case 2: {
+                    //extract value
                     if (c == ';') {
-                        final String value = cookie.substring(start, i);
-                        if (++cookieCount == maxCookies) {
-                            throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
-                        }
-                        if (name.startsWith("$")) {
-                            additional.put(name, value);
-                        } else {
-                            cookies.put(name, value);
-                        }
+                        createCookie(name, cookie.substring(start, i), maxCookies, ++cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
                     } else if (c == '"') {
                         state = 3;
                         start = i + 1;
+                    } else if (!allowEqualInValue && c == '=') {
+                        createCookie(name, cookie.substring(start, i), maxCookies, ++cookieCount, cookies, additional);
+                        state = 4;
+                        start = i + 1;
                     }
                     break;
                 }
                 case 3: {
+                    //extract quoted value
                     if (c == '"') {
-                        final String value = cookie.substring(start, i);
-                        if (++cookieCount == maxCookies) {
-                            throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
-                        }
-                        if (name.startsWith("$")) {
-                            additional.put(name, value);
-                        } else {
-                            cookies.put(name, value);
-                        }
+                        createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
                     }
                     break;
                 }
+                case 4: {
+                    //skip value portion behind '='
+                    if (c == ';') {
+                        state = 0;
+                    }
+                    start = i + 1;
+                    break;
+                }
             }
         }
         if (state == 2) {
-            final String value = cookie.substring(start);
-            if (++cookieCount == maxCookies) {
-                throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
-            }
-            if (name.startsWith("$")) {
-                additional.put(name, value);
-            } else {
-                cookies.put(name, value);
-            }
+            createCookie(name, cookie.substring(start), maxCookies, cookieCount, cookies, additional);
         }
 
         for (final Map.Entry<String, String> entry : cookies.entrySet()) {
@@ -245,6 +231,18 @@ public class Cookies {
                 c.setPath(additional.get(PATH));
             }
             parsedCookies.put(c.getName(), c);
+        }
+    }
+
+    private static void createCookie(final String name, final String value, int maxCookies, int cookieCount,
+            final Map<String, String> cookies, final Map<String, String> additional) {
+        if (cookieCount == maxCookies) {
+            throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
+        }
+        if (name.startsWith("$")) {
+            additional.put(name, value);
+        } else {
+            cookies.put(name, value);
         }
     }
 
