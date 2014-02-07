@@ -100,6 +100,15 @@ public class PredicateParsingTestCase {
     }
 
     @Test
+    public void testDefaultArrayValue() {
+        Predicate predicate = PredicateParser.parse("equals[%{i,Content-Type},\"text/plain\"]", PredicateParsingTestCase.class.getClassLoader());
+        HttpServerExchange e = new HttpServerExchange(null);
+        Assert.assertFalse(predicate.resolve(e));
+        e.getRequestHeaders().add(Headers.CONTENT_TYPE, "text/plain");
+        Assert.assertTrue(predicate.resolve(e));
+    }
+
+    @Test
     public void testOrderOfOperations() {
         expect("exists[%{i,Content-Length}] or exists[value=%{i,Trailer}] and exists[%{i,Other}]", false, true);
         expect("(exists[%{i,Content-Length}] or exists[value=%{i,Trailer}]) and exists[%{i,Other}]", false, false);
