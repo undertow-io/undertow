@@ -8,7 +8,6 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 
 import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * Servlet version of the single sign on authentication mechanism.
@@ -27,12 +26,7 @@ public class ServletSingleSignOnAuthenticationMechainism extends SingleSignOnAut
         if(System.getSecurityManager() == null) {
             return session.getSession();
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<Session>() {
-                @Override
-                public Session run() {
-                    return session.getSession();
-                }
-            });
+            return AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
         }
     }
 }
