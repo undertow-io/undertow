@@ -135,6 +135,15 @@ public class UndertowOptions {
      */
     public static final Option<Boolean> RECORD_REQUEST_START_TIME = Option.simple(UndertowOptions.class, "RECORD_REQUEST_START_TIME", Boolean.class);
 
+    /**
+     * If this is true then Undertow will allow non-escaped equals characters in unquoted cookie values.
+     * <p/>
+     * Unquoted cookie values may not contain equals characters. If present the value ends before the equals sign. The remainder of the cookie value will be dropped.
+     * <p/>
+     * default is false
+     */
+    public static final Option<Boolean> ALLOW_EQUALS_IN_COOKIE_VALUE = Option.simple(UndertowOptions.class, "ALLOW_EQUALS_IN_COOKIE_VALUE", Boolean.class);
+
     private UndertowOptions() {
 
     }
