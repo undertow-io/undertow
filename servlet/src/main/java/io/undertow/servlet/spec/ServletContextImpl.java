@@ -657,7 +657,7 @@ public class ServletContextImpl implements ServletContext {
         final SessionManager sessionManager = deployment.getSessionManager();
         Session session = sessionManager.getSession(sessionId);
         if (session != null) {
-            return HttpSessionImpl.forSession(session, this, false);
+            return SecurityActions.forSession(session, this, false);
         }
         return null;
     }
@@ -672,11 +672,11 @@ public class ServletContextImpl implements ServletContext {
             final SessionManager sessionManager = deployment.getSessionManager();
             Session session = sessionManager.getSession(exchange, c);
             if (session != null) {
-                httpSession = HttpSessionImpl.forSession(session, this, false);
+                httpSession = SecurityActions.forSession(session, this, false);
                 exchange.putAttachment(sessionAttachmentKey, httpSession);
             } else if (create) {
                 final Session newSession = sessionManager.createSession(exchange, c);
-                httpSession = HttpSessionImpl.forSession(newSession, this, true);
+                httpSession = SecurityActions.forSession(newSession, this, true);
                 exchange.putAttachment(sessionAttachmentKey, httpSession);
             }
         }

@@ -20,7 +20,6 @@ package io.undertow.servlet.websockets;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
-import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.FinishedIoFuture;
@@ -58,7 +57,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
     public ServletWebSocketHttpExchange(final HttpServletRequest request, final HttpServletResponse response) {
         this.request = request;
         this.response = response;
-        this.exchange = ServletRequestContext.requireCurrent().getOriginalRequest().getExchange();
+        this.exchange = SecurityActions.requireCurrentServletRequestContext().getOriginalRequest().getExchange();
     }
 
 

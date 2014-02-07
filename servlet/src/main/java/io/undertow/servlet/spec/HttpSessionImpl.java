@@ -58,6 +58,7 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     public static HttpSessionImpl forSession(final Session session, final ServletContext servletContext, final boolean newSession) {
+        // forSession is called by privileged actions only so no need to do it again
         ServletRequestContext current = ServletRequestContext.current();
         if (current == null) {
             return new HttpSessionImpl(session, servletContext, newSession);
@@ -189,7 +190,7 @@ public class HttpSessionImpl implements HttpSession {
     @Override
     public void invalidate() {
         invalid = true;
-        ServletRequestContext current = ServletRequestContext.current();
+        ServletRequestContext current = SecurityActions.currentServletRequestContext();
         if (current == null) {
             session.invalidate(null);
         } else {

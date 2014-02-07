@@ -33,7 +33,7 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void sessionCreated(final Session session, final HttpServerExchange exchange) {
-        final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, true);
+        final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, true);
         applicationListeners.sessionCreated(httpSession);
     }
 
@@ -41,7 +41,7 @@ public class SessionListenerBridge implements SessionListener {
     public void sessionDestroyed(final Session session, final HttpServerExchange exchange, final SessionDestroyedReason reason) {
         ThreadSetupAction.Handle handle = null;
         try {
-            final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
+            final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);
             if (reason == SessionDestroyedReason.TIMEOUT) {
                 handle = threadSetup.setup(exchange);
             }
@@ -56,7 +56,7 @@ public class SessionListenerBridge implements SessionListener {
             if (handle != null) {
                 handle.tearDown();
             }
-            ServletRequestContext current = ServletRequestContext.current();
+            ServletRequestContext current = SecurityActions.currentServletRequestContext();
             if (current != null) {
                 current.setSession(null);
             }
@@ -68,7 +68,7 @@ public class SessionListenerBridge implements SessionListener {
         if(name.startsWith(IO_UNDERTOW)) {
             return;
         }
-        final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
+        final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);
         applicationListeners.httpSessionAttributeAdded(httpSession, name, value);
         if (value instanceof HttpSessionBindingListener) {
             ((HttpSessionBindingListener) value).valueBound(new HttpSessionBindingEvent(httpSession, name, value));
@@ -80,7 +80,7 @@ public class SessionListenerBridge implements SessionListener {
         if(name.startsWith(IO_UNDERTOW)) {
             return;
         }
-        final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
+        final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);
         if (old != value) {
             if (old instanceof HttpSessionBindingListener) {
                 ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(httpSession, name, old));
@@ -97,7 +97,7 @@ public class SessionListenerBridge implements SessionListener {
         if(name.startsWith(IO_UNDERTOW)) {
             return;
         }
-        final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
+        final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);
         if (old != null) {
             applicationListeners.httpSessionAttributeRemoved(httpSession, name, old);
             if (old instanceof HttpSessionBindingListener) {

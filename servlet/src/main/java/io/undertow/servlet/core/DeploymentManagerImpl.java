@@ -201,8 +201,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 wrappedHandlers = new MetricsChainHandler(wrappedHandlers, metrics, deployment);
             }
 
-            final ServletInitialHandler servletInitialHandler = new ServletInitialHandler(deployment.getServletPaths(), wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
-
+            final ServletInitialHandler servletInitialHandler = SecurityActions.createServletInitialHandler(deployment.getServletPaths(), wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
 
             HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
             initialHandler = new HttpContinueReadHandler(initialHandler);

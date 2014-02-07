@@ -79,7 +79,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
-        final ServletRequestContext servletRequestContext = ServletRequestContext.requireCurrent();
+        final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
 
         ThreadSetupAction.Handle handle = null;
         ServletContextImpl oldServletContext = null;
@@ -196,7 +196,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
-        final ServletRequestContext servletRequestContext = ServletRequestContext.requireCurrent();
+        final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
         final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
         ThreadSetupAction.Handle handle = null;
@@ -319,7 +319,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     }
 
     private void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception, final String message) throws ServletException, IOException {
-        final ServletRequestContext servletRequestContext = ServletRequestContext.requireCurrent();
+        final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
         final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
         if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {

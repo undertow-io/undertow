@@ -22,6 +22,16 @@ package io.undertow.servlet.core;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import javax.servlet.ServletContext;
+
+import io.undertow.server.HttpHandler;
+import io.undertow.server.session.Session;
+import io.undertow.servlet.handlers.ServletInitialHandler;
+import io.undertow.servlet.handlers.ServletPathMatches;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.HttpSessionImpl;
+import io.undertow.servlet.spec.ServletContextImpl;
+
 final class SecurityActions {
 
     private SecurityActions() {
@@ -84,6 +94,45 @@ final class SecurityActions {
             return (String) AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 public Object run() {
                     return System.getProperty(prop);
+                }
+            });
+        }
+    }
+
+    static HttpSessionImpl forSession(final Session session, final ServletContext servletContext, final boolean newSession) {
+        if (System.getSecurityManager() == null) {
+            return HttpSessionImpl.forSession(session, servletContext, newSession);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<HttpSessionImpl>() {
+                @Override
+                public HttpSessionImpl run() {
+                    return HttpSessionImpl.forSession(session, servletContext, newSession);
+                }
+            });
+        }
+    }
+
+    static ServletRequestContext currentServletRequestContext() {
+        if (System.getSecurityManager() == null) {
+            return ServletRequestContext.current();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ServletRequestContext>() {
+                @Override
+                public ServletRequestContext run() {
+                    return ServletRequestContext.current();
+                }
+            });
+        }
+    }
+
+    static ServletInitialHandler createServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
+        if (System.getSecurityManager() == null) {
+            return new ServletInitialHandler(paths, next, setupAction, servletContext);
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ServletInitialHandler>() {
+                @Override
+                public ServletInitialHandler run() {
+                    return new ServletInitialHandler(paths, next, setupAction, servletContext);
                 }
             });
         }

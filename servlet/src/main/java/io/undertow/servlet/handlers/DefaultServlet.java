@@ -159,7 +159,7 @@ public class DefaultServlet extends HttpServlet {
         }
         final boolean include = req.getDispatcherType() == DispatcherType.INCLUDE;
         if (!req.getMethod().equals(Methods.HEAD_STRING)) {
-            HttpServerExchange exchange = ServletRequestContext.requireCurrent().getOriginalRequest().getExchange();
+            HttpServerExchange exchange = SecurityActions.requireCurrentServletRequestContext().getOriginalRequest().getExchange();
             resource.serve(exchange.getResponseSender(), exchange, new IoCallback() {
 
                 @Override

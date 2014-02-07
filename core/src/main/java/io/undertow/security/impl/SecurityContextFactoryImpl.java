@@ -43,7 +43,7 @@ public class SecurityContextFactoryImpl implements SecurityContextFactory {
     @Override
     public SecurityContext createSecurityContext(final HttpServerExchange exchange, final AuthenticationMode mode,
         final IdentityManager identityManager, final String programmaticMechName) {
-        SecurityContextImpl securityContext = new SecurityContextImpl(exchange, mode, identityManager);
+        SecurityContextImpl securityContext = SecurityActions.createSecurityContextImpl(exchange, mode, identityManager);
         if (programmaticMechName != null)
             securityContext.setProgramaticMechName(programmaticMechName);
         return securityContext;
