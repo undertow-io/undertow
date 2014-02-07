@@ -51,7 +51,7 @@ public class Bootstrap implements ServletExtension {
         }
         servletContext.setAttribute(ServerContainer.class.getName(), container);
         info.containerReady(container);
-        UndertowContainerProvider.addContainer(deploymentInfo.getClassLoader(), container);
+        SecurityActions.addContainer(deploymentInfo.getClassLoader(), container);
 
         deploymentInfo.addListener(Servlets.listener(WebSocketListener.class));
     }
@@ -72,7 +72,7 @@ public class Bootstrap implements ServletExtension {
 
         @Override
         public void contextDestroyed(ServletContextEvent sce) {
-            UndertowContainerProvider.removeContainer(sce.getServletContext().getClassLoader());
+            SecurityActions.removeContainer(sce.getServletContext().getClassLoader());
 
         }
     }

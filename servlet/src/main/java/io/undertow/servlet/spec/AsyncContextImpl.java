@@ -510,7 +510,7 @@ public class AsyncContextImpl implements AsyncContext {
 
 
     private void onAsyncComplete() {
-        final boolean setupRequired = ServletRequestContext.current() == null;
+        final boolean setupRequired = SecurityActions.currentServletRequestContext() == null;
         ThreadSetupAction.Handle handle = null;
         if (setupRequired) {
             handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
@@ -538,7 +538,7 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private void onAsyncTimeout() {
-        final boolean setupRequired = ServletRequestContext.current() == null;
+        final boolean setupRequired = SecurityActions.currentServletRequestContext() == null;
         ThreadSetupAction.Handle handle = null;
         if (setupRequired) {
             handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
@@ -566,7 +566,7 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private void onAsyncStart(AsyncContext newAsyncContext) {
-        final boolean setupRequired = ServletRequestContext.current() == null;
+        final boolean setupRequired = SecurityActions.currentServletRequestContext() == null;
         ThreadSetupAction.Handle handle = null;
         if (setupRequired) {
             handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
@@ -595,7 +595,7 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private void onAsyncError(Throwable t) {
-        final boolean setupRequired = ServletRequestContext.current() == null;
+        final boolean setupRequired = SecurityActions.currentServletRequestContext() == null;
         ThreadSetupAction.Handle handle = null;
         if (setupRequired) {
             handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
@@ -625,14 +625,14 @@ public class AsyncContextImpl implements AsyncContext {
     private void setupRequestContext(final boolean setupRequired) {
         if (setupRequired) {
             servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
-            ServletRequestContext.setCurrentRequestContext(servletRequestContext);
+            SecurityActions.setCurrentRequestContext(servletRequestContext);
         }
     }
 
     private void tearDownRequestContext(final boolean setupRequired) {
         if (setupRequired) {
             servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
-            ServletRequestContext.clearCurrentServletAttachments();
+            SecurityActions.clearCurrentServletAttachments();
         }
     }
 

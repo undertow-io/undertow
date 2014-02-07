@@ -75,7 +75,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
             for (String sessionId : sessionManager.getTransientSessions()) {
                 Session session = sessionManager.getSession(sessionId);
                 if (session != null) {
-                    final HttpSessionEvent event = new HttpSessionEvent(HttpSessionImpl.forSession(session, servletContext, false));
+                    final HttpSessionEvent event = new HttpSessionEvent(SecurityActions.forSession(session, servletContext, false));
                     final Map<String, Object> sessionData = new HashMap<String, Object>();
                     for (String attr : session.getAttributeNames()) {
                         final Object attribute = session.getAttribute(attr);

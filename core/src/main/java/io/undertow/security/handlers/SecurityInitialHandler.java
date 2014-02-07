@@ -72,7 +72,7 @@ public class SecurityInitialHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         SecurityContext newContext = this.contextFactory.createSecurityContext(exchange, authenticationMode, identityManager,
                 programaticMechName);
-        exchange.setSecurityContext(newContext);
+        SecurityActions.setSecurityContext(exchange, newContext);
         next.handleRequest(exchange);
     }
 
