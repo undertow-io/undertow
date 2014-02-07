@@ -93,6 +93,8 @@ import java.util.Set;
  */
 public final class HttpServletRequestImpl implements HttpServletRequest {
 
+    private static final String HTTPS = "https";
+
     private final HttpServerExchange exchange;
     private final ServletContextImpl originalServletContext;
     private ServletContextImpl servletContext;
@@ -839,7 +841,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isSecure() {
-        return getAttribute("javax.servlet.request.ssl_session_id") != null;//todo this could be done better
+        return getScheme().equalsIgnoreCase(HTTPS);
     }
 
     @Override
