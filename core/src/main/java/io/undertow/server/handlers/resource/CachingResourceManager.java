@@ -150,16 +150,20 @@ public class CachingResourceManager implements ResourceManager {
 
     @Override
     public void close() throws IOException {
-        //clear all cached data on close
-        if(dataCache != null) {
-            Set<Object> keys = dataCache.getAllKeys();
-            for(final Object key : keys) {
-                if(key instanceof CachedResource.CacheKey) {
-                    if(((CachedResource.CacheKey) key).manager == this) {
-                        dataCache.remove(key);
+        try {
+            //clear all cached data on close
+            if(dataCache != null) {
+                Set<Object> keys = dataCache.getAllKeys();
+                for(final Object key : keys) {
+                    if(key instanceof CachedResource.CacheKey) {
+                        if(((CachedResource.CacheKey) key).manager == this) {
+                            dataCache.remove(key);
+                        }
                     }
                 }
             }
+        } finally {
+            underlyingResourceManager.close();
         }
     }
 
