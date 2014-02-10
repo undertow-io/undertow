@@ -68,6 +68,7 @@ public abstract class AbstractAjpParser {
         while (length < stringLength) {
             if (!buf.hasRemaining()) {
                 state.stringLength = stringLength;
+                state.containsUrlCharacters = containsUrlCharacters;
                 return new StringHolder(null, false, false);
             }
             char c = (char) buf.get();
@@ -85,6 +86,8 @@ public abstract class AbstractAjpParser {
             state.containsUrlCharacters = false;
             return new StringHolder(builder.toString(), true, containsUrlCharacters);
         } else {
+            state.stringLength = stringLength;
+            state.containsUrlCharacters = containsUrlCharacters;
             return new StringHolder(null, false, false);
         }
     }
