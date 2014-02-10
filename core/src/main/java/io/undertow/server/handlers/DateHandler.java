@@ -15,6 +15,7 @@ import io.undertow.util.Headers;
  *
  * @author Stuart Douglas
  */
+@Deprecated()
 public class DateHandler implements HttpHandler {
 
     private final HttpHandler next;

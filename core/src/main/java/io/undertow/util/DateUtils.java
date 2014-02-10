@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -38,6 +39,9 @@ public class DateUtils {
     private static final TimeZone GMT_ZONE = TimeZone.getTimeZone("GMT");
 
     private static final String RFC1123_PATTERN = "EEE, dd MMM yyyy HH:mm:ss z";
+
+    private static volatile String cachedDateString;
+    private static volatile long nextUpdateTime = -1;
 
     /**
      * Thread local cache of this date format. This is technically a small memory leak, however
@@ -218,6 +222,22 @@ public class DateUtils {
             return true;
         }
         return lastModified.after(modDate);
+    }
+
+    public static void addDateHeaderIfRequired(HttpServerExchange exchange) {
+        HeaderMap responseHeaders = exchange.getResponseHeaders();
+        if(exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_DATE, true) && !responseHeaders.contains(Headers.DATE)) {
+            long time = System.nanoTime();
+            if(time < nextUpdateTime) {
+                responseHeaders.put(Headers.DATE, cachedDateString);
+            } else {
+                long realTime = System.currentTimeMillis();
+                String dateString = DateUtils.toDateString(new Date(realTime));
+                cachedDateString = dateString;
+                nextUpdateTime = time + 1000000000;
+                responseHeaders.put(Headers.DATE, dateString);
+            }
+        }
     }
 
     private DateUtils() {

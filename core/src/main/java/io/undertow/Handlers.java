@@ -176,9 +176,12 @@ public class Handlers {
     /**
      * Returns a new HTTP handler that sets the Date: header.
      *
+     * This is no longer necessary, as it is handled by the connectors directly.
+     *
      * @param next The next handler in the chain
      * @return A new date handler
      */
+    @Deprecated
     public static DateHandler date(final HttpHandler next) {
         return new DateHandler(next);
     }

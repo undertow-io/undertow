@@ -27,6 +27,7 @@ import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.xnio.OptionMap;
@@ -123,6 +124,7 @@ public final class AjpServerConnection extends AbstractServerConnection {
 
     @Override
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
+        DateUtils.addDateHeaderIfRequired(exchange);
         return conduit;
     }
 

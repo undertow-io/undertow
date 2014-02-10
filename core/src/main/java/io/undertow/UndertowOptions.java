@@ -117,6 +117,14 @@ public class UndertowOptions {
     public static final Option<Boolean> ALWAYS_SET_KEEP_ALIVE = Option.simple(UndertowOptions.class, "ALWAYS_SET_KEEP_ALIVE", Boolean.class);
 
     /**
+     * If this is true then a Date header will be added to all responses. The HTTP spec says this header should be added to all
+     * responses, unless the server does not have an accurate clock.
+     * <p/>
+     * Defaults to true
+     */
+    public static final Option<Boolean> ALWAYS_SET_DATE = Option.simple(UndertowOptions.class, "ALWAYS_SET_DATE", Boolean.class);
+
+    /**
      * Maximum size of a buffered request, in bytes
      * <p/>
      * Requests are not usually buffered, the most common case is when performing SSL renegotiation for a POST request, and the post data must be fully

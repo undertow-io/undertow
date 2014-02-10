@@ -28,6 +28,7 @@ import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -49,6 +50,7 @@ import org.xnio.conduits.StreamSourceConduit;
 public class HttpTransferEncoding {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.handler.transfer-encoding");
+
 
     /**
      * Construct a new instance.
@@ -197,6 +199,8 @@ public class HttpTransferEncoding {
     }
 
     static StreamSinkConduit createSinkConduit(final HttpServerExchange exchange) {
+        DateUtils.addDateHeaderIfRequired(exchange);
+
         boolean headRequest = exchange.getRequestMethod().equals(Methods.HEAD);
         HttpServerConnection serverConnection = (HttpServerConnection) exchange.getConnection();
 
