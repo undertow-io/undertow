@@ -26,6 +26,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import org.junit.AfterClass;
@@ -45,6 +46,7 @@ import java.net.Socket;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@ProxyIgnore
 public class ChunkedRequestTrailersTestCase {
 
     private static volatile HttpServerConnection connection;
