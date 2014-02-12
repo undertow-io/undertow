@@ -228,7 +228,7 @@ public interface UndertowMessages {
     @Message(id = 67, value = "No client cert was provided")
     SSLPeerUnverifiedException peerUnverified();
 
-    @Message(id = 68, value = "Servlet patch match failed")
+    @Message(id = 68, value = "Servlet path match failed")
     IllegalArgumentException servletPathMatchFailed();
 
     @Message(id = 69, value = "Could not parse set cookie header %s")
