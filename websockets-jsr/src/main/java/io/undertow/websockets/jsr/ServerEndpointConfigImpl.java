@@ -7,16 +7,18 @@ import javax.websocket.server.ServerEndpointConfig;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Stuart Douglas
  */
-public class ServerEnpointConfigImpl implements ServerEndpointConfig{
+public class ServerEndpointConfigImpl implements ServerEndpointConfig {
 
     private final Class<?> endpointclass;
     private final String path;
+    private final Map<String, Object> userProperties = new ConcurrentHashMap<String, Object>();
 
-    public ServerEnpointConfigImpl(Class<?> endpointclass, String path) {
+    public ServerEndpointConfigImpl(Class<?> endpointclass, String path) {
         this.endpointclass = endpointclass;
         this.path = path;
     }
@@ -58,6 +60,6 @@ public class ServerEnpointConfigImpl implements ServerEndpointConfig{
 
     @Override
     public Map<String, Object> getUserProperties() {
-        return Collections.emptyMap();
+        return userProperties;
     }
 }

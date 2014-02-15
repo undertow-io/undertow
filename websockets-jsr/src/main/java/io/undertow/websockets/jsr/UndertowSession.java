@@ -35,11 +35,11 @@ import java.net.URI;
 import java.nio.channels.Channel;
 import java.security.Principal;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -55,7 +55,7 @@ public final class UndertowSession implements Session {
     private final ServerWebSocketContainer container;
     private final Principal user;
     private final WebSocketSessionRemoteEndpoint remote;
-    private final Map<String, Object> attrs = new ConcurrentHashMap<String, Object>();
+    private final Map<String, Object> attrs;
     private final Map<String, List<String>> requestParameterMap;
     private final URI requestUri;
     private final String queryString;
@@ -86,6 +86,7 @@ public final class UndertowSession implements Session {
         this.frameHandler = new FrameHandler(this, this.endpoint.getInstance());
         webSocketChannel.getReceiveSetter().set(frameHandler);
         this.sessionId = new SecureRandomSessionIdGenerator().createSessionId();
+        this.attrs = Collections.synchronizedMap(new HashMap<String, Object>(config.getUserProperties()));
     }
 
     @Override

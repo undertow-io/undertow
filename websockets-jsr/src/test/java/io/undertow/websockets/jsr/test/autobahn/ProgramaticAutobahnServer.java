@@ -25,7 +25,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
-import io.undertow.websockets.jsr.ServerEnpointConfigImpl;
+import io.undertow.websockets.jsr.ServerEndpointConfigImpl;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
@@ -94,7 +94,7 @@ public class ProgramaticAutobahnServer implements Runnable {
                     .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
                     .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
 
-            deployment.addEndpoint(new ServerEnpointConfigImpl(ProgramaticAutobahnEndpoint.class, "/"));
+            deployment.addEndpoint(new ServerEndpointConfigImpl(ProgramaticAutobahnEndpoint.class, "/"));
 
             DeploymentManager manager = container.addDeployment(builder);
             manager.deploy();
