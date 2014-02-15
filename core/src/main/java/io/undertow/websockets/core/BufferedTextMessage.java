@@ -34,7 +34,9 @@ public class BufferedTextMessage {
     }
 
     private void checkMaxSize(StreamSourceFrameChannel channel, int res) throws IOException {
-        currentSize += res;
+        if(res > 0) {
+            currentSize += res;
+        }
         if (maxMessageSize > 0 && currentSize > maxMessageSize) {
             WebSockets.sendClose(new CloseMessage(CloseMessage.MSG_TOO_BIG, WebSocketMessages.MESSAGES.messageToBig(maxMessageSize)).toByteBuffer(), channel.getWebSocketChannel(), null);
             throw new IOException(WebSocketMessages.MESSAGES.messageToBig(maxMessageSize));
