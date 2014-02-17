@@ -359,7 +359,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentType(final String type) {
-        if (insideInclude || responseStarted()) {
+        if (type == null || insideInclude || responseStarted()) {
             return;
         }
         contentType = type;
