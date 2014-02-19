@@ -80,13 +80,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
     public void handleEvent(final ConduitStreamSourceChannel channel) {
-        Pooled<ByteBuffer> existing = connection.getExtraBytes();
-        if(existing == null && (connection.getOriginalSinkConduit().isWriteShutdown() || connection.getOriginalSourceConduit().isReadShutdown())) {
-            IoUtils.safeClose(connection);
-            channel.suspendReads();
-            return;
-        }
-
         while (requestStateUpdater.get(this) != 0) {
             //if the CAS fails it is because another thread is in the process of changing state
             //we just immediately retry
@@ -95,6 +88,16 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 requestStateUpdater.set(this, 1);
                 return;
             }
+        }
+        handleEventWithNoRunningRequest(channel);
+    }
+
+    public void handleEventWithNoRunningRequest(final ConduitStreamSourceChannel channel) {
+        Pooled<ByteBuffer> existing = connection.getExtraBytes();
+        if (existing == null && (connection.getOriginalSinkConduit().isWriteShutdown() || connection.getOriginalSourceConduit().isReadShutdown())) {
+            IoUtils.safeClose(connection);
+            channel.suspendReads();
+            return;
         }
 
 
@@ -147,7 +150,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             this.httpServerExchange = null;
             requestStateUpdater.set(this, 1);
             HttpTransferEncoding.setupRequest(httpServerExchange);
-            if(recordRequestStartTime) {
+            if (recordRequestStartTime) {
                 Connectors.setRequestStartTime(httpServerExchange);
             }
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
@@ -212,12 +215,21 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             if (connection.getExtraBytes() == null) {
                 //if we are not pipelining we just register a listener
                 //we have to resume from with the io thread
-                while (requestStateUpdater.get(this) != 0) {
-                    if (requestStateUpdater.compareAndSet(this, 1, 2)) {
-                        newRequest();
-                        channel.getSourceChannel().setReadListener(HttpReadListener.this);
-                        channel.getSourceChannel().resumeReads();
-                        requestStateUpdater.set(this, 0);
+                if (exchange.isInIoThread()) {
+                    //no need for CAS, we are in the IO thread
+                    newRequest();
+                    channel.getSourceChannel().setReadListener(HttpReadListener.this);
+                    channel.getSourceChannel().resumeReads();
+                    requestStateUpdater.set(this, 0);
+                } else {
+                    while (true) {
+                        if (requestStateUpdater.compareAndSet(this, 1, 2)) {
+                            newRequest();
+                            channel.getSourceChannel().setReadListener(HttpReadListener.this);
+                            requestStateUpdater.set(this, 0);
+                            channel.getSourceChannel().resumeReads();
+                            break;
+                        }
                     }
                 }
             } else {
@@ -227,10 +239,12 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     //no need to suspend reads here, the task will always run before the read listener anyway
                     channel.getIoThread().execute(this);
                 } else {
-                    while (requestStateUpdater.get(this) != 0) {
-                        if(requestStateUpdater.compareAndSet(this, 1, 2)) {
+                    while (true) {
+                        if (requestStateUpdater.compareAndSet(this, 1, 2)) {
                             newRequest();
                             channel.getSourceChannel().suspendReads();
+                            requestStateUpdater.set(this, 0);
+                            break;
                         }
                     }
                     Executor executor = exchange.getDispatchExecutor();
@@ -242,8 +256,8 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             }
         } else if (!exchange.isPersistent()) {
             IoUtils.safeClose(connection);
-        } else if(exchange.isUpgrade()) {
-            if(connection.getExtraBytes() != null) {
+        } else if (exchange.isUpgrade()) {
+            if (connection.getExtraBytes() != null) {
                 connection.getChannel().getSourceChannel().setConduit(new ReadDataStreamSourceConduit(connection.getChannel().getSourceChannel().getConduit(), connection));
             }
             connection.getUpgradeListener().handleUpgrade(connection.getChannel(), exchange);
