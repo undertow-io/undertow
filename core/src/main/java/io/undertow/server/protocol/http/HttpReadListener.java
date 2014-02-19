@@ -68,7 +68,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser) {
         this.connection = connection;
         this.parser = parser;
-        maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
+        this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, 0);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
     }
@@ -221,13 +221,18 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     }
                 }
             } else {
-                requestStateUpdater.set(this, 0); //no need to CAS, as we don't actually resume
-                newRequest();
                 if (exchange.isInIoThread()) {
+                    requestStateUpdater.set(this, 0); //no need to CAS, as we don't actually resume
+                    newRequest();
                     //no need to suspend reads here, the task will always run before the read listener anyway
                     channel.getIoThread().execute(this);
                 } else {
-                    channel.getSourceChannel().suspendReads();
+                    while (requestStateUpdater.get(this) != 0) {
+                        if(requestStateUpdater.compareAndSet(this, 1, 2)) {
+                            newRequest();
+                            channel.getSourceChannel().suspendReads();
+                        }
+                    }
                     Executor executor = exchange.getDispatchExecutor();
                     if (executor == null) {
                         executor = exchange.getConnection().getWorker();
