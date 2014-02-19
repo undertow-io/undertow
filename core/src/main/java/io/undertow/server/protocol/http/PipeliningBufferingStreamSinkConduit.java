@@ -81,17 +81,14 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
         }
         final ByteBuffer buffer = pooled.getResource();
 
-        int total = 0;
-        for (int i = offset; i < offset + length; ++i) {
-            total += srcs[i].remaining();
-        }
+        long total = Buffers.remaining(srcs, offset, length);
 
         if (buffer.remaining() > total) {
-            int put = total;
+            long put = total;
             Buffers.copy(buffer, srcs, offset, length);
             return put;
         } else {
-            return flushBufferWithUserData(srcs);
+            return flushBufferWithUserData(srcs, offset, length);
         }
     }
 
@@ -116,7 +113,7 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
             buffer.put(src);
             return put;
         } else {
-            return (int) flushBufferWithUserData(new ByteBuffer[]{src});
+            return (int) flushBufferWithUserData(new ByteBuffer[]{src}, 0, 1);
         }
     }
 
@@ -130,11 +127,11 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
         return Conduits.writeFinalBasic(this, srcs, offset, length);
     }
 
-    private long flushBufferWithUserData(final ByteBuffer[] byteBuffers) throws IOException {
+    private long flushBufferWithUserData(final ByteBuffer[] byteBuffers, int offset, int length) throws IOException {
         final ByteBuffer byteBuffer = buffer.getResource();
         if (byteBuffer.position() == 0) {
             try {
-                return next.write(byteBuffers, 0, byteBuffers.length);
+                return next.write(byteBuffers, offset, length);
             } finally {
                 buffer.free();
                 buffer = null;
@@ -147,10 +144,10 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
         }
         int originalBufferedRemaining = byteBuffer.remaining();
         long toWrite = originalBufferedRemaining;
-        ByteBuffer[] writeBufs = new ByteBuffer[byteBuffers.length + 1];
+        ByteBuffer[] writeBufs = new ByteBuffer[length + 1];
         writeBufs[0] = byteBuffer;
-        for (int i = 0; i < byteBuffers.length; ++i) {
-            writeBufs[i + 1] = byteBuffers[i];
+        for (int i = offset; i < offset + length; ++i) {
+            writeBufs[i + 1 - offset] = byteBuffers[i];
             toWrite += byteBuffers[i].remaining();
         }
 
@@ -297,12 +294,12 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
             final HttpServerConnection.ConduitState oldState = connection.resetChannel();
             if (!flushPipelinedData()) {
                 final StreamConnection channel = connection.getChannel();
-                channel.getSinkChannel().getWriteSetter().set(new ChannelListener<Channel>() {
+                channel.getSinkChannel().setWriteListener(new ChannelListener<Channel>() {
                     @Override
                     public void handleEvent(Channel c) {
                         try {
                             if (flushPipelinedData()) {
-                                channel.getSinkChannel().getWriteSetter().set(null);
+                                channel.getSinkChannel().setWriteListener(null);
                                 channel.getSinkChannel().suspendWrites();
                                 connection.restoreChannel(oldState);
                                 connection.getReadListener().exchangeComplete(exchange);
