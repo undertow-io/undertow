@@ -13,6 +13,7 @@ import java.util.TreeMap;
  * Class that contains utility methods for dealing with cookies.
  *
  * @author Stuart Douglas
+ * @author Andre Dietisheim
  */
 public class Cookies {
 
@@ -21,10 +22,31 @@ public class Cookies {
     public static final String PATH = "$Path";
 
     /**
-     * Parses a Set-Cookie response header into its cookie representation.
+     * Parses a "Set-Cookie:" response header value into its cookie representation. The header value is parsed according to the
+     * syntax that's defined in RFC2109:
+     *
+     * <pre>
+     * <code>
+     *  set-cookie      =       "Set-Cookie:" cookies
+     *   cookies         =       1#cookie
+     *   cookie          =       NAME "=" VALUE *(";" cookie-av)
+     *   NAME            =       attr
+     *   VALUE           =       value
+     *   cookie-av       =       "Comment" "=" value
+     *                   |       "Domain" "=" value
+     *                   |       "Max-Age" "=" value
+     *                   |       "Path" "=" value
+     *                   |       "Secure"
+     *                   |       "Version" "=" 1*DIGIT
+     *
+     * </code>
+     * </pre>
      *
      * @param headerValue The header value
      * @return The cookie
+     *
+     * @see Cookie
+     * @see <a href="http://tools.ietf.org/search/rfc2109">rfc2109</a>
      */
     public static Cookie parseSetCookieHeader(final String headerValue) {
 
@@ -123,11 +145,30 @@ public class Cookies {
     }
 
     /**
-     * Parses the cookies from a list of cookie headers
+    /**
+     * Parses the cookies from a list of "Cookie:" header values. The cookie header values are parsed according to RFC2109 that
+     * defines the following syntax:
+     *
+     * <pre>
+     * <code>
+     * cookie          =  "Cookie:" cookie-version
+     *                    1*((";" | ",") cookie-value)
+     * cookie-value    =  NAME "=" VALUE [";" path] [";" domain]
+     * cookie-version  =  "$Version" "=" value
+     * NAME            =  attr
+     * VALUE           =  value
+     * path            =  "$Path" "=" value
+     * domain          =  "$Domain" "=" value
+     * </code>
+     * </pre>
+     *
      * @param maxCookies The maximum number of cookies. Used to prevent hash collision attacks
      * @param allowEqualInValue if true equal characters are allowed in cookie values
      * @param cookies The cookie values to parse
      * @return A pared cookie map
+     *
+     * @see Cookie
+     * @see <a href="http://tools.ietf.org/search/rfc2109">rfc2109</a>
      */
     public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
 
@@ -142,12 +183,6 @@ public class Cookies {
         return parsedCookies;
     }
 
-    /**
-     * @param cookie        The cookie
-     * @param parsedCookies The map of cookies
-     * @param maxCookies The maximum number of cookies. Used to prevent hash collision attacks
-     * @param allowEqualInValue if true equal characters are allowed in cookie values
-     */
     private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue) {
         int state = 0;
         String name = null;
@@ -174,7 +209,7 @@ public class Cookies {
                         start = i + 1;
                         state = 2;
                     } else if (c == ';') {
-                        createCookie(name, cookie.substring(start, i), maxCookies, ++cookieCount, cookies, additional);
+                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
                     }
@@ -183,14 +218,14 @@ public class Cookies {
                 case 2: {
                     //extract value
                     if (c == ';') {
-                        createCookie(name, cookie.substring(start, i), maxCookies, ++cookieCount, cookies, additional);
+                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
                     } else if (c == '"') {
                         state = 3;
                         start = i + 1;
                     } else if (!allowEqualInValue && c == '=') {
-                        createCookie(name, cookie.substring(start, i), maxCookies, ++cookieCount, cookies, additional);
+                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 4;
                         start = i + 1;
                     }
@@ -199,7 +234,7 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
                     }
@@ -221,28 +256,33 @@ public class Cookies {
 
         for (final Map.Entry<String, String> entry : cookies.entrySet()) {
             Cookie c = new CookieImpl(entry.getKey(), entry.getValue());
-            if (additional.containsKey(DOMAIN)) {
-                c.setDomain(additional.get(DOMAIN));
+            String domain = additional.get(DOMAIN);
+            if (domain != null) {
+                c.setDomain(domain);
             }
-            if (additional.containsKey(VERSION)) {
-                c.setVersion(Integer.parseInt(additional.get(VERSION)));
+            String version = additional.get(VERSION);
+            if (version != null) {
+                c.setVersion(Integer.parseInt(version));
             }
-            if (additional.containsKey(PATH)) {
-                c.setPath(additional.get(PATH));
+            String path = additional.get(PATH);
+            if (path != null) {
+                c.setPath(path);
             }
             parsedCookies.put(c.getName(), c);
         }
     }
 
-    private static void createCookie(final String name, final String value, int maxCookies, int cookieCount,
+    private static int createCookie(final String name, final String value, int maxCookies, int cookieCount,
             final Map<String, String> cookies, final Map<String, String> additional) {
-        if (cookieCount == maxCookies) {
-            throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
-        }
-        if (name.startsWith("$")) {
+        if (name.charAt(0) == '$') {
             additional.put(name, value);
+            return cookieCount;
         } else {
+            if (cookieCount == maxCookies) {
+                throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
+            }
             cookies.put(name, value);
+            return ++cookieCount;
         }
     }
 
