@@ -94,6 +94,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -321,7 +322,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 properties.put(AuthenticationMechanismFactory.LOGIN_PAGE, loginConfig.getLoginPage());
                 properties.putAll(method.getProperties());
 
-                String name = method.getName().toUpperCase();
+                String name = method.getName().toUpperCase(Locale.US);
                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
                 // comparable using '=='
                 name = name.equals(FORM_AUTH) ? FORM_AUTH : name;

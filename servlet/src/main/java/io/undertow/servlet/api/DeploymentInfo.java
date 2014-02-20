@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -902,7 +903,7 @@ public class DeploymentInfo implements Cloneable {
      * @return
      */
     public DeploymentInfo addAuthenticationMechanism(final String name, final AuthenticationMechanismFactory factory) {
-        authenticationMechanisms.put(name.toUpperCase(), factory);
+        authenticationMechanisms.put(name.toUpperCase(Locale.US), factory);
         return this;
     }
 
