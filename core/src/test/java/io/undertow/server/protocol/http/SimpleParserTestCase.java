@@ -212,6 +212,23 @@ public class SimpleParserTestCase {
         }
     }
 
+
+    @Test
+    public void testEmptyQueryParams() {
+        byte[] in = "GET /clusterbench/requestinfo//?;?=44&test=OK;devil=3&&&&&&&&&&&&&&&&&&&&&&&&&&&&777=666 HTTP/1.1\r\n\r\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/clusterbench/requestinfo//", result.getRequestURI());
+        Assert.assertEquals("/clusterbench/requestinfo//", result.getRequestPath());
+        Assert.assertEquals(3, result.getQueryParameters().size());
+        Assert.assertEquals("OK;devil=3", result.getQueryParameters().get("test").getFirst());
+        Assert.assertEquals("666", result.getQueryParameters().get("777").getFirst());
+        Assert.assertEquals("44", result.getQueryParameters().get(";?").getFirst());
+    }
+
     private void runTest(final byte[] in) {
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null);
