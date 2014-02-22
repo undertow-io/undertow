@@ -138,7 +138,7 @@ public class ServletContextImpl implements ServletContext {
             }
         }
         SessionConfigWrapper wrapper = deploymentInfo.getSessionConfigWrapper();
-        if(wrapper != null) {
+        if (wrapper != null) {
             sessionConfig = wrapper.wrap(sessionConfig, deployment);
         }
         this.sessionConfig = sessionConfig;
@@ -203,12 +203,16 @@ public class ServletContextImpl implements ServletContext {
             File file = res.getFile();
             if (file != null) {
                 File base = res.getResourceManagerRoot();
-                String filePath = file.getAbsolutePath().substring(base.getAbsolutePath().length());
-                filePath = filePath.replace('\\', '/'); //for windows systems
-                if (file.isDirectory()) {
-                    filePath = filePath + "/";
+                if (base == null) {
+                    resources.add(file.getPath()); //not much else we can do here
+                } else {
+                    String filePath = file.getAbsolutePath().substring(base.getAbsolutePath().length());
+                    filePath = filePath.replace('\\', '/'); //for windows systems
+                    if (file.isDirectory()) {
+                        filePath = filePath + "/";
+                    }
+                    resources.add(filePath);
                 }
-                resources.add(filePath);
             }
         }
         return resources;
@@ -682,6 +686,7 @@ public class ServletContextImpl implements ServletContext {
         }
         return httpSession;
     }
+
     /**
      * Gets the session
      *
@@ -696,7 +701,7 @@ public class ServletContextImpl implements ServletContext {
         HttpSessionImpl httpSession = getSession(exchange, false);
         if (httpSession != null) {
             Session underlyingSession;
-            if(System.getSecurityManager() == null) {
+            if (System.getSecurityManager() == null) {
                 underlyingSession = httpSession.getSession();
             } else {
                 underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
@@ -735,7 +740,7 @@ public class ServletContextImpl implements ServletContext {
     }
 
     private void readServletAnnotations(ServletInfo servlet) {
-        if(System.getSecurityManager() == null) {
+        if (System.getSecurityManager() == null) {
             new ReadServletAnnotationsTask(servlet, deploymentInfo).run();
         } else {
             AccessController.doPrivileged(new ReadServletAnnotationsTask(servlet, deploymentInfo));
@@ -775,15 +780,15 @@ public class ServletContextImpl implements ServletContext {
                 servletInfo.setServletSecurityInfo(servletSecurityInfo);
             }
             final MultipartConfig multipartConfig = servletInfo.getServletClass().getAnnotation(MultipartConfig.class);
-            if(multipartConfig != null) {
+            if (multipartConfig != null) {
                 servletInfo.setMultipartConfig(new MultipartConfigElement(multipartConfig.location(), multipartConfig.maxFileSize(), multipartConfig.maxRequestSize(), multipartConfig.fileSizeThreshold()));
             }
             final RunAs runAs = servletInfo.getServletClass().getAnnotation(RunAs.class);
-            if(runAs != null) {
+            if (runAs != null) {
                 servletInfo.setRunAs(runAs.value());
             }
             final DeclareRoles declareRoles = servletInfo.getServletClass().getAnnotation(DeclareRoles.class);
-            if(declareRoles != null) {
+            if (declareRoles != null) {
                 deploymentInfo.addSecurityRoles(declareRoles.value());
             }
             return null;
