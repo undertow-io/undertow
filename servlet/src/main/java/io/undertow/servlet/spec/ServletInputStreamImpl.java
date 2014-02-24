@@ -247,14 +247,17 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     }
                     state |= FLAG_READY;
                     try {
-                        CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
-                        ThreadSetupAction.Handle handle = action.setup(request.getExchange());
-                        try {
-                            listener.onDataAvailable();
-                        } finally {
-                            handle.tearDown();
+                        readIntoBufferNonBlocking();
+                        state |= FLAG_READY;
+                        if(!anyAreSet(state, FLAG_FINISHED)) {
+                            CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
+                            ThreadSetupAction.Handle handle = action.setup(request.getExchange());
+                            try {
+                                listener.onDataAvailable();
+                            } finally {
+                                handle.tearDown();
+                            }
                         }
-
                     } catch (Exception e) {
                         CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
                         ThreadSetupAction.Handle handle = action.setup(request.getExchange());
