@@ -1,5 +1,6 @@
 package io.undertow.server.protocol.ajp;
 
+import io.undertow.security.impl.ExternalAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -364,6 +365,10 @@ public class AjpRequestParser extends AbstractAjpParser {
                     if (state.currentAttribute.equals(QUERY_STRING)) {
                         exchange.setQueryString(result == null ? "" : result);
                         URLUtils.parseQueryString(result, exchange, encoding, doDecode);
+                    } else if(state.currentAttribute.equals(REMOTE_USER)) {
+                        exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_PRINCIPAL, result);
+                    } else if(state.currentAttribute.equals(AUTH_TYPE)) {
+                        exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_AUTHENTICATION_TYPE, result);
                     } else {
                         //other attributes
                         state.attributes.put(state.currentAttribute, result);
