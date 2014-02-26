@@ -294,12 +294,13 @@ public class AjpRequestParser extends AbstractAjpParser {
                 }
             }
             case AjpRequestParseState.READING_HEADERS: {
-                int readHeaders = exchange.getRequestHeaders().getHeaderNames().size();
+                int readHeaders = state.readHeaders;
                 while (readHeaders < state.numHeaders) {
                     if (state.currentHeader == null) {
                         StringHolder result = parseString(buf, state, true);
                         if (!result.readComplete) {
                             state.state = AjpRequestParseState.READING_HEADERS;
+                            state.readHeaders = readHeaders;
                             return;
                         }
                         if (result.header != null) {
@@ -311,6 +312,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                     StringHolder result = parseString(buf, state, false);
                     if (!result.readComplete) {
                         state.state = AjpRequestParseState.READING_HEADERS;
+                        state.readHeaders = readHeaders;
                         return;
                     }
                     exchange.getRequestHeaders().add(state.currentHeader, result.value);

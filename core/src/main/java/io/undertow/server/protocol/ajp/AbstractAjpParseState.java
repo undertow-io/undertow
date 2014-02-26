@@ -25,10 +25,12 @@ public class AbstractAjpParseState {
     public int currentIntegerPart = -1;
 
     boolean containsUrlCharacters = false;
+    public int readHeaders = 0;
 
     public void reset() {
         stringLength = -1;
         currentString = null;
         currentIntegerPart = -1;
+        readHeaders = 0;
     }
 }

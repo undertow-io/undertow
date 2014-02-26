@@ -116,12 +116,13 @@ class AjpResponseParser extends AbstractAjpParser {
                 }
             }
             case AjpResponseParseState.READING_HEADERS: {
-                int readHeaders = builder.getResponseHeaders().getHeaderNames().size();
+                int readHeaders = state.readHeaders;
                 while (readHeaders < state.numHeaders) {
                     if (state.currentHeader == null) {
                         StringHolder result = parseString(buf, state, true);
                         if (!result.readComplete) {
                             state.state = AjpResponseParseState.READING_HEADERS;
+                            state.readHeaders = readHeaders;
                             return;
                         }
                         if (result.header != null) {
@@ -133,6 +134,7 @@ class AjpResponseParser extends AbstractAjpParser {
                     StringHolder result = parseString(buf, state, false);
                     if (!result.readComplete) {
                         state.state = AjpResponseParseState.READING_HEADERS;
+                        state.readHeaders = readHeaders;
                         return;
                     }
                     builder.getResponseHeaders().add(state.currentHeader, result.value);
