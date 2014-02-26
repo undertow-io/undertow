@@ -345,15 +345,18 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         byte int2 = (byte) (v >> 16);
         byte int1 = (byte) (v >>  8);
         byte int0 = (byte) (v      );
+        boolean nonZeroFound = false;
         if (int3 != 0) {
             buf.put(DIGITS[(0xF0 & int3) >>> 4])
                .put(DIGITS[0x0F & int3]);
+            nonZeroFound = true;
         }
-        if (int2 != 0) {
+        if (nonZeroFound || int2 != 0) {
             buf.put(DIGITS[(0xF0 & int2) >>> 4])
                .put(DIGITS[0x0F & int2]);
+            nonZeroFound = true;
         }
-        if (int1 != 0) {
+        if (nonZeroFound || int1 != 0) {
             buf.put(DIGITS[(0xF0 & int1) >>> 4])
                .put(DIGITS[0x0F & int1]);
         }
