@@ -473,6 +473,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             } catch (Exception e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
                 IoUtils.safeClose(connection);
+                currentRequest.setFailed( e instanceof  IOException ? (IOException) e : new IOException(e));
             } finally {
                 if (free) pooled.free();
             }
@@ -518,19 +519,9 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                         }
                         return;
                     } else if (res == -1 && !buffer.hasRemaining()) {
-                        try {
-                            channel.suspendReads();
-                            channel.shutdownReads();
-                            IoUtils.safeClose(connection);
-                        } catch (IOException e) {
-                            if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
-                                UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
-                            }
-                            // Cancel the current active request
-                            currentRequest.setFailed(e);
-                            IoUtils.safeClose(connection);
-                            return;
-                        }
+                        channel.suspendReads();
+                        IoUtils.safeClose(connection);
+                        currentRequest.setFailed(new IOException(UndertowClientMessages.MESSAGES.connectionClosed()));
                         return;
                     }
 

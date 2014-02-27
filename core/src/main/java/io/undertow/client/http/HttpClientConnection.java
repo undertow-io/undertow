@@ -49,7 +49,6 @@ import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
@@ -423,25 +422,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     } else if (res == -1) {
                         channel.suspendReads();
                         IoUtils.safeClose(HttpClientConnection.this);
-                        try {
-                            final StreamSinkChannel requestChannel = connection.getSinkChannel();
-                            requestChannel.shutdownWrites();
-                            // will return false if there's a response queued ahead of this one, so we'll set up a listener then
-                            if (!requestChannel.flush()) {
-                                requestChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
-                                requestChannel.resumeWrites();
-                            }
-                            // Cancel the current active request
-                            currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
-                        } catch (IOException e) {
-                            if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
-                                UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
-                            }
-                            IoUtils.safeClose(channel);
-                            // Cancel the current active request
-                            currentRequest.setFailed(e);
-                            return;
-                        }
+                        // Cancel the current active request
+                        currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
                         return;
                     }
 
