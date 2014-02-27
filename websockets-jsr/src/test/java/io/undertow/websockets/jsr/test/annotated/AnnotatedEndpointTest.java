@@ -44,7 +44,7 @@ import java.net.URI;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore(apacheOnly = true)
+@AjpIgnore
 public class AnnotatedEndpointTest {
 
     private static ServerWebSocketContainer deployment;
