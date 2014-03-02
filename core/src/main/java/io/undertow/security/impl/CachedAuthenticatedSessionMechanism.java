@@ -51,8 +51,8 @@ public class CachedAuthenticatedSessionMechanism implements AuthenticationMechan
             } else {
                 sessionManager.clearSession(exchange);
                 // We know we had a previously authenticated account but for some reason the IdentityManager is no longer
-                // accepting it, safer to mark as a failed authentication.
-                return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+                // accepting it, we now
+                return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
             }
         } else {
             // It is possible an AuthenticatedSessionManager could have been available even if there was no chance of it
