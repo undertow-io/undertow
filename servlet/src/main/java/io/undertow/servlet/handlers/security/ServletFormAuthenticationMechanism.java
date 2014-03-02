@@ -9,7 +9,6 @@ import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.util.SavedRequest;
-import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
 
 import javax.servlet.RequestDispatcher;
@@ -57,7 +56,6 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         ServletRequest req = servletRequestContext.getServletRequest();
         ServletResponse resp = servletRequestContext.getServletResponse();
         RequestDispatcher disp = req.getRequestDispatcher(location);
-        exchange.setRequestMethod(Methods.GET); //TODO: is this correct?
         try {
             disp.forward(req, resp);
         } catch (ServletException e) {
