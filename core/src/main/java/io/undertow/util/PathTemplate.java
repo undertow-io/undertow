@@ -19,8 +19,11 @@
 package io.undertow.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.undertow.UndertowMessages;
 
@@ -43,12 +46,14 @@ public class PathTemplate implements Comparable<PathTemplate> {
     private final boolean template;
     private final String base;
     private final List<Part> parts;
+    private final Set<String> parameterNames;
 
-    private PathTemplate(String templateString, final boolean template, final String base, final List<Part> parts) {
+    private PathTemplate(String templateString, final boolean template, final String base, final List<Part> parts, Set<String> parameterNames) {
         this.templateString = templateString;
         this.template = template;
         this.base = base;
         this.parts = parts;
+        this.parameterNames = Collections.unmodifiableSet(parameterNames);
     }
 
     public static PathTemplate create(final String path) {
@@ -139,7 +144,13 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 break;
             }
         }
-        return new PathTemplate(path, state > 1, base, parts);
+        final Set<String> templates = new HashSet<String>();
+        for(Part part : parts) {
+            if(part.template) {
+                templates.add(part.part);
+            }
+        }
+        return new PathTemplate(path, state > 1, base, parts, templates);
     }
 
     /**
@@ -260,6 +271,10 @@ public class PathTemplate implements Comparable<PathTemplate> {
 
     public String getTemplateString() {
         return templateString;
+    }
+
+    public Set<String> getParameterNames() {
+        return parameterNames;
     }
 
     private static class Part {

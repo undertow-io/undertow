@@ -62,7 +62,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     }
 
 
-    public static AnnotatedEndpointFactory create(final Executor executor, final Class<?> endpointClass, final InstanceFactory<?> underlyingInstance, final EncodingFactory encodingFactory) throws DeploymentException {
+    public static AnnotatedEndpointFactory create(final Executor executor, final Class<?> endpointClass, final InstanceFactory<?> underlyingInstance, final EncodingFactory encodingFactory, final Set<String> paths) throws DeploymentException {
         final Set<Class<? extends Annotation>> found = new HashSet<Class<? extends Annotation>>();
         BoundMethod OnOpen = null;
         BoundMethod OnClose = null;
@@ -80,7 +80,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                     found.add(OnOpen.class);
                     OnOpen = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, EndpointConfig.class, true),
-                            createBoundPathParameters(method));
+                            createBoundPathParameters(method, paths, endpointClass));
                 }
                 if (method.isAnnotationPresent(OnClose.class)) {
                     if (found.contains(OnClose.class)) {
@@ -89,7 +89,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                     found.add(OnClose.class);
                     OnClose = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, CloseReason.class, true),
-                            createBoundPathParameters(method));
+                            createBoundPathParameters(method, paths, endpointClass));
                 }
                 if (method.isAnnotationPresent(OnError.class)) {
                     if (found.contains(OnError.class)) {
@@ -98,7 +98,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                     found.add(OnError.class);
                     OnError = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, Throwable.class, false),
-                            createBoundPathParameters(method));
+                            createBoundPathParameters(method, paths, endpointClass));
                 }
                 if (method.isAnnotationPresent(OnMessage.class)) {
                     long maxMessageSize = method.getAnnotation(OnMessage.class).maxMessageSize();
@@ -118,7 +118,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             binaryMessage = new BoundMethod(method, byte[].class, false, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, byte[].class),
-                                    createBoundPathParameters(method));
+                                    createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
                             break;
                         } else if (param.equals(ByteBuffer.class)) {
@@ -129,7 +129,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                                     maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, ByteBuffer.class),
-                                    createBoundPathParameters(method));
+                                    createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
                             break;
 
@@ -141,7 +141,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                                     maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, InputStream.class),
-                                    createBoundPathParameters(method));
+                                    createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
                             break;
 
@@ -152,7 +152,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             textMessage = new BoundMethod(method, String.class, false, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, String.class),
-                                    createBoundPathParameters(method));
+                                    createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
                             break;
 
@@ -164,7 +164,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                                     maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, Reader.class),
-                                    createBoundPathParameters(method));
+                                    createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
                             break;
 
@@ -174,7 +174,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             }
                             pongMessage = new BoundMethod(method, PongMessage.class, false, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(i, PongMessage.class),
-                                    createBoundPathParameters(method));
+                                    createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
                             break;
                         }
@@ -196,7 +196,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                                 textMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                         new BoundSingleParameter(method, boolean.class, true),
                                         new BoundSingleParameter(i, param),
-                                        createBoundPathParameters(method));
+                                        createBoundPathParameters(method, paths, endpointClass));
                                 messageHandled = true;
                                 break;
                             } else if (encodingFactory.canDecodeBinary(param)) {
@@ -206,7 +206,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                                 binaryMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
                                         new BoundSingleParameter(method, boolean.class, true),
                                         new BoundSingleParameter(i, param),
-                                        createBoundPathParameters(method));
+                                        createBoundPathParameters(method, paths, endpointClass));
                                 messageHandled = true;
                                 break;
                             }
@@ -222,8 +222,8 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
         return new AnnotatedEndpointFactory(executor, endpointClass, underlyingInstance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
     }
 
-    private static BoundPathParameters createBoundPathParameters(final Method method) throws DeploymentException {
-        return new BoundPathParameters(pathParams(method), method);
+    private static BoundPathParameters createBoundPathParameters(final Method method, Set<String> paths, Class<?> endpointClass) throws DeploymentException {
+        return new BoundPathParameters(pathParams(method), method, endpointClass, paths);
     }
 
 
@@ -348,16 +348,29 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
      */
     private static class BoundPathParameters implements BoundParameter {
 
+        private final Class<?> endpointClass;
+        private final Set<String> paths;
         private final String[] positions;
         private final Encoding[] encoders;
         private final Class[] types;
 
-        public BoundPathParameters(final String[] positions, final Method method) throws DeploymentException {
+        public BoundPathParameters(final String[] positions, final Method method, Class<?> endpointClass, Set<String> paths) throws DeploymentException {
             this.positions = positions;
+            this.endpointClass = endpointClass;
+            this.paths = paths;
             this.encoders = new Encoding[positions.length];
             this.types = new Class[positions.length];
             for (int i = 0; i < positions.length; ++i) {
                 Class type = method.getParameterTypes()[i];
+                Annotation[] annotations = method.getParameterAnnotations()[i];
+                for(int j = 0; j < annotations.length; ++j) {
+                    if(annotations[j] instanceof PathParam) {
+                        PathParam param = (PathParam) annotations[j];
+                        if(!paths.contains(param.value())) {
+                            throw JsrWebSocketMessages.MESSAGES.pathTemplateNotFound(endpointClass, param, method, paths);
+                        }
+                    }
+                }
                 if (positions[i] == null || type == null || type == String.class) {
                     continue;
                 }

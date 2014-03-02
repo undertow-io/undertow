@@ -26,6 +26,7 @@ import java.util.Set;
 import javax.websocket.Decoder;
 import javax.websocket.DeploymentException;
 import javax.websocket.Encoder;
+import javax.websocket.server.PathParam;
 
 import io.undertow.util.PathTemplate;
 import org.jboss.logging.Messages;
@@ -130,4 +131,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3031, value = "Received a binary frame however endpont does not have a method capable of handling it")
     RuntimeException receivedBinaryFrameButNoMethod();
+
+    @Message(id = 3032, value = "Invalid endpoint class %s, path param %s on method %s does not reference a valid parameter, valid parameters are %s")
+    DeploymentException pathTemplateNotFound(Class<?> endpointClass, PathParam param, Method method, Set<String> paths);
 }

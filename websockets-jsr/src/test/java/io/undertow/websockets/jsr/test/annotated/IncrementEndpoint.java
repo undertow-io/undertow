@@ -39,7 +39,7 @@ public class IncrementEndpoint {
     }
 
     @OnMessage
-    public int handleMessage(final int message, @PathParam("user") String user) {
+    public int handleMessage(final int message) {
         return message + increment;
     }
 
