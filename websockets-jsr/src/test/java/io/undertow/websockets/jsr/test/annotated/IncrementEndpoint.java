@@ -18,19 +18,29 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
+import javax.websocket.EndpointConfig;
 import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 
 /**
  * @author Stuart Douglas
  */
-@ServerEndpoint("/increment")
+@ServerEndpoint("/increment/{increment}")
 public class IncrementEndpoint {
+
+    int increment;
+
+    @OnOpen
+    public void open(final Session session, final EndpointConfig config, @PathParam("increment") int increment) {
+        this.increment = increment;
+    }
 
     @OnMessage
     public int handleMessage(final int message, @PathParam("user") String user) {
-        return message + 1;
+        return message + increment;
     }
 
 }
