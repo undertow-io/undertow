@@ -502,6 +502,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
 
+            if (servletContainer.isEagerFilterInit()){
+                for(ManagedFilter filter: deployment.getFilters().getFilters().values()) {
+                    filter.createFilter();
+                }
+            }
+
             state = State.STARTED;
             return root;
         } finally {

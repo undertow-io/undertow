@@ -39,6 +39,15 @@ public class ServletContainerImpl implements ServletContainer {
 
     private final Map<String, DeploymentManager> deployments = Collections.synchronizedMap(new HashMap<String, DeploymentManager>());
     private final Map<String, DeploymentManager> deploymentsByPath = Collections.synchronizedMap(new HashMap<String, DeploymentManager>());
+    private final boolean eagerFilterInit;
+
+    public ServletContainerImpl() {
+        this.eagerFilterInit = false;
+    }
+
+    public ServletContainerImpl(boolean eagerFilterInit) {
+        this.eagerFilterInit = eagerFilterInit;
+    }
 
     @Override
     public Collection<String> listDeployments() {
@@ -89,5 +98,10 @@ public class ServletContainerImpl implements ServletContainer {
             }
         }
         return deploymentsByPath.get("");
+    }
+
+    @Override
+    public boolean isEagerFilterInit() {
+        return eagerFilterInit;
     }
 }

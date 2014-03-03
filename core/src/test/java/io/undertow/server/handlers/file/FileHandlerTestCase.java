@@ -22,6 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import io.undertow.Undertow;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.resource.FileResourceManager;
@@ -90,6 +92,23 @@ public class FileHandlerTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+    /*
+    Starts simple file server, it is useful for testing directory browsing
+     */
+    public static void main(String[] args) throws URISyntaxException {
+        File rootPath = new File(FileHandlerTestCase.class.getResource("page.html").toURI()).getParentFile().getParentFile();
+        HttpHandler root = (new CanonicalPathHandler()
+                .setNext(new PathHandler()
+                        .addPrefixPath("/path", new ResourceHandler()
+                                // 1 byte = force transfer
+                                .setResourceManager(new FileResourceManager(rootPath, 1))
+                                .setDirectoryListingEnabled(true))));
+        Undertow undertow = Undertow.builder()
+                .addHttpListener(8888, "localhost")
+                .setHandler(root)
+                .build();
+        undertow.start();
     }
 
 }

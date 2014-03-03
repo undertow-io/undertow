@@ -3,11 +3,13 @@ package io.undertow.server.handlers.resource;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 import io.undertow.UndertowLogger;
@@ -58,7 +60,7 @@ public class URLResource implements Resource {
     public String getName() {
         String path = url.getPath();
         if (path.endsWith("/")) {
-            path = path.substring(0, path.length() - 2);
+            path = path.substring(0, path.length() - 1);
         }
         int sepIndex = path.lastIndexOf("/");
         if (sepIndex != -1) {
@@ -78,7 +80,18 @@ public class URLResource implements Resource {
 
     @Override
     public List<Resource> list() {
-        return null;
+        List<Resource> result = new LinkedList<Resource>();
+        File file = getFile();
+        try {
+            if (file != null) {
+                for (File f : file.listFiles()) {
+                    result.add(new URLResource(f.toURI().toURL(), connection, f.getPath()));
+                }
+            }
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+        return result;
     }
 
     @Override
