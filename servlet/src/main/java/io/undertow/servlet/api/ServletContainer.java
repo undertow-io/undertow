@@ -41,22 +41,11 @@ public interface ServletContainer {
 
     DeploymentManager getDeploymentByPath(String uripath);
 
-    /**
-     *
-     * @return true if filter init() should be called on deployment start
-     */
-    boolean isEagerFilterInit();
-
     public static class Factory {
 
         public static ServletContainer newInstance() {
-            return new ServletContainerImpl(false);
+            return new ServletContainerImpl();
         }
-
-        public static ServletContainer newInstance(boolean eagerFilterInit) {
-            return new ServletContainerImpl(eagerFilterInit);
-        }
-
     }
 
 }

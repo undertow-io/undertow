@@ -502,7 +502,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
 
-            if (servletContainer.isEagerFilterInit()){
+            if (deployment.getDeploymentInfo().isEagerFilterInit()){
                 for(ManagedFilter filter: deployment.getFilters().getFilters().values()) {
                     filter.createFilter();
                 }

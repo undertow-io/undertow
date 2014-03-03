@@ -44,7 +44,7 @@ public class EagerServletLifecycleTestCase {
 
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance(true);
+        final ServletContainer container = ServletContainer.Factory.newInstance();
 
         FilterInfo f = new FilterInfo("filter", LifecycleFilter.class);
 
@@ -53,6 +53,7 @@ public class EagerServletLifecycleTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
+                .setEagerFilterInit(true)
                 .addFilter(f)
                 .addFilterUrlMapping("filter", "/aa", DispatcherType.REQUEST);
 

@@ -92,6 +92,7 @@ public class DeploymentInfo implements Cloneable {
     private String serverName = "Undertow";
     private MetricsCollector metricsCollector = null;
     private SessionConfigWrapper sessionConfigWrapper = null;
+    private boolean eagerFilterInit = false;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -418,6 +419,15 @@ public class DeploymentInfo implements Cloneable {
 
     public List<ThreadSetupAction> getThreadSetupActions() {
         return threadSetupActions;
+    }
+
+    public boolean isEagerFilterInit() {
+        return eagerFilterInit;
+    }
+
+    public DeploymentInfo setEagerFilterInit(boolean eagerFilterInit) {
+        this.eagerFilterInit = eagerFilterInit;
+        return this;
     }
 
     public DeploymentInfo addInitParameter(final String name, final String value) {
@@ -1054,6 +1064,7 @@ public class DeploymentInfo implements Cloneable {
         info.serverName = serverName;
         info.metricsCollector = metricsCollector;
         info.sessionConfigWrapper = sessionConfigWrapper;
+        info.eagerFilterInit = eagerFilterInit;
         return info;
     }
 
