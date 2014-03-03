@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>12</version>
+        <version>13</version>
     </parent>
 
     <groupId>io.undertow</groupId>
@@ -53,7 +53,6 @@
         <!-- Build configuration -->
         <maven.compiler.source>1.6</maven.compiler.source>
         <maven.compiler.target>1.6</maven.compiler.target>
-        <version.checkstyle.plugin>2.11</version.checkstyle.plugin>
         <!--
             Dependency versions. Please keep alphabetical.
 
@@ -66,7 +65,7 @@
          -->
         <version.com.h2database>1.3.175</version.com.h2database>
         <version.easymock>3.2</version.easymock>        
-        <version.io.undertow.jastow>1.0.0.CR1</version.io.undertow.jastow>
+        <version.io.undertow.jastow>1.0.0.Final</version.io.undertow.jastow>
         <version.junit>4.11</version.junit>        
         <version.netty>3.6.6.Final</version.netty>     
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>   
@@ -75,13 +74,12 @@
         <version.org.glassfish.el>3.0.0</version.org.glassfish.el>
         <version.org.jboss.classfilewriter>1.0.5.Final</version.org.jboss.classfilewriter>
         <version.org.jboss.logging>3.1.4.GA</version.org.jboss.logging>
-        <version.org.jboss.logging.processor>1.2.0.Beta1</version.org.jboss.logging.processor>
+        <version.org.jboss.logging.processor>1.2.0.Final</version.org.jboss.logging.processor>
         <version.org.jboss.logmanager>1.5.2.Final</version.org.jboss.logmanager>
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.0.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.0.0.Final</version.org.jboss.spec.javax.websockets>
-        <version.org.jboss.web.jasper-jdt>7.0.3.Final</version.org.jboss.web.jasper-jdt>
         <version.xnio>3.2.0.Final</version.xnio>
         
         <!-- Surefire args -->
@@ -340,13 +338,7 @@
                 <version>${version.org.jboss.spec.javax.websockets}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.jboss.web</groupId>
-                <artifactId>jasper-jdt</artifactId>
-                <version>${version.org.jboss.web.jasper-jdt}</version>
-            </dependency>
-
-            <dependency>
+             <dependency>
                 <groupId>io.undertow.jastow</groupId>
                 <artifactId>jastow</artifactId>
                 <version>${version.io.undertow.jastow}</version>
