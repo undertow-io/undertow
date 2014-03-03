@@ -22,15 +22,16 @@ import java.io.IOException;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.spec.FilterConfigImpl;
+import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
  * @author Stuart Douglas
@@ -38,18 +39,21 @@ import io.undertow.servlet.spec.FilterConfigImpl;
 public class ManagedFilter implements Lifecycle {
 
     private final FilterInfo filterInfo;
-    private final ServletContext servletContext;
+    private final ServletContextImpl servletContext;
 
     private volatile boolean started = false;
     private volatile Filter filter;
     private volatile InstanceHandle<? extends Filter> handle;
 
-    public ManagedFilter(final FilterInfo filterInfo, final ServletContext servletContext) {
+    public ManagedFilter(final FilterInfo filterInfo, final ServletContextImpl servletContext) {
         this.filterInfo = filterInfo;
         this.servletContext = servletContext;
     }
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        if(servletContext.getDeployment().getDeploymentState() != DeploymentManager.State.STARTED) {
+            throw UndertowServletMessages.MESSAGES.deploymentStopped(servletContext.getDeployment().getDeploymentInfo().getDeploymentName());
+        }
         if (!started) {
             start();
         }

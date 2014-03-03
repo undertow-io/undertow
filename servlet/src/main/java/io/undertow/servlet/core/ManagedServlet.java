@@ -32,6 +32,7 @@ import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.server.handlers.resource.ResourceChangeListener;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ServletInfo;
@@ -46,6 +47,7 @@ import io.undertow.servlet.spec.ServletContextImpl;
 public class ManagedServlet implements Lifecycle {
 
     private final ServletInfo servletInfo;
+    private final ServletContextImpl servletContext;
 
     private volatile boolean started = false;
     private final InstanceStrategy instanceStrategy;
@@ -56,6 +58,7 @@ public class ManagedServlet implements Lifecycle {
 
     public ManagedServlet(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
+        this.servletContext = servletContext;
         if (SingleThreadModel.class.isAssignableFrom(servletInfo.getServletClass())) {
             instanceStrategy = new SingleThreadModelPoolStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
         } else {
@@ -145,6 +148,9 @@ public class ManagedServlet implements Lifecycle {
     }
 
     public InstanceHandle<? extends Servlet> getServlet() throws ServletException {
+        if(servletContext.getDeployment().getDeploymentState() != DeploymentManager.State.STARTED) {
+            throw UndertowServletMessages.MESSAGES.deploymentStopped(servletContext.getDeployment().getDeploymentInfo().getDeploymentName());
+        }
         if (!started) {
             synchronized (this) {
                 if (!started) {

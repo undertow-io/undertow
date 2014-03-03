@@ -140,7 +140,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         deploymentInfo.validate();
-        final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo, servletContainer);
+        final DeploymentImpl deployment = new DeploymentImpl(this, deploymentInfo, servletContainer);
         this.deployment = deployment;
 
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);

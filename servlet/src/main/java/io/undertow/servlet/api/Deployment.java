@@ -91,4 +91,6 @@ public interface Deployment {
      */
     List<AuthenticationMechanism> getAuthenticationMechanisms();
 
+    DeploymentManager.State getDeploymentState();
+
 }

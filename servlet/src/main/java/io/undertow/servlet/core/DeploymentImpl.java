@@ -33,6 +33,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.handlers.ServletInitialHandler;
@@ -49,6 +50,7 @@ import io.undertow.servlet.spec.ServletContextImpl;
  */
 public class DeploymentImpl implements Deployment {
 
+    private final DeploymentManager deploymentManager;
     private final DeploymentInfo deploymentInfo;
     private final ServletContainer servletContainer;
     private final List<Lifecycle> lifecycleObjects = new ArrayList<Lifecycle>();
@@ -70,7 +72,8 @@ public class DeploymentImpl implements Deployment {
     private volatile Charset defaultCharset;
     private volatile List<AuthenticationMechanism> authenticationMechanisms;
 
-    public DeploymentImpl(final DeploymentInfo deploymentInfo, ServletContainer servletContainer) {
+    public DeploymentImpl(DeploymentManager deploymentManager, final DeploymentInfo deploymentInfo, ServletContainer servletContainer) {
+        this.deploymentManager = deploymentManager;
         this.deploymentInfo = deploymentInfo;
         this.servletContainer = servletContainer;
         this.executor = deploymentInfo.getExecutor();
@@ -206,6 +209,11 @@ public class DeploymentImpl implements Deployment {
     @Override
     public List<AuthenticationMechanism> getAuthenticationMechanisms() {
         return authenticationMechanisms;
+    }
+
+    @Override
+    public DeploymentManager.State getDeploymentState() {
+        return deploymentManager.getState();
     }
 
     public void setDefaultCharset(Charset defaultCharset) {
