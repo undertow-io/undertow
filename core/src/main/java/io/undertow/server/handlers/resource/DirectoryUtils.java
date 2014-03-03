@@ -49,42 +49,28 @@ public class DirectoryUtils {
         return false;
     }
 
-    public static void renderDirectoryListing(HttpServerExchange exchange, Resource resource) {
-        String requestPath = exchange.getRequestPath();
-        if (! requestPath.endsWith("/")) {
-            exchange.setResponseCode(302);
-            exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
-            exchange.endExchange();
-            return;
+    public static StringBuilder renderDirectoryListing(String path, Resource resource) {
+        if (!path.endsWith("/")){
+            path += "/";
         }
-
-        // TODO - Fix exchange to sanitize path, so handlers don't need to do this
-        String resolvedPath = exchange.getResolvedPath();
-        for (int i = 0; i < resolvedPath.length(); i++) {
-            if (resolvedPath.charAt(i) != '/') {
-                resolvedPath = resolvedPath.substring(Math.max(0, i - 1));
-                break;
-            }
-        }
-
         StringBuilder builder = new StringBuilder();
-        builder.append("<html>\n<head>\n<script src='").append(resolvedPath).append("?js'></script>\n")
-                .append("<link rel='stylesheet' type='text/css' href='").append(resolvedPath).append("?css' />\n</head>\n");
+        builder.append("<html>\n<head>\n<script src='").append(path).append("?js'></script>\n")
+                .append("<link rel='stylesheet' type='text/css' href='").append(path).append("?css' />\n</head>\n");
         builder.append("<body onresize='growit()' onload='growit()'>\n<table id='thetable'>\n<thead>\n");
-        builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(requestPath).append("</th></tr>\n")
+        builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(path).append("</th></tr>\n")
                 .append("<tr><th class='label offset'>Name</th><th class='label'>Last Modified</th><th class='label'>Size</th></tr>\n</thead>\n")
                 .append("<tfoot>\n<tr><th class=\"loc footer\" colspan=\"3\">Powered by Undertow</th></tr>\n</tfoot>\n<tbody>\n");
 
-        int state  = 0;
+        int state = 0;
         String parent = null;
-        for (int i = requestPath.length() - 1; i >= 0; i--) {
+        for (int i = path.length() - 1; i >= 0; i--) {
             if (state == 1) {
-                if (requestPath.charAt(i) == '/') {
+                if (path.charAt(i) == '/') {
                     state = 2;
                 }
-            } else if (requestPath.charAt(i) != '/') {
+            } else if (path.charAt(i) != '/') {
                 if (state == 2) {
-                    parent = requestPath.substring(0, i + 1);
+                    parent = path.substring(0, i + 1);
                     break;
                 }
                 state = 1;
@@ -102,7 +88,7 @@ public class DirectoryUtils {
         for (Resource entry : resource.list()) {
             builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon ");
             builder.append(entry.isDirectory() ? "dir" : "file");
-            builder.append("' href='").append(entry.getName()).append("'>").append(entry.getName()).append("</a></td><td>");
+            builder.append("' href='").append(path).append(entry.getName()).append("'>").append(entry.getName()).append("</a></td><td>");
             builder.append(format.format(entry.getLastModified())).append("</td><td>");
             if (entry.isDirectory()) {
                 builder.append("--");
@@ -112,6 +98,22 @@ public class DirectoryUtils {
             builder.append("</td></tr>\n");
         }
         builder.append("</tbody>\n</table>\n</body>\n</html>");
+
+        return builder;
+
+    }
+
+    public static void renderDirectoryListing(HttpServerExchange exchange, Resource resource) {
+        String requestPath = exchange.getRequestPath();
+        if (! requestPath.endsWith("/")) {
+            exchange.setResponseCode(302);
+            exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
+            exchange.endExchange();
+            return;
+        }
+        String resolvedPath = exchange.getResolvedPath();
+
+        StringBuilder builder = renderDirectoryListing(requestPath, resource);
 
         try {
             ByteBuffer output = ByteBuffer.wrap(builder.toString().getBytes("UTF-8"));
@@ -175,7 +177,7 @@ public class DirectoryUtils {
      *
      * @author Jason T. Greene
      */
-    static class Blobs {
+    public static class Blobs {
           public static final String FILE_JS="function growit() {\n" +
                   "    var table = document.getElementById(\"thetable\");\n" +
                   "\n" +

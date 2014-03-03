@@ -21,6 +21,7 @@ package io.undertow.servlet.handlers;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.resource.DirectoryUtils;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.api.DefaultServletConfig;
@@ -54,7 +55,6 @@ import java.util.Date;
  * todo: this thing needs a lot more work. In particular:
  * - caching for blocking requests
  * - correct mime type
- * - directory listings
  * - range/last-modified and other headers to be handled properly
  * - head requests
  * - and probably heaps of other things
@@ -66,6 +66,7 @@ public class DefaultServlet extends HttpServlet {
     private Deployment deployment;
     private DefaultServletConfig config;
     private ResourceManager resourceManager;
+    private boolean directoryListingEnabled = false;
 
 
     @Override
@@ -76,6 +77,10 @@ public class DefaultServlet extends HttpServlet {
         DefaultServletConfig defaultServletConfig = deployment.getDeploymentInfo().getDefaultServletConfig();
         this.config = defaultServletConfig != null ? defaultServletConfig : new DefaultServletConfig();
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
+        String listings = config.getInitParameter("directory-listing");
+        if (Boolean.valueOf(listings)){
+            this.directoryListingEnabled = true;
+        }
     }
 
     @Override
@@ -95,8 +100,21 @@ public class DefaultServlet extends HttpServlet {
             }
             return;
         } else if (resource.isDirectory()) {
-            //todo: directory listing
-            resp.sendError(404);
+            if ("css".equals(req.getQueryString())) {
+                resp.setContentType("text/css");
+                resp.getWriter().write(DirectoryUtils.Blobs.FILE_CSS);
+                return;
+            } else if ("js".equals(req.getQueryString())) {
+                resp.setContentType("application/javascript");
+                resp.getWriter().write(DirectoryUtils.Blobs.FILE_JS);
+                return;
+            }
+            if (directoryListingEnabled) {
+                StringBuilder output = DirectoryUtils.renderDirectoryListing(req.getRequestURI(), resource);
+                resp.getWriter().write(output.toString());
+            } else {
+                resp.sendError(403);
+            }
         } else {
             serveFileBlocking(req, resp, resource);
         }

@@ -1,7 +1,6 @@
 package io.undertow.servlet.test.defaultservlet;
 
 import java.io.IOException;
-
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
@@ -11,6 +10,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.handlers.DefaultServlet;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
 import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
@@ -48,6 +48,11 @@ public class DefaultServletTestCase {
         builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("/path/default"));
 
+        builder.addServlet(new ServletInfo("default", DefaultServlet.class)
+                .addInitParam("directory-listing", "true")
+                .addMapping("/*"));
+
+
         builder.addFilter(new FilterInfo("Filter", HelloFilter.class));
         builder.addFilterUrlMapping("Filter", "/filterpath/*", DispatcherType.REQUEST);
 
@@ -57,7 +62,6 @@ public class DefaultServletTestCase {
 
         DefaultServer.setRootHandler(root);
     }
-
 
     @Test
     public void testSimpleResource() throws IOException {
@@ -97,6 +101,19 @@ public class DefaultServletTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/disallowed.sh");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testDirectoryListing() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
         } finally {
             client.getConnectionManager().shutdown();
