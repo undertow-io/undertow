@@ -18,7 +18,12 @@
 
 package io.undertow.servlet.test.streams;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import javax.servlet.ServletException;
 
@@ -27,6 +32,7 @@ import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -88,6 +94,57 @@ public class ServletInputStreamTestCase {
         }
         //}
     }
+
+    private void runTestViaJavaImpl(final String message, String url)
+            throws IOException {
+        HttpURLConnection urlcon = null;
+        try {
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url;
+            urlcon = (HttpURLConnection) new URL(uri).openConnection();
+            urlcon.setInstanceFollowRedirects(true);
+            urlcon.setRequestProperty("Connection", "close");
+            urlcon.setRequestMethod("POST");
+            urlcon.setDoInput(true);
+            urlcon.setDoOutput(true);
+            OutputStream os = urlcon.getOutputStream();
+            os.write(message.getBytes());
+            os.close();
+            Assert.assertEquals(200, urlcon.getResponseCode());
+            InputStream is = urlcon.getInputStream();
+
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            byte[] buf = new byte[256];
+            int len;
+            while ((len = is.read(buf)) > 0 ){
+                bytes.write(buf, 0, len);
+            }
+            is.close();
+            final String response = new String(bytes.toByteArray(), 0, bytes.size());
+            if (!message.equals(response)) {
+                System.out.println(String.format("response=%s", Hex.encodeHexString(response.getBytes())));
+            }
+            Assert.assertEquals(message, response);
+        } finally {
+            if (urlcon != null) {
+                urlcon.disconnect();
+            }
+        }
+    }
+
+    @Test
+    public void testAsyncServletInputStream3() {
+        String message = "to_user_id=7999&msg_body=msg3";
+        for (int i = 0; i < 200; ++i) {
+            try {
+                runTestViaJavaImpl(message, ASYNC_SERVLET);
+            } catch (Throwable e) {
+                System.out.println("test failed with i equal to " + i);
+                e.printStackTrace();
+                throw new RuntimeException("test failed with i equal to " + i, e);
+            }
+        }
+    }
+
 
     public void runTest(final String message, String url) throws IOException {
         TestHttpClient client = new TestHttpClient();

@@ -58,7 +58,7 @@ public class AsyncInputStreamServlet extends HttpServlet {
 
         boolean done = false;
 
-        int written =0;
+        int written = 0;
 
         public MyListener(final ServletOutputStream outputStream, final ServletInputStream inputStream, final AsyncContext context) {
             this.outputStream = outputStream;
@@ -67,24 +67,27 @@ public class AsyncInputStreamServlet extends HttpServlet {
         }
 
         @Override
-        public  void onWritePossible() throws IOException {
+        public void onWritePossible() throws IOException {
             if (outputStream.isReady()) {
                 outputStream.write(dataToWrite.toByteArray());
                 written += dataToWrite.toByteArray().length;
                 dataToWrite.reset();
-                if(done) {
+                if (done) {
                     context.complete();
                 }
             }
         }
 
         @Override
-        public  void onDataAvailable() throws IOException {
-            byte[] buf = new byte[24];
+        public void onDataAvailable() throws IOException {
+            int read;
             while (inputStream.isReady()) {
-                int read = inputStream.read(buf);
+                read = inputStream.read();
+                if (read == 0) {
+                    System.out.println("onDataAvailable> read 0x00");
+                }
                 if (read != -1) {
-                    dataToWrite.write(buf, 0, read);
+                    dataToWrite.write(read);
                 } else {
                     onWritePossible();
                 }

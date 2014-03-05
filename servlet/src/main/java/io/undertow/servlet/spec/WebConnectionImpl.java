@@ -1,11 +1,13 @@
 package io.undertow.servlet.spec;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.WebConnection;
 
+import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 /**
@@ -16,9 +18,9 @@ public class WebConnectionImpl implements WebConnection {
     private final UpgradeServletOutputStream outputStream;
     private final UpgradeServletInputStream inputStream;
 
-    public WebConnectionImpl(final StreamConnection channel) {
+    public WebConnectionImpl(final StreamConnection channel, Pool<ByteBuffer> bufferPool) {
         this.outputStream = new UpgradeServletOutputStream(channel.getSinkChannel());
-        this.inputStream = new UpgradeServletInputStream(channel.getSourceChannel());
+        this.inputStream = new UpgradeServletInputStream(channel.getSourceChannel(), bufferPool);
     }
 
     @Override

@@ -49,7 +49,7 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Htt
                 final ThreadSetupAction.Handle handle = threadSetupAction.setup(ServletUpgradeListener.this.exchange);
                 try {
                     //run the upgrade in the IO thread, to prevent threading issues
-                    instance.getInstance().init(new WebConnectionImpl(channel));
+                    instance.getInstance().init(new WebConnectionImpl(channel, ServletUpgradeListener.this.exchange.getConnection().getBufferPool()));
                 } finally {
                     handle.tearDown();
                 }
