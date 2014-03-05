@@ -9,8 +9,11 @@ import java.util.Set;
  * The default servlet config. By default this has quite a restrictive configuration, only allowing
  * extensions in common use in the web to be served.
  *
+ * This class is deprecated, the default servlet should be configured via context params.
+ *
  * @author Stuart Douglas
  */
+@Deprecated
 public class DefaultServletConfig {
 
     private static final String[] DEFAULT_ALLOWED_EXTENSIONS = {"js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf"};

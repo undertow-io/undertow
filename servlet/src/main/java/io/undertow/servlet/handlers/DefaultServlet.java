@@ -42,7 +42,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Default servlet responsible for serving up resources. This is both a handler and a servlet. If no filters
@@ -63,11 +67,24 @@ import java.util.Date;
  */
 public class DefaultServlet extends HttpServlet {
 
+    public static final String DIRECTORY_LISTING = "directory-listing";
+    public static final String DEFAULT_ALLOWED = "default-allowed";
+    public static final String ALLOWED_EXTENSIONS = "allowed-extensions";
+    public static final String DISALLOWED_EXTENSIONS = "disallowed-extensions";
+    public static final String RESOLVE_AGAINST_CONTEXT_ROOT = "resolve-against-context-root";
+
+    private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf")));
+    private static final Set<String> DEFAULT_DISALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("class", "jar", "war", "zip", "xml")));
+
+
     private Deployment deployment;
-    private DefaultServletConfig config;
     private ResourceManager resourceManager;
     private boolean directoryListingEnabled = false;
 
+    private boolean defaultAllowed;
+    private Set<String> allowed = DEFAULT_ALLOWED_EXTENSIONS;
+    private Set<String> disallowed = DEFAULT_DISALLOWED_EXTENSIONS;
+    private boolean resolveAgainstContextRoot;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -75,10 +92,28 @@ public class DefaultServlet extends HttpServlet {
         ServletContextImpl sc = (ServletContextImpl) config.getServletContext();
         this.deployment = sc.getDeployment();
         DefaultServletConfig defaultServletConfig = deployment.getDeploymentInfo().getDefaultServletConfig();
-        this.config = defaultServletConfig != null ? defaultServletConfig : new DefaultServletConfig();
+        if (defaultServletConfig != null) {
+            defaultAllowed = defaultServletConfig.isDefaultAllowed();
+            allowed = new HashSet<String>(defaultServletConfig.getAllowed());
+            disallowed = new HashSet<String>(defaultServletConfig.getDisallowed());
+        }
+        if (config.getInitParameter(DEFAULT_ALLOWED) != null) {
+            defaultAllowed = Boolean.parseBoolean(config.getInitParameter(DEFAULT_ALLOWED));
+        }
+        if (config.getInitParameter(ALLOWED_EXTENSIONS) != null) {
+            String extensions = config.getInitParameter(ALLOWED_EXTENSIONS);
+            allowed = new HashSet<String>(Arrays.asList(extensions.split(",")));
+        }
+        if (config.getInitParameter(DISALLOWED_EXTENSIONS) != null) {
+            String extensions = config.getInitParameter(DISALLOWED_EXTENSIONS);
+            disallowed = new HashSet<String>(Arrays.asList(extensions.split(",")));
+        }
+        if (config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT) != null) {
+            resolveAgainstContextRoot = Boolean.parseBoolean(config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT));
+        }
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
-        String listings = config.getInitParameter("directory-listing");
-        if (Boolean.valueOf(listings)){
+        String listings = config.getInitParameter(DIRECTORY_LISTING);
+        if (Boolean.valueOf(listings)) {
             this.directoryListingEnabled = true;
         }
     }
@@ -197,25 +232,28 @@ public class DefaultServlet extends HttpServlet {
     }
 
     private String getPath(final HttpServletRequest request) {
+        String servletPath;
+        String pathInfo;
+
         if (request.getDispatcherType() == DispatcherType.INCLUDE && request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI) != null) {
-            String result = (String) request.getAttribute(RequestDispatcher.INCLUDE_PATH_INFO);
-            if (result == null) {
-                result = (String) request.getAttribute(RequestDispatcher.INCLUDE_SERVLET_PATH);
-            }
-            if (result == null || result.equals("")) {
-                result = "/";
-            }
-            return result;
+            pathInfo = (String) request.getAttribute(RequestDispatcher.INCLUDE_PATH_INFO);
+            servletPath = (String) request.getAttribute(RequestDispatcher.INCLUDE_SERVLET_PATH);
+
         } else {
-            String result = request.getPathInfo();
-            if (result == null) {
-                result = request.getServletPath();
-            }
-            if ((result == null) || (result.equals(""))) {
-                result = "/";
-            }
-            return result;
+            pathInfo = request.getPathInfo();
+            servletPath = request.getServletPath();
         }
+        String result = pathInfo;
+        if (result == null) {
+            result = servletPath;
+        } else if(resolveAgainstContextRoot) {
+            result = servletPath + pathInfo;
+        }
+        if ((result == null) || (result.equals(""))) {
+            result = "/";
+        }
+        return result;
+
     }
 
     private boolean isAllowed(String path) {
@@ -243,10 +281,10 @@ public class DefaultServlet extends HttpServlet {
             return true;
         }
         final String extension = lastSegment.substring(ext + 1, lastSegment.length());
-        if (config.isDefaultAllowed()) {
-            return !config.getDisallowed().contains(extension);
+        if (defaultAllowed) {
+            return !disallowed.contains(extension);
         } else {
-            return config.getAllowed().contains(extension);
+            return allowed.contains(extension);
         }
     }
 
