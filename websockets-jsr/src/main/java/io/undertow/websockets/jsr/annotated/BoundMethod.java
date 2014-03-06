@@ -1,5 +1,6 @@
 package io.undertow.websockets.jsr.annotated;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -40,7 +41,22 @@ final class BoundMethod {
             allParams.removeAll(param.positions());
         }
         if (!allParams.isEmpty()) {
-            throw JsrWebSocketMessages.MESSAGES.invalidParamers(method, allParams);
+            //first check to see if the user has accidentally used the wrong PathParam annotation
+            //and if so throw a more informative error message
+            boolean wrongAnnotation = false;
+            for (int i = 0; i < method.getParameterAnnotations().length; ++i) {
+                for (int j = 0; j < method.getParameterAnnotations()[i].length; ++j) {
+                    Annotation annotation = method.getParameterAnnotations()[i][j];
+                    if (annotation.annotationType().getName().equals("javax.ws.rs.PathParam")) {
+                        wrongAnnotation = true;
+                    }
+                }
+            }
+            if (wrongAnnotation) {
+                throw JsrWebSocketMessages.MESSAGES.invalidParametersWithWrongAnnotation(method, allParams);
+            } else {
+                throw JsrWebSocketMessages.MESSAGES.invalidParameters(method, allParams);
+            }
         }
         method.setAccessible(true);
     }

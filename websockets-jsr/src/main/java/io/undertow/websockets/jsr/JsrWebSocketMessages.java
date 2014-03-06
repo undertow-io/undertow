@@ -78,8 +78,8 @@ public interface JsrWebSocketMessages {
     @Message(id = 3011, value = "More than one method is annotated with %s")
     DeploymentException moreThanOneAnnotation(Class<?> clazz);
 
-    @Message(id = 3012, value = "Method %s has invalid parameters %s")
-    DeploymentException invalidParamers(Method method, Set<Integer> allParams);
+    @Message(id = 3012, value = "Method %s has invalid parameters at locations %s")
+    DeploymentException invalidParameters(Method method, Set<Integer> allParams);
 
     @Message(id = 3014, value = "Could not determine decoder type for %s")
     IllegalArgumentException couldNotDetermineDecoderTypeFor(Class<?> decoderClass);
@@ -134,4 +134,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3032, value = "Invalid endpoint class %s, path param %s on method %s does not reference a valid parameter, valid parameters are %s")
     DeploymentException pathTemplateNotFound(Class<?> endpointClass, PathParam param, Method method, Set<String> paths);
+
+    @Message(id = 3033, value = "Method %s has invalid parameters at locations %s. It looks like you may have accidentally used javax.ws.rs.PathParam instead of javax.websocket.server.PathParam")
+    DeploymentException invalidParametersWithWrongAnnotation(Method method, Set<Integer> allParams);
 }

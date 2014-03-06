@@ -51,7 +51,7 @@ import static org.xnio.Bits.anyAreSet;
 public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
     /**
-     * Trails that are to be attached to the end of the HTTP response. Note that it is the callers responsibility
+     * Trailers that are to be attached to the end of the HTTP response. Note that it is the callers responsibility
      * to make sure the client understands trailers (i.e. they have provided a TE header), and to set the 'Trailers:'
      * header appropriately.
      * <p/>

@@ -71,6 +71,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
         BoundMethod binaryMessage = null;
         BoundMethod pongMessage = null;
         Class<?> c = endpointClass;
+
         do {
             for (final Method method : c.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(OnOpen.class)) {
