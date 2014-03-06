@@ -21,6 +21,7 @@ package io.undertow.conduits;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
@@ -49,7 +50,8 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     /**
      * If the response has HTTP footers they are attached to the exchange under this key. They will only be available once the exchange has been fully read.
      */
-    public static final AttachmentKey<HeaderMap> TRAILERS = AttachmentKey.create(HeaderMap.class);
+    @Deprecated
+    public static final AttachmentKey<HeaderMap> TRAILERS = HttpAttachments.REQUEST_TRAILERS;
 
     private final BufferWrapper bufferWrapper;
     private final ConduitListener<? super ChunkedStreamSourceConduit> finishListener;
@@ -93,7 +95,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         this.bufferWrapper = bufferWrapper;
         this.finishListener = finishListener;
         this.remainingAllowed = Long.MIN_VALUE;
-        this.chunkReader = new ChunkReader<ChunkedStreamSourceConduit>(attachable, TRAILERS, finishListener, this);
+        this.chunkReader = new ChunkReader<ChunkedStreamSourceConduit>(attachable, HttpAttachments.REQUEST_TRAILERS, finishListener, this);
         this.exchange = exchange;
     }
 

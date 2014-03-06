@@ -28,8 +28,6 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
 import io.undertow.client.ProxiedRequestAttachments;
-import io.undertow.conduits.ChunkedStreamSinkConduit;
-import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
@@ -38,6 +36,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
@@ -435,9 +434,9 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void handleEvent(final StreamSinkChannel channel) {
-            HeaderMap trailers = source.getAttachment(ChunkedStreamSourceConduit.TRAILERS);
+            HeaderMap trailers = source.getAttachment(HttpAttachments.REQUEST_TRAILERS);
             if (trailers != null) {
-                target.putAttachment(ChunkedStreamSinkConduit.TRAILERS, trailers);
+                target.putAttachment(HttpAttachments.RESPONSE_TRAILERS, trailers);
             }
             try {
                 channel.shutdownWrites();

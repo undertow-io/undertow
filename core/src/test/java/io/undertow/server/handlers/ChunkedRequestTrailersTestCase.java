@@ -19,8 +19,8 @@
 package io.undertow.server.handlers;
 
 import io.undertow.UndertowOptions;
-import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
@@ -77,7 +77,7 @@ public class ChunkedRequestTrailersTestCase {
                     String m = HttpClientUtils.readResponse(inputStream);
                     Assert.assertEquals("abcdefghi", m);
 
-                    HeaderMap headers = exchange.getAttachment(ChunkedStreamSourceConduit.TRAILERS);
+                    HeaderMap headers = exchange.getAttachment(HttpAttachments.REQUEST_TRAILERS);
                     for (HeaderValues header : headers) {
                         for (String val : header) {
                             outputStream.write(header.getHeaderName().toString().getBytes());

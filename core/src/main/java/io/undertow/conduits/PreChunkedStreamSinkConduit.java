@@ -18,15 +18,7 @@
 
 package io.undertow.conduits;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.UndertowMessages;
-import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
@@ -41,29 +33,26 @@ import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
- * Channel that implements HTTP chunked transfer coding.
+ * Channel that implements HTTP chunked transfer coding for data streams that already have chunk markers.
  *
  * @author Stuart Douglas
  */
-public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
-
-    /**
-     * Trailers that are to be attached to the end of the HTTP response. Note that it is the callers responsibility
-     * to make sure the client understands trailers (i.e. they have provided a TE header), and to set the 'Trailers:'
-     * header appropriately.
-     * <p/>
-     * This attachment must be set before the {@link #terminateWrites()} method is called.
-     */
-    @Deprecated
-    public static final AttachmentKey<HeaderMap> TRAILERS = HttpAttachments.RESPONSE_TRAILERS;
+public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
     private final HeaderMap responseHeaders;
 
-    private final ConduitListener<? super ChunkedStreamSinkConduit> finishListener;
+    private final ConduitListener<? super PreChunkedStreamSinkConduit> finishListener;
     private final int config;
 
     private final Pool<ByteBuffer> bufferPool;
@@ -110,7 +99,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
      * @param finishListener  The finish listener
      * @param attachable      The attachable
      */
-    public ChunkedStreamSinkConduit(final StreamSinkConduit next, final Pool<ByteBuffer> bufferPool, final boolean configurable, final boolean passClose, HeaderMap responseHeaders, final ConduitListener<? super ChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
+    public PreChunkedStreamSinkConduit(final StreamSinkConduit next, final Pool<ByteBuffer> bufferPool, final boolean configurable, final boolean passClose, HeaderMap responseHeaders, final ConduitListener<? super PreChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
         super(next);
         this.bufferPool = bufferPool;
         this.responseHeaders = responseHeaders;
@@ -308,7 +297,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         }
         lastChunkBuffer.put(LAST_CHUNK);
         //we just assume it will fit
-        HeaderMap trailers = attachable.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
+        HeaderMap trailers = attachable.getAttachment(TRAILERS);
         if (trailers != null && trailers.size() != 0) {
             for (HeaderValues trailer : trailers) {
                 for (String val : trailer) {

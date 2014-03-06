@@ -18,10 +18,10 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
+import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -76,7 +76,7 @@ public class ChunkedResponseTrailersTestCase {
                         return;
                     }
                     HeaderMap trailers = new HeaderMap();
-                    exchange.putAttachment(ChunkedStreamSinkConduit.TRAILERS, trailers);
+                    exchange.putAttachment(HttpAttachments.RESPONSE_TRAILERS, trailers);
                     trailers.put(HttpString.tryFromString("foo"), "fooVal");
                     trailers.put(HttpString.tryFromString("bar"), "barVal");
                     new StringWriteChannelListener(message).setup(exchange.getResponseChannel());
