@@ -47,7 +47,7 @@ import org.xnio.conduits.StreamSourceConduit;
  * @author Stuart Douglas
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public class HttpTransferEncoding {
+class HttpTransferEncoding {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.handler.transfer-encoding");
 
