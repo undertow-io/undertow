@@ -26,6 +26,7 @@ import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FinishableStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
+import io.undertow.conduits.PreChunkedStreamSinkConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
@@ -295,7 +296,12 @@ class HttpTransferEncoding {
             if (headRequest) {
                 return channel;
             }
-            return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+            Boolean preChunked = exchange.getAttachment(HttpAttachments.PRE_CHUNKED_RESPONSE);
+            if(preChunked != null && preChunked) {
+                return new PreChunkedStreamSinkConduit(channel, finishListener, exchange);
+            } else {
+                return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+            }
         } else {
 
             if (headRequest) {

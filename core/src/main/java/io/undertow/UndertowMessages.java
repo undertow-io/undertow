@@ -275,4 +275,8 @@ public interface UndertowMessages {
 
     @Message(id = 83, value = "Host %s has not been registered")
     RuntimeException hostHasNotBeenRegistered(Object host);
+
+    @Message(id = 84, value = "Attempted to write additional data after the last chunk")
+    IOException extraDataWrittenAfterChunkEnd();
+
 }

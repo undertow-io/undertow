@@ -19,14 +19,9 @@
 package io.undertow.conduits;
 
 import io.undertow.UndertowMessages;
+import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.util.Attachable;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
-import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
@@ -34,7 +29,6 @@ import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
@@ -50,62 +44,29 @@ import static org.xnio.Bits.anyAreSet;
  */
 public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
-    private final HeaderMap responseHeaders;
-
     private final ConduitListener<? super PreChunkedStreamSinkConduit> finishListener;
-    private final int config;
-
-    private final Pool<ByteBuffer> bufferPool;
-
-    /**
-     * "0\r\n" as bytes in US ASCII encoding.
-     */
-    private static final byte[] LAST_CHUNK = new byte[] {(byte) 48, (byte) 13, (byte) 10};
-
-    /**
-     * "\r\n" as bytes in US ASCII encoding.
-     */
-    private static final byte[] CRLF = new byte[] {(byte) 13, (byte) 10};
-
-    private final Attachable attachable;
-    private int state;
-    private int chunkleft = 0;
-
-    private final ByteBuffer chunkingBuffer = ByteBuffer.allocate(14); //14 is the most
-    private Pooled<ByteBuffer> lastChunkBuffer;
-
-
-    private static final int CONF_FLAG_CONFIGURABLE = 1 << 0;
-    private static final int CONF_FLAG_PASS_CLOSE = 1 << 1;
 
     /**
      * Flag that is set when {@link #terminateWrites()} or @{link #close()} is called
      */
     private static final int FLAG_WRITES_SHUTDOWN = 1;
-    private static final int FLAG_NEXT_SHUTDOWN = 1 << 2;
-    private static final int FLAG_WRITTEN_FIRST_CHUNK = 1 << 3;
-    private static final int FLAG_FIRST_DATA_WRITTEN = 1 << 4; //set on first flush or write call
-    private static final int FLAG_FINISHED = 1 << 5;
+    private static final int FLAG_FINISHED = 1 << 2;
 
-    int written = 0;
+    int state = 0;
+    final ChunkReader<PreChunkedStreamSinkConduit> chunkReader;
 
     /**
      * Construct a new instance.
      *
-     * @param next            the channel to wrap
-     * @param configurable    {@code true} to allow configuration of the next channel, {@code false} otherwise
-     * @param passClose       {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
-     * @param responseHeaders The response headers
-     * @param finishListener  The finish listener
-     * @param attachable      The attachable
+     * @param next           the channel to wrap
+     * @param finishListener The finish listener
+     * @param attachable     The attachable
      */
-    public PreChunkedStreamSinkConduit(final StreamSinkConduit next, final Pool<ByteBuffer> bufferPool, final boolean configurable, final boolean passClose, HeaderMap responseHeaders, final ConduitListener<? super PreChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
+    public PreChunkedStreamSinkConduit(final StreamSinkConduit next, final ConduitListener<? super PreChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
         super(next);
-        this.bufferPool = bufferPool;
-        this.responseHeaders = responseHeaders;
+        //we don't want the reader to call the finish listener, so we pass null
+        this.chunkReader = new ChunkReader<PreChunkedStreamSinkConduit>(attachable, HttpAttachments.RESPONSE_TRAILERS, null, this);
         this.finishListener = finishListener;
-        this.attachable = attachable;
-        config = (configurable ? CONF_FLAG_CONFIGURABLE : 0) | (passClose ? CONF_FLAG_PASS_CLOSE : 0);
     }
 
     @Override
@@ -118,67 +79,43 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
-        if(src.remaining() == 0) {
+        if (chunkReader.getChunkRemaining() == -1) {
+            throw UndertowMessages.MESSAGES.extraDataWrittenAfterChunkEnd();
+        }
+        if (src.remaining() == 0) {
             return 0;
         }
-        this.state |= FLAG_FIRST_DATA_WRITTEN;
-        int oldLimit = src.limit();
-        if (chunkleft == 0) {
-            chunkingBuffer.clear();
-            if (anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
-                chunkingBuffer.put(CRLF);
-            }
-            written += src.remaining();
-            putIntAsHexString(chunkingBuffer, src.remaining());
-            chunkingBuffer.put(CRLF);
-            chunkingBuffer.flip();
-            state |= FLAG_WRITTEN_FIRST_CHUNK;
-            chunkleft = src.remaining();
-        } else {
-            if (src.remaining() > chunkleft) {
-                src.limit(chunkleft + src.position());
-            }
-        }
+        int oldPos = src.position();
+        int ret = next.write(src);
+        int newPos = src.position();
+        src.position(oldPos);
         try {
-            int chunkingSize = chunkingBuffer.remaining();
-            if (chunkingSize > 0 || lastChunkBuffer != null) {
-                int originalRemaining = src.remaining();
-                long result;
-                if (lastChunkBuffer == null) {
-                    final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src};
-                    result = next.write(buf, 0, buf.length);
-                } else {
-                    final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src, lastChunkBuffer.getResource()};
-                    if (anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
-                        result = next.writeFinal(buf, 0, buf.length);
+            while (true) {
+                long chunkRemaining = chunkReader.readChunk(src);
+                if (chunkRemaining == -1) {
+                    if (src.remaining() == 0) {
+                        return ret;
                     } else {
-                        result = next.write(buf, 0, buf.length);
-                    }
-                    if (!src.hasRemaining()) {
-                        state |= FLAG_WRITES_SHUTDOWN;
-                    }
-                    if (!lastChunkBuffer.getResource().hasRemaining()) {
-                        state |= FLAG_NEXT_SHUTDOWN;
-                        lastChunkBuffer.free();
+                        throw UndertowMessages.MESSAGES.extraDataWrittenAfterChunkEnd();
                     }
                 }
-                int srcWritten = originalRemaining - src.remaining();
-                chunkleft -= srcWritten;
-                if (result < chunkingSize) {
-                    return 0;
+                int remaining;
+                if (src.remaining() >= chunkRemaining) {
+                    src.position((int) (src.position() + chunkRemaining));
+                    remaining = 0;
                 } else {
-                    return srcWritten;
+                    remaining = (int) (chunkRemaining - src.remaining());
+                    src.position(src.limit());
                 }
-            } else {
-                int result = next.write(src);
-                chunkleft -= result;
-                return result;
-
+                chunkReader.setChunkRemaining(remaining);
+                if (!src.hasRemaining()) {
+                    break;
+                }
             }
         } finally {
-            src.limit(oldLimit);
+            src.position(newPos);
         }
-
+        return ret;
     }
 
 
@@ -199,15 +136,13 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
 
     @Override
     public int writeFinal(ByteBuffer src) throws IOException {
-        //todo: we could optimise this to just set a content length if no data has been written
-        if(!src.hasRemaining()) {
+        if (!src.hasRemaining()) {
             terminateWrites();
             return 0;
         }
-        if (lastChunkBuffer == null) {
-            createLastChunk(true);
-        }
-        return doWrite(src);
+        int ret = doWrite(src);
+        terminateWrites();
+        return ret;
     }
 
     @Override
@@ -228,31 +163,12 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
 
     @Override
     public boolean flush() throws IOException {
-        this.state |= FLAG_FIRST_DATA_WRITTEN;
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
-            if (anyAreSet(state, FLAG_NEXT_SHUTDOWN)) {
-                boolean val = next.flush();
-                if (val && allAreClear(state, FLAG_FINISHED)) {
-                    invokeFinishListener();
-                }
-                return val;
-            } else {
-                next.write(lastChunkBuffer.getResource());
-                if (!lastChunkBuffer.getResource().hasRemaining()) {
-                    lastChunkBuffer.free();
-                    if (anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
-                        next.terminateWrites();
-                    }
-                    state |= FLAG_NEXT_SHUTDOWN;
-                    boolean val = next.flush();
-                    if (val && allAreClear(state, FLAG_FINISHED)) {
-                        invokeFinishListener();
-                    }
-                    return val;
-                } else {
-                    return false;
-                }
+            boolean val = next.flush();
+            if (val && allAreClear(state, FLAG_FINISHED)) {
+                invokeFinishListener();
             }
+            return val;
         } else {
             return next.flush();
         }
@@ -267,100 +183,22 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
 
     @Override
     public void terminateWrites() throws IOException {
-        if(anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
+        if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             return;
         }
-        if (this.chunkleft != 0) {
+        if (chunkReader.getChunkRemaining() != -1) {
             throw UndertowMessages.MESSAGES.chunkedChannelClosedMidChunk();
         }
-        if (!anyAreSet(state, FLAG_FIRST_DATA_WRITTEN)) {
-            //if no data was actually sent we just remove the transfer encoding header, and set content length 0
-            //TODO: is this the best way to do it?
-            //todo: should we make this behaviour configurable?
-            responseHeaders.put(Headers.CONTENT_LENGTH, "0"); //according to the spec we don't actually need this, but better to be safe
-            responseHeaders.remove(Headers.TRANSFER_ENCODING);
-            state |= FLAG_NEXT_SHUTDOWN | FLAG_WRITES_SHUTDOWN;
-            if(anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
-                next.terminateWrites();
-            }
-        } else {
-            createLastChunk(false);
-            state |= FLAG_WRITES_SHUTDOWN;
-        }
-    }
-
-    private void createLastChunk(final boolean writeFinal) throws UnsupportedEncodingException {
-        lastChunkBuffer = bufferPool.allocate();
-        ByteBuffer lastChunkBuffer = this.lastChunkBuffer.getResource();
-        if (anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK) || writeFinal) {
-            lastChunkBuffer.put(CRLF);
-        }
-        lastChunkBuffer.put(LAST_CHUNK);
-        //we just assume it will fit
-        HeaderMap trailers = attachable.getAttachment(TRAILERS);
-        if (trailers != null && trailers.size() != 0) {
-            for (HeaderValues trailer : trailers) {
-                for (String val : trailer) {
-                    trailer.getHeaderName().appendTo(lastChunkBuffer);
-                    lastChunkBuffer.put((byte) ':');
-                    lastChunkBuffer.put((byte) ' ');
-                    lastChunkBuffer.put(val.getBytes("US-ASCII"));
-                    lastChunkBuffer.put(CRLF);
-                }
-            }
-            lastChunkBuffer.put(CRLF);
-        } else {
-            lastChunkBuffer.put(CRLF);
-        }
-        lastChunkBuffer.flip();
+        state |= FLAG_WRITES_SHUTDOWN;
     }
 
     @Override
     public void awaitWritable() throws IOException {
-        if (anyAreSet(state, FLAG_NEXT_SHUTDOWN)) {
-            return;
-        }
         next.awaitWritable();
     }
 
     @Override
     public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
-        if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
-            throw new ClosedChannelException();
-        }
         next.awaitWritable(time, timeUnit);
     }
-
-    private static void putIntAsHexString(final ByteBuffer buf, final int v) {
-        byte int3 = (byte) (v >> 24);
-        byte int2 = (byte) (v >> 16);
-        byte int1 = (byte) (v >>  8);
-        byte int0 = (byte) (v      );
-        boolean nonZeroFound = false;
-        if (int3 != 0) {
-            buf.put(DIGITS[(0xF0 & int3) >>> 4])
-               .put(DIGITS[0x0F & int3]);
-            nonZeroFound = true;
-        }
-        if (nonZeroFound || int2 != 0) {
-            buf.put(DIGITS[(0xF0 & int2) >>> 4])
-               .put(DIGITS[0x0F & int2]);
-            nonZeroFound = true;
-        }
-        if (nonZeroFound || int1 != 0) {
-            buf.put(DIGITS[(0xF0 & int1) >>> 4])
-               .put(DIGITS[0x0F & int1]);
-        }
-        buf.put(DIGITS[(0xF0 & int0) >>> 4])
-           .put(DIGITS[0x0F & int0]);
-    }
-
-    /**
-     * hexadecimal digits "0123456789abcdef" as bytes in US ASCII encoding.
-     */
-    private static final byte[] DIGITS = new byte[] {
-        (byte) 48, (byte) 49, (byte) 50, (byte) 51, (byte) 52, (byte) 53,
-        (byte) 54, (byte) 55, (byte) 56, (byte) 57, (byte) 97, (byte) 98,
-        (byte) 99, (byte) 100, (byte) 101, (byte) 102};
-
 }

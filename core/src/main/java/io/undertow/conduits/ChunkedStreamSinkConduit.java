@@ -328,17 +328,11 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public void awaitWritable() throws IOException {
-        if (anyAreSet(state, FLAG_NEXT_SHUTDOWN)) {
-            return;
-        }
         next.awaitWritable();
     }
 
     @Override
     public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
-        if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
-            throw new ClosedChannelException();
-        }
         next.awaitWritable(time, timeUnit);
     }
 
