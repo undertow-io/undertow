@@ -20,12 +20,11 @@ package io.undertow.conduits;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -40,11 +39,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreSet;
-import static org.xnio.Bits.longBitMask;
-
 /**
  * Channel to de-chunkify data
  *
@@ -57,28 +51,14 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
      */
     public static final AttachmentKey<HeaderMap> TRAILERS = AttachmentKey.create(HeaderMap.class);
 
-    private final Attachable attachable;
     private final BufferWrapper bufferWrapper;
     private final ConduitListener<? super ChunkedStreamSourceConduit> finishListener;
     private final HttpServerExchange exchange;
 
-    private long state;
+    private boolean closed;
 
     private long remainingAllowed;
-    /**
-     * The trailer parser that stores the trailer parse state. If this class is not null it means
-     * that we are in the middle of parsing trailers.
-     */
-    private TrailerParser trailerParser;
-
-    private static final long FLAG_CLOSED = 1L << 63L;
-    private static final long FLAG_FINISHED = 1L << 62L;
-    private static final long FLAG_READING_LENGTH = 1L << 61L;
-    private static final long FLAG_READING_TILL_END_OF_LINE = 1L << 60L;
-    private static final long FLAG_READING_NEWLINE = 1L << 59L;
-    private static final long FLAG_READING_AFTER_LAST = 1L << 58L;
-
-    private static final long MASK_COUNT = longBitMask(0, 56);
+    private final ChunkReader chunkReader;
 
     public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamSourceConduit channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, Attachable attachable) {
         this(next, new BufferWrapper() {
@@ -103,7 +83,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
             @Override
             public void pushBack(Pooled<ByteBuffer> pooled) {
-                ((HttpServerConnection)exchange.getConnection()).ungetRequestBytes(pooled);
+                ((HttpServerConnection) exchange.getConnection()).ungetRequestBytes(pooled);
             }
         }, finishListener, exchange, exchange);
     }
@@ -113,9 +93,8 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         this.bufferWrapper = bufferWrapper;
         this.finishListener = finishListener;
         this.remainingAllowed = Long.MIN_VALUE;
-        this.attachable = attachable;
+        this.chunkReader = new ChunkReader<ChunkedStreamSourceConduit>(attachable, TRAILERS, finishListener, this);
         this.exchange = exchange;
-        state = FLAG_READING_LENGTH;
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
@@ -123,12 +102,12 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     }
 
     private void updateRemainingAllowed(final int written) throws IOException {
-        if(remainingAllowed == Long.MIN_VALUE) {
-            if(exchange == null) {
+        if (remainingAllowed == Long.MIN_VALUE) {
+            if (exchange == null) {
                 return;
             } else {
                 long maxEntitySize = exchange.getMaxEntitySize();
-                if(maxEntitySize <= 0) {
+                if (maxEntitySize <= 0) {
                     return;
                 }
                 remainingAllowed = maxEntitySize;
@@ -143,7 +122,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             } catch (IOException e) {
                 UndertowLogger.REQUEST_LOGGER.debug("Exception terminating reads due to exceeding max size", e);
             }
-            state |= FLAG_FINISHED | FLAG_CLOSED;
+            closed = true;
             finishListener.handleEvent(this);
             exchange.setPersistent(false);
             throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
@@ -172,116 +151,32 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     }
 
     public int read(final ByteBuffer dst) throws IOException {
-        final long oldVal = state;
+        long chunkRemaining = chunkReader.getChunkRemaining();
         //we have read the last chunk, we just return EOF
-        if (anyAreSet(oldVal, FLAG_FINISHED)) {
+        if (chunkRemaining == -1) {
             return -1;
         }
-        if (anyAreSet(oldVal, FLAG_CLOSED)) {
+        if (closed) {
             throw new ClosedChannelException();
         }
-
-        long chunkRemaining = oldVal & MASK_COUNT;
         Pooled<ByteBuffer> pooled = bufferWrapper.allocate();
         ByteBuffer buf = pooled.getResource();
-        int r = next.read(buf);
-        buf.flip();
-        if (r == -1) {
-            //Channel is broken, not sure how best to report it
-            throw new ClosedChannelException();
-        } else if (r == 0) {
-            return 0;
-        }
-
-
-        long newVal = oldVal;
         try {
-
-            if (anyAreSet(oldVal, FLAG_READING_AFTER_LAST)) {
-                int ret = handleChunkedRequestEnd(buf);
-                if (ret == -1) {
-                    newVal |= FLAG_FINISHED & ~FLAG_READING_AFTER_LAST;
-                }
-                return ret;
+            int r = next.read(buf);
+            buf.flip();
+            if (r == -1) {
+                //Channel is broken, not sure how best to report it
+                throw new ClosedChannelException();
+            } else if (r == 0) {
+                return 0;
             }
-
-            while (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
-                while (buf.hasRemaining()) {
-                    byte b = buf.get();
-                    if (b == '\n') {
-                        newVal = newVal & ~FLAG_READING_NEWLINE | FLAG_READING_LENGTH;
-                        break;
-                    }
-                }
-                if (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
-                    buf.clear();
-                    int c = next.read(buf);
-                    buf.flip();
-                    if (c == -1) {
-                        //Channel is broken, not sure how best to report it
-                        throw new ClosedChannelException();
-                    } else if (c == 0) {
-                        return 0;
-                    }
+            if (chunkRemaining == 0) {
+                chunkRemaining = chunkReader.readChunk(buf);
+                if (chunkRemaining <= 0) {
+                    return (int) chunkRemaining;
                 }
             }
 
-            while (anyAreSet(newVal, FLAG_READING_LENGTH)) {
-                while (buf.hasRemaining()) {
-                    byte b = buf.get();
-                    if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')) {
-                        chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
-                        chunkRemaining += Character.digit((char) b, 16);
-                    } else {
-                        if (b == '\n') {
-                            newVal = newVal & ~FLAG_READING_LENGTH;
-                        } else {
-                            newVal = newVal & ~FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE;
-                        }
-                        break;
-                    }
-                }
-                if (anyAreSet(newVal, FLAG_READING_LENGTH)) {
-                    buf.clear();
-                    int c = next.read(buf);
-                    buf.flip();
-                    if (c == -1) {
-                        //Channel is broken, not sure how best to report it
-                        throw new ClosedChannelException();
-                    } else if (c == 0) {
-                        return 0;
-                    }
-                }
-            }
-            while (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
-                while (buf.hasRemaining()) {
-                    if (buf.get() == '\n') {
-                        newVal = newVal & ~FLAG_READING_TILL_END_OF_LINE;
-                        break;
-                    }
-                }
-                if (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
-                    buf.clear();
-                    int c = next.read(buf);
-                    buf.flip();
-                    if (c == -1) {
-                        //Channel is broken, not sure how best to report it
-                        throw new ClosedChannelException();
-                    } else if (c == 0) {
-                        return 0;
-                    }
-                }
-            }
-
-            //we have our chunk size, check to make sure it was not the last chunk
-            if (allAreClear(newVal, FLAG_READING_NEWLINE | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
-                newVal |= FLAG_READING_AFTER_LAST;
-                int ret = handleChunkedRequestEnd(buf);
-                if (ret == -1) {
-                    newVal |= FLAG_FINISHED & ~FLAG_READING_AFTER_LAST;
-                }
-                return ret;
-            }
 
             final int originalLimit = dst.limit();
             try {
@@ -330,15 +225,11 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                             }
                         } while (c > 0 && chunkRemaining > 0);
                         if (c == -1) {
-                            newVal |= FLAG_FINISHED;
+                            throw new ClosedChannelException();
                         }
                     } finally {
                         dst.limit(old);
                     }
-                }
-
-                if (chunkRemaining == 0) {
-                    newVal |= FLAG_READING_NEWLINE;
                 }
                 updateRemainingAllowed(read);
                 return read;
@@ -349,41 +240,20 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             }
 
         } finally {
-            newVal = (newVal & ~MASK_COUNT) | chunkRemaining;
-            state = newVal;
+            if(chunkRemaining >= 0) {
+                chunkReader.setChunkRemaining(chunkRemaining);
+            }
             if (buf.hasRemaining()) {
                 bufferWrapper.pushBack(pooled);
-            }
-            if (allAreClear(oldVal, FLAG_FINISHED) && allAreSet(newVal, FLAG_FINISHED)) {
-                callFinish();
+            } else {
+                pooled.free();
             }
         }
 
-    }
-
-    private int handleChunkedRequestEnd(ByteBuffer buffer) throws IOException {
-        if (trailerParser != null) {
-            return trailerParser.handle(buffer);
-        }
-        while (buffer.hasRemaining()) {
-            byte b = buffer.get();
-            if (b == '\n') {
-                return -1;
-            } else if (b != '\r') {
-                buffer.position(buffer.position() - 1);
-                trailerParser = new TrailerParser();
-                return trailerParser.handle(buffer);
-            }
-        }
-        return 0;
     }
 
     public boolean isFinished() {
-        return anyAreSet(state, FLAG_FINISHED);
-    }
-
-    private void callFinish() {
-        finishListener.handleEvent(this);
+        return chunkReader.getChunkRemaining() == -1;
     }
 
     interface BufferWrapper {
@@ -393,72 +263,4 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         void pushBack(Pooled<ByteBuffer> pooled);
 
     }
-
-
-    /**
-     * Class that parses HTTP trailers. We don't just re-use the http parser code because it is complicated enough
-     * already, and this is not used very often so the performance benefits should not matter.
-     */
-    private final class TrailerParser {
-
-        private HeaderMap headerMap = new HeaderMap();
-        private StringBuilder builder = new StringBuilder();
-        private HttpString httpString;
-        int state = 0;
-
-        private static final int STATE_TRAILER_NAME = 0;
-        private static final int STATE_TRAILER_VALUE = 1;
-        private static final int STATE_ENDING = 2;
-
-
-        public int handle(ByteBuffer buf) throws IOException {
-            while (buf.hasRemaining()) {
-                final byte b = buf.get();
-                if (state == STATE_TRAILER_NAME) {
-                    if (b == '\r') {
-                        if (builder.length() == 0) {
-                            state = STATE_ENDING;
-                        } else {
-                            throw UndertowMessages.MESSAGES.couldNotDecodeTrailers();
-                        }
-                    } else if (b == '\n') {
-                        if (builder.length() == 0) {
-                            attachable.putAttachment(TRAILERS, headerMap);
-                            return -1;
-                        } else {
-                            throw UndertowMessages.MESSAGES.couldNotDecodeTrailers();
-                        }
-                    } else if (b == ':') {
-                        httpString = HttpString.tryFromString(builder.toString().trim());
-                        state = STATE_TRAILER_VALUE;
-                        builder.setLength(0);
-                    } else {
-                        builder.append((char) b);
-                    }
-                } else if (state == STATE_TRAILER_VALUE) {
-                    if (b == '\n') {
-                        headerMap.put(httpString, builder.toString().trim());
-                        httpString = null;
-                        builder.setLength(0);
-                        state = STATE_TRAILER_NAME;
-                    } else if (b != '\r') {
-                        builder.append((char) b);
-                    }
-                } else if (state == STATE_ENDING) {
-                    if (b == '\n') {
-                        if (attachable != null) {
-                            attachable.putAttachment(TRAILERS, headerMap);
-                        }
-                        return -1;
-                    } else {
-                        throw UndertowMessages.MESSAGES.couldNotDecodeTrailers();
-                    }
-                } else {
-                    throw new IllegalStateException();
-                }
-            }
-            return 0;
-        }
-    }
-
 }
