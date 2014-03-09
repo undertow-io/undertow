@@ -24,7 +24,6 @@ import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContextFactory;
-import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
 import io.undertow.security.handlers.NotificationReceiverHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
@@ -74,6 +73,7 @@ import io.undertow.servlet.handlers.SessionRestoringHandler;
 import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;
 import io.undertow.servlet.handlers.security.SSLInformationAssociationHandler;
 import io.undertow.servlet.handlers.security.SecurityPathMatches;
+import io.undertow.servlet.handlers.security.ServletAuthenticationCallHandler;
 import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
@@ -286,7 +286,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         current = new SSLInformationAssociationHandler(current);
 
         final SecurityPathMatches securityPathMatches = buildSecurityConstraints();
-        current = new AuthenticationCallHandler(current);
+        current = new ServletAuthenticationCallHandler(current);
         if (!securityPathMatches.isEmpty()) {
             current = new ServletAuthenticationConstraintHandler(current);
         }
