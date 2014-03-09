@@ -34,6 +34,10 @@ public class ClassPathResourceManager implements ResourceManager {
         }
     }
 
+    public ClassPathResourceManager(final ClassLoader classLoader) {
+        this(classLoader, "");
+    }
+
     @Override
     public Resource getResource(final String path) throws IOException {
         String modPath = path;
