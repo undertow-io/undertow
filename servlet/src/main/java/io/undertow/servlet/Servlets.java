@@ -8,8 +8,11 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
+import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.core.ServletContainerImpl;
 
 import java.util.EventListener;
@@ -126,7 +129,30 @@ public class Servlets {
         return new ListenerInfo(listenerClass);
     }
 
+    public static SecurityConstraint securityConstraint() {
+        return new SecurityConstraint();
+    }
+
+    public static WebResourceCollection webResourceCollection() {
+        return new WebResourceCollection();
+    }
+
     private Servlets() {
     }
 
+    public static LoginConfig loginConfig(String realmName, String loginPage, String errorPage) {
+        return new LoginConfig(realmName, loginPage, errorPage);
+    }
+
+    public static LoginConfig loginConfig(final String realmName) {
+        return new LoginConfig(realmName);
+    }
+
+    public static LoginConfig loginConfig(String mechanismName, String realmName, String loginPage, String errorPage) {
+        return new LoginConfig(mechanismName, realmName, loginPage, errorPage);
+    }
+
+    public static LoginConfig loginConfig(String mechanismName, final String realmName) {
+        return new LoginConfig(mechanismName, realmName);
+    }
 }
