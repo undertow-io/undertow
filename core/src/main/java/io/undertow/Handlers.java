@@ -146,7 +146,7 @@ public class Handlers {
      * @return A new resource handler
      */
     public static ResourceHandler resource(final ResourceManager resourceManager) {
-        return new ResourceHandler().setResourceManager(resourceManager).setDirectoryListingEnabled(false);
+        return new ResourceHandler(resourceManager).setDirectoryListingEnabled(false);
     }
 
     /**

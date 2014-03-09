@@ -63,6 +63,18 @@ public class ResourceHandler implements HttpHandler {
 
     private volatile ContentEncodedResourceManager contentEncodedResourceManager;
 
+    public ResourceHandler(ResourceManager resourceManager) {
+        this.resourceManager = resourceManager;
+    }
+
+
+    /**
+     * You should use {@link ResourceHandler(ResourceManager)} instead.
+     */
+    @Deprecated
+    public ResourceHandler() {
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (exchange.getRequestMethod().equals(Methods.GET) ||
