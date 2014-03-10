@@ -138,11 +138,14 @@ class ChunkReader<T extends Conduit> {
         if (anyAreSet(state, FLAG_FINISHED)) {
             return -1;
         }
+        if(anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
+            return 0;
+        }
         return state & MASK_COUNT;
     }
 
     public void setChunkRemaining(final long remaining) {
-        if (remaining < 0) {
+        if (remaining < 0  || anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
             return;
         }
         long old = state;
