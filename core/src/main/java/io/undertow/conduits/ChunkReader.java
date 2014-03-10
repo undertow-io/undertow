@@ -53,7 +53,8 @@ class ChunkReader<T extends Conduit> {
     public long readChunk(final ByteBuffer buf) throws IOException {
         long oldVal = state;
         long chunkRemaining = state & MASK_COUNT;
-        if (chunkRemaining > 0) {
+
+        if (chunkRemaining > 0 && !anyAreSet(state, FLAG_READING_AFTER_LAST | FLAG_READING_LENGTH | FLAG_READING_NEWLINE | FLAG_READING_TILL_END_OF_LINE)) {
             return chunkRemaining;
         }
         long newVal = oldVal & ~MASK_COUNT;
@@ -134,14 +135,14 @@ class ChunkReader<T extends Conduit> {
     }
 
     public long getChunkRemaining() {
-        if(anyAreSet(state, FLAG_FINISHED)) {
+        if (anyAreSet(state, FLAG_FINISHED)) {
             return -1;
         }
         return state & MASK_COUNT;
     }
 
     public void setChunkRemaining(final long remaining) {
-        if(remaining < 0) {
+        if (remaining < 0) {
             return;
         }
         long old = state;

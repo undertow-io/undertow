@@ -86,9 +86,14 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
             return 0;
         }
         int oldPos = src.position();
+        int oldLimit = src.limit();
         int ret = next.write(src);
+        if(ret == 0) {
+            return ret;
+        }
         int newPos = src.position();
         src.position(oldPos);
+        src.limit(oldPos + ret);
         try {
             while (true) {
                 long chunkRemaining = chunkReader.readChunk(src);
@@ -98,6 +103,8 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
                     } else {
                         throw UndertowMessages.MESSAGES.extraDataWrittenAfterChunkEnd();
                     }
+                } else if(chunkRemaining == 0) {
+                    return ret;
                 }
                 int remaining;
                 if (src.remaining() >= chunkRemaining) {
@@ -114,6 +121,7 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
             }
         } finally {
             src.position(newPos);
+            src.limit(oldLimit);
         }
         return ret;
     }
