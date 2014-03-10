@@ -279,4 +279,6 @@ public interface UndertowMessages {
     @Message(id = 84, value = "Attempted to write additional data after the last chunk")
     IOException extraDataWrittenAfterChunkEnd();
 
+    @Message(id = 85, value = "Could not generate unique session id")
+    RuntimeException couldNotGenerateUniqueSessionId();
 }
