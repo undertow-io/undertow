@@ -115,8 +115,11 @@ public class InMemorySessionManager implements SessionManager {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
         String sessionID = config.findSessionId(serverExchange);
-        if(sessionID == null) {
+        while (sessionID == null) {
             sessionID = sessionIdGenerator.createSessionId();
+            if(sessions.containsKey(sessionID)) {
+                sessionID = null;
+            }
         }
         Object evictionToken;
         if (evictionQueue != null) {
