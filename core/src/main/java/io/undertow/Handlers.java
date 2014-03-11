@@ -22,10 +22,13 @@ import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.RequestLimit;
 import io.undertow.server.handlers.RequestLimitingHandler;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.builder.PredicatedHandler;
+import io.undertow.server.handlers.proxy.ProxyClient;
+import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.websockets.WebSocketConnectionCallback;
@@ -398,6 +401,37 @@ public class Handlers {
         return new RequestLimitingHandler(requestLimit, next);
     }
 
+    /**
+     * Returns a handler that can act as a load balancing reverse proxy.
+     *
+     * @param proxyClient The proxy client to use to connect to the remote server
+     * @param maxRequestTime The maximum amount of time a request can be in progress before it is forcibly closed
+     * @param next The next handler to invoke if the proxy client does not know how to proxy the request
+     * @return The proxy handler
+     */
+    public static ProxyHandler proxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next) {
+        return new ProxyHandler(proxyClient, maxRequestTime, next);
+    }
+    /**
+     * Returns a handler that can act as a load balancing reverse proxy.
+     *
+     * @param proxyClient The proxy client to use to connect to the remote server
+     * @param next The next handler to invoke if the proxy client does not know how to proxy the request
+     * @return The proxy handler
+     */
+    public static ProxyHandler proxyHandler(ProxyClient proxyClient, HttpHandler next) {
+        return new ProxyHandler(proxyClient, next);
+    }
+
+    /**
+     * Returns a handler that can act as a load balancing reverse proxy.
+     *
+     * @param proxyClient The proxy client to use to connect to the remote server
+     * @return The proxy handler
+     */
+    public static ProxyHandler proxyHandler(ProxyClient proxyClient) {
+        return new ProxyHandler(proxyClient, ResponseCodeHandler.HANDLE_404);
+    }
     private Handlers() {
 
     }
