@@ -364,6 +364,13 @@ public class Handlers {
         return new ProxyPeerAddressHandler(next);
     }
 
+    /**
+     * Handler that appends the JVM route to the session cookie
+     * @param sessionCookieName The session cookie name
+     * @param jvmRoute The JVM route to append
+     * @param next The next handler
+     * @return The handler
+     */
     public static JvmRouteHandler jvmRoute(final String sessionCookieName, final String jvmRoute, HttpHandler next) {
         return new JvmRouteHandler(next, sessionCookieName, jvmRoute);
     }
