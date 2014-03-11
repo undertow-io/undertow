@@ -7,6 +7,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
 import java.util.Locale;
 
 /**
@@ -18,13 +19,19 @@ import java.util.Locale;
  */
 public class ServletPrintWriter {
 
+    private static final char[] EMPTY_CHAR = {};
+
     private final ServletOutputStreamImpl outputStream;
     private final CharsetEncoder charsetEncoder;
     private boolean error = false;
+    private char[] underflow;
 
     public ServletPrintWriter(final ServletOutputStreamImpl outputStream, final String charset) throws UnsupportedEncodingException {
         this.outputStream = outputStream;
         this.charsetEncoder = Charset.forName(charset).newEncoder();
+        //replace malformed and unmappable with question marks
+        this.charsetEncoder.onUnmappableCharacter(CodingErrorAction.REPLACE);
+        this.charsetEncoder.onMalformedInput(CodingErrorAction.REPLACE);
     }
 
     public void flush() {
@@ -37,6 +44,15 @@ public class ServletPrintWriter {
 
     public void close() {
         try {
+            boolean done = false;
+            do {
+                CoderResult result = charsetEncoder.encode(CharBuffer.wrap(EMPTY_CHAR), outputStream.underlyingBuffer(), true);
+                if (result.isOverflow()) {
+                    outputStream.flushInternal();
+                } else {
+                    done = true;
+                }
+            } while (!done);
             outputStream.close();
         } catch (IOException e) {
             error = true;
@@ -47,25 +63,35 @@ public class ServletPrintWriter {
         return error;
     }
 
-    public void write(final CharBuffer cb) {
+    public void write(final CharBuffer input) {
         ByteBuffer buffer = outputStream.underlyingBuffer();
         try {
             if (!buffer.hasRemaining()) {
                 outputStream.flushInternal();
             }
+            final CharBuffer cb;
+            if(underflow == null) {
+                cb = input;
+            } else {
+                char[] newArray = new char[underflow.length + input.remaining()];
+                System.arraycopy(underflow, 0, newArray, 0, underflow.length);
+                input.get(newArray, underflow.length, input.remaining());
+                cb = CharBuffer.wrap(newArray);
+                underflow = null;
+            }
             while (cb.hasRemaining()) {
                 int remaining = buffer.remaining();
                 CoderResult result = charsetEncoder.encode(cb, buffer, false);
                 outputStream.updateWritten(remaining - buffer.remaining());
-                if(result.isOverflow() || !buffer.hasRemaining()) {
+                if (result.isOverflow() || !buffer.hasRemaining()) {
                     outputStream.flushInternal();
                 }
-                if(result.isUnmappable()) {
-                    //not much we can do here, but I think writing question marks instead of just erroring
-                    //out is more user friendly.
-                    cb.get();
-                    buffer.put((byte)'?');
-                } else if(result.isError() || result.isMalformed()) {
+                if (result.isUnderflow()) {
+                    underflow = new char[cb.remaining()];
+                    cb.get(underflow);
+                    return;
+                }
+                if (result.isError()) {
                     error = true;
                     return;
                 }
@@ -76,7 +102,7 @@ public class ServletPrintWriter {
     }
 
     public void write(final int c) {
-        final CharBuffer cb = CharBuffer.wrap(Character.toString((char)c));
+        final CharBuffer cb = CharBuffer.wrap(Character.toString((char) c));
         write(cb);
     }
 
