@@ -476,17 +476,16 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private void loadParts() throws IOException, ServletException {
         final ServletRequestContext requestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        readStarted = true;
+
         if (parts == null) {
             final List<Part> parts = new ArrayList<Part>();
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
-                final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getServletChain().getManagedServlet();
-                final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
-                if(parser != null) {
-                    final FormData value = parser.parseBlocking();
-                    for (final String namedPart : value) {
-                        for (FormData.FormValue part : value.get(namedPart)) {
+
+                FormData formData = parseFormData();
+                if(formData != null) {
+                    for (final String namedPart : formData) {
+                        for (FormData.FormValue part : formData.get(namedPart)) {
                             parts.add(new PartImpl(namedPart, part, requestContext.getOriginalServletPathMatch().getServletChain().getManagedServlet().getServletInfo().getMultipartConfig(), servletContext));
                         }
                     }
@@ -609,7 +608,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
             return null;
         }
-            return params.getFirst();
+        return params.getFirst();
     }
 
     @Override
