@@ -61,8 +61,7 @@ class AjpRequestParseState extends AbstractAjpParseState {
         String sessionId = attributes.get(AjpRequestParser.SSL_SESSION);
         String cypher = attributes.get(AjpRequestParser.SSL_CIPHER);
         String cert = attributes.get(AjpRequestParser.SSL_CERT);
-        if (sessionId == null ||
-                cypher == null) {
+        if (cert == null && sessionId == null) {
             return null;
         }
         try {

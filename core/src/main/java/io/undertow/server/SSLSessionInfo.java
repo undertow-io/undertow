@@ -11,6 +11,10 @@ import java.io.IOException;
  */
 public interface SSLSessionInfo {
 
+    /**
+     *
+     * @return The SSL session ID, or null if this could not be determined.
+     */
     byte[] getSessionId();
 
     java.lang.String getCipherSuite();

@@ -14,7 +14,7 @@ public class SslSessionIdAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(HttpServerExchange exchange) {
         SSLSessionInfo ssl = exchange.getConnection().getSslSessionInfo();
-        if(ssl == null) {
+        if(ssl == null || ssl.getSessionId() == null) {
             return null;
         }
         return FlexBase64.encodeString(ssl.getSessionId(), false);

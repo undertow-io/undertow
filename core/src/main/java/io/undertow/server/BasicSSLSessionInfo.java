@@ -59,11 +59,14 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
      * @throws CertificateException If the client cert could not be decoded
      */
     public BasicSSLSessionInfo(String sessionId, String cypherSuite, String certificate) throws java.security.cert.CertificateException, CertificateException {
-        this(base64Decode(sessionId), cypherSuite, certificate);
+        this(sessionId == null ? null : base64Decode(sessionId), cypherSuite, certificate);
     }
 
     @Override
     public byte[] getSessionId() {
+        if(sessionId == null) {
+            return null;
+        }
         final byte[] copy = new byte[sessionId.length];
         System.arraycopy(sessionId, 0, copy, 0, copy.length);
         return copy;
