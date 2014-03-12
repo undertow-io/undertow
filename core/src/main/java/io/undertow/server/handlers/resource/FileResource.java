@@ -248,7 +248,7 @@ public class FileResource implements Resource {
     @Override
     public URL getUrl() {
         try {
-            return file.toURL();
+            return file.toURI().toURL();
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
