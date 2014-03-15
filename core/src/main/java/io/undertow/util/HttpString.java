@@ -79,7 +79,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @param length the number of bytes to copy
      */
     public HttpString(final byte[] bytes, int offset, int length) {
-        this(copyOfRange(bytes, offset, length), null);
+        this(copyOfRange(bytes, offset, offset + length), null);
     }
 
     /**

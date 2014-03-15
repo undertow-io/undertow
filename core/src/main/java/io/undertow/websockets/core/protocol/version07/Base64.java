@@ -17,6 +17,8 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import io.undertow.UndertowLogger;
+
 /**
  * <p>
  * Encodes and decodes to and from Base64 notation.
@@ -1174,7 +1176,7 @@ class Base64 {
 
                 } // end try
                 catch (java.io.IOException e) {
-                    e.printStackTrace();
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     // Just return originally-decoded bytes
                 } // end catch
                 finally {

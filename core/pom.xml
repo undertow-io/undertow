@@ -71,6 +71,18 @@
             <scope>runtime</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.mortbay.jetty.npn</groupId>
+            <artifactId>npn-boot</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty.npn</groupId>
+            <artifactId>npn-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Test dependencies -->
 
         <dependency>
@@ -157,6 +169,19 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.bitstrings.maven.plugins</groupId>
+                <artifactId>dependencypath-maven-plugin</artifactId>
+                <version>1.1.1</version>
+                <executions>
+                    <execution>
+                        <id>set-all</id>
+                        <goals>
+                            <goal>set</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
@@ -172,6 +197,7 @@
                         <test.level>${test.level}</test.level>
                         <argLine>-Xmx1024m</argLine>
                     </systemPropertyVariables>
+                    <argLine>-Xbootclasspath/p:${org.mortbay.jetty.npn:npn-boot:jar}</argLine>
                 </configuration>
             </plugin>
         </plugins>

@@ -49,7 +49,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private final Object lock = new Object();
 
     private volatile int state = 0;
-    private Pooled<ByteBuffer> header;
+    private SendFrameHeader header;
     private Pooled<ByteBuffer> trailer;
 
     private static final int STATE_BROKEN = 1;
@@ -91,19 +91,34 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     /**
      * Returns the header for the current frame.
      *
+     * This consists of the frame data, and also an integer specifying how much data is remaining in the buffer.
+     * If this is non-zero then this method must adjust the buffers limit accordingly.
+     *
+     * It is expected that this will be used when limits on the size of a data frame prevent the whole buffer from
+     * being sent at once.
+     *
+     *
      * @return The header for the current frame, or null
      */
-    final ByteBuffer getFrameHeader() {
+    final SendFrameHeader getFrameHeader() {
         if (header == null) {
             header = createFrameHeader();
             if (header == null) {
-                header = EMPTY_BYTE_BUFFER;
+                header = new SendFrameHeader(0, null);
             }
         }
-        return header.getResource();
+        return header;
     }
 
-    protected Pooled<ByteBuffer> createFrameHeader() {
+    /**
+     * Returns the amount of data that is currently allowed to be sent.
+     * @return
+     */
+    protected int frameCanSend() {
+        return buffer.getResource().remaining();
+    }
+
+    protected SendFrameHeader createFrameHeader() {
         return null;
     }
 
@@ -242,12 +257,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     @Override
-    public ChannelListener.Setter<S> getWriteSetter() {
+    public ChannelListener.Setter<? extends S> getWriteSetter() {
         return writeSetter;
     }
 
     @Override
-    public ChannelListener.Setter<S> getCloseSetter() {
+    public ChannelListener.Setter<? extends S> getCloseSetter() {
         return closeSetter;
     }
 
@@ -263,7 +278,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public boolean flush() throws IOException {
-        if (anyAreSet(state, STATE_CLOSED | STATE_BROKEN)) {
+        if(anyAreSet(state, STATE_CLOSED)) {
+            return true;
+        }
+        if (anyAreSet(state, STATE_BROKEN)) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         if (anyAreSet(state, STATE_FULLY_FLUSHED)) {
@@ -281,10 +299,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 return true;
             }
         }
-        if (allAreSet(state, STATE_WRITES_SHUTDOWN)) {
-            return false;
-        }
-        return true; //todo: should this return true of false?
+        return !allAreSet(state, STATE_WRITES_SHUTDOWN);
     }
 
     @Override
@@ -418,14 +433,18 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     final void flushComplete() throws IOException {
         try {
             state &= ~(STATE_READY_FOR_FLUSH | STATE_ACTIVE);
-            boolean channelClosed = anyAreSet(state, STATE_FINAL_FRAME_QUEUED);
+            int remaining = header.getReminingInBuffer();
+            boolean channelClosed = anyAreSet(state, STATE_FINAL_FRAME_QUEUED) && remaining == 0;
+            if(remaining > 0) {
+                buffer.getResource().limit(buffer.getResource().limit() + remaining);
+            }
             if (channelClosed) {
                 state |= STATE_FULLY_FLUSHED;
                 buffer.free();
             } else {
-                buffer.getResource().clear();
+                buffer.getResource().compact();
             }
-            header.free();
+            header.getByteBuffer().free();
             trailer.free();
             header = null;
             trailer = null;

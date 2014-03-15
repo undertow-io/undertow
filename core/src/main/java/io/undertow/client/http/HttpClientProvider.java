@@ -1,9 +1,11 @@
 package io.undertow.client.http;
 
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
+import io.undertow.client.spdy.SpdyClientProvider;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
@@ -11,6 +13,7 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
+import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
 import java.net.InetSocketAddress;
@@ -75,9 +78,16 @@ public class HttpClientProvider implements ClientProvider {
     }
 
 
-    private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
-        listener.completed(new HttpClientConnection(connection, options, bufferPool));
+    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        if (options.get(UndertowOptions.ENABLE_SPDY, false) && connection instanceof SslConnection) {
+            SpdyClientProvider.handlePotentialSpdyConnection(connection, listener, uri, ssl, bufferPool, options, new ChannelListener<SslConnection>() {
+                @Override
+                public void handleEvent(SslConnection channel) {
+                    listener.completed(new HttpClientConnection(connection, options, bufferPool));
+                }
+            });
+        } else {
+            listener.completed(new HttpClientConnection(connection, options, bufferPool));
+        }
     }
-
-
 }

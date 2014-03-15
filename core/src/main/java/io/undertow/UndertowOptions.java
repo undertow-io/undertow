@@ -152,6 +152,11 @@ public class UndertowOptions {
      */
     public static final Option<Boolean> ALLOW_EQUALS_IN_COOKIE_VALUE = Option.simple(UndertowOptions.class, "ALLOW_EQUALS_IN_COOKIE_VALUE", Boolean.class);
 
+    /**
+     * If we should attempt to use SPDY for HTTPS connections.
+     */
+    public static final Option<Boolean> ENABLE_SPDY = Option.simple(UndertowOptions.class, "ENABLE_SPDY", Boolean.class);
+
     private UndertowOptions() {
 
     }

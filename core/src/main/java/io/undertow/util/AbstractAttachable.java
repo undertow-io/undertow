@@ -69,9 +69,13 @@ public abstract class AbstractAttachable implements Attachable {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("key");
         }
         if(attachments == null) {
-            attachments = new IdentityHashMap<AttachmentKey<?>, Object>(5);
+            attachments = createAttachmentMap();
         }
         return key.cast(attachments.put(key, key.cast(value)));
+    }
+
+    protected Map<AttachmentKey<?>, Object> createAttachmentMap() {
+        return new IdentityHashMap<AttachmentKey<?>, Object>(5);
     }
 
     /**
@@ -92,7 +96,7 @@ public abstract class AbstractAttachable implements Attachable {
     public <T> void addToAttachmentList(final AttachmentKey<AttachmentList<T>> key, final T value) {
         if (key != null) {
             if(attachments == null) {
-                attachments = new IdentityHashMap<AttachmentKey<?>, Object>(5);
+                attachments = createAttachmentMap();
             }
             final Map<AttachmentKey<?>, Object> attachments = this.attachments;
             final AttachmentList<T> list = key.cast(attachments.get(key));

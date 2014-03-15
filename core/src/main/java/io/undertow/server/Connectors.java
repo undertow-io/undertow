@@ -187,7 +187,7 @@ public class Connectors {
             if (!exchange.isResponseStarted()) {
                 exchange.setResponseCode(500);
             }
-            UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", exchange);
+            UndertowLogger.REQUEST_LOGGER.errorf(t, "Undertow request failed %s", exchange);
             exchange.endExchange();
         }
     }

@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core;
 
+import io.undertow.UndertowLogger;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -180,7 +181,7 @@ public final class WebSocketUtils {
                         try {
                             streamSinkFrameChannel.shutdownWrites();
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                             IoUtils.safeClose(streamSinkFrameChannel, channel);
                             return;
                         }
@@ -199,7 +200,8 @@ public final class WebSocketUtils {
                                         }, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
                                             @Override
                                             public void handleException(StreamSinkFrameChannel streamSinkFrameChannel, IOException e) {
-                                                e.printStackTrace();
+
+                                                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                                                 IoUtils.safeClose(streamSinkFrameChannel, channel);
 
                                             }
@@ -214,7 +216,7 @@ public final class WebSocketUtils {
                                 IoUtils.safeClose(streamSinkFrameChannel);
                             }
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                             IoUtils.safeClose(streamSinkFrameChannel, channel);
 
                         }
@@ -222,14 +224,13 @@ public final class WebSocketUtils {
                 }, new ChannelExceptionHandler<StreamSourceFrameChannel>() {
                     @Override
                     public void handleException(StreamSourceFrameChannel streamSourceFrameChannel, IOException e) {
-                        e.printStackTrace();
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         IoUtils.safeClose(streamSourceFrameChannel, channel);
                     }
                 }, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
                     @Override
                     public void handleException(StreamSinkFrameChannel streamSinkFrameChannel, IOException e) {
-                        e.printStackTrace();
-
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         IoUtils.safeClose(streamSinkFrameChannel, channel);
                     }
                 }, channel.getBufferPool()

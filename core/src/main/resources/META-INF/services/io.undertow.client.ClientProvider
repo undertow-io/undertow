@@ -1,2 +1,3 @@
 io.undertow.client.http.HttpClientProvider
 io.undertow.client.ajp.AjpClientProvider
+io.undertow.client.spdy.SpdyClientProvider

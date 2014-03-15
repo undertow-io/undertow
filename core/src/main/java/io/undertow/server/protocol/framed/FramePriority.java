@@ -35,6 +35,9 @@ public interface FramePriority<C extends AbstractFramedChannel<C, R, S>, R exten
      * If frames in the held frame queue are now eligible to be sent they can be added
      * to the pending frames queue.
      *
+     * Note that if the protocol has explicitly asked for the held frames to be recalculated
+     * then the added frame may be null.
+     *
      * @param addedFrame The newly added frame
      * @param pendingFrames The pending frame queue
      * @param holdFrames The held frame queue

@@ -74,7 +74,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * @param client
      */
     protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, final boolean client, boolean extensionsSupported) {
-        super(connectedStreamChannel, bufferPool, new WebSocketFramePriority());
+        super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null);
         this.client = client;
         this.version = version;
         this.wsUrl = wsUrl;

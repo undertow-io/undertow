@@ -89,6 +89,8 @@
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.0.Final</version.io.undertow.build.checkstyle-config>
+        <version.org.mortbay.jetty.npn>1.1.6.v20130911</version.org.mortbay.jetty.npn>
+        <version.org.eclipse.jetty.npn>1.1.0.v20120525</version.org.eclipse.jetty.npn>
     </properties>
 
     <modules>
@@ -262,6 +264,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.eclipse.jetty.npn</groupId>
+                <artifactId>npn-api</artifactId>
+                <version>${version.org.eclipse.jetty.npn}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
                 <version>${version.easymock}</version>
@@ -354,6 +362,12 @@
                 <groupId>org.jboss.xnio</groupId>
                 <artifactId>xnio-nio</artifactId>
                 <version>${version.xnio}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.mortbay.jetty.npn</groupId>
+                <artifactId>npn-boot</artifactId>
+                <version>${version.org.mortbay.jetty.npn}</version>
             </dependency>
 
             <dependency>

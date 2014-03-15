@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
@@ -82,7 +83,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     }
 
     @Override
-    protected Pooled<ByteBuffer> createFrameHeader() {
+    protected SendFrameHeader createFrameHeader() {
         if(payloadSize >= 0 && dataWritten) {
             //for fixed length we don't need more than one header
             return null;
@@ -129,7 +130,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
             header.put((byte)((maskingKey & 0xFF)));
         }
         header.flip();
-        return start;
+        return new SendFrameHeader(0, start);
     }
 
     @Override

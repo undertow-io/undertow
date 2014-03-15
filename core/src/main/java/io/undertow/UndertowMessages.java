@@ -281,4 +281,16 @@ public interface UndertowMessages {
 
     @Message(id = 85, value = "Could not generate unique session id")
     RuntimeException couldNotGenerateUniqueSessionId();
+
+    @Message(id = 86, value = "SPDY needs to be provided with a heap buffer pool, for use in compressing and decompressing headers.")
+    IllegalArgumentException mustProvideHeapBuffer();
+
+    @Message(id = 87, value = "Unexpected SPDY frame type %s")
+    IOException unexpectedFrameType(int type);
+
+    @Message(id = 88, value = "SPDY control frames cannot have body content")
+    IOException controlFrameCannotHaveBodyContent();
+
+    @Message(id = 89, value = "SPDY not supported")
+    IOException spdyNotSupported();
 }

@@ -1,6 +1,7 @@
 package io.undertow.server.handlers.proxy;
 
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
@@ -136,14 +137,14 @@ class ProxyConnectionPool implements Closeable {
     }
 
     private void openConnection(final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, final HostThreadData data, final boolean exclusive) {
-        if (exclusive == false) {
+        if (!exclusive) {
             data.connections++;
         }
         client.connect(new ClientCallback<ClientConnection>() {
             @Override
             public void completed(final ClientConnection result) {
                 problem = false;
-                if (exclusive == false) {
+                if (!exclusive) {
                     result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
                         @Override
                         public void handleEvent(ClientConnection channel) {
@@ -164,7 +165,7 @@ class ProxyConnectionPool implements Closeable {
                 scheduleFailedHostRetry(exchange);
                 callback.failed(exchange);
             }
-        }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
+        }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
     }
 
     private void redistributeQueued(HostThreadData hostData) {

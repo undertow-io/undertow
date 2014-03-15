@@ -99,8 +99,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     static final AttachmentKey<Pooled<ByteBuffer>[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(Pooled[].class);
 
     private final ServerConnection connection;
-    private final HeaderMap requestHeaders = new HeaderMap();
-    private final HeaderMap responseHeaders = new HeaderMap();
+    private final HeaderMap requestHeaders;
+    private final HeaderMap responseHeaders;
 
     private int exchangeCompletionListenersCount = 0;
     private ExchangeCompletionListener[] exchangeCompleteListeners;
@@ -282,12 +282,18 @@ public final class HttpServerExchange extends AbstractAttachable {
     private InetSocketAddress destinationAddress;
 
     public HttpServerExchange(final ServerConnection connection, long maxEntitySize) {
-        this.connection = connection;
-        this.maxEntitySize = maxEntitySize;
+        this(connection, new HeaderMap(), new HeaderMap(), maxEntitySize);
     }
 
     public HttpServerExchange(final ServerConnection connection) {
         this(connection, 0);
+    }
+
+    public HttpServerExchange(final ServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders,  long maxEntitySize) {
+        this.connection = connection;
+        this.maxEntitySize = maxEntitySize;
+        this.requestHeaders = requestHeaders;
+        this.responseHeaders = responseHeaders;
     }
 
     /**
@@ -1494,6 +1500,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+
             IoUtils.safeClose(connection);
         }
     }
