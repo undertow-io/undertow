@@ -294,11 +294,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (!securityPathMatches.isEmpty()) {
             current = new ServletSecurityConstraintHandler(securityPathMatches, current);
         }
+        List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
+        authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism()); //TODO: does this really need to be hard coded?
 
         String mechName = null;
         if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
-            List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
-            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism()); //TODO: does this really need to be hard coded?
 
             //we don't allow multipart requests, and always use the default encoding
             FormParserFactory parser = FormParserFactory.builder(false)
@@ -336,14 +336,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
                 authenticationMechanisms.add(factory.create(name, parser, properties));
             }
+        }
 
-            deployment.setAuthenticationMechanisms(authenticationMechanisms);
-            //if the JASPI auth mechanism is set then it takes over
-            if(deploymentInfo.getJaspiAuthenticationMechanism() == null) {
-                current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
-            } else {
-                current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(deploymentInfo.getJaspiAuthenticationMechanism()));
-            }
+        deployment.setAuthenticationMechanisms(authenticationMechanisms);
+        //if the JASPI auth mechanism is set then it takes over
+        if(deploymentInfo.getJaspiAuthenticationMechanism() == null) {
+            current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
+        } else {
+            current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(deploymentInfo.getJaspiAuthenticationMechanism()));
         }
 
         current = new CachedAuthenticatedSessionHandler(current, this.deployment.getServletContext());
