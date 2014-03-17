@@ -1,15 +1,12 @@
 package io.undertow.websockets.jsr.annotated;
 
-import java.io.InputStream;
-import java.io.Reader;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executor;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.websockets.jsr.Encoding;
+import io.undertow.websockets.jsr.EncodingFactory;
+import io.undertow.websockets.jsr.JsrWebSocketLogger;
+import io.undertow.websockets.jsr.JsrWebSocketMessages;
 
 import javax.websocket.CloseReason;
 import javax.websocket.DecodeException;
@@ -23,13 +20,16 @@ import javax.websocket.OnOpen;
 import javax.websocket.PongMessage;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
-
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.util.ImmediateInstanceHandle;
-import io.undertow.websockets.jsr.Encoding;
-import io.undertow.websockets.jsr.EncodingFactory;
-import io.undertow.websockets.jsr.JsrWebSocketMessages;
+import java.io.InputStream;
+import java.io.Reader;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executor;
 
 /**
  * Factory that creates annotated end points.
@@ -368,7 +368,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                     if(annotations[j] instanceof PathParam) {
                         PathParam param = (PathParam) annotations[j];
                         if(!paths.contains(param.value())) {
-                            throw JsrWebSocketMessages.MESSAGES.pathTemplateNotFound(endpointClass, param, method, paths);
+                            JsrWebSocketLogger.ROOT_LOGGER.pathTemplateNotFound(endpointClass, param, method, paths);
                         }
                     }
                 }

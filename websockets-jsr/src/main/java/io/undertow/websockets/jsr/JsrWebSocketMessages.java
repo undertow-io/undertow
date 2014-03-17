@@ -18,21 +18,19 @@
 
 package io.undertow.websockets.jsr;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Set;
-
-import javax.websocket.Decoder;
-import javax.websocket.DeploymentException;
-import javax.websocket.Encoder;
-import javax.websocket.server.PathParam;
-
 import io.undertow.util.PathTemplate;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
+
+import javax.websocket.Decoder;
+import javax.websocket.DeploymentException;
+import javax.websocket.Encoder;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Set;
 
 
 /**
@@ -131,9 +129,6 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3031, value = "Received a binary frame however endpont does not have a method capable of handling it")
     RuntimeException receivedBinaryFrameButNoMethod();
-
-    @Message(id = 3032, value = "Invalid endpoint class %s, path param %s on method %s does not reference a valid parameter, valid parameters are %s")
-    DeploymentException pathTemplateNotFound(Class<?> endpointClass, PathParam param, Method method, Set<String> paths);
 
     @Message(id = 3033, value = "Method %s has invalid parameters at locations %s. It looks like you may have accidentally used javax.ws.rs.PathParam instead of javax.websocket.server.PathParam")
     DeploymentException invalidParametersWithWrongAnnotation(Method method, Set<Integer> allParams);

@@ -25,6 +25,10 @@ import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 
+import javax.websocket.server.PathParam;
+import java.lang.reflect.Method;
+import java.util.Set;
+
 /**
  * log messages start at 26000
  *
@@ -60,4 +64,9 @@ public interface JsrWebSocketLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 26006, value = "Exception running web socket method")
     void exceptionInWebSocketMethod(@Cause Throwable e);
+
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 26007, value = "On Endpoint class %s path param %s on method %s does not reference a valid parameter, valid parameters are %s.")
+    void pathTemplateNotFound(Class<?> endpointClass, PathParam param, Method method, Set<String> paths);
+
 }
