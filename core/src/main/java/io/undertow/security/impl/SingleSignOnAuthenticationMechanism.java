@@ -36,6 +36,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
     private boolean httpOnly;
     private boolean secure;
     private String domain;
+    private String path;
     private final SessionInvalidationListener listener = new SessionInvalidationListener();
     private final ResponseListener responseListener = new ResponseListener();
     private final SingleSignOnManager manager;
@@ -104,7 +105,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                 SingleSignOn sso = manager.createSingleSignOn(account, sc.getMechanismName());
                 try {
                     registerSessionIfRequired(exchange, sso);
-                    exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain));
+                    exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
                 } finally {
                     sso.close();
                 }
@@ -194,4 +195,14 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         this.domain = domain;
         return this;
     }
+
+    public String getPath() {
+        return path;
+    }
+
+    public SingleSignOnAuthenticationMechanism setPath(String path) {
+        this.path = path;
+        return this;
+    }
+
 }
