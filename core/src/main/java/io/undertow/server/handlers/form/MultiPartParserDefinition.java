@@ -177,7 +177,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 return existing;
             }
 
-            final MultipartParser.ParseState parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes());
+            final MultipartParser.ParseState parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes(), exchange.getRequestCharset());
             final Pooled<ByteBuffer> resource = exchange.getConnection().getBufferPool().allocate();
             StreamSourceChannel requestChannel = exchange.getRequestChannel();
             if (requestChannel == null) {

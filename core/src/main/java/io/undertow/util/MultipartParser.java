@@ -18,7 +18,9 @@
 
 package io.undertow.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
 import org.xnio.Pool;
@@ -59,19 +61,20 @@ public class MultipartParser {
         void endPart();
     }
 
-    public static ParseState beginParse(final Pool<ByteBuffer> bufferPool, final PartHandler handler, final byte[] boundary) {
+    public static ParseState beginParse(final Pool<ByteBuffer> bufferPool, final PartHandler handler, final byte[] boundary, final String requestCharset) {
 
         // We prepend CR/LF to the boundary to chop trailing CR/LF from
         // body-data tokens.
         byte[] boundaryToken = new byte[boundary.length + BOUNDARY_PREFIX.length];
         System.arraycopy(BOUNDARY_PREFIX, 0, boundaryToken, 0, BOUNDARY_PREFIX.length);
         System.arraycopy(boundary, 0, boundaryToken, BOUNDARY_PREFIX.length, boundary.length);
-        return new ParseState(bufferPool, handler, boundaryToken);
+        return new ParseState(bufferPool, handler, requestCharset, boundaryToken);
     }
 
     public static class ParseState {
         private final Pool<ByteBuffer> bufferPool;
         private final PartHandler partHandler;
+        private final String requestCharset;
         /**
          * The boundary, complete with the initial CRLF--
          */
@@ -80,15 +83,16 @@ public class MultipartParser {
         //0=preamble
         private volatile int state = 0;
         private volatile int subState = Integer.MAX_VALUE; // used for preamble parsing
-        private volatile StringBuilder currentString = null;
+        private volatile ByteArrayOutputStream currentString = null;
         private volatile String currentHeaderName = null;
         private volatile HeaderMap headers;
         private volatile Encoding encodingHandler;
 
 
-        public ParseState(final Pool<ByteBuffer> bufferPool, final PartHandler partHandler, final byte[] boundary) {
+        public ParseState(final Pool<ByteBuffer> bufferPool, final PartHandler partHandler, String requestCharset, final byte[] boundary) {
             this.bufferPool = bufferPool;
             this.partHandler = partHandler;
+            this.requestCharset = requestCharset;
             this.boundary = boundary;
         }
 
@@ -160,15 +164,15 @@ public class MultipartParser {
             }
         }
 
-        private void headerName(final ByteBuffer buffer) throws MalformedMessageException {
+        private void headerName(final ByteBuffer buffer) throws MalformedMessageException, UnsupportedEncodingException {
             while (buffer.hasRemaining()) {
                 final byte b = buffer.get();
                 if (b == ':') {
                     if (currentString == null || subState != 0) {
                         throw new MalformedMessageException();
                     } else {
-                        currentHeaderName = currentString.toString();
-                        currentString.setLength(0);
+                        currentHeaderName = new String(currentString.toByteArray(), requestCharset);
+                        currentString.reset();
                         subState = 0;
                         state = 2;
                         return;
@@ -204,14 +208,14 @@ public class MultipartParser {
                     if (subState != 0) {
                         throw new MalformedMessageException();
                     } else if (currentString == null) {
-                        currentString = new StringBuilder();
+                        currentString = new ByteArrayOutputStream();
                     }
-                    currentString.append((char) b);
+                    currentString.write((char) b);
                 }
             }
         }
 
-        private void headerValue(final ByteBuffer buffer) throws MalformedMessageException {
+        private void headerValue(final ByteBuffer buffer) throws MalformedMessageException, UnsupportedEncodingException {
             while (buffer.hasRemaining()) {
                 final byte b = buffer.get();
                 if (b == CR) {
@@ -220,7 +224,7 @@ public class MultipartParser {
                     if (subState != 1) {
                         throw new MalformedMessageException();
                     }
-                    headers.put(new HttpString(currentHeaderName.trim()), currentString.toString().trim());
+                    headers.put(new HttpString(currentHeaderName.trim()), new String(currentString.toByteArray(), requestCharset).trim());
                     state = 1;
                     subState = 0;
                     currentString = null;
@@ -229,7 +233,7 @@ public class MultipartParser {
                     if (subState != 0) {
                         throw new MalformedMessageException();
                     }
-                    currentString.append((char) b);
+                    currentString.write((char) b);
                 }
             }
         }

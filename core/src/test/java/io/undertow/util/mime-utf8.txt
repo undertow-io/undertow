@@ -1,0 +1,7 @@
+This is a preamble
+--unique-boundary-1
+Content-type: text/plain
+Content-Disposition: attachment; filename=个专为语文教学而设计的电脑软件.txt
+
+Just some chinese characters I copied from the internet, no idea what it says.
+--unique-boundary-1--
