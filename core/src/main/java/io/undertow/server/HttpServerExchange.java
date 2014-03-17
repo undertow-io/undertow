@@ -91,6 +91,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
 
     private static final RuntimePermission SET_SECURITY_CONTEXT = new RuntimePermission("io.undertow.SET_SECURITY_CONTEXT");
+    private static final String ISO_8859_1 = "ISO-8859-1";
 
     /**
      * The attachment key that buffered request data is attached under.
@@ -512,6 +513,39 @@ public final class HttpServerExchange extends AbstractAttachable {
         } else {
             return getRequestScheme() + "://" + getHostAndPort() + getRequestURI();
         }
+    }
+
+    /**
+     * Returns the request charset. If none was explicitly specified it will return
+     * "ISO-8859-1", which is the default charset for HTTP requests.
+     *
+     * @return The character encoding
+     */
+    public String getRequestCharset() {
+        return extractCharset(requestHeaders);
+    }
+
+    /**
+     * Returns the response charset. If none was explicitly specified it will return
+     * "ISO-8859-1", which is the default charset for HTTP requests.
+     *
+     * @return The character encoding
+     */
+    public String getResponseCharset() {
+        HeaderMap headers = responseHeaders;
+        return extractCharset(headers);
+    }
+
+    private String extractCharset(HeaderMap headers) {
+        String contentType = headers.getFirst(Headers.CONTENT_TYPE);
+        if (contentType == null) {
+            return null;
+        }
+        String value = Headers.extractQuotedValueFromHeader(contentType, "charset");
+        if(value != null) {
+            return value;
+        }
+        return ISO_8859_1;
     }
 
     /**
