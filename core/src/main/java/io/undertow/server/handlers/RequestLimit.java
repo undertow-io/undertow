@@ -1,8 +1,10 @@
 package io.undertow.server.handlers;
 
+import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.SameThreadExecutor;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -12,18 +14,18 @@ import static org.xnio.Bits.longBitMask;
 
 /**
  * Represents a limit on a number of running requests.
- *
+ * <p/>
  * This is basically a counter with a configured set of limits, that is used by {@link RequestLimitingHandler}.
- *
+ * <p/>
  * When the number of active requests goes over the configured max requests then requests will be suspended and queued.
- *
+ * <p/>
  * If the queue is full requests will be rejected with a 513.
- *
+ * <p/>
  * The reason why this is abstracted out into a separate class is so that multiple handlers can share the same state. This
  * allows for fine grained control of resources.
  *
- * @see RequestLimitingHandler
  * @author Stuart Douglas
+ * @see RequestLimitingHandler
  */
 public class RequestLimit {
     @SuppressWarnings("unused")
@@ -78,7 +80,7 @@ public class RequestLimit {
         this.queue = new LinkedBlockingQueue<SuspendedRequest>(queueSize <= 0 ? Integer.MAX_VALUE : queueSize);
     }
 
-    public void handleRequest(final HttpServerExchange exchange, HttpHandler next) throws Exception {
+    public void handleRequest(final HttpServerExchange exchange, final HttpHandler next) throws Exception {
         exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
         long oldVal, newVal;
         do {
@@ -86,9 +88,14 @@ public class RequestLimit {
             final long current = oldVal & MASK_CURRENT;
             final long max = (oldVal & MASK_MAX) >> 32L;
             if (current >= max) {
-                if(!queue.offer(new SuspendedRequest(exchange, next))) {
-                    failureHandler.handleRequest(exchange);
-                }
+                exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!queue.offer(new SuspendedRequest(exchange, next))) {
+                            Connectors.executeRootHandler(failureHandler, exchange);
+                        }
+                    }
+                });
                 return;
             }
             newVal = oldVal + 1;
