@@ -608,10 +608,16 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (host.startsWith("[")) {
                 colonIndex = host.indexOf(':', host.indexOf(']'));
             } else {
-               colonIndex = host.indexOf(':');
+                colonIndex = host.indexOf(':');
             }
             if (colonIndex != -1) {
                 return Integer.parseInt(host.substring(colonIndex + 1));
+            } else {
+                if (getRequestScheme().equals("https")) {
+                    return 443;
+                } else if (getRequestScheme().equals("http")) {
+                    return 80;
+                }
             }
         }
         return getDestinationAddress().getPort();
