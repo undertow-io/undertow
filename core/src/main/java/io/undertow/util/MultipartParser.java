@@ -210,7 +210,7 @@ public class MultipartParser {
                     } else if (currentString == null) {
                         currentString = new ByteArrayOutputStream();
                     }
-                    currentString.write((char) b);
+                    currentString.write(b);
                 }
             }
         }
@@ -233,7 +233,7 @@ public class MultipartParser {
                     if (subState != 0) {
                         throw new MalformedMessageException();
                     }
-                    currentString.write((char) b);
+                    currentString.write(b);
                 }
             }
         }
