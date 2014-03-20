@@ -18,16 +18,21 @@
 
 package io.undertow.server.protocol.http;
 
-import java.nio.ByteBuffer;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
+import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
+import org.xnio.Options;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -63,6 +68,22 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         }
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         HttpReadListener readListener = new HttpReadListener(connection, parser);
+
+        //set read and write timeouts
+        try {
+            Integer readTimeout = channel.getOption(Options.READ_TIMEOUT);
+            if (readTimeout != null && readTimeout > 0) {
+                channel.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(channel.getSourceChannel().getConduit(), channel));
+            }
+            Integer writeTimeout = channel.getOption(Options.WRITE_TIMEOUT);
+            if (writeTimeout != 0 && writeTimeout > 0) {
+                channel.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(channel.getSinkChannel().getConduit(), channel));
+            }
+        } catch (IOException e) {
+            IoUtils.safeClose(channel);
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+        }
+
         connection.setReadListener(readListener);
         readListener.newRequest();
         channel.getSourceChannel().setReadListener(readListener);
