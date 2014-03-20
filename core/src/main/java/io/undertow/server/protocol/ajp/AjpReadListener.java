@@ -13,7 +13,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
@@ -106,15 +105,11 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                         channel.shutdownReads();
                         final StreamSinkChannel responseChannel = connection.getChannel().getSinkChannel();
                         responseChannel.shutdownWrites();
-                        // will return false if there's a response queued ahead of this one, so we'll set up a listener then
-                        if (!responseChannel.flush()) {
-                            responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
-                            responseChannel.resumeWrites();
-                        }
+                        IoUtils.safeClose(connection);
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         // fuck it, it's all ruined
-                        IoUtils.safeClose(channel);
+                        IoUtils.safeClose(connection);
                         return;
                     }
                     return;

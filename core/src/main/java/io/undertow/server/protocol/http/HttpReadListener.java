@@ -25,7 +25,6 @@ import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
@@ -177,11 +176,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             channel.shutdownReads();
             final StreamSinkChannel responseChannel = this.connection.getChannel().getSinkChannel();
             responseChannel.shutdownWrites();
-            // will return false if there's a response queued ahead of this one, so we'll set up a listener then
-            if (!responseChannel.flush()) {
-                responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
-                responseChannel.resumeWrites();
-            }
+            IoUtils.safeClose(connection);
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.debug("Error reading request", e);
             // fuck it, it's all ruined
