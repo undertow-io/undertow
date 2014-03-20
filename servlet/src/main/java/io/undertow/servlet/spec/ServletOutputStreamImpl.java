@@ -161,47 +161,47 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 Pooled[] pooledBuffers = new Pooled[MAX_BUFFERS_TO_ALLOCATE];
                 try {
                     buffers[0] = buffer;
-                    int currentOffset = off;
+                    int bytesWritten = 0;
                     int rem = buffer.remaining();
-                    buffer.put(b, currentOffset, rem);
+                    buffer.put(b, bytesWritten + off, rem);
                     buffer.flip();
-                    currentOffset += rem;
+                    bytesWritten += rem;
                     int bufferCount = 1;
                     for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
                         Pooled<ByteBuffer> pooled = bufferPool.allocate();
                         pooledBuffers[bufferCount - 1] = pooled;
                         buffers[bufferCount++] = pooled.getResource();
                         ByteBuffer cb = pooled.getResource();
-                        int toWrite = len - currentOffset;
+                        int toWrite = len - bytesWritten;
                         if (toWrite > cb.remaining()) {
                             rem = cb.remaining();
-                            cb.put(b, currentOffset, rem);
+                            cb.put(b, bytesWritten + off, rem);
                             cb.flip();
-                            currentOffset += rem;
+                            bytesWritten += rem;
                         } else {
-                            cb.put(b, currentOffset, len - currentOffset);
-                            currentOffset = len;
+                            cb.put(b, bytesWritten + off, toWrite);
+                            bytesWritten = len;
                             cb.flip();
                             break;
                         }
                     }
                     Channels.writeBlocking(channel, buffers, 0, bufferCount);
-                    while (currentOffset < len) {
+                    while (bytesWritten < len) {
                         //ok, it did not fit, loop and loop and loop until it is done
                         bufferCount = 0;
                         for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE + 1; ++i) {
                             ByteBuffer cb = buffers[i];
                             cb.clear();
                             bufferCount++;
-                            int toWrite = len - currentOffset;
+                            int toWrite = len - bytesWritten;
                             if (toWrite > cb.remaining()) {
                                 rem = cb.remaining();
-                                cb.put(b, currentOffset, rem);
+                                cb.put(b, bytesWritten + off, rem);
                                 cb.flip();
-                                currentOffset += rem;
+                                bytesWritten += rem;
                             } else {
-                                cb.put(b, currentOffset, len - currentOffset);
-                                currentOffset = len;
+                                cb.put(b, bytesWritten + off, toWrite);
+                                bytesWritten = len;
                                 cb.flip();
                                 break;
                             }
