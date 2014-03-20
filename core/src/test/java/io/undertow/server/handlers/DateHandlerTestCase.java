@@ -35,7 +35,7 @@ public class DateHandlerTestCase {
             Header date = result.getHeaders("Date")[0];
             final long firstDate = DateUtils.parseDate(date.getValue()).getTime();
             Assert.assertTrue((firstDate + 3000) > System.currentTimeMillis());
-            Assert.assertTrue(System.currentTimeMillis() > firstDate);
+            Assert.assertTrue(System.currentTimeMillis() >= firstDate);
             HttpClientUtils.readResponse(result);
             Thread.sleep(1500);
             result = client.execute(get);
