@@ -94,7 +94,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
     public void handleEventWithNoRunningRequest(final ConduitStreamSourceChannel channel) {
         Pooled<ByteBuffer> existing = connection.getExtraBytes();
-        if (existing == null && (connection.getOriginalSinkConduit().isWriteShutdown() || connection.getOriginalSourceConduit().isReadShutdown())) {
+        if ((existing == null && connection.getOriginalSourceConduit().isReadShutdown()) || connection.getOriginalSinkConduit().isWriteShutdown()) {
             IoUtils.safeClose(connection);
             channel.suspendReads();
             return;
@@ -223,12 +223,19 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     requestStateUpdater.set(this, 0);
                 } else {
                     while (true) {
-                        if (requestStateUpdater.compareAndSet(this, 1, 2)) {
-                            newRequest();
-                            channel.getSourceChannel().setReadListener(HttpReadListener.this);
-                            requestStateUpdater.set(this, 0);
-                            channel.getSourceChannel().resumeReads();
-                            break;
+                        if (connection.getOriginalSourceConduit().isReadShutdown() || connection.getOriginalSinkConduit().isWriteShutdown()) {
+                            channel.getSourceChannel().suspendReads();
+                            channel.getSinkChannel().suspendWrites();
+                            IoUtils.safeClose(connection);
+                            return;
+                        } else {
+                            if (requestStateUpdater.compareAndSet(this, 1, 2)) {
+                                newRequest();
+                                channel.getSourceChannel().setReadListener(HttpReadListener.this);
+                                requestStateUpdater.set(this, 0);
+                                channel.getSourceChannel().resumeReads();
+                                break;
+                            }
                         }
                     }
                 }
@@ -240,7 +247,12 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     channel.getIoThread().execute(this);
                 } else {
                     while (true) {
-                        if (requestStateUpdater.compareAndSet(this, 1, 2)) {
+                        if (connection.getOriginalSinkConduit().isWriteShutdown()) {
+                            channel.getSourceChannel().suspendReads();
+                            channel.getSinkChannel().suspendWrites();
+                            IoUtils.safeClose(connection);
+                            return;
+                        } else if (requestStateUpdater.compareAndSet(this, 1, 2)) {
                             newRequest();
                             channel.getSourceChannel().suspendReads();
                             requestStateUpdater.set(this, 0);

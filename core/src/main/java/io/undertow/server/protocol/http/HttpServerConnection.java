@@ -75,6 +75,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
         addCloseListener(new CloseListener() {
             @Override
             public void closed(ServerConnection connection) {
+                if(getExtraBytes() != null) {
+                    getExtraBytes().free();
+                }
                 responseConduit.freeBuffers();
             }
         });
