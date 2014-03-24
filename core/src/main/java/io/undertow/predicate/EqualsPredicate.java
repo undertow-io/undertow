@@ -35,8 +35,8 @@ class EqualsPredicate implements Predicate {
 
     private final ExchangeAttribute[] attributes;
 
-    EqualsPredicate(final ExchangeAttribute[] attribute) {
-        this.attributes = attribute;
+    EqualsPredicate(final ExchangeAttribute[] attributes) {
+        this.attributes = attributes;
     }
 
     @Override
