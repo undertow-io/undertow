@@ -12,6 +12,15 @@ import io.undertow.attribute.ExchangeAttributes;
 public class Predicates {
 
     /**
+     * Creates a procedure that returns true if the given ExchangeAttributes are equal.
+     * @param Attributes to be compared in the predictor.
+     * @return A new EqualsPredicate.
+     */
+    public static Predicate equals(final ExchangeAttribute[] attributes){
+        return new EqualsPredicate(attributes);
+    }
+
+    /**
      * Creates a predicate that returns true if an only if the given predicates all
      * return true.
      */
@@ -29,21 +38,21 @@ public class Predicates {
 
     /**
      * Creates a predicate that returns true if the given predicate returns
-     * false
+     * false.
      */
     public static  Predicate not(final Predicate predicate) {
         return new NotPredicate(predicate);
     }
 
     /**
-     * creates a predicate that returns true if the given path matches exactly
+     * Creates a predicate that returns true if the given path matches exactly.
      */
     public static Predicate path(final String path) {
         return new PathMatchPredicate(path);
     }
 
     /**
-     * creates a predicate that returns true if any of the given paths match exactly
+     * Creates a predicate that returns true if any of the given paths match exactly.
      */
     public static Predicate paths(final String... paths) {
         final PathMatchPredicate[] predicates = new PathMatchPredicate[paths.length];
@@ -54,14 +63,14 @@ public class Predicates {
     }
 
     /**
-     * creates a predicate that returns true if the request path ends with the provided suffix
+     * Creates a predicate that returns true if the request path ends with the provided suffix.
      */
     public static Predicate suffix(final String path) {
         return new PathSuffixPredicate(path);
     }
 
     /**
-     * creates a predicate that returns true if the request path ends with any of the provided suffixes
+     * Creates a predicate that returns true if the request path ends with any of the provided suffixes.
      */
     public static Predicate suffixes(final String... paths) {
         if(paths.length == 1) {
@@ -75,14 +84,14 @@ public class Predicates {
     }
 
     /**
-     * creates a predicate that returns true if the given relative path starts with the provided prefix
+     * Creates a predicate that returns true if the given relative path starts with the provided prefix.
      */
     public static Predicate prefix(final String path) {
         return new PathPrefixPredicate(path);
     }
 
     /**
-     * creates a predicate that returns true if the relative request path matches any of the provided prefixes
+     * Creates a predicate that returns true if the relative request path matches any of the provided prefixes.
      */
     public static Predicate prefixes(final String... paths) {
         return new PathPrefixPredicate(paths);
@@ -107,34 +116,32 @@ public class Predicates {
     }
 
     /**
-     * predicate that always returns true
+     * Prediction which always returns true
      */
     public static  Predicate truePredicate() {
         return TruePredicate.instance();
     }
 
     /**
-     * predicate that always returns false
+     * Predicate which always returns false.
      */
     public static  Predicate falsePredicate() {
         return FalsePredicate.instance();
     }
 
     /**
-     * Return a predicate that will return true if the given attribute is not null and not empty
+     * Return a predicate that will return true if the given attribute is not null and not empty.
      *
-     * @param attribute The attribute to check
+     * @param attribute The attribute to check whether it exists or not.
      */
     public static Predicate exists(final ExchangeAttribute attribute) {
         return new ExistsPredicate(attribute);
     }
 
-
-
     /**
-     * Returns true if the given attribute is present and contains one of the provided value
-     * @param attribute The exchange attribute
-     * @param values The values to check for
+     * Returns true if the given attribute is present and contains one of the provided value.
+     * @param attribute The exchange attribute.
+     * @param values The values to check for.
      */
     public static Predicate contains(final ExchangeAttribute attribute, final String ... values) {
         return new ContainsPredicate(attribute, values);
@@ -142,8 +149,8 @@ public class Predicates {
 
     /**
      * Creates a predicate that matches the given attribute against a regex. A full match is not required
-     * @param attribute The attribute
-     * @param pattern The pattern
+     * @param attribute The exchange attribute to check against.
+     * @param pattern The pattern to look for.
      */
     public static Predicate regex(final ExchangeAttribute attribute, final String pattern) {
         return new RegularExpressionPredicate(pattern, attribute);
@@ -151,9 +158,9 @@ public class Predicates {
 
     /**
      * Creates a predicate that matches the given attribute against a regex.
-     * @param requireFullMatch If a full match is required
-     * @param attribute The attribute
-     * @param pattern The pattern
+     * @param requireFullMatch If a full match is required in order to return true.
+     * @param attribute The attribute to check against.
+     * @param pattern The pattern to look for.
      */
     public static Predicate regex(final ExchangeAttribute attribute, final String pattern, boolean requireFullMatch) {
         return new RegularExpressionPredicate(pattern, attribute, requireFullMatch);
@@ -161,9 +168,9 @@ public class Predicates {
 
     /**
      * Creates a predicate that matches the given attribute against a regex.
-     * @param requireFullMatch If a full match is required
-     * @param attribute The attribute
-     * @param pattern The pattern
+     * @param requireFullMatch If a full match is required in order to return true.
+     * @param attribute The attribute to check against.
+     * @param pattern The pattern to look for.
      */
     public static Predicate regex(final String attribute, final String pattern, final ClassLoader classLoader, final boolean requireFullMatch) {
         return new RegularExpressionPredicate(pattern, ExchangeAttributes.parser(classLoader).parse(attribute), requireFullMatch);
