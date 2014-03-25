@@ -27,4 +27,8 @@ public class ImmediatePooled<T> implements Pooled<T> {
     public T getResource() throws IllegalStateException {
         return value;
     }
+
+    @Override
+    public void close() {
+    }
 }

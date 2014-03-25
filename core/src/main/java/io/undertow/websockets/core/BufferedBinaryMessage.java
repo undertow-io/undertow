@@ -203,5 +203,10 @@ public class BufferedBinaryMessage {
         public ByteBuffer[] getResource() throws IllegalStateException {
             return data;
         }
+
+        @Override
+        public void close() {
+            free();
+        }
     }
 }
