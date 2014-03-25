@@ -60,9 +60,21 @@ public class AccessLogFileTestCase {
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
         File directory = logDirectory;
         File logFileName = new File(directory, "server1.log");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1");
+        verifySingleLogMessageToFile(logFileName, logReceiver);
+    }
+
+    @Test
+    public void testSingleLogMessageToFileWithSuffix() throws IOException, InterruptedException {
+        File directory = logDirectory;
+        File logFileName = new File(directory, "server1.logsuffix");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1", ".logsuffix");
+        verifySingleLogMessageToFile(logFileName, logReceiver);
+    }
+
+    private void verifySingleLogMessageToFile(File logFileName, DefaultAccessLogReceiver logReceiver) throws IOException, InterruptedException {
 
         CompletionLatchHandler latchHandler;
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1");
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
         TestHttpClient client = new TestHttpClient();
         try {
