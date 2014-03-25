@@ -94,8 +94,14 @@ public class DefaultServlet extends HttpServlet {
         DefaultServletConfig defaultServletConfig = deployment.getDeploymentInfo().getDefaultServletConfig();
         if (defaultServletConfig != null) {
             defaultAllowed = defaultServletConfig.isDefaultAllowed();
-            allowed = new HashSet<String>(defaultServletConfig.getAllowed());
-            disallowed = new HashSet<String>(defaultServletConfig.getDisallowed());
+            allowed = new HashSet<String>();
+            if (defaultServletConfig.getAllowed() != null) {
+                allowed.addAll(defaultServletConfig.getAllowed());
+            }
+            disallowed = new HashSet<String>();
+            if (defaultServletConfig.getDisallowed() != null) {
+                disallowed.addAll(defaultServletConfig.getDisallowed());
+            }
         }
         if (config.getInitParameter(DEFAULT_ALLOWED) != null) {
             defaultAllowed = Boolean.parseBoolean(config.getInitParameter(DEFAULT_ALLOWED));
