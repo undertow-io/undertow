@@ -65,7 +65,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         this.logBaseName = logBaseName;
         this.logNameSuffix = (logNameSuffix != null) ? logNameSuffix : DEFAULT_LOG_SUFFIX;
         this.pendingMessages = new ConcurrentLinkedDeque<String>();
-        this.defaultLogFile = new File(outputDirectory, logBaseName + logNameSuffix);
+        this.defaultLogFile = new File(outputDirectory, logBaseName + this.logNameSuffix);
         calculateChangeOverPoint();
     }
 
