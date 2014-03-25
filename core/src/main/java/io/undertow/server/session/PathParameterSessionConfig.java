@@ -24,12 +24,13 @@ public class PathParameterSessionConfig implements SessionConfig {
 
     @Override
     public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
-
+        exchange.getPathParameters().remove(name);
+        exchange.addPathParam(name, sessionId);
     }
 
     @Override
     public void clearSession(final HttpServerExchange exchange, final String sessionId) {
-
+        exchange.getPathParameters().remove(name);
     }
 
     @Override

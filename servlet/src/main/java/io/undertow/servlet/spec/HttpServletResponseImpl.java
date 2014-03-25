@@ -551,7 +551,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             if (url.equalsIgnoreCase("")) {
                 url = absolute;
             }
-            return originalServletContext.getSessionConfig().rewriteUrl(url, servletContext.getSession(originalServletContext.getSessionConfig(), exchange, true).getId());
+            return originalServletContext.getSessionConfig().rewriteUrl(url, servletContext.getSession(originalServletContext, exchange, true).getId());
         } else {
             return (url);
         }
@@ -566,7 +566,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
      */
     public String encodeRedirectURL(String url) {
         if (isEncodeable(toAbsolute(url))) {
-            return originalServletContext.getSessionConfig().rewriteUrl(url, servletContext.getSession(originalServletContext.getSessionConfig(), exchange, true).getId());
+            return originalServletContext.getSessionConfig().rewriteUrl(url, servletContext.getSession(originalServletContext, exchange, true).getId());
         } else {
             return (url);
         }
