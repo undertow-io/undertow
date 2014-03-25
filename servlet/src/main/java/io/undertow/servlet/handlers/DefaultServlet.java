@@ -73,15 +73,15 @@ public class DefaultServlet extends HttpServlet {
     public static final String DISALLOWED_EXTENSIONS = "disallowed-extensions";
     public static final String RESOLVE_AGAINST_CONTEXT_ROOT = "resolve-against-context-root";
 
-    private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf")));
-    private static final Set<String> DEFAULT_DISALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("class", "jar", "war", "zip", "xml")));
+    private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf", "jpeg", "xml")));
+    private static final Set<String> DEFAULT_DISALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("class", "jar", "war", "zip")));
 
 
     private Deployment deployment;
     private ResourceManager resourceManager;
     private boolean directoryListingEnabled = false;
 
-    private boolean defaultAllowed;
+    private boolean defaultAllowed = true;
     private Set<String> allowed = DEFAULT_ALLOWED_EXTENSIONS;
     private Set<String> disallowed = DEFAULT_DISALLOWED_EXTENSIONS;
     private boolean resolveAgainstContextRoot;
