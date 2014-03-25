@@ -100,7 +100,7 @@ public class DefaultServletTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/disallowed.sh");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
         } finally {
             client.getConnectionManager().shutdown();
