@@ -79,13 +79,15 @@ public class PathHandler implements HttpHandler {
      * Adds a path prefix and a handler for that path. If the path does not start
      * with a / then one will be prepended.
      * <p/>
-     * The match is done on a prefix bases, so registering /foo will also match /bar. Exact
-     * path matches are taken into account first.
+     * The match is done on a prefix bases, so registering /foo will also match /foo/bar.
+     * Though exact path matches are taken into account before prefix path matches. So
+     * if an exact path match exists it's  handler will be triggered.
      * <p/>
      * If / is specified as the path then it will replace the default handler.
      *
-     * @param path    The path
-     * @param handler The handler
+     * @param path    If the request contains this prefix, run handler.
+     * @param handler The handler which is activated upon match.
+     * @return The resulting PathHandler after this path has been added to it.
      */
     public synchronized PathHandler addPrefixPath(final String path, final HttpHandler handler) {
         Handlers.handlerNotNull(handler);
@@ -93,7 +95,15 @@ public class PathHandler implements HttpHandler {
         return this;
     }
 
-
+    /**
+     * If the request path is exactly equal to the given path, run the handler.
+     * <p/>
+     * Exact paths are prioritized higher than prefix paths.
+     * 
+     * @param path If the request path is exactly this, run handler.
+     * @param handler Handler run upon exact path match.
+     * @return The resulting PathHandler after this path has been added to it.
+     */
     public synchronized PathHandler addExactPath(final String path, final HttpHandler handler) {
         Handlers.handlerNotNull(handler);
         pathMatcher.addExactPath(path, handler);
