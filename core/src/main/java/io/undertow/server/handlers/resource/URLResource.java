@@ -74,6 +74,8 @@ public class URLResource implements Resource {
         File file = getFile();
         if(file != null) {
             return file.isDirectory();
+        } else if(url.getPath().endsWith("/")) {
+            return true;
         }
         return false;
     }

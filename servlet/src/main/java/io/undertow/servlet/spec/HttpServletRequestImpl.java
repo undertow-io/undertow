@@ -298,7 +298,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String changeSessionId() {
-        HttpSessionImpl session = servletContext.getSession(originalServletContext.getSessionConfig(), exchange, false);
+        HttpSessionImpl session = servletContext.getSession(originalServletContext, exchange, false);
         if (session == null) {
             throw UndertowServletMessages.MESSAGES.noSession();
         }
@@ -350,7 +350,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public HttpSession getSession(final boolean create) {
-        return servletContext.getSession(originalServletContext.getSessionConfig(), exchange, create);
+        return servletContext.getSession(originalServletContext, exchange, create);
     }
 
     @Override
@@ -361,7 +361,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isRequestedSessionIdValid() {
-        HttpSessionImpl session = servletContext.getSession(originalServletContext.getSessionConfig(), exchange, false);
+        HttpSessionImpl session = servletContext.getSession(originalServletContext, exchange, false);
         return session != null;
     }
 

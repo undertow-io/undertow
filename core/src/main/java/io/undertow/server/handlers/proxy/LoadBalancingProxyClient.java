@@ -7,6 +7,7 @@ import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.CopyOnWriteMap;
+import org.xnio.ssl.XnioSsl;
 
 import java.net.URI;
 import java.util.Map;
@@ -128,12 +129,22 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     public synchronized LoadBalancingProxyClient addHost(final URI host) {
-        return addHost(host, null);
+        return addHost(host, null, null);
+    }
+
+    public synchronized LoadBalancingProxyClient addHost(final URI host, XnioSsl ssl) {
+        return addHost(host, null, ssl);
     }
 
     public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute) {
-        ProxyConnectionPool pool = new ProxyConnectionPool(manager, host, client);
-        Host h = new Host(pool, jvmRoute, host);
+        return addHost(host, jvmRoute, null);
+    }
+
+
+    public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl) {
+
+        ProxyConnectionPool pool = new ProxyConnectionPool(manager, host, ssl, client);
+        Host h = new Host(pool, jvmRoute, host, ssl);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];
         System.arraycopy(existing, 0, newHosts, 0, existing.length);
@@ -144,7 +155,6 @@ public class LoadBalancingProxyClient implements ProxyClient {
         }
         return this;
     }
-
     public synchronized LoadBalancingProxyClient removeHost(final URI uri) {
         int found = -1;
         Host[] existing = hosts;
@@ -288,11 +298,13 @@ public class LoadBalancingProxyClient implements ProxyClient {
         final ProxyConnectionPool connectionPool;
         final String jvmRoute;
         final URI uri;
+        final XnioSsl ssl;
 
-        private Host(ProxyConnectionPool connectionPool, String jvmRoute, URI uri) {
+        private Host(ProxyConnectionPool connectionPool, String jvmRoute, URI uri, XnioSsl ssl) {
             this.connectionPool = connectionPool;
             this.jvmRoute = jvmRoute;
             this.uri = uri;
+            this.ssl = ssl;
         }
     }
 

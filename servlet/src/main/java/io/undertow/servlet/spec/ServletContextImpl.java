@@ -18,45 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.EventListener;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import javax.annotation.security.DeclareRoles;
-import javax.annotation.security.RunAs;
-import javax.servlet.Filter;
-import javax.servlet.FilterRegistration;
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.Servlet;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletContextListener;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRegistration;
-import javax.servlet.SessionTrackingMode;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.MultipartConfig;
-import javax.servlet.annotation.ServletSecurity;
-import javax.servlet.descriptor.JspConfigDescriptor;
-
 import io.undertow.Version;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.Resource;
@@ -87,6 +48,44 @@ import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
+
+import javax.annotation.security.DeclareRoles;
+import javax.annotation.security.RunAs;
+import javax.servlet.Filter;
+import javax.servlet.FilterRegistration;
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.Servlet;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletContextListener;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRegistration;
+import javax.servlet.SessionTrackingMode;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.MultipartConfig;
+import javax.servlet.annotation.ServletSecurity;
+import javax.servlet.descriptor.JspConfigDescriptor;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.EventListener;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import static io.undertow.servlet.core.ApplicationListeners.ListenerState.NO_LISTENER;
 import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRAMATIC_LISTENER;
@@ -666,7 +665,8 @@ public class ServletContextImpl implements ServletContext {
         return null;
     }
 
-    public HttpSessionImpl getSession(final SessionConfig c, final HttpServerExchange exchange, boolean create) {
+    public HttpSessionImpl getSession(final ServletContextImpl originalServletContext, final HttpServerExchange exchange, boolean create) {
+        SessionConfig c = originalServletContext.getSessionConfig();
         HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
         if (httpSession != null && httpSession.isInvalid()) {
             exchange.removeAttachment(sessionAttachmentKey);
@@ -679,6 +679,16 @@ public class ServletContextImpl implements ServletContext {
                 httpSession = SecurityActions.forSession(session, this, false);
                 exchange.putAttachment(sessionAttachmentKey, httpSession);
             } else if (create) {
+
+                String existing = c.findSessionId(exchange);
+                if (originalServletContext != this) {
+                    //this is a cross context request
+                    //we need to make sure there is a top level session
+                    originalServletContext.getSession(originalServletContext, exchange, true);
+                } else if (existing != null) {
+                    c.clearSession(exchange, existing);
+                }
+
                 final Session newSession = sessionManager.createSession(exchange, c);
                 httpSession = SecurityActions.forSession(newSession, this, true);
                 exchange.putAttachment(sessionAttachmentKey, httpSession);
@@ -694,7 +704,7 @@ public class ServletContextImpl implements ServletContext {
      * @return
      */
     public HttpSessionImpl getSession(final HttpServerExchange exchange, boolean create) {
-        return getSession(sessionConfig, exchange, create);
+        return getSession(this, exchange, create);
     }
 
     public void updateSessionAccessTime(final HttpServerExchange exchange) {

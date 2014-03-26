@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>1.0.3.Final-SNAPSHOT</version>
+        <version>1.1.0.Beta1-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-core</artifactId>
-    <version>1.0.3.Final-SNAPSHOT</version>
+    <version>1.1.0.Beta1-SNAPSHOT</version>
 
     <name>Undertow Core</name>
 
@@ -170,6 +170,7 @@
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
+                        <argLine>-Xmx1024m</argLine>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

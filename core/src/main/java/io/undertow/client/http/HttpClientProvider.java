@@ -13,7 +13,6 @@ import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -33,56 +32,51 @@ public class HttpClientProvider implements ClientProvider {
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
-        if(uri.getScheme().equals("https")) {
-            if(ssl == null) {
+        if (uri.getScheme().equals("https")) {
+            if (ssl == null) {
                 throw UndertowMessages.MESSAGES.sslWasNull();
             }
+            ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+        } else {
+            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         }
-        worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), new ChannelListener<StreamConnection>() {
-            @Override
-            public void handleEvent(StreamConnection connection) {
-                handleConnected(connection, listener, uri, ssl, bufferPool, options);
-            }
-        }, options).addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
-
-            @Override
-            public void notify(IoFuture<? extends StreamConnection> ioFuture, Object o) {
-                if(ioFuture.getStatus() == IoFuture.Status.FAILED) {
-                    listener.failed(ioFuture.getException());
-                }
-            }
-        }, null);
     }
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
-        if(uri.getScheme().equals("https")) {
-            if(ssl == null) {
+        if (uri.getScheme().equals("https")) {
+            if (ssl == null) {
                 throw UndertowMessages.MESSAGES.sslWasNull();
             }
+            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+        } else {
+            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         }
-        ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), new ChannelListener<StreamConnection>() {
+    }
+
+    private IoFuture.Notifier<StreamConnection, Object> createNotifier(final ClientCallback<ClientConnection> listener) {
+        return new IoFuture.Notifier<StreamConnection, Object>() {
+            @Override
+            public void notify(IoFuture<? extends StreamConnection> ioFuture, Object o) {
+                if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
+                    listener.failed(ioFuture.getException());
+                }
+            }
+        };
+    }
+
+    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        return new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
                 handleConnected(connection, listener, uri, ssl, bufferPool, options);
             }
-        }, options).addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
-            @Override
-            public void notify(IoFuture<? extends StreamConnection> ioFuture, Object o) {
-                if(ioFuture.getStatus() == IoFuture.Status.FAILED) {
-                    listener.failed(ioFuture.getException());
-                }
-            }
-        }, null);
+        };
     }
 
-    private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
-        if(uri.getScheme().equals("https")) {
-            listener.failed(new IOException("ssl not implemented yet"));
-        } else {
-            listener.completed(new HttpClientConnection(connection, options, bufferPool));
-        }
 
+    private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+        listener.completed(new HttpClientConnection(connection, options, bufferPool));
     }
 
 

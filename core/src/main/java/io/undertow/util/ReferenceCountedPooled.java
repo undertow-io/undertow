@@ -47,6 +47,11 @@ public class ReferenceCountedPooled<T> implements Pooled<T> {
         return underlying.getResource();
     }
 
+    @Override
+    public void close() {
+        free();
+    }
+
     public Pooled<T> createView(final T newValue) {
         increaseReferenceCount();
         return new Pooled<T>() {
@@ -63,6 +68,11 @@ public class ReferenceCountedPooled<T> implements Pooled<T> {
             @Override
             public T getResource() throws IllegalStateException {
                 return newValue;
+            }
+
+            @Override
+            public void close() {
+                free();
             }
         };
     }

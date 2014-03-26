@@ -99,7 +99,7 @@ public class PathHandler implements HttpHandler {
      * If the request path is exactly equal to the given path, run the handler.
      * <p/>
      * Exact paths are prioritized higher than prefix paths.
-     * 
+     *
      * @param path If the request path is exactly this, run handler.
      * @param handler Handler run upon exact path match.
      * @return The resulting PathHandler after this path has been added to it.

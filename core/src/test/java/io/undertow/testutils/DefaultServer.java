@@ -363,10 +363,26 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * authentication.
      */
     public static void startSSLServer() throws IOException {
-        SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
-        clientSslContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
+        SSLContext serverContext = getServerSslContext();
+        clientSslContext = createClientSslContext();
 
         startSSLServer(serverContext, OptionMap.create(SSL_CLIENT_AUTH_MODE, REQUESTED));
+    }
+
+    public static SSLContext createClientSslContext() {
+        try {
+            return createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static SSLContext getServerSslContext() {
+        try {
+            return createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -376,8 +392,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * single client. Client cert mode is not set by default
      */
     public static void startSSLServer(OptionMap optionMap) throws IOException {
-        SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
-        clientSslContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
+        SSLContext serverContext = getServerSslContext();
+        clientSslContext = createClientSslContext();
 
         startSSLServer(serverContext, optionMap);
     }

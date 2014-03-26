@@ -29,6 +29,7 @@ import io.undertow.UndertowLogger;
  * @author Stuart Douglas
  */
 public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Closeable {
+    private static final String DEFAULT_LOG_SUFFIX = ".log";
 
     private final Executor logWriteExecutor;
 
@@ -50,15 +51,21 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     private final File defaultLogFile;
 
     private final String logBaseName;
+    private final String logNameSuffix;
 
     private Writer writer = null;
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName) {
+        this(logWriteExecutor, outputDirectory, logBaseName, null);
+    }
+
+    public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName, final String logNameSuffix) {
         this.logWriteExecutor = logWriteExecutor;
         this.outputDirectory = outputDirectory;
         this.logBaseName = logBaseName;
+        this.logNameSuffix = (logNameSuffix != null) ? logNameSuffix : DEFAULT_LOG_SUFFIX;
         this.pendingMessages = new ConcurrentLinkedDeque<String>();
-        this.defaultLogFile = new File(outputDirectory, logBaseName + ".log");
+        this.defaultLogFile = new File(outputDirectory, logBaseName + this.logNameSuffix);
         calculateChangeOverPoint();
     }
 
@@ -161,11 +168,11 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
                 writer.close();
                 writer = null;
             }
-            File newFile = new File(outputDirectory, logBaseName + "_" + currentDateString + ".log");
+            File newFile = new File(outputDirectory, logBaseName + "_" + currentDateString + logNameSuffix);
             int count = 0;
             while (newFile.exists()) {
                 ++count;
-                newFile = new File(outputDirectory, logBaseName + "_" + currentDateString + "-" + count + ".log");
+                newFile = new File(outputDirectory, logBaseName + "_" + currentDateString + "-" + count + logNameSuffix);
             }
             if (!defaultLogFile.renameTo(newFile)) {
                 UndertowLogger.ROOT_LOGGER.errorRotatingAccessLog(new IOException());

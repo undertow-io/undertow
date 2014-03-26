@@ -33,6 +33,7 @@ import io.undertow.server.ServerConnection;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.ImmediatePooled;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -155,22 +156,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
                 eb.free();
                 unget.free();
                 final ByteBuffer newBuffer = ByteBuffer.wrap(data);
-                setExtraBytes(new Pooled<ByteBuffer>() {
-                    @Override
-                    public void discard() {
-
-                    }
-
-                    @Override
-                    public void free() {
-
-                    }
-
-                    @Override
-                    public ByteBuffer getResource() throws IllegalStateException {
-                        return newBuffer;
-                    }
-                });
+                setExtraBytes(new ImmediatePooled<ByteBuffer>(newBuffer));
             }
         }
     }
