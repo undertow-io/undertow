@@ -36,10 +36,10 @@ public class HttpClientProvider implements ClientProvider {
             if (ssl == null) {
                 throw UndertowMessages.MESSAGES.sslWasNull();
             }
-
             ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+        } else {
+            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         }
-        worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
     }
 
     @Override
