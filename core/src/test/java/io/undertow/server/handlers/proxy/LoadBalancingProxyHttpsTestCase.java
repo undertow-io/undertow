@@ -26,6 +26,8 @@ import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
+import org.xnio.ssl.JsseXnioSsl;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -39,7 +41,7 @@ import static io.undertow.Handlers.path;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCase {
+public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyTestCase {
 
     @BeforeClass
     public static void setup() throws URISyntaxException {
@@ -47,14 +49,14 @@ public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCa
         final SessionCookieConfig sessionConfig = new SessionCookieConfig();
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
-                .addHttpListener(port + 1, DefaultServer.getHostAddress("default"))
+                .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setHandler(jvmRoute("JSESSIONID", "s1", path()
                         .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new StringSendHandler("server1"))))
                 .build();
 
         server2 = Undertow.builder()
-                .addHttpListener(port + 2, DefaultServer.getHostAddress("default"))
+                .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setHandler(jvmRoute("JSESSIONID", "s2", path()
                         .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new StringSendHandler("server2"))))
@@ -62,10 +64,11 @@ public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCa
         server1.start();
         server2.start();
 
+        JsseXnioSsl ssl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext());
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
-                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
-                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl)
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl)
                 , 10000, ResponseCodeHandler.HANDLE_404));
     }
 

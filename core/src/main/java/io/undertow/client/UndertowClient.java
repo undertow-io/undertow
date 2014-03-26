@@ -6,6 +6,7 @@ import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
+import org.xnio.ssl.XnioSsl;
 
 import java.io.IOException;
 import java.net.URI;
@@ -41,8 +42,11 @@ public final class UndertowClient {
         }
         this.clientProviders = Collections.unmodifiableMap(map);
     }
-
     public IoFuture<ClientConnection> connect(final URI uri, final XnioWorker worker, Pool<ByteBuffer> bufferPool, OptionMap options) {
+        return connect(uri, worker, null, bufferPool, options);
+    }
+
+    public IoFuture<ClientConnection> connect(final URI uri, final XnioWorker worker, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
         final FutureResult<ClientConnection> result = new FutureResult<ClientConnection>();
         provider.connect(new ClientCallback<ClientConnection>() {
@@ -55,12 +59,15 @@ public final class UndertowClient {
             public void failed(IOException e) {
                 result.setException(e);
             }
-        }, uri, worker, null, bufferPool, options
-        );
+        }, uri, worker, ssl, bufferPool, options);
         return result.getIoFuture();
     }
 
     public IoFuture<ClientConnection> connect(final URI uri, final XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, OptionMap options) {
+        return connect(uri, ioThread, null, bufferPool, options);
+    }
+
+    public IoFuture<ClientConnection> connect(final URI uri, final XnioIoThread ioThread, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
         final FutureResult<ClientConnection> result = new FutureResult<ClientConnection>();
         provider.connect(new ClientCallback<ClientConnection>() {
@@ -73,20 +80,25 @@ public final class UndertowClient {
             public void failed(IOException e) {
                 result.setException(e);
             }
-        }, uri, ioThread, null, bufferPool, options
-        );
+        }, uri, ioThread, ssl, bufferPool, options);
         return result.getIoFuture();
     }
 
-
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, Pool<ByteBuffer> bufferPool, OptionMap options) {
+        connect(listener, uri, worker, null, bufferPool, options);
+    }
+
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
-        provider.connect(listener, uri, worker, null, bufferPool, options);
+        provider.connect(listener, uri, worker, ssl, bufferPool, options);
     }
 
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, OptionMap options) {
+        connect(listener, uri, ioThread, null, bufferPool, options);
+    }
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
-        provider.connect(listener, uri, ioThread, null, bufferPool, options);
+        provider.connect(listener, uri, ioThread, ssl, bufferPool, options);
     }
 
     private ClientProvider getClientProvider(URI uri) {

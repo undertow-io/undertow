@@ -12,6 +12,7 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
+import org.xnio.ssl.XnioSsl;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -34,6 +35,8 @@ class ProxyConnectionPool implements Closeable {
 
     private final URI uri;
 
+    private final XnioSsl ssl;
+
     private final UndertowClient client;
 
     private final ConnectionPoolManager connectionPoolManager;
@@ -54,8 +57,13 @@ class ProxyConnectionPool implements Closeable {
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<XnioIoThread, HostThreadData>();
 
     public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, UndertowClient client) {
+        this(connectionPoolManager, uri, null, client);
+    }
+
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, XnioSsl ssl, UndertowClient client) {
         this.connectionPoolManager = connectionPoolManager;
         this.uri = uri;
+        this.ssl = ssl;
         this.client = client;
     }
 
@@ -156,7 +164,7 @@ class ProxyConnectionPool implements Closeable {
                 scheduleFailedHostRetry(exchange);
                 callback.failed(exchange);
             }
-        }, getUri(), exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
+        }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
     }
 
     private void redistributeQueued(HostThreadData hostData) {
@@ -232,7 +240,7 @@ class ProxyConnectionPool implements Closeable {
                     public void failed(IOException e) {
                         scheduleFailedHostRetry(exchange);
                     }
-                }, getUri(), exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
+                }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
             }
         }, connectionPoolManager.getProblemServerRetry(), TimeUnit.SECONDS);
     }
