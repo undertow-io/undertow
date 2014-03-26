@@ -170,6 +170,7 @@
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
+                        <argLine>-Xmx1024m</argLine>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
