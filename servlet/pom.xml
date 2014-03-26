@@ -151,6 +151,7 @@
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
                     </systemPropertyVariables>
+                    <argLine>-Xmx1024m</argLine>
                 </configuration>
             </plugin>
         </plugins>
