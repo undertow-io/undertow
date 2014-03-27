@@ -66,8 +66,6 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
-        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        HttpReadListener readListener = new HttpReadListener(connection, parser);
 
         //set read and write timeouts
         try {
@@ -83,6 +81,10 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             IoUtils.safeClose(channel);
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         }
+
+
+        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
+        HttpReadListener readListener = new HttpReadListener(connection, parser);
 
         connection.setReadListener(readListener);
         readListener.newRequest();
