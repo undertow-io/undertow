@@ -297,6 +297,7 @@ public final class ProxyHandler implements HttpHandler {
             } else {
                 outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, "localhost");
             }
+            outboundRequestHeaders.put(Headers.X_FORWARDED_PROTO, exchange.getRequestScheme());
 
             if(exchange.getRequestScheme().equals("https")) {
                 request.putAttachment(ProxiedRequestAttachments.IS_SSL, true);
