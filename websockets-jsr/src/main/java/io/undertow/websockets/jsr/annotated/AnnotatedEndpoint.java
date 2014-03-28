@@ -270,6 +270,9 @@ public class AnnotatedEndpoint extends Endpoint {
 
 
         private void handleTextMessage(BufferedTextMessage message, boolean finalFragment) {
+            if(textMessage == null) {
+                return;
+            }
             final String data = message.getData();
             Object messageObject;
 
@@ -323,7 +326,7 @@ public class AnnotatedEndpoint extends Endpoint {
         @Override
         protected void onBinary(WebSocketChannel webSocketChannel, final StreamSourceFrameChannel messageChannel) throws IOException {
             if (!partialBinary) {
-                super.onText(webSocketChannel, messageChannel);
+                super.onBinary(webSocketChannel, messageChannel);
             } else {
                 BufferedBinaryMessage buffered = new BufferedBinaryMessage(session.getMaxBinaryMessageBufferSize(), false);
                 buffered.read(messageChannel, new WebSocketCallback<BufferedBinaryMessage>() {
@@ -365,6 +368,10 @@ public class AnnotatedEndpoint extends Endpoint {
 
 
         private void handleBinaryMessage(BufferedBinaryMessage message, boolean finalFragment) {
+            if(binaryMessage == null) {
+                message.getData().free();
+                return;
+            }
             final Pooled<ByteBuffer[]> pooled = message.getData();
             try {
                 final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
