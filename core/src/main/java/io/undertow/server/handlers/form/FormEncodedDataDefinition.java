@@ -45,6 +45,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
 
     public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
     private String defaultEncoding = "ISO-8859-1";
+    private boolean forceCreation = false; //if the parser should be created even if the correct headers are missing
 
     public FormEncodedDataDefinition() {
     }
@@ -52,7 +53,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
     @Override
     public FormDataParser create(final HttpServerExchange exchange)  {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
-        if (mimeType != null && mimeType.startsWith(APPLICATION_X_WWW_FORM_URLENCODED)) {
+        if (forceCreation || (mimeType != null && mimeType.startsWith(APPLICATION_X_WWW_FORM_URLENCODED))) {
 
             String charset = defaultEncoding;
             String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
@@ -69,6 +70,15 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
 
     public String getDefaultEncoding() {
         return defaultEncoding;
+    }
+
+    public boolean isForceCreation() {
+        return forceCreation;
+    }
+
+    public FormEncodedDataDefinition setForceCreation(boolean forceCreation) {
+        this.forceCreation = forceCreation;
+        return this;
     }
 
     public FormEncodedDataDefinition setDefaultEncoding(final String defaultEncoding) {

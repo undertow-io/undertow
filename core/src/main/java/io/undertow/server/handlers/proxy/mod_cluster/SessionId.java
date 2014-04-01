@@ -19,7 +19,7 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA, or see the FSF
  * site: http://www.fsf.org.
  */
-package io.undertow.proxy.container;
+package io.undertow.server.handlers.proxy.mod_cluster;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -32,46 +32,31 @@ import java.util.Date;
 public class SessionId implements Serializable {
 
     /**
-     *
-     */
-    private static final long serialVersionUID = 1L;
-
-    /**
      * SessionId
      */
-    private String sessionId;
+    private final String sessionId;
 
     /**
      * JVMRoute
      */
-    private String jmvRoute;
+    private final String jmvRoute;
 
     /**
       * Date last updated.
       */
-    private Date updateTime;
+    private volatile Date updateTime;
 
-    /**
-     * Create a new instance of {@code SessionId}
-     */
-    public SessionId() {
-        super();
+    public SessionId(String sessionId, String jmvRoute) {
+        this.sessionId = sessionId;
+        this.jmvRoute = jmvRoute;
     }
 
     public String getSessionId() {
         return sessionId;
     }
 
-    public void setSessionId(String sessionId) {
-        this.sessionId = sessionId;
-    }
-
     public String getJmvRoute() {
         return jmvRoute;
-    }
-
-    public void setJmvRoute(String jmvRoute) {
-        this.jmvRoute = jmvRoute;
     }
 
     public Date getUpdateTime() {

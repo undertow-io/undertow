@@ -19,9 +19,7 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA, or see the FSF
  * site: http://www.fsf.org.
  */
-package io.undertow.proxy.container;
-
-import java.io.Serializable;
+package io.undertow.server.handlers.proxy.mod_cluster;
 
 /**
  * {@code Context}
@@ -30,7 +28,7 @@ import java.io.Serializable;
  *
  * @author <a href="mailto:nbenothm@redhat.com">Nabil Benothman</a>
  */
-public class Context implements Serializable {
+public class Context {
 
     /**
      * {@code Status}
@@ -47,39 +45,36 @@ public class Context implements Serializable {
         REMOVED;
     }
 
-    /**
-     *
-     */
-    private static final long serialVersionUID = -3107364662635260034L;
      /**
      * Status of the application: ENABLED, DISABLED or STOPPED.
      */
-    private Status status;
+    private volatile Status status;
     /**
      * The context path. (String) URL to be mapped.
      */
-    private String path;
-
-    /*
-     * The corresponding node identification.
-     */
-    private String JVMRoute;
-
-    /*
-     * The virtualhost id.
-     */
-    private long hostid;
-
-    /*
-     * The number of active requests
-     */
-    private long nbRequests;
+    private final String path;
 
     /**
-     * Create a new instance of {@code Context}
+     * The corresponding node identification.
      */
-    public Context() {
-        super();
+    private final String jvmRoute;
+
+    /**
+     * The virtualhost id.
+     */
+    private final long hostid;
+
+    /**
+     * The number of active requests
+     */
+    private final long nbRequests;
+
+    Context(ContextBuilder b) {
+        status = b.status;
+        path = b.path;
+        jvmRoute = b.jvmRoute;
+        hostid = b.hostid;
+        nbRequests = b.nbRequests;
     }
 
     /**
@@ -128,7 +123,7 @@ public class Context implements Serializable {
      */
     @Override
     public String toString() {
-        return "Context[Path: " + this.path + ", Status: " + this.status + ", Node: " + this.JVMRoute + ", Host: " + this.hostid +  "]";
+        return "Context[Path: " + this.path + ", Status: " + this.status + ", Node: " + this.jvmRoute + ", Host: " + this.hostid +  "]";
     }
 
     /**
@@ -140,36 +135,75 @@ public class Context implements Serializable {
         return this.path;
     }
 
-    /**
-     * Setter for the path
-     *
-     * @param path the path to set
-     */
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public String getJVMRoute() {
-        return JVMRoute;
-    }
-
-    public void setJVMRoute(String jVMRoute) {
-        JVMRoute = jVMRoute;
+    public String getJvmRoute() {
+        return jvmRoute;
     }
 
     public long getHostid() {
         return hostid;
     }
 
-    public void setHostid(long hostid) {
-        this.hostid = hostid;
-    }
-
     public long getNbRequests() {
         return nbRequests;
     }
 
-    public void setNbRequests(long nbRequests) {
-        this.nbRequests = nbRequests;
+    public static ContextBuilder builder() {
+        return new ContextBuilder();
+    }
+
+    public static final class ContextBuilder {
+
+        ContextBuilder() {
+
+        }
+        private Status status;
+        private String path;
+        private String jvmRoute;
+        private long hostid;
+        private long nbRequests;
+
+        public void setStatus(Status status) {
+            this.status = status;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public void setJvmRoute(String jvmRoute) {
+            this.jvmRoute = jvmRoute;
+        }
+
+        public void setHostid(long hostid) {
+            this.hostid = hostid;
+        }
+
+        public void setNbRequests(long nbRequests) {
+            this.nbRequests = nbRequests;
+        }
+
+        public Status getStatus() {
+            return status;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public String getJvmRoute() {
+            return jvmRoute;
+        }
+
+        public long getHostid() {
+            return hostid;
+        }
+
+        public long getNbRequests() {
+            return nbRequests;
+        }
+
+        public Context build() {
+            return new Context(this);
+        }
     }
 }

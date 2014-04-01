@@ -140,7 +140,7 @@ public final class ProxyHandler implements HttpHandler {
                 }
             });
         }
-        exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
+        exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : exchange.getIoThread(), new Runnable() {
             @Override
             public void run() {
                 proxyClient.getConnection(target, exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);

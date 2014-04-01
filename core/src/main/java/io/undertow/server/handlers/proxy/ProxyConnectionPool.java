@@ -356,7 +356,7 @@ public class ProxyConnectionPool implements Closeable {
         }
     }
 
-    enum AvailabilityType {
+    public enum AvailabilityType {
         /**
          * The host is read to accept requests
          */
