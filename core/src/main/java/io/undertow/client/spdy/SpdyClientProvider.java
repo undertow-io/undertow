@@ -1,5 +1,6 @@
 package io.undertow.client.spdy;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
@@ -22,7 +23,9 @@ import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
+import javax.net.ssl.SSLEngine;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -42,6 +45,21 @@ public class SpdyClientProvider implements ClientProvider {
     private static final String SPDY_3_1 = "spdy/3.1";
     private static final String HTTP_1_1 = "http/1.1";
 
+    private static final Method NPN_PUT_METHOD;
+
+    static {
+        Method npnPutMethod;
+        try {
+            Class<?> npnClass = SpdyClientProvider.class.getClassLoader().loadClass("org.eclipse.jetty.npn.NextProtoNego");
+            npnPutMethod = npnClass.getDeclaredMethod("put", SSLEngine.class, SpdyClientProvider.class.getClassLoader().loadClass("org.eclipse.jetty.npn.NextProtoNego$Provider"));
+        } catch (Exception e) {
+            UndertowLogger.CLIENT_LOGGER.jettyNpnNotFound();
+            npnPutMethod = null;
+        }
+        NPN_PUT_METHOD = npnPutMethod;
+    }
+
+
     @Override
     public Set<String> handlesSchemes() {
         return new HashSet<String>(Arrays.asList(new String[]{"spdy"}));
@@ -49,8 +67,13 @@ public class SpdyClientProvider implements ClientProvider {
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        if(NPN_PUT_METHOD == null) {
+            listener.failed(UndertowMessages.MESSAGES.jettyNPNNotAvailable());
+            return;
+        }
         if (ssl == null) {
-            throw UndertowMessages.MESSAGES.sslWasNull();
+            listener.failed(UndertowMessages.MESSAGES.sslWasNull());
+            return;
         }
         ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
 
@@ -58,8 +81,13 @@ public class SpdyClientProvider implements ClientProvider {
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        if(NPN_PUT_METHOD == null) {
+            listener.failed(UndertowMessages.MESSAGES.jettyNPNNotAvailable());
+            return;
+        }
         if (ssl == null) {
-            throw UndertowMessages.MESSAGES.sslWasNull();
+            listener.failed(UndertowMessages.MESSAGES.sslWasNull());
+            return;
         }
         ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
 
@@ -94,13 +122,24 @@ public class SpdyClientProvider implements ClientProvider {
         });
     }
 
+    public static boolean isEnabled() {
+        return NPN_PUT_METHOD != null;
+    }
+
     /**
      * Not really part of the public API, but is used by the HTTP client to initiate a SPDY connection for HTTPS requests.
      */
     public static void handlePotentialSpdyConnection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> spdyFailedListener) {
         final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(listener, connection, options, bufferPool);
         final SslConnection sslConnection = (SslConnection) connection;
-        NextProtoNego.put(JsseXnioSsl.getSslEngine(sslConnection), spdySelectionProvider);
+
+
+        try {
+            NPN_PUT_METHOD.invoke(null, JsseXnioSsl.getSslEngine(sslConnection), spdySelectionProvider);
+        } catch (Exception e) {
+            listener.failed(new IOException(e));
+            return;
+        }
 
         try {
             sslConnection.startHandshake();

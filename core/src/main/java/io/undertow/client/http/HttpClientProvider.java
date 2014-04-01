@@ -37,7 +37,8 @@ public class HttpClientProvider implements ClientProvider {
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
         if (uri.getScheme().equals("https")) {
             if (ssl == null) {
-                throw UndertowMessages.MESSAGES.sslWasNull();
+                listener.failed(UndertowMessages.MESSAGES.sslWasNull());
+                return;
             }
             ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         } else {
@@ -49,7 +50,8 @@ public class HttpClientProvider implements ClientProvider {
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
         if (uri.getScheme().equals("https")) {
             if (ssl == null) {
-                throw UndertowMessages.MESSAGES.sslWasNull();
+                listener.failed(UndertowMessages.MESSAGES.sslWasNull());
+                return;
             }
             ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         } else {
@@ -79,7 +81,7 @@ public class HttpClientProvider implements ClientProvider {
 
 
     private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
-        if (options.get(UndertowOptions.ENABLE_SPDY, false) && connection instanceof SslConnection) {
+        if (options.get(UndertowOptions.ENABLE_SPDY, false) && connection instanceof SslConnection && SpdyClientProvider.isEnabled()) {
             SpdyClientProvider.handlePotentialSpdyConnection(connection, listener, uri, ssl, bufferPool, options, new ChannelListener<SslConnection>() {
                 @Override
                 public void handleEvent(SslConnection channel) {

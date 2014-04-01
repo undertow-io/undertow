@@ -220,7 +220,7 @@ public interface UndertowMessages {
     IllegalStateException fileSystemWatcherNotStarted();
 
     @Message(id = 65, value = "SSL must be specified to connect to a https URL")
-    IllegalArgumentException sslWasNull();
+    IOException sslWasNull();
 
     @Message(id = 66, value = "Incorrect magic number for AJP packet header")
     IOException wrongMagicNumber();
@@ -293,4 +293,7 @@ public interface UndertowMessages {
 
     @Message(id = 89, value = "SPDY not supported")
     IOException spdyNotSupported();
+
+    @Message(id = 90, value = "Jetty NPN not available")
+    IOException jettyNPNNotAvailable();
 }

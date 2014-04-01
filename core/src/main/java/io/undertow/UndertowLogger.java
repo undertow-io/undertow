@@ -142,4 +142,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5025, value = "Could not initiate SPDY connection and no HTTP fallback defined")
     void couldNotInitiateSpdyConnection();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5026, value = "Jetty NPN support not found, SPDY client will not be available.")
+    void jettyNpnNotFound();
 }
