@@ -13,7 +13,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
@@ -68,7 +67,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
     public void handleEvent(final StreamSourceChannel channel) {
         if(connection.getOriginalSinkConduit().isWriteShutdown() || connection.getOriginalSourceConduit().isReadShutdown()) {
-            IoUtils.safeClose(connection);
+            safeClose(connection);
             channel.suspendReads();
             return;
         }
@@ -105,11 +104,11 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                         channel.shutdownReads();
                         final StreamSinkChannel responseChannel = connection.getChannel().getSinkChannel();
                         responseChannel.shutdownWrites();
-                        IoUtils.safeClose(connection);
+                        safeClose(connection);
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         // fuck it, it's all ruined
-                        IoUtils.safeClose(connection);
+                        safeClose(connection);
                         return;
                     }
                     return;
@@ -123,14 +122,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 }
                 int begin = buffer.remaining();
                 parser.parse(buffer, state, httpServerExchange);
-                read += (begin - buffer.remaining());
+                read += begin - buffer.remaining();
                 if (buffer.hasRemaining()) {
                     free = false;
                     connection.setExtraBytes(pooled);
                 }
                 if (read > maxRequestSize) {
                     UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
-                    IoUtils.safeClose(connection);
+                    safeClose(connection);
                     return;
                 }
             } while (!state.isComplete());
@@ -147,7 +146,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     channel.resumeReads();
                 } else {
                     UndertowLogger.REQUEST_LOGGER.ignoringAjpRequestWithPrefixCode(state.prefix);
-                    IoUtils.safeClose(connection);
+                    safeClose(connection);
                 }
                 return;
             }
@@ -188,12 +187,12 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                IoUtils.safeClose(channel);
-                IoUtils.safeClose(connection);
+                safeClose(channel);
+                safeClose(connection);
             }
         } catch (Exception e) {
             UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-            IoUtils.safeClose(connection.getChannel());
+            safeClose(connection.getChannel());
         } finally {
             if (free) pooled.free();
         }
@@ -221,7 +220,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                                     }
                                 } catch (IOException e) {
                                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                                    IoUtils.safeClose(connection);
+                                    safeClose(connection);
                                 }
                             } while (buffer.hasRemaining());
                             channel.suspendWrites();
@@ -235,7 +234,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             AjpReadListener.this.handleEvent(underlyingChannel.getSourceChannel());
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-            IoUtils.safeClose(connection);
+            safeClose(connection);
         }
     }
 
@@ -246,7 +245,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             channel.getReadSetter().set(this);
             channel.wakeupReads();
         } else if(!exchange.isPersistent()) {
-            IoUtils.safeClose(exchange.getConnection());
+            safeClose(exchange.getConnection());
         }
     }
 

@@ -267,7 +267,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         }
 
         Principal getPrincipal() {
-            if (isEstablished() == false) {
+            if (!isEstablished()) {
                 throw new IllegalStateException("No established GSSContext to use for the Principal.");
             }
 

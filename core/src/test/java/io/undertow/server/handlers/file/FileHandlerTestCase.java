@@ -98,12 +98,12 @@ public class FileHandlerTestCase {
      */
     public static void main(String[] args) throws URISyntaxException {
         File rootPath = new File(FileHandlerTestCase.class.getResource("page.html").toURI()).getParentFile().getParentFile();
-        HttpHandler root = (new CanonicalPathHandler()
+        HttpHandler root = new CanonicalPathHandler()
                 .setNext(new PathHandler()
                         .addPrefixPath("/path", new ResourceHandler()
                                 // 1 byte = force transfer
                                 .setResourceManager(new FileResourceManager(rootPath, 1))
-                                .setDirectoryListingEnabled(true))));
+                                .setDirectoryListingEnabled(true)));
         Undertow undertow = Undertow.builder()
                 .addHttpListener(8888, "localhost")
                 .setHandler(root)

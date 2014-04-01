@@ -96,8 +96,7 @@ public class Hybi07Handshake extends Handshake {
         final String concat = nonceBase64.trim() + getMagicNumber();
         final MessageDigest digest = MessageDigest.getInstance(getHashAlgorithm());
         digest.update(concat.getBytes(WebSocketUtils.UTF_8));
-        final String result = Base64.encodeBytes(digest.digest()).trim();
-        return result;
+        return  Base64.encodeBytes(digest.digest()).trim();
     }
 
     @Override

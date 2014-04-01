@@ -40,7 +40,6 @@ public class OriginTestCase {
 
     private static final String HEADER = "selected";
     private static final String MESSAGE = "My HTTP Request!";
-    private static BlockingHandler blockingHandler;
 
     /**
      * Tests the Origin header is respected when the strictest options are selected

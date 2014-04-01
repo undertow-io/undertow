@@ -41,7 +41,7 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        if (isConfidential(exchange) || (confidentialityRequired(exchange) == false)) {
+        if (isConfidential(exchange) || !confidentialityRequired(exchange)) {
             next.handleRequest(exchange);
         } else {
             try {

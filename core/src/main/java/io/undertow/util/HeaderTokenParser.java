@@ -54,7 +54,7 @@ public class HeaderTokenParser<E extends HeaderToken> {
             switch (searchingFor) {
                 case START_OF_NAME:
                     // Eliminate any white space before the name of the parameter.
-                    if (headerChars[i] != COMMA && Character.isWhitespace(headerChars[i]) == false) {
+                    if (headerChars[i] != COMMA && !Character.isWhitespace(headerChars[i])) {
                         nameStart = i;
                         searchingFor = SearchingFor.EQUALS_SIGN;
                     }
@@ -70,7 +70,7 @@ public class HeaderTokenParser<E extends HeaderToken> {
                     }
                     break;
                 case START_OF_VALUE:
-                    if (Character.isWhitespace(headerChars[i]) == false) {
+                    if (!Character.isWhitespace(headerChars[i])) {
                         if (headerChars[i] == QUOTE && currentToken.isAllowQuoted()) {
                             valueStart = i + 1;
                             searchingFor = SearchingFor.LAST_QUOTE;
