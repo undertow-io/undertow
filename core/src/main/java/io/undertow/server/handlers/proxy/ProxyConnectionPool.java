@@ -157,7 +157,7 @@ class ProxyConnectionPool implements Closeable {
 
             @Override
             public void failed(IOException e) {
-                if (exclusive == false) {
+                if (!exclusive) {
                     data.connections--;
                 }
                 problem = true;
@@ -191,7 +191,7 @@ class ProxyConnectionPool implements Closeable {
         exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                if (exclusive == false) {
+                if (!exclusive) {
                     returnConnection(result);
                 }
                 nextListener.proceed();
@@ -299,7 +299,6 @@ class ProxyConnectionPool implements Closeable {
     }
 
     private static final class HostThreadData {
-
         int connections = 0;
         final Deque<ClientConnection> availableConnections = new ArrayDeque<ClientConnection>();
         final Deque<CallbackHolder> awaitingConnections = new ArrayDeque<CallbackHolder>();

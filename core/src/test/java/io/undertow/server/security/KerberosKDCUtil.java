@@ -100,7 +100,7 @@ class KerberosKDCUtil {
 
 
     public static boolean startServer() throws Exception {
-        if (initialised == true) {
+        if (initialised) {
             return false;
         }
         startLdapServer();
@@ -241,7 +241,7 @@ class KerberosKDCUtil {
 
             @Override
             public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-                if ("KDC".equals(name) == false) {
+                if (!"KDC".equals(name)) {
                     throw new IllegalArgumentException("Unexpected name '" + name + "'");
                 }
 

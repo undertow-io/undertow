@@ -33,7 +33,6 @@ import io.undertow.server.handlers.error.SimpleErrorPageHandler;
 import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.file.FileHandlerTestCase;
-import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -118,7 +117,6 @@ public class ComplexSSLTestCase {
                 }
                 exchange.startBlocking();
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
-                HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
                 byte[] buf = new byte[100];
                 int res = 0;
                 while ((res = exchange.getInputStream().read(buf)) > 0) {

@@ -35,7 +35,6 @@ import io.undertow.util.Protocols;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -286,7 +285,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     private void handleError(IOException exception) {
         currentRequest.setFailed(exception);
-        IoUtils.safeClose(connection);
+        safeClose(connection);
     }
 
     public StreamConnection performUpgrade() throws IOException {
@@ -320,7 +319,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
         if (anyAreSet(state, CLOSE_REQ)) {
             currentRequest = null;
-            IoUtils.safeClose(connection);
+            safeClose(connection);
         } else if (anyAreSet(state, UPGRADE_REQUESTED)) {
             connection.getSourceChannel().suspendReads();
             currentRequest = null;
@@ -366,10 +365,10 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                         int res = channel.read(buffer);
                         if (res == -1) {
                             UndertowLogger.CLIENT_LOGGER.debugf("Connection to %s was closed by the target server", connection.getPeerAddress());
-                            IoUtils.safeClose(AjpClientConnection.this);
+                            safeClose(AjpClientConnection.this);
                         } else if (res != 0) {
                             UndertowLogger.CLIENT_LOGGER.debugf("Target server %s sent unexpected data when no request pending, closing connection", connection.getPeerAddress());
-                            IoUtils.safeClose(AjpClientConnection.this);
+                            safeClose(AjpClientConnection.this);
                         }
                         //otherwise it is a spurious notification
                     } catch (IOException e) {
@@ -404,7 +403,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                         return;
                     } else if (res == -1 && !buffer.hasRemaining()) {
                         channel.suspendReads();
-                        IoUtils.safeClose(AjpClientConnection.this);
+                        safeClose(AjpClientConnection.this);
                         try {
                             final StreamSinkChannel requestChannel = connection.getSinkChannel();
                             requestChannel.shutdownWrites();
@@ -421,7 +420,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                             }
                             // Cancel the current active request
                             currentRequest.setFailed(e);
-                            IoUtils.safeClose(channel);
+                            safeClose(channel);
                             return;
                         }
                         return;
@@ -472,7 +471,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
             } catch (Exception e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
-                IoUtils.safeClose(connection);
+                safeClose(connection);
                 currentRequest.setFailed( e instanceof  IOException ? (IOException) e : new IOException(e));
             } finally {
                 if (free) pooled.free();
@@ -520,7 +519,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                         return;
                     } else if (res == -1 && !buffer.hasRemaining()) {
                         channel.suspendReads();
-                        IoUtils.safeClose(connection);
+                        safeClose(connection);
                         currentRequest.setFailed(new IOException(UndertowClientMessages.MESSAGES.connectionClosed()));
                         return;
                     }
@@ -539,7 +538,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                             //todo: ping?
                             UndertowLogger.CLIENT_LOGGER.debugf("Received invalid AJP response code %s with no request active, closing connection", state.prefix);
                             //invalid, at this point read body chunk is all the server should be sending
-                            IoUtils.safeClose(connection);
+                            safeClose(connection);
                             currentRequest.setFailed(UndertowClientMessages.MESSAGES.receivedInvalidChunk(state.prefix));
                         }
                     } else {
@@ -550,7 +549,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
             } catch (Exception e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
-                IoUtils.safeClose(connection);
+                safeClose(connection);
             } finally {
                 if (free) pooled.free();
             }

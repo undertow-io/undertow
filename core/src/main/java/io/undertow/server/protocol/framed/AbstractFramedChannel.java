@@ -25,7 +25,6 @@ import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -384,7 +383,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 res = channel.getSinkChannel().write(data);
                 toWrite -= res;
             } catch (IOException e) {
-                IoUtils.safeClose(channel);
+                safeClose(channel);
                 markWritesBroken(e);
                 throw e;
             }
@@ -506,7 +505,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     @Override
     public void close() throws IOException {
-        IoUtils.safeClose(channel);
+        safeClose(channel);
         wakeupWrites();
     }
 
@@ -595,7 +594,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     void notifyFrameReadComplete(AbstractFramedStreamSourceChannel<C, R, S> channel) {
         synchronized (AbstractFramedChannel.this) {
             if (isLastFrameReceived()) {
-                IoUtils.safeClose(AbstractFramedChannel.this.channel.getSourceChannel());
+                safeClose(AbstractFramedChannel.this.channel.getSourceChannel());
             }
             if (channel == receiver) {
                 receiver = null;

@@ -41,7 +41,6 @@ import io.undertow.util.Protocols;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -313,7 +312,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
     private void handleError(IOException exception) {
         currentRequest.setFailed(exception);
-        IoUtils.safeClose(connection);
+        safeClose(connection);
     }
 
     public StreamConnection performUpgrade() throws IOException {
@@ -348,7 +347,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         if (anyAreSet(state, CLOSE_REQ)) {
             currentRequest = null;
             this.state |= CLOSED;
-            IoUtils.safeClose(connection);
+            safeClose(connection);
         } else if (anyAreSet(state, UPGRADE_REQUESTED)) {
             connection.getSourceChannel().suspendReads();
             currentRequest = null;
@@ -385,10 +384,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                         int res = channel.read(buffer);
                          if(res == -1) {
                             UndertowLogger.CLIENT_LOGGER.debugf("Connection to %s was closed by the target server", connection.getPeerAddress());
-                            IoUtils.safeClose(HttpClientConnection.this);
+                            safeClose(HttpClientConnection.this);
                         } else if(res != 0) {
                              UndertowLogger.CLIENT_LOGGER.debugf("Target server %s sent unexpected data when no request pending, closing connection", connection.getPeerAddress());
-                             IoUtils.safeClose(HttpClientConnection.this);
+                             safeClose(HttpClientConnection.this);
                         }
                         //otherwise it is a spurious notification
                     } catch (IOException e) {
@@ -421,7 +420,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                         return;
                     } else if (res == -1) {
                         channel.suspendReads();
-                        IoUtils.safeClose(HttpClientConnection.this);
+                        safeClose(HttpClientConnection.this);
                         // Cancel the current active request
                         currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
                         return;
@@ -469,7 +468,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
             } catch (Exception e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
-                IoUtils.safeClose(connection);
+                safeClose(connection);
                 currentRequest.setFailed(new IOException(e));
             } finally {
                 if (free) pooled.free();

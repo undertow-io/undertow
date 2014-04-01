@@ -51,7 +51,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -60,7 +59,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @AjpIgnore
 public class AbstractWebSocketServerTest {
 
-    @org.junit.Test
+    @Test
     public void testText() throws Exception {
         if (getVersion() == WebSocketVersion.V00) {
             // ignore 00 tests for now
@@ -119,7 +118,6 @@ public class AbstractWebSocketServerTest {
             }
         }));
 
-        final AtomicReference<String> result = new AtomicReference<String>();
         final FutureResult<?> latch = new FutureResult();
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -128,7 +126,7 @@ public class AbstractWebSocketServerTest {
         client.destroy();
     }
 
-    @org.junit.Test
+    @Test
     public void testBinary() throws Exception {
         if (getVersion() == WebSocketVersion.V00) {
             // ignore 00 tests for now

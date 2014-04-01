@@ -164,7 +164,7 @@ public class ETagUtils {
         for (int i = 0; i < headerChars.length; i++) {
             switch (searchingFor) {
                 case START_OF_VALUE:
-                    if (headerChars[i] != COMMA && Character.isWhitespace(headerChars[i]) == false) {
+                    if (headerChars[i] != COMMA && !Character.isWhitespace(headerChars[i])) {
                         if (headerChars[i] == QUOTE) {
                             valueStart = i + 1;
                             searchingFor = SearchingFor.LAST_QUOTE;
@@ -233,7 +233,7 @@ public class ETagUtils {
         for (int i = 0; i < headerChars.length; i++) {
             switch (searchingFor) {
                 case START_OF_VALUE:
-                    if (headerChars[i] != COMMA && Character.isWhitespace(headerChars[i]) == false) {
+                    if (headerChars[i] != COMMA && !Character.isWhitespace(headerChars[i])) {
                         if (headerChars[i] == QUOTE) {
                             valueStart = i + 1;
                             searchingFor = SearchingFor.LAST_QUOTE;
