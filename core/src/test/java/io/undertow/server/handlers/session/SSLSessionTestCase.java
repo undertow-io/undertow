@@ -56,8 +56,9 @@ public class SSLSessionTestCase {
     public void testSslSession() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final SslSessionConfig sessionConfig = new SslSessionConfig();
-            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), sessionConfig)
+            InMemorySessionManager sessionManager = new InMemorySessionManager("");
+            final SslSessionConfig sessionConfig = new SslSessionConfig(sessionManager);
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(sessionManager, sessionConfig)
                     .setNext(new HttpHandler() {
                         @Override
                         public void handleRequest(final HttpServerExchange exchange) throws Exception {

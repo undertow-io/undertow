@@ -127,7 +127,7 @@ public class ServletContextImpl implements ServletContext {
         SessionConfig sessionConfig = sessionCookieConfig;
         if (trackingMethods != null && !trackingMethods.isEmpty()) {
             if (sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
-                sessionConfig = new SslSessionConfig();
+                sessionConfig = new SslSessionConfig(deployment.getSessionManager());
             } else {
                 if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE) && sessionTrackingModes.contains(SessionTrackingMode.URL)) {
                     sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH)));

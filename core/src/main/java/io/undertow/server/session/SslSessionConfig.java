@@ -18,10 +18,11 @@
 
 package io.undertow.server.session;
 
-import javax.net.ssl.SSLSession;
-
-import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.SSLSessionInfo;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Session config that stores the session ID in the current SSL session.
@@ -33,48 +34,98 @@ import io.undertow.server.HttpServerExchange;
 public class SslSessionConfig implements SessionConfig {
 
     private final SessionConfig fallbackSessionConfig;
+    private final Map<Key, String> sessions = new HashMap<Key, String>();
+    private final Map<String, Key> reverse = new HashMap<String, Key>();
 
-    public SslSessionConfig(final SessionConfig fallbackSessionConfig) {
+    public SslSessionConfig(final SessionConfig fallbackSessionConfig, SessionManager sessionManager) {
         this.fallbackSessionConfig = fallbackSessionConfig;
+        sessionManager.registerSessionListener(new SessionListener() {
+            @Override
+            public void sessionCreated(Session session, HttpServerExchange exchange) {
+            }
+
+            @Override
+            public void sessionDestroyed(Session session, HttpServerExchange exchange, SessionDestroyedReason reason) {
+                synchronized (SslSessionConfig.this) {
+                    Key sid = reverse.remove(session.getId());
+                    if (sid != null) {
+                        sessions.remove(sid);
+                    }
+                }
+            }
+
+            @Override
+            public void attributeAdded(Session session, String name, Object value) {
+            }
+
+            @Override
+            public void attributeUpdated(Session session, String name, Object newValue, Object oldValue) {
+            }
+
+            @Override
+            public void attributeRemoved(Session session, String name, Object oldValue) {
+            }
+
+            @Override
+            public void sessionIdChanged(Session session, String oldSessionId) {
+                synchronized (SslSessionConfig.this) {
+                    Key sid = reverse.remove(session.getId());
+                    if (sid != null) {
+                        sessions.remove(sid);
+                    }
+                }
+            }
+        });
     }
 
-    public SslSessionConfig() {
-        this(null);
+    public SslSessionConfig(SessionManager sessionManager) {
+        this(null, sessionManager);
     }
 
     @Override
     public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
-        SSLSession sslSession = ((HttpServerConnection)exchange.getConnection()).getSslSession();
+        SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
                 fallbackSessionConfig.setSessionId(exchange, sessionId);
             }
         } else {
-            sslSession.putValue(SslSessionConfig.class.getName(), sessionId);
+            Key key = new Key(sslSession.getSessionId());
+            synchronized (this) {
+                sessions.put(key, sessionId);
+                reverse.put(sessionId, key);
+            }
         }
     }
 
     @Override
     public void clearSession(final HttpServerExchange exchange, final String sessionId) {
-        SSLSession sslSession = ((HttpServerConnection)exchange.getConnection()).getSslSession();
+        SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
                 fallbackSessionConfig.clearSession(exchange, sessionId);
             }
         } else {
-            sslSession.putValue(SslSessionConfig.class.getName(), null);
+            synchronized (this) {
+                Key sid = reverse.remove(sessionId);
+                if (sid != null) {
+                    sessions.remove(sid);
+                }
+            }
         }
     }
 
     @Override
     public String findSessionId(final HttpServerExchange exchange) {
-        SSLSession sslSession = ((HttpServerConnection)exchange.getConnection()).getSslSession();
+        SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
                 return fallbackSessionConfig.findSessionId(exchange);
             }
         } else {
-            return (String) sslSession.getValue(SslSessionConfig.class.getName());
+            synchronized (this) {
+                return sessions.get(new Key(sslSession.getSessionId()));
+            }
         }
         return null;
     }
@@ -87,5 +138,30 @@ public class SslSessionConfig implements SessionConfig {
     @Override
     public String rewriteUrl(final String originalUrl, final String sessionId) {
         return originalUrl;
+    }
+
+    private static final class Key {
+        private final byte[] id;
+
+        private Key(byte[] id) {
+            this.id = id;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Key key = (Key) o;
+
+            if (!Arrays.equals(id, key.id)) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return id != null ? Arrays.hashCode(id) : 0;
+        }
     }
 }
