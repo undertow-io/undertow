@@ -111,7 +111,9 @@ public class DateUtils {
             parsing.
 
          */
-        final String trimmedDate = date.replaceAll(";.*$","");
+
+        final int semicolonIndex = date.indexOf(';');
+        final String trimmedDate = semicolonIndex >=0 ? date.substring(0, semicolonIndex) : date;
 
         ParsePosition pp = new ParsePosition(0);
         SimpleDateFormat dateFormat = RFC1123_PATTERN_FORMAT.get();
