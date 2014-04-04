@@ -275,7 +275,8 @@ public class AsyncContextImpl implements AsyncContext {
 
     public synchronized void completeInternal() {
 
-        if (!initialRequestDone && Thread.currentThread() == initiatingThread) {
+        Thread currentThread = Thread.currentThread();
+        if (!initialRequestDone && currentThread == initiatingThread) {
             //the context was stopped in the same request context it was started, we don't do anything
             if (dispatched) {
                 throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
@@ -286,7 +287,11 @@ public class AsyncContextImpl implements AsyncContext {
         } else {
             //we do not run the ServletRequestListeners here, as the request does not come into the scope
             //of a web application, as defined by the javadoc on ServletRequestListener
-            if(initialRequestDone) {
+            if(currentThread == exchange.getIoThread()) {
+                //the thread safety semantics here are a bit weird.
+                //basically if we are doing async IO we can't do a dispatch here, as then the IO thread can be racing
+                //with the dispatch thread.
+                //at all other times the dispatch is desirable
                 HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                 response.responseDone();
             } else {
