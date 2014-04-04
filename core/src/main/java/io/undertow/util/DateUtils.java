@@ -104,34 +104,43 @@ public class DateUtils {
      * @return The parsed date, or null if parsing failed
      */
     public static Date parseDate(final String date) {
+
+        /*
+            IE9 sends a superflous lenght parameter after date in the
+            If-Modified-Since header, which needs to be stripped before
+            parsing.
+
+         */
+        final String trimmedDate = date.replaceAll(";.*$","");
+
         ParsePosition pp = new ParsePosition(0);
         SimpleDateFormat dateFormat = RFC1123_PATTERN_FORMAT.get();
-        Date val = dateFormat.parse(date, pp);
-        if (val != null && pp.getIndex() == date.length()) {
+        Date val = dateFormat.parse(trimmedDate, pp);
+        if (val != null && pp.getIndex() == trimmedDate.length()) {
             return val;
         }
 
         pp = new ParsePosition(0);
         dateFormat = new SimpleDateFormat(RFC1036_PATTERN, LOCALE_US);
         dateFormat.setTimeZone(GMT_ZONE);
-        val = dateFormat.parse(date, pp);
-        if (val != null && pp.getIndex() == date.length()) {
+        val = dateFormat.parse(trimmedDate, pp);
+        if (val != null && pp.getIndex() == trimmedDate.length()) {
             return val;
         }
 
         pp = new ParsePosition(0);
         dateFormat = new SimpleDateFormat(ASCITIME_PATTERN, LOCALE_US);
         dateFormat.setTimeZone(GMT_ZONE);
-        val = dateFormat.parse(date, pp);
-        if (val != null && pp.getIndex() == date.length()) {
+        val = dateFormat.parse(trimmedDate, pp);
+        if (val != null && pp.getIndex() == trimmedDate.length()) {
             return val;
         }
 
         pp = new ParsePosition(0);
         dateFormat = new SimpleDateFormat(OLD_COOKIE_PATTERN, LOCALE_US);
         dateFormat.setTimeZone(GMT_ZONE);
-        val = dateFormat.parse(date, pp);
-        if (val != null && pp.getIndex() == date.length()) {
+        val = dateFormat.parse(trimmedDate, pp);
+        if (val != null && pp.getIndex() == trimmedDate.length()) {
             return val;
         }
 
