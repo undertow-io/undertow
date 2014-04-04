@@ -19,6 +19,7 @@ public class WebSocketDeploymentInfo {
 
     private XnioWorker worker;
     private Pool<ByteBuffer> buffers;
+    private boolean dispatchToWorkerThread = false;
     private final List<Class<?>> annotatedEndpoints = new ArrayList<Class<?>>();
     private final List<ServerEndpointConfig> programaticEndpoints = new ArrayList<ServerEndpointConfig>();
     private final List<ContainerReadyListener> containerReadyListeners = new ArrayList<ContainerReadyListener>();
@@ -68,6 +69,14 @@ public class WebSocketDeploymentInfo {
     public WebSocketDeploymentInfo addListener(final ContainerReadyListener listener) {
         containerReadyListeners.add(listener);
         return this;
+    }
+
+    public boolean isDispatchToWorkerThread() {
+        return dispatchToWorkerThread;
+    }
+
+    public void setDispatchToWorkerThread(boolean dispatchToWorkerThread) {
+        this.dispatchToWorkerThread = dispatchToWorkerThread;
     }
 
     public interface ContainerReadyListener {

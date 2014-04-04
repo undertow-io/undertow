@@ -80,6 +80,7 @@ public class ServerWebSocketContainer implements ServerContainer {
     private final XnioWorker xnioWorker;
     private final Pool<ByteBuffer> bufferPool;
     private final ThreadSetupAction threadSetupAction;
+    private final boolean dispatchToWorker;
 
     private final boolean clientMode;
 
@@ -92,11 +93,12 @@ public class ServerWebSocketContainer implements ServerContainer {
     private ServletContextImpl contextToAddFilter = null;
 
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean clientMode) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
         this.threadSetupAction = threadSetupAction;
+        this.dispatchToWorker = dispatchToWorker;
         this.clientMode = clientMode;
     }
 
@@ -217,22 +219,30 @@ public class ServerWebSocketContainer implements ServerContainer {
      * will use blocking IO methods. We suspend recieves while this is in progress, to make sure that we do not have multiple
      * methods invoked at once.
      * <p/>
-     * TODO: make this configurable as to if it executes in a thread pool or not
      *
      * @param invocation The task to run
      */
     public void invokeEndpointMethod(final Executor executor, final Runnable invocation) {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
-                try {
-                    invocation.run();
-                } finally {
-                    handle.tearDown();
+        if (dispatchToWorker) {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
+                    try {
+                        invocation.run();
+                    } finally {
+                        handle.tearDown();
+                    }
                 }
+            });
+        } else {
+            ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
+            try {
+                invocation.run();
+            } finally {
+                handle.tearDown();
             }
-        });
+        }
     }
 
     @Override
@@ -346,10 +356,10 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     public ConfiguredClientEndpoint getClientEndpoint(final Class<?> type) {
         ConfiguredClientEndpoint existing = clientEndpoints.get(type);
-        if(existing != null) {
+        if (existing != null) {
             return existing;
         }
-        if(clientMode && type.isAnnotationPresent(ClientEndpoint.class)) {
+        if (clientMode && type.isAnnotationPresent(ClientEndpoint.class)) {
             try {
                 addEndpointInternal(type);
                 return clientEndpoints.get(type);
