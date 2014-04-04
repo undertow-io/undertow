@@ -286,8 +286,19 @@ public class AsyncContextImpl implements AsyncContext {
         } else {
             //we do not run the ServletRequestListeners here, as the request does not come into the scope
             //of a web application, as defined by the javadoc on ServletRequestListener
-            HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
-            response.responseDone();
+            if(initialRequestDone) {
+                HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
+                response.responseDone();
+            } else {
+                doDispatch(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
+                        response.responseDone();
+                    }
+                });
+            }
         }
     }
 
