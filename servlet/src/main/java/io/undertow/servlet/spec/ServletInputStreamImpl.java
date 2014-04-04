@@ -1,11 +1,5 @@
 package io.undertow.servlet.spec;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
-
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
@@ -17,6 +11,11 @@ import org.xnio.Pooled;
 import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
+
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreClear;
@@ -89,7 +88,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         asyncContext.addAsyncTask(new Runnable() {
             @Override
             public void run() {
-                channel.wakeupReads();
+                channel.resumeReads();
             }
         });
     }
@@ -114,7 +113,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
-        if(listener != null) {
+        if (listener != null) {
             if (anyAreClear(state, FLAG_READY)) {
                 throw UndertowServletMessages.MESSAGES.streamNotReady();
             }
@@ -132,7 +131,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (!buffer.hasRemaining()) {
             pooled.free();
             pooled = null;
-            if(listener != null) {
+            if (listener != null) {
                 readIntoBufferNonBlocking();
             }
         }
@@ -183,7 +182,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     state &= ~FLAG_READY;
                     pooled.free();
                     pooled = null;
-                    asyncContext.addAsyncTask(new Runnable() {
+                    channel.getIoThread().execute(new Runnable() {
                         @Override
                         public void run() {
                             channel.resumeReads();
@@ -233,63 +232,58 @@ public class ServletInputStreamImpl extends ServletInputStream {
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
             channel.suspendReads();
-            asyncContext.addAsyncTask(new Runnable() {
-                @Override
-                public void run() {
-                    if (asyncContext.isDispatched()) {
-                        //this is no longer an async request
-                        //we just return
-                        //TODO: what do we do here? Revert back to blocking mode?
-                        return;
-                    }
-                    if (anyAreSet(state, FLAG_FINISHED)) {
-                        return;
-                    }
+            if (asyncContext.isDispatched()) {
+                //this is no longer an async request
+                //we just return
+                //TODO: what do we do here? Revert back to blocking mode?
+                return;
+            }
+            if (anyAreSet(state, FLAG_FINISHED)) {
+                return;
+            }
+            state |= FLAG_READY;
+            try {
+                readIntoBufferNonBlocking();
+                if (pooled != null) {
                     state |= FLAG_READY;
-                    try {
-                        readIntoBufferNonBlocking();
-                        if(pooled != null) {
-                            state |= FLAG_READY;
-                            if (!anyAreSet(state, FLAG_FINISHED)) {
-                                CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
-                                ThreadSetupAction.Handle handle = action.setup(request.getExchange());
-                                try {
-                                    listener.onDataAvailable();
-                                } finally {
-                                    handle.tearDown();
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
+                    if (!anyAreSet(state, FLAG_FINISHED)) {
                         CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
                         ThreadSetupAction.Handle handle = action.setup(request.getExchange());
                         try {
-                            listener.onError(e);
+                            listener.onDataAvailable();
                         } finally {
                             handle.tearDown();
                         }
-                        IoUtils.safeClose(channel);
-                    }
-                    if (anyAreSet(state, FLAG_FINISHED)) {
-                        if (anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
-                            try {
-                                state |= FLAG_ON_DATA_READ_CALLED;
-                                channel.shutdownReads();
-                                CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
-                                ThreadSetupAction.Handle handle = action.setup(request.getExchange());
-                                try {
-                                    listener.onAllDataRead();
-                                } finally {
-                                    handle.tearDown();
-                                }
-                            } catch (IOException e) {
-                                listener.onError(e);
-                                IoUtils.safeClose(channel);
-                            }
-                        }
                     }
                 }
-            });
+            } catch (Exception e) {
+                CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
+                ThreadSetupAction.Handle handle = action.setup(request.getExchange());
+                try {
+                    listener.onError(e);
+                } finally {
+                    handle.tearDown();
+                }
+                IoUtils.safeClose(channel);
+            }
+            if (anyAreSet(state, FLAG_FINISHED)) {
+                if (anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
+                    try {
+                        state |= FLAG_ON_DATA_READ_CALLED;
+                        channel.shutdownReads();
+                        CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
+                        ThreadSetupAction.Handle handle = action.setup(request.getExchange());
+                        try {
+                            listener.onAllDataRead();
+                        } finally {
+                            handle.tearDown();
+                        }
+                    } catch (IOException e) {
+                        listener.onError(e);
+                        IoUtils.safeClose(channel);
+                    }
+                }
+            }
 
         }
     }

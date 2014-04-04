@@ -26,7 +26,6 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -255,7 +254,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
                             this.buffersToWrite = new ByteBuffer[]{buffer, copy};
                             state &= ~FLAG_READY;
-                            resumeWrites();
+                            channel.resumeWrites();
                             return;
                         }
                     } while (written < toWrite);
@@ -344,7 +343,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                             copy.flip();
                             this.buffersToWrite = new ByteBuffer[]{buffer, copy};
                             state &= ~FLAG_READY;
-                            resumeWrites();
+                            channel.resumeWrites();
                             return;
                         }
                     } while (written < toWrite);
@@ -378,31 +377,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 if (flushBufferAsync(true)) {
                     channel.shutdownWrites();
                     state |= FLAG_DELEGATE_SHUTDOWN;
-                    if (!channel.flush()) {
-                        resumeWrites();
-                    }
-                } else {
-                    resumeWrites();
+                    channel.flush();
                 }
             }
-        }
-    }
-
-    private void resumeWrites() {
-        if (anyAreSet(state, FLAG_IN_CALLBACK)) {
-            //writes will be resumed at the end of the callback
-            return;
-        }
-        if (channel != null) {
-            channel.getWriteSetter().set(internalListener);
-            channel.resumeWrites();
-        } else {
-            servletRequestContext.getExchange().getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelListeners.invokeChannelListener(null, internalListener);
-                }
-            });
         }
     }
 
@@ -427,7 +404,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         long res;
         long written = 0;
         do {
-            if(writeFinal) {
+            if (writeFinal) {
                 res = channel.writeFinal(bufs);
             } else {
                 res = channel.write(bufs);
@@ -437,6 +414,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 //write it out with a listener
                 state = state & ~FLAG_READY;
                 buffersToWrite = bufs;
+                channel.resumeWrites();
                 return false;
             }
         } while (written < toWrite);
@@ -470,7 +448,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE) {
             return;
         }
-        if(servletRequestContext.getDeployment().getDeploymentInfo().isIgnoreFlush() &&
+        if (servletRequestContext.getDeployment().getDeploymentInfo().isIgnoreFlush() &&
                 servletRequestContext.getExchange().isRequestComplete() &&
                 servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
             //we mark the stream as flushed, but don't actually flush
@@ -557,7 +535,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                         state &= ~FLAG_READY;
                         pendingFile = source;
                         source.position(pos);
-                        resumeWrites();
+                        channel.resumeWrites();
                         return;
                     }
                     pos += ret;
@@ -576,12 +554,12 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
         buffer.flip();
         while (buffer.hasRemaining()) {
-            if(writeFinal) {
+            if (writeFinal) {
                 channel.writeFinal(buffer);
             } else {
                 channel.write(buffer);
             }
-            if(buffer.hasRemaining()) {
+            if (buffer.hasRemaining()) {
                 channel.awaitWritable();
             }
         }
@@ -601,7 +579,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             state |= FLAG_CLOSED;
             state &= ~FLAG_READY;
             if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
-                if(servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
+                if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
                     if (buffer == null) {
                         servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                     } else {
@@ -618,7 +596,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 }
                 state |= FLAG_DELEGATE_SHUTDOWN;
                 StreamSinkChannel channel = this.channel;
-                if(channel != null) { //mock requests
+                if (channel != null) { //mock requests
                     channel.shutdownWrites();
                     Channels.flushBlocking(channel);
                 }
@@ -651,7 +629,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         state &= ~FLAG_READY;
         if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
 
-            if(servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
+            if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
                 if (buffer == null) {
                     servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
                 } else {
@@ -662,14 +640,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         createChannel();
         if (buffer != null) {
             if (!flushBufferAsync(true)) {
-                resumeWrites();
                 return;
             }
         }
         channel.shutdownWrites();
         state |= FLAG_DELEGATE_SHUTDOWN;
-        if (!channel.flush()) {
-            resumeWrites();
+        if(!channel.flush()) {
+            channel.resumeWrites();
         }
     }
 
@@ -677,6 +654,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (channel == null) {
             channel = servletRequestContext.getExchange().getResponseChannel();
             channel.getWriteSetter().set(internalListener);
+            if(internalListener != null) {
+                channel.resumeWrites();
+            }
         }
     }
 
@@ -747,7 +727,17 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         //under normal circumstances this will break write listener delegation
         this.internalListener = new WriteChannelListener();
         //we resume from an async task, after the request has been dispatched
-        internalListener.handleEvent(null);
+        asyncContext.addAsyncTask(new Runnable() {
+            @Override
+            public void run() {
+                servletRequestContext.getExchange().getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        internalListener.handleEvent(null);
+                    }
+                });
+            }
+        });
     }
 
 
@@ -755,113 +745,100 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
         @Override
         public void handleEvent(final StreamSinkChannel aChannel) {
-            if (channel != null) {
-                channel.suspendWrites();
-            }
-            //we run this whole thing as a async task, to avoid threading issues
-            asyncContext.addAsyncTask(new Runnable() {
-                @Override
-                public void run() {
-                    //flush the channel if it is closed
-                    if (anyAreSet(state, FLAG_DELEGATE_SHUTDOWN)) {
-                        try {
-                            //either it will work, and the channel is closed
-                            //or it won't, and we continue with writes resumed
-                            if (!channel.flush()) {
-                                resumeWrites();
-                            }
-                            return;
-                        } catch (IOException e) {
-                            handleError(e);
-                            return;
-                        }
-                    }
-                    //if there is data still to write
-                    if (buffersToWrite != null) {
-                        long toWrite = Buffers.remaining(buffersToWrite);
-                        long written = 0;
-                        long res;
-                        do {
-                            try {
-                                res = channel.write(buffersToWrite);
-                                written += res;
-                                if (res == 0) {
-                                    resumeWrites();
-                                    return;
-                                }
-                            } catch (IOException e) {
-                                handleError(e);
-                                return;
-                            }
-                        } while (written < toWrite);
-                        buffersToWrite = null;
-                    }
-                    if (pendingFile != null) {
-                        try {
-                            long size = pendingFile.size();
-                            long pos = pendingFile.position();
-
-                            while (size - pos > 0) {
-                                long ret = channel.transferFrom(pendingFile, pos, size - pos);
-                                if (ret <= 0) {
-                                    pendingFile.position(pos);
-                                    resumeWrites();
-                                    return;
-                                }
-                                pos += ret;
-                            }
-                            pendingFile = null;
-                        } catch (IOException e) {
-                            handleError(e);
-                            return;
-                        }
-                    }
-                    if (anyAreSet(state, FLAG_CLOSED)) {
-                        try {
-                            channel.shutdownWrites();
-                            state |= FLAG_DELEGATE_SHUTDOWN;
-                            if (!channel.flush()) {
-                                resumeWrites();
-                            }
-                        } catch (IOException e) {
-                            handleError(e);
-                            return;
-                        }
-                    } else {
-
-
-                        if (asyncContext.isDispatched()) {
-                            //this is no longer an async request
-                            //we just return for now
-                            //TODO: what do we do here? Revert back to blocking mode?
-                            return;
-                        }
-
-                        state |= FLAG_READY;
-                        try {
-                            state |= FLAG_IN_CALLBACK;
-
-                            ThreadSetupAction.Handle handle = threadSetupAction.setup(servletRequestContext.getExchange());
-                            try {
-                                listener.onWritePossible();
-                            } finally {
-                                handle.tearDown();
-                            }
-                            if (!isReady()) {
-                                //if the stream is still ready then we do not resume writes
-                                //this is per spec, we only call the listener once for each time
-                                //isReady returns true
-                                state &= ~FLAG_IN_CALLBACK;
-                                resumeWrites();
-                            }
-                        } catch (Throwable e) {
-                            IoUtils.safeClose(channel);
-                        } finally {
-                            state &= ~FLAG_IN_CALLBACK;
-                        }
-                    }
+            //flush the channel if it is closed
+            if (anyAreSet(state, FLAG_DELEGATE_SHUTDOWN)) {
+                try {
+                    //either it will work, and the channel is closed
+                    //or it won't, and we continue with writes resumed
+                    channel.flush();
+                    return;
+                } catch (IOException e) {
+                    handleError(e);
+                    return;
                 }
-            });
+            }
+            //if there is data still to write
+            if (buffersToWrite != null) {
+                long toWrite = Buffers.remaining(buffersToWrite);
+                long written = 0;
+                long res;
+                do {
+                    try {
+                        res = channel.write(buffersToWrite);
+                        written += res;
+                        if (res == 0) {
+                            return;
+                        }
+                    } catch (IOException e) {
+                        handleError(e);
+                        return;
+                    }
+                } while (written < toWrite);
+                buffersToWrite = null;
+            }
+            if (pendingFile != null) {
+                try {
+                    long size = pendingFile.size();
+                    long pos = pendingFile.position();
+
+                    while (size - pos > 0) {
+                        long ret = channel.transferFrom(pendingFile, pos, size - pos);
+                        if (ret <= 0) {
+                            pendingFile.position(pos);
+                            return;
+                        }
+                        pos += ret;
+                    }
+                    pendingFile = null;
+                } catch (IOException e) {
+                    handleError(e);
+                    return;
+                }
+            }
+            if (anyAreSet(state, FLAG_CLOSED)) {
+                try {
+                    channel.shutdownWrites();
+                    state |= FLAG_DELEGATE_SHUTDOWN;
+                    channel.flush();
+                } catch (IOException e) {
+                    handleError(e);
+                    return;
+                }
+            } else {
+
+
+                if (asyncContext.isDispatched()) {
+                    //this is no longer an async request
+                    //we just return for now
+                    //TODO: what do we do here? Revert back to blocking mode?
+                    return;
+                }
+
+                state |= FLAG_READY;
+                try {
+                    state |= FLAG_IN_CALLBACK;
+
+                    ThreadSetupAction.Handle handle = threadSetupAction.setup(servletRequestContext.getExchange());
+                    try {
+                        listener.onWritePossible();
+                    } finally {
+                        handle.tearDown();
+                    }
+                    if (isReady()) {
+                        //if the stream is still ready then we do not resume writes
+                        //this is per spec, we only call the listener once for each time
+                        //isReady returns true
+                        if(channel != null) {
+                            channel.suspendWrites();
+                        }
+                    }
+                } catch (Throwable e) {
+                    IoUtils.safeClose(channel);
+                } finally {
+                    state &= ~FLAG_IN_CALLBACK;
+                }
+            }
+
         }
 
         private void handleError(final IOException e) {
