@@ -3,6 +3,7 @@ package io.undertow.websockets.client;
 import io.undertow.websockets.WebSocketExtension;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Stuart Douglas
@@ -33,6 +34,13 @@ public class WebSocketClientNegotiation {
 
     public List<String> getSelectedExtensions() {
         return selectedExtensions;
+    }
+
+    public void beforeRequest(final Map<String, String> headers) {
+
+    }
+    public void afterRequest(final Map<String, String> headers) {
+
     }
 
     public void handshakeComplete(String selectedProtocol, List<String> selectedExtensions) {

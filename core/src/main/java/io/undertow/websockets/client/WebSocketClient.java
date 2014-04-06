@@ -38,6 +38,9 @@ public class WebSocketClient {
         }
         final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation);
         final Map<String, String> headers = handshake.createHeaders();
+        if(clientNegotiation != null) {
+            clientNegotiation.beforeRequest(headers);
+        }
         IoFuture<StreamConnection> result = HttpUpgrade.performUpgrade(worker, null, newUri, headers, new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection channel) {

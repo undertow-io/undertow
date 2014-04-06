@@ -26,7 +26,7 @@ import javax.websocket.server.ServerEndpoint;
 /**
  * @author Stuart Douglas
  */
-@ServerEndpoint(value = "/chat/{user}", subprotocols = {"foo", "bar"})
+@ServerEndpoint(value = "/chat/{user}", subprotocols = {"foo", "bar", "configured-proto"})
 public class MessageEndpoint {
 
     @OnMessage
