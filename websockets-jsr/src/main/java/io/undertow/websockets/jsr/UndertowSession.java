@@ -64,8 +64,14 @@ public final class UndertowSession implements Session {
     private final Encoding encoding;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final Set<Session> openSessions;
+    private final String subProtocol;
+    private final List<Extension> extensions;
 
-    public UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString, final Encoding encoding, final Set<Session> openSessions) {
+    public UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
+                           Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
+                           InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
+                           final Encoding encoding, final Set<Session> openSessions, final String subProtocol,
+                           final List<Extension> extensions) {
         this.webSocketChannel = webSocketChannel;
         this.queryString = queryString;
         this.encoding = encoding;
@@ -87,6 +93,8 @@ public final class UndertowSession implements Session {
         webSocketChannel.getReceiveSetter().set(frameHandler);
         this.sessionId = new SecureRandomSessionIdGenerator().createSessionId();
         this.attrs = Collections.synchronizedMap(new HashMap<String, Object>(config.getUserProperties()));
+        this.extensions = extensions;
+        this.subProtocol = subProtocol;
     }
 
     @Override
@@ -128,7 +136,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public String getNegotiatedSubprotocol() {
-        return "";
+        return subProtocol == null ? "" : subProtocol;
     }
 
     @Override
@@ -258,7 +266,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public List<Extension> getNegotiatedExtensions() {
-        return Collections.emptyList();
+        return extensions;
     }
 
     void close0() {

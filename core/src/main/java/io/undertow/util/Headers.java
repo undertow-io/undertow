@@ -74,6 +74,7 @@ public final class Headers {
     public static final String REFRESH_STRING = "Refresh";
     public static final String RETRY_AFTER_STRING = "Retry-After";
     public static final String SEC_WEB_SOCKET_ACCEPT_STRING = "Sec-WebSocket-Accept";
+    public static final String SEC_WEB_SOCKET_EXTENSIONS_STRING = "Sec-WebSocket-Extensions";
     public static final String SEC_WEB_SOCKET_KEY_STRING = "Sec-WebSocket-Key";
     public static final String SEC_WEB_SOCKET_KEY1_STRING = "Sec-WebSocket-Key1";
     public static final String SEC_WEB_SOCKET_KEY2_STRING = "Sec-WebSocket-Key2";
@@ -149,6 +150,7 @@ public final class Headers {
     public static final HttpString REFRESH = new HttpString(REFRESH_STRING, 42);
     public static final HttpString RETRY_AFTER = new HttpString(RETRY_AFTER_STRING, 43);
     public static final HttpString SEC_WEB_SOCKET_ACCEPT = new HttpString(SEC_WEB_SOCKET_ACCEPT_STRING, 44);
+    public static final HttpString SEC_WEB_SOCKET_EXTENSIONS = new HttpString(SEC_WEB_SOCKET_EXTENSIONS_STRING);
     public static final HttpString SEC_WEB_SOCKET_KEY = new HttpString(SEC_WEB_SOCKET_KEY_STRING, 45);
     public static final HttpString SEC_WEB_SOCKET_KEY1 = new HttpString(SEC_WEB_SOCKET_KEY1_STRING, 46);
     public static final HttpString SEC_WEB_SOCKET_KEY2 = new HttpString(SEC_WEB_SOCKET_KEY2_STRING, 47);

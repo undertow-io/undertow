@@ -107,7 +107,7 @@ public class AnnotatedEndpointTest {
 
         Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
 
-        Assert.assertEquals("hi Bob", AnnotatedClientEndpoint.message());
+        Assert.assertEquals("hi Bob (protocol=foo)", AnnotatedClientEndpoint.message());
 
         session.close();
         Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());

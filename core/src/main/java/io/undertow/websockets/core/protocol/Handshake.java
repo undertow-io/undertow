@@ -18,8 +18,6 @@ package io.undertow.websockets.core.protocol;
 
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketHandshakeException;
-import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoFuture;
@@ -128,7 +126,7 @@ public abstract class Handshake {
         exchange.sendData(payload).addNotifier(new IoFuture.Notifier<Void, Object>() {
             @Override
             public void notify(final IoFuture<? extends Void> ioFuture, final Object attachment) {
-                if(ioFuture.getStatus() == IoFuture.Status.DONE) {
+                if (ioFuture.getStatus() == IoFuture.Status.DONE) {
                     exchange.endExchange();
                 } else {
                     exchange.close();
@@ -147,9 +145,8 @@ public abstract class Handshake {
     /**
      * Selects the first matching supported sub protocol and add it the the headers of the exchange.
      *
-     * @throws WebSocketHandshakeException Get thrown if no subprotocol could be found
      */
-    protected final void selectSubprotocol(final WebSocketHttpExchange exchange) throws WebSocketHandshakeException {
+    protected final void selectSubprotocol(final WebSocketHttpExchange exchange) {
         String requestedSubprotocols = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING);
         if (requestedSubprotocols == null) {
             return;
@@ -157,11 +154,9 @@ public abstract class Handshake {
 
         String[] requestedSubprotocolArray = PATTERN.split(requestedSubprotocols);
         String subProtocol = supportedSubprotols(requestedSubprotocolArray);
-        if (subProtocol == null) {
-            // No match found
-            throw WebSocketMessages.MESSAGES.unsupportedProtocol(requestedSubprotocols, subprotocols);
+        if (subProtocol != null) {
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, subProtocol);
         }
-        exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, subProtocol);
 
     }
 

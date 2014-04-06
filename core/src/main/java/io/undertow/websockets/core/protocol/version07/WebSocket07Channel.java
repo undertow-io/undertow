@@ -33,7 +33,6 @@ import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
-import java.util.Set;
 
 
 /**
@@ -84,8 +83,8 @@ public class WebSocket07Channel extends WebSocketChannel {
      * @param wsUrl      The url for which the {@link WebSocket07Channel} was created.
      */
     public WebSocket07Channel(StreamConnection channel, Pool<ByteBuffer> bufferPool,
-                              String wsUrl, Set<String> subProtocols, final boolean client, boolean allowExtensions) {
-        super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocols, client, allowExtensions);
+                              String wsUrl, String subProtocol, final boolean client, boolean allowExtensions) {
+        super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocol, client, allowExtensions);
     }
 
     @Override

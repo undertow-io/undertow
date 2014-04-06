@@ -18,13 +18,15 @@
 
 package io.undertow.websockets.core;
 
+import io.undertow.websockets.WebSocketExtension;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.Set;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * start at 20000
@@ -81,7 +83,7 @@ public interface WebSocketMessages {
     WebSocketFrameCorruptedException extensionsNotAllowed(int rsv);
 
     @Message(id = 2016, value = "Could not find supported protocol in request list %s. Supported protocols are %s")
-    WebSocketHandshakeException unsupportedProtocol(String requestedSubprotocols, Set<String> subprotocols);
+    WebSocketHandshakeException unsupportedProtocol(String requestedSubprotocols, Collection<String> subprotocols);
 
     @Message(id = 2017, value = "No Length encoded in the frame")
     WebSocketFrameCorruptedException noLengthEncodedInFrame();
@@ -157,4 +159,7 @@ public interface WebSocketMessages {
 
     @Message(id = 2041, value = "Attempted to write more data than the specified payload length")
     IOException messageOverflow();
+
+    @Message(id = 2042, value = "Server responded with unsupported extension %s. Supported extensions: %s")
+    IOException unsupportedExtension(String part, List<WebSocketExtension> supportedExtensions);
 }
