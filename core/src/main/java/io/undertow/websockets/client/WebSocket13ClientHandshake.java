@@ -112,6 +112,9 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
         return new HandshakeChecker() {
             @Override
             public void checkHandshake(Map<String, String> headers) throws IOException {
+                if(negotiation != null) {
+                    negotiation.afterRequest(headers);
+                }
                 String upgrade = headers.get(Headers.UPGRADE_STRING.toLowerCase(Locale.ENGLISH));
                 if (upgrade == null || !upgrade.trim().equalsIgnoreCase("websocket")) {
                     throw WebSocketMessages.MESSAGES.noWebSocketUpgradeHeader();

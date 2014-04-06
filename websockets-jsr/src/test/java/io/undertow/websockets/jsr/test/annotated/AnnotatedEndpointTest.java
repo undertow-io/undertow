@@ -64,6 +64,7 @@ public class AnnotatedEndpointTest {
                                 .setWorker(DefaultServer.getWorker())
                                 .addEndpoint(MessageEndpoint.class)
                                 .addEndpoint(AnnotatedClientEndpoint.class)
+                                .addEndpoint(AnnotatedClientEndpointWithConfigurator.class)
                                 .addEndpoint(IncrementEndpoint.class)
                                 .addEndpoint(EncodingEndpoint.class)
                                 .addEndpoint(RequestUriEndpoint.class)
@@ -113,6 +114,20 @@ public class AnnotatedEndpointTest {
         Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
     }
 
+
+    @org.junit.Test
+    public void testAnnotatedClientEndpointWithConfigurator() throws Exception {
+
+
+        Session session = deployment.connectToServer(AnnotatedClientEndpointWithConfigurator.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
+
+        Assert.assertEquals("hi Bob (protocol=configured-proto)", AnnotatedClientEndpointWithConfigurator.message());
+        Assert.assertEquals("foo, bar, configured-proto",ClientConfigurator.sentSubProtocol);
+        Assert.assertEquals("configured-proto", ClientConfigurator.receivedSubProtocol());
+
+        session.close();
+        Assert.assertEquals("CLOSED", AnnotatedClientEndpointWithConfigurator.message());
+    }
 
     @org.junit.Test
     public void testImplicitIntegerConversion() throws Exception {

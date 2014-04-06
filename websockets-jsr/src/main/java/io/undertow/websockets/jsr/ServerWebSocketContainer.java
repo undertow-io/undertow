@@ -41,6 +41,7 @@ import javax.websocket.ClientEndpointConfig;
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
 import javax.websocket.Extension;
+import javax.websocket.HandshakeResponse;
 import javax.websocket.Session;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpoint;
@@ -141,7 +142,7 @@ public class ServerWebSocketContainer implements ServerContainer {
     @Override
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        WebSocketClientNegotiation clientNegotiation = new WebSocketClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()));
+        WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()), cec);
         IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation);
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
@@ -182,7 +183,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     private Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        WebSocketClientNegotiation clientNegotiation = new WebSocketClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()));
+        WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
         IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation); //TODO: fix this
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
@@ -441,5 +442,55 @@ public class ServerWebSocketContainer implements ServerContainer {
             ret.add(new WebSocketExtension(e.getName(), parameters));
         }
         return ret;
+    }
+
+    private class ClientNegotiation extends WebSocketClientNegotiation {
+
+        private final ClientEndpointConfig config;
+
+        public ClientNegotiation(List<String> supportedSubProtocols, List<WebSocketExtension> supportedExtensions, ClientEndpointConfig config) {
+            super(supportedSubProtocols, supportedExtensions);
+            this.config = config;
+        }
+
+        @Override
+        public void afterRequest(final Map<String, String> headers) {
+
+            ClientEndpointConfig.Configurator configurator = config.getConfigurator();
+            if(configurator != null) {
+                final Map<String, List<String>> newHeaders = new HashMap<String, List<String>>();
+                for(Map.Entry<String, String> entry : headers.entrySet()) {
+                    ArrayList<String> arrayList = new ArrayList<String>();
+                    arrayList.add(entry.getValue());
+                    newHeaders.put(entry.getKey(), arrayList);
+                }
+                configurator.afterResponse(new HandshakeResponse() {
+                    @Override
+                    public Map<String, List<String>> getHeaders() {
+                        return newHeaders;
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void beforeRequest(Map<String, String> headers) {
+            ClientEndpointConfig.Configurator configurator = config.getConfigurator();
+            if(configurator != null) {
+                final Map<String, List<String>> newHeaders = new HashMap<String, List<String>>();
+                for(Map.Entry<String, String> entry : headers.entrySet()) {
+                    ArrayList<String> arrayList = new ArrayList<String>();
+                    arrayList.add(entry.getValue());
+                    newHeaders.put(entry.getKey(), arrayList);
+                }
+                configurator.beforeRequest(newHeaders);
+                headers.clear(); //TODO: more efficient way
+                for(Map.Entry<String, List<String>> entry : newHeaders.entrySet()) {
+                    if(!entry.getValue().isEmpty()) {
+                        headers.put(entry.getKey(), entry.getValue().get(0));
+                    }
+                }
+            }
+        }
     }
 }
