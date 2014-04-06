@@ -1243,9 +1243,9 @@ public class MCMPHandler implements HttpHandler {
         boolean allowCmd = true;
         boolean displaySessionids = true;
 
-        private final String advertiseGroup = "224.0.1.105";
-        private final int advertisePort = 23364;
-        private final String advertiseAddress = "127.0.0.1";
+        private String advertiseGroup = "224.0.1.105";
+        private int advertisePort = 23364;
+        private String advertiseAddress = "127.0.0.1";
         private MessageDigest md = null;
         private String scheme = "http";
         private String securityKey;
@@ -1286,6 +1286,18 @@ public class MCMPHandler implements HttpHandler {
 
         public void setDisplaySessionids(boolean displaySessionids) {
             this.displaySessionids = displaySessionids;
+        }
+
+        public void setAdvertiseGroup(String advertiseGroup) {
+            this.advertiseGroup = advertiseGroup;
+        }
+
+        public void setAdvertisePort(int advertisePort) {
+            this.advertisePort = advertisePort;
+        }
+
+        public void setAdvertiseAddress(String advertiseAddress) {
+            this.advertiseAddress = advertiseAddress;
         }
 
         public String getAdvertiseGroup() {
