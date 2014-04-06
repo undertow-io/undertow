@@ -66,6 +66,8 @@ public final class UndertowSession implements Session {
     private final Set<Session> openSessions;
     private final String subProtocol;
     private final List<Extension> extensions;
+    private volatile int maximumBinaryBufferSize = 0;
+    private volatile int maximumTextBufferSize = 0;
 
     public UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
                            Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
@@ -229,24 +231,23 @@ public final class UndertowSession implements Session {
 
     @Override
     public void setMaxBinaryMessageBufferSize(int i) {
-        //webSocketChannel.setMaximumBinaryFrameSize(i);
+        maximumBinaryBufferSize = i;
     }
 
     @Override
     public int getMaxBinaryMessageBufferSize() {
-        return 0;
+        return maximumBinaryBufferSize;
         //return (int) webSocketChannel.getMaximumBinaryFrameSize();
     }
 
     @Override
     public void setMaxTextMessageBufferSize(int i) {
-        //webSocketChannel.setMaximumTextFrameSize(i);
+        maximumTextBufferSize = i;
     }
 
     @Override
     public int getMaxTextMessageBufferSize() {
-        return 0;
-        //return (int) webSocketChannel.getMaximumTextFrameSize();
+        return maximumTextBufferSize;
     }
 
     @Override
