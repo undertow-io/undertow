@@ -51,10 +51,7 @@ public class Hybi13Handshake extends Hybi07Handshake {
         if (origin != null) {
             exchange.setResponseHeader(Headers.ORIGIN_STRING, origin);
         }
-        String protocol = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING);
-        if (protocol != null) {
-            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, protocol);
-        }
+        selectSubprotocol(exchange);
         exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_LOCATION_STRING, getWebSocketLocation(exchange));
 
         final String key = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY_STRING);
@@ -71,6 +68,6 @@ public class Hybi13Handshake extends Hybi07Handshake {
 
     @Override
     public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final Pool<ByteBuffer> pool) {
-        return new WebSocket13Channel(channel, pool, getWebSocketLocation(exchange), subprotocols, false, allowExtensions);
+        return new WebSocket13Channel(channel, pool, getWebSocketLocation(exchange), exchange.getResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING), false, allowExtensions);
     }
 }

@@ -25,6 +25,10 @@ public class WebSocketClient {
 
 
     public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
+        return connect(worker, bufferPool, optionMap, uri, version, null);
+    }
+
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
         final FutureResult<WebSocketChannel> ioFuture = new FutureResult<WebSocketChannel>();
         final URI newUri;
         try {
@@ -32,7 +36,7 @@ public class WebSocketClient {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(WebSocketVersion.V13, newUri);
+        final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation);
         final Map<String, String> headers = handshake.createHeaders();
         IoFuture<StreamConnection> result = HttpUpgrade.performUpgrade(worker, null, newUri, headers, new ChannelListener<StreamConnection>() {
             @Override

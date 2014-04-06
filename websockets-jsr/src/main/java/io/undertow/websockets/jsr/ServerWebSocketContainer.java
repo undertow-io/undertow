@@ -24,7 +24,9 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.util.PathTemplate;
+import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.client.WebSocketClient;
+import io.undertow.websockets.client.WebSocketClientNegotiation;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
@@ -139,12 +141,26 @@ public class ServerWebSocketContainer implements ServerContainer {
     @Override
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
+        WebSocketClientNegotiation clientNegotiation = new WebSocketClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()));
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation);
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
+        final List<Extension> extensions = new ArrayList<Extension>();
+        final Map<String, Extension> extMap = new HashMap<String, Extension>();
+        for(Extension ext : cec.getExtensions()) {
+            extMap.put(ext.getName(), ext);
+        }
+        for(String e : clientNegotiation.getSelectedExtensions()) {
+            Extension ext = extMap.get(e);
+            if(ext == null) {
+                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e, clientNegotiation.getSupportedExtensions());
+            }
+            extensions.add(ext);
+        }
+
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>());
+        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);
         endpointInstance.onOpen(undertowSession, cec);
         channel.resumeReceives();
 
@@ -164,13 +180,27 @@ public class ServerWebSocketContainer implements ServerContainer {
         }
     }
 
-    public Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
+    private Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
+        WebSocketClientNegotiation clientNegotiation = new WebSocketClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()));
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation); //TODO: fix this
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
-        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>());
+        final List<Extension> extensions = new ArrayList<Extension>();
+        final Map<String, Extension> extMap = new HashMap<String, Extension>();
+        for(Extension ext : cec.getConfig().getExtensions()) {
+            extMap.put(ext.getName(), ext);
+        }
+        for(String e : clientNegotiation.getSelectedExtensions()) {
+            Extension ext = extMap.get(e);
+            if(ext == null) {
+                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e, clientNegotiation.getSupportedExtensions());
+            }
+            extensions.add(ext);
+        }
+
+        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);
         endpointInstance.onOpen(undertowSession, cec.getConfig());
         channel.resumeReceives();
 
@@ -399,5 +429,17 @@ public class ServerWebSocketContainer implements ServerContainer {
         public <T> T getEndpointInstance(final Class<T> endpointClass) throws InstantiationException {
             return (T) factory.createInstance().getInstance();
         }
+    }
+
+    private static List<WebSocketExtension> toExtensionList(final List<Extension> extensions) {
+        List<WebSocketExtension> ret = new ArrayList<WebSocketExtension>();
+        for(Extension e : extensions) {
+            final List<WebSocketExtension.Parameter> parameters = new ArrayList<WebSocketExtension.Parameter>();
+            for(Extension.Parameter p : e.getParameters()) {
+                parameters.add(new WebSocketExtension.Parameter(p.getName(), p.getValue()));
+            }
+            ret.add(new WebSocketExtension(e.getName(), parameters));
+        }
+        return ret;
     }
 }

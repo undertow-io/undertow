@@ -19,18 +19,20 @@
 package io.undertow.websockets.jsr.test.annotated;
 
 import javax.websocket.OnMessage;
+import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 
 /**
  * @author Stuart Douglas
  */
-@ServerEndpoint("/chat/{user}")
+@ServerEndpoint(value = "/chat/{user}", subprotocols = {"foo", "bar"})
 public class MessageEndpoint {
 
     @OnMessage
-    public String handleMessage(final String message, @PathParam("user") String user) {
-        return message + " " + user;
+    public String handleMessage(Session session, final String message, @PathParam("user") String user) {
+        String proto = session.getNegotiatedSubprotocol();
+        return message + " " + user + (proto.isEmpty() ? "" : " (protocol=" + proto + ")");
     }
 
 }

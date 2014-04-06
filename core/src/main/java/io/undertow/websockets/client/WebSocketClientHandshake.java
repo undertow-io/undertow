@@ -13,14 +13,18 @@ import java.util.Map;
 /**
  * @author Stuart Douglas
  */
-public abstract class WebSocketClientHandshake{
+public abstract class WebSocketClientHandshake {
 
     protected final URI url;
 
     public static WebSocketClientHandshake create(final WebSocketVersion version, final URI uri) {
+        return create(version, uri, null);
+    }
+
+    public static WebSocketClientHandshake create(final WebSocketVersion version, final URI uri, WebSocketClientNegotiation clientNegotiation) {
         switch (version) {
             case V13:
-                return new WebSocket13ClientHandshake(uri);
+                return new WebSocket13ClientHandshake(uri, clientNegotiation);
         }
         throw new IllegalArgumentException();
     }

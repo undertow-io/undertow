@@ -51,7 +51,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
 
     private boolean closeFrameReceived;
     private boolean closeFrameSent;
-    private final Set<String> subProtocols;
+    private final String subProtocol;
     private final boolean extensionsSupported;
     /**
      * an incoming frame that has not been created yet
@@ -73,13 +73,13 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * @param wsUrl                  The url for which the channel was created.
      * @param client
      */
-    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, final boolean client, boolean extensionsSupported) {
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported) {
         super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null);
         this.client = client;
         this.version = version;
         this.wsUrl = wsUrl;
         this.extensionsSupported = extensionsSupported;
-        this.subProtocols = subProtocols;
+        this.subProtocol = subProtocol;
     }
 
     @Override
@@ -189,8 +189,13 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     /**
      * Returns an unmodifiable {@link Set} of the selected subprotocols if any.
      */
+    @Deprecated
     public Set<String> getSubProtocols() {
-        return subProtocols;
+        return Collections.singleton(subProtocol);
+    }
+
+    public String getSubProtocol() {
+        return subProtocol;
     }
 
     public boolean isCloseFrameReceived() {

@@ -19,6 +19,7 @@
 package io.undertow.websockets.jsr;
 
 import io.undertow.util.PathTemplate;
+import io.undertow.websockets.WebSocketExtension;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
@@ -132,4 +133,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3033, value = "Method %s has invalid parameters at locations %s. It looks like you may have accidentally used javax.ws.rs.PathParam instead of javax.websocket.server.PathParam")
     DeploymentException invalidParametersWithWrongAnnotation(Method method, Set<Integer> allParams);
+
+    @Message(id = 3034, value = "Server provided extension %s which was not in client supported extensions %s")
+    IOException extensionWasNotPresentInClientHandshake(String e, List<WebSocketExtension> supportedExtensions);
 }

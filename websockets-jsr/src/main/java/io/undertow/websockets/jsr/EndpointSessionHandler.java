@@ -21,16 +21,18 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.websocket.Endpoint;
+import javax.websocket.Extension;
 import java.net.URI;
 import java.security.Principal;
+import java.util.Collections;
 
 /**
  * {@link WebSocketConnectionCallback} implementation which will setuo the {@link UndertowSession} and notify
@@ -72,7 +74,7 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
                 principal = src.getOriginalRequest().getUserPrincipal();
             }
 
-            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions());
+            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions(), channel.getSubProtocol(), Collections.<Extension>emptyList());
             config.getOpenSessions().add(session);
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
