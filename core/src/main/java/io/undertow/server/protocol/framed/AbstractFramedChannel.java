@@ -219,10 +219,15 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * of calling this method then it can prevent frame channels for being fully consumed.
      */
     public synchronized R receive() throws IOException {
-        if (isLastFrameReceived()) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
-        }
         if (receiver != null) {
+            return null;
+        }
+        if (isLastFrameReceived()) {
+            //we have received the last frame, we just shut down and return
+            //it would probably make more sense to have the last channel responsible for this
+            //however it is much simpler just to have it here
+            channel.getSourceChannel().suspendReads();
+            channel.getSourceChannel().shutdownReads();
             return null;
         }
         ReferenceCountedPooled<ByteBuffer> pooled = this.readData;
