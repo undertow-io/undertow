@@ -150,12 +150,12 @@ public class ServerWebSocketContainer implements ServerContainer {
         for(Extension ext : cec.getExtensions()) {
             extMap.put(ext.getName(), ext);
         }
-        for(String e : clientNegotiation.getSelectedExtensions()) {
-            Extension ext = extMap.get(e);
+        for(WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
+            Extension ext = extMap.get(e.getName());
             if(ext == null) {
-                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e, clientNegotiation.getSupportedExtensions());
+                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), clientNegotiation.getSupportedExtensions());
             }
-            extensions.add(ext);
+            extensions.add(ExtensionImpl.create(e));
         }
 
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
@@ -191,12 +191,12 @@ public class ServerWebSocketContainer implements ServerContainer {
         for(Extension ext : cec.getConfig().getExtensions()) {
             extMap.put(ext.getName(), ext);
         }
-        for(String e : clientNegotiation.getSelectedExtensions()) {
-            Extension ext = extMap.get(e);
+        for(WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
+            Extension ext = extMap.get(e.getName());
             if(ext == null) {
-                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e, clientNegotiation.getSupportedExtensions());
+                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), clientNegotiation.getSupportedExtensions());
             }
-            extensions.add(ext);
+            extensions.add(ExtensionImpl.create(e));
         }
 
         UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);

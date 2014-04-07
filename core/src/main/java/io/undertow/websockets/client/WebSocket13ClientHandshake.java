@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -133,23 +133,10 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                     if (!negotiation.getSupportedSubProtocols().contains(subProto)) {
                         throw WebSocketMessages.MESSAGES.unsupportedProtocol(subProto, negotiation.getSupportedSubProtocols());
                     }
-                    List<String> extensions = new ArrayList<String>();
+                    List<WebSocketExtension> extensions = Collections.emptyList();
                     String extHeader = headers.get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING.toLowerCase(Locale.ENGLISH));
                     if (extHeader != null) {
-                        String[] parts = extHeader.split(",");
-                        for (String part : parts) {
-                            boolean found = false;
-                            for (WebSocketExtension ext : negotiation.getSupportedExtensions()) {
-                                if (ext.getName().equals(part)) {
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if (!found) {
-                                throw WebSocketMessages.MESSAGES.unsupportedExtension(part, negotiation.getSupportedExtensions());
-                            }
-                            extensions.add(part);
-                        }
+                        extensions = WebSocketExtension.parse(extHeader);
                     }
                     negotiation.handshakeComplete(subProto, extensions);
                 }
