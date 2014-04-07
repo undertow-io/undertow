@@ -13,7 +13,7 @@ public class WebSocketClientNegotiation {
     private final List<String> supportedSubProtocols;
     private final List<WebSocketExtension> supportedExtensions;
     private volatile String selectedSubProtocol;
-    private volatile List<String> selectedExtensions;
+    private volatile List<WebSocketExtension> selectedExtensions;
 
     public WebSocketClientNegotiation(List<String> supportedSubProtocols, List<WebSocketExtension> supportedExtensions) {
         this.supportedSubProtocols = supportedSubProtocols;
@@ -32,7 +32,7 @@ public class WebSocketClientNegotiation {
         return selectedSubProtocol;
     }
 
-    public List<String> getSelectedExtensions() {
+    public List<WebSocketExtension> getSelectedExtensions() {
         return selectedExtensions;
     }
 
@@ -43,7 +43,7 @@ public class WebSocketClientNegotiation {
 
     }
 
-    public void handshakeComplete(String selectedProtocol, List<String> selectedExtensions) {
+    public void handshakeComplete(String selectedProtocol, List<WebSocketExtension> selectedExtensions) {
         this.selectedExtensions = selectedExtensions;
         this.selectedSubProtocol = selectedProtocol;
     }
