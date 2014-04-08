@@ -89,7 +89,13 @@ public class ServletInputStreamImpl extends ServletInputStream {
         asyncContext.addAsyncTask(new Runnable() {
             @Override
             public void run() {
-                internalListener.handleEvent(channel);
+                channel.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        channel.resumeReads();
+                        internalListener.handleEvent(channel);
+                    }
+                });
             }
         });
     }
@@ -161,6 +167,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 if (res == 0) {
                     pooled.free();
                     pooled = null;
+                    if(!channel.isReadResumed()) {
+                        channel.resumeReads();
+                    }
                     return;
                 }
                 pooled.getResource().flip();
@@ -232,14 +241,15 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private class ServletInputStreamChannelListener implements ChannelListener<StreamSourceChannel> {
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
-            channel.suspendReads();
             if (asyncContext.isDispatched()) {
                 //this is no longer an async request
                 //we just return
                 //TODO: what do we do here? Revert back to blocking mode?
+                channel.suspendReads();
                 return;
             }
             if (anyAreSet(state, FLAG_FINISHED)) {
+                channel.suspendReads();
                 return;
             }
             state |= FLAG_READY;
@@ -254,6 +264,10 @@ public class ServletInputStreamImpl extends ServletInputStream {
                             listener.onDataAvailable();
                         } finally {
                             handle.tearDown();
+                        }
+                        if(pooled != null) {
+                            //they did not consume all the data
+                            channel.suspendReads();
                         }
                     }
                 }
