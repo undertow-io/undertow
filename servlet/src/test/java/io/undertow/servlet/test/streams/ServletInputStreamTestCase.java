@@ -95,6 +95,16 @@ public class ServletInputStreamTestCase {
         //}
     }
 
+    @Test
+    public void testAsyncServletInputStreamWithEmptyRequestBody() {
+        String message = "";
+        try {
+            runTest(message, ASYNC_SERVLET);
+        } catch (Throwable e) {
+            throw new RuntimeException("test failed", e);
+        }
+    }
+
     private void runTestViaJavaImpl(final String message, String url)
             throws IOException {
         HttpURLConnection urlcon = null;

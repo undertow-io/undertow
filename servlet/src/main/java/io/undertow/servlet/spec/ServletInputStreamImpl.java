@@ -34,6 +34,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private final Pool<ByteBuffer> bufferPool;
 
     private volatile ReadListener listener;
+    private volatile ServletInputStreamChannelListener internalListener;
 
     /**
      * If this stream is ready for a read
@@ -82,13 +83,13 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
         asyncContext = request.getAsyncContext();
         listener = readListener;
-        channel.getReadSetter().set(new ServletInputStreamChannelListener());
+        channel.getReadSetter().set(internalListener = new ServletInputStreamChannelListener());
 
         //we resume from an async task, after the request has been dispatched
         asyncContext.addAsyncTask(new Runnable() {
             @Override
             public void run() {
-                channel.resumeReads();
+                internalListener.handleEvent(channel);
             }
         });
     }
