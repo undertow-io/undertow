@@ -82,7 +82,8 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private int state;
     private int chunkleft = 0;
 
-    private final ByteBuffer chunkingBuffer = ByteBuffer.allocate(14); //14 is the most
+    private final ByteBuffer chunkingBuffer = ByteBuffer.allocate(12); //12 is the most
+    private final ByteBuffer chunkingSepBuffer = ByteBuffer.allocate(2);
     private Pooled<ByteBuffer> lastChunkBuffer;
 
 
@@ -136,13 +137,13 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         int oldLimit = src.limit();
         if (chunkleft == 0) {
             chunkingBuffer.clear();
-            if (anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
-                chunkingBuffer.put(CRLF);
-            }
             written += src.remaining();
             putIntAsHexString(chunkingBuffer, src.remaining());
             chunkingBuffer.put(CRLF);
             chunkingBuffer.flip();
+            chunkingSepBuffer.clear();
+            chunkingSepBuffer.put(CRLF);
+            chunkingSepBuffer.flip();
             state |= FLAG_WRITTEN_FIRST_CHUNK;
             chunkleft = src.remaining();
         } else {
@@ -152,11 +153,12 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         }
         try {
             int chunkingSize = chunkingBuffer.remaining();
-            if (chunkingSize > 0 || lastChunkBuffer != null) {
+            int chunkingSepSize = chunkingSepBuffer.remaining();
+            if (chunkingSize > 0 || chunkingSepSize > 0 || lastChunkBuffer != null) {
                 int originalRemaining = src.remaining();
                 long result;
                 if (lastChunkBuffer == null) {
-                    final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src};
+                    final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src, chunkingSepBuffer};
                     result = next.write(buf, 0, buf.length);
                 } else {
                     final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src, lastChunkBuffer.getResource()};
@@ -310,7 +312,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private void createLastChunk(final boolean writeFinal) throws UnsupportedEncodingException {
         lastChunkBuffer = bufferPool.allocate();
         ByteBuffer lastChunkBuffer = this.lastChunkBuffer.getResource();
-        if (anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK) || writeFinal) {
+        if (writeFinal) {
             lastChunkBuffer.put(CRLF);
         }
         lastChunkBuffer.put(LAST_CHUNK);
