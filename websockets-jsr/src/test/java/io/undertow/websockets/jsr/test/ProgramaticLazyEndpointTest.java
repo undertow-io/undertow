@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr.test.annotated;
+package io.undertow.websockets.jsr.test;
 
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -26,19 +26,21 @@ import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import io.undertow.websockets.jsr.test.AddEndpointServlet;
-import io.undertow.websockets.utils.FrameChecker;
-import io.undertow.websockets.utils.WebSocketTestClient;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
-import org.xnio.FutureResult;
 
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.ContainerProvider;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.MessageHandler;
+import javax.websocket.Session;
 import java.net.URI;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -87,13 +89,29 @@ public class ProgramaticLazyEndpointTest {
 
     @org.junit.Test
     public void testStringOnMessage() throws Exception {
-        final byte[] payload = "Stuart".getBytes();
-        final FutureResult latch = new FutureResult();
+        ProgramaticClientEndpoint endpoint = new ProgramaticClientEndpoint();
+        ContainerProvider.getWebSocketContainer().connectToServer(endpoint, ClientEndpointConfig.Builder.create().build(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/foo"));
+        Assert.assertEquals("Hello Stuart", endpoint.getResponses().poll(15, TimeUnit.SECONDS));
+    }
 
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/foo"));
-        client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "Hello Stuart".getBytes(), latch));
-        latch.getIoFuture().get();
-        client.destroy();
+    public static class ProgramaticClientEndpoint extends Endpoint {
+
+        private final LinkedBlockingDeque<String> responses = new LinkedBlockingDeque<String>();
+
+        @Override
+        public void onOpen(Session session, EndpointConfig config) {
+            session.getAsyncRemote().sendText("Stuart");
+            session.addMessageHandler(new MessageHandler.Whole<String>() {
+
+                @Override
+                public void onMessage(String message) {
+                    responses.add(message);
+                }
+            });
+        }
+
+        public LinkedBlockingDeque<String> getResponses() {
+            return responses;
+        }
     }
 }
