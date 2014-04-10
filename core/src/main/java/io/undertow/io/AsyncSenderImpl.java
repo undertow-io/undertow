@@ -249,7 +249,7 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void send(final String data, final IoCallback callback) {
-        send(ByteBuffer.wrap(data.getBytes(utf8)), callback);
+        send(data, utf8, callback);
     }
 
     @Override
@@ -267,6 +267,7 @@ public class AsyncSenderImpl implements Sender {
             pooledBuffers[i] = pooled;
             bufs[i] = pooled.getResource();
             Buffers.copy(pooled.getResource(), bytes);
+            pooled.getResource().flip();
             ++i;
         }
         send(bufs, callback);
