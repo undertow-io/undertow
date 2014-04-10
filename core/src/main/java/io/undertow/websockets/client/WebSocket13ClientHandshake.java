@@ -130,7 +130,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                 }
                 if (negotiation != null) {
                     String subProto = headers.get(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING.toLowerCase(Locale.ENGLISH));
-                    if (!negotiation.getSupportedSubProtocols().contains(subProto)) {
+                    if (subProto != null && !subProto.isEmpty() && !negotiation.getSupportedSubProtocols().contains(subProto)) {
                         throw WebSocketMessages.MESSAGES.unsupportedProtocol(subProto, negotiation.getSupportedSubProtocols());
                     }
                     List<WebSocketExtension> extensions = Collections.emptyList();
