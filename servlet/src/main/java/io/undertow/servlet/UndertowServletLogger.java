@@ -91,4 +91,9 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.WARN)
     @Message(id = 15011, value = "Non standard filter mapping '*' for filter %s. Portable application should use '/*' instead.")
     void nonStandardFilterMapping(String filterName);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 15012, value = "Failed to generate error page %s for original exception: %s. Generating error page resulted in a %s.")
+    void errorGeneratingErrorPage(String originalErrorPage, Object originalException, int code,  @Cause Throwable cause);
+
 }
