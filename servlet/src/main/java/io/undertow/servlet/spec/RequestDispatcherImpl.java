@@ -36,6 +36,7 @@ import javax.servlet.ServletResponseWrapper;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -319,7 +320,17 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     }
 
     private void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception, final String message) throws ServletException, IOException {
+
         final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
+        if(request.getDispatcherType() == DispatcherType.ERROR) {
+            //we have already dispatched once with an error
+            //if we dispatch again we run the risk of a stack overflow
+            //so we just kill it, the user will just get the basic error page
+            UndertowServletLogger.REQUEST_LOGGER.errorGeneratingErrorPage(servletRequestContext.getExchange().getRequestPath(), request.getAttribute(ERROR_EXCEPTION), servletRequestContext.getExchange().getResponseCode(), exception);
+            servletRequestContext.getExchange().endExchange();
+            return;
+        }
+
         final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
         if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
