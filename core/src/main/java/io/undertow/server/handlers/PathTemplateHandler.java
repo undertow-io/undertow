@@ -3,6 +3,7 @@ package io.undertow.server.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.PathTemplateMatcher;
 
 import java.util.Map;
@@ -17,6 +18,10 @@ public class PathTemplateHandler implements HttpHandler {
 
     private final boolean rewriteQueryParameters;
 
+    /**
+     * @see io.undertow.util.PathTemplateMatch#ATTACHMENT_KEY
+     */
+    @Deprecated
     public static final AttachmentKey<PathTemplateMatch> PATH_TEMPLATE_MATCH = AttachmentKey.create(PathTemplateMatch.class);
 
     private final PathTemplateMatcher<HttpHandler> pathTemplateMatcher = new PathTemplateMatcher<HttpHandler>();
@@ -38,6 +43,7 @@ public class PathTemplateHandler implements HttpHandler {
             return;
         }
         exchange.putAttachment(PATH_TEMPLATE_MATCH, new PathTemplateMatch(match.getMatchedTemplate(), match.getParameters()));
+        exchange.putAttachment(io.undertow.util.PathTemplateMatch.ATTACHMENT_KEY, new io.undertow.util.PathTemplateMatch(match.getMatchedTemplate(), match.getParameters()));
         if (rewriteQueryParameters) {
             for (Map.Entry<String, String> entry : match.getParameters().entrySet()) {
                 exchange.addQueryParam(entry.getKey(), entry.getValue());
@@ -56,6 +62,10 @@ public class PathTemplateHandler implements HttpHandler {
         return this;
     }
 
+    /**
+     * @see io.undertow.util.PathTemplateMatch
+     */
+    @Deprecated
     public static final class PathTemplateMatch {
         private final String matchedTemplate;
         private final Map<String, String> parameters;

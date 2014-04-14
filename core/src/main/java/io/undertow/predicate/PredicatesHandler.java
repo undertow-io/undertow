@@ -17,7 +17,7 @@ import java.util.TreeMap;
 public class PredicatesHandler implements HttpHandler {
 
     private volatile Holder[] handlers = new Holder[0];
-    private final HttpHandler next;
+    private volatile HttpHandler next;
 
     //non-static, so multiple handlers can co-exist
     private final AttachmentKey<Integer> CURRENT_POSITION = AttachmentKey.create(Integer.class);
@@ -67,6 +67,14 @@ public class PredicatesHandler implements HttpHandler {
 
     public PredicatesHandler addPredicatedHandler(final PredicatedHandler handler) {
         return addPredicatedHandler(handler.getPredicate(), handler.getHandler());
+    }
+
+    public void setNext(HttpHandler next) {
+        this.next = next;
+    }
+
+    public HttpHandler getNext() {
+        return next;
     }
 
     private static final class Holder {

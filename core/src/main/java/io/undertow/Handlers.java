@@ -6,6 +6,7 @@ import io.undertow.predicate.PredicateParser;
 import io.undertow.predicate.PredicatesHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.JvmRouteHandler;
+import io.undertow.server.RoutingHandler;
 import io.undertow.server.handlers.AccessControlListHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
@@ -68,6 +69,23 @@ public class Handlers {
      */
     public static PathTemplateHandler pathTemplate() {
         return new PathTemplateHandler();
+    }
+
+    /**
+     *
+     * @param rewriteQueryParams If the query params should be rewritten
+     * @return The routing handler
+     */
+    public static RoutingHandler routing(boolean rewriteQueryParams) {
+        return new RoutingHandler(rewriteQueryParams);
+    }
+
+    /**
+     *
+     * @return a new routing handler
+     */
+    public static RoutingHandler routing() {
+        return new RoutingHandler();
     }
 
     /**

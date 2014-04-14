@@ -137,7 +137,7 @@ public class PathTemplateMatcher<T> {
         Set<PathTemplateHolder> values = pathTemplateMap.get(trimBase(template));
         Set<PathTemplateHolder> newValues;
         if (values == null) {
-            newValues = new TreeSet<PathTemplateHolder>();
+            return this;
         } else {
             newValues = new TreeSet<PathTemplateHolder>(values);
         }
@@ -158,23 +158,27 @@ public class PathTemplateMatcher<T> {
         return this;
     }
 
-    public static class PathMatchResult<T> {
-        private final Map<String, String> parameters;
-        private final String matchedTemplate;
+
+    public synchronized T get(String template) {
+        PathTemplate pathTemplate = PathTemplate.create(template);
+        Set<PathTemplateHolder> values = pathTemplateMap.get(trimBase(pathTemplate));
+        if(values == null) {
+            return null;
+        }
+        for (PathTemplateHolder next : values) {
+            if (next.template.getTemplateString().equals(template)) {
+                return next.value;
+            }
+        }
+        return null;
+    }
+
+    public static class PathMatchResult<T> extends PathTemplateMatch {
         private final T value;
 
         public PathMatchResult(Map<String, String> parameters, String matchedTemplate, T value) {
-            this.parameters = parameters;
-            this.matchedTemplate = matchedTemplate;
+            super(matchedTemplate, parameters);
             this.value = value;
-        }
-
-        public Map<String, String> getParameters() {
-            return parameters;
-        }
-
-        public String getMatchedTemplate() {
-            return matchedTemplate;
         }
 
         public T getValue() {
