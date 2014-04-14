@@ -4,6 +4,7 @@ import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedBinaryMessage;
 import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -95,6 +96,7 @@ public class AnnotatedEndpoint extends Endpoint {
             final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
+            params.put(CloseReason.class, closeReason);
             invokeMethod(params, webSocketClose, (UndertowSession) session);
         }
     }
@@ -175,6 +177,7 @@ public class AnnotatedEndpoint extends Endpoint {
         protected void onFullCloseMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
             Pooled<ByteBuffer[]> data = message.getData();
             final ByteBuffer buffer = WebSockets.mergeBuffers(data.getResource());
+            final CloseMessage cm = new CloseMessage(buffer);
             data.free();
             try {
                 if (webSocketClose != null) {
@@ -182,6 +185,7 @@ public class AnnotatedEndpoint extends Endpoint {
                         final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
                         params.put(Session.class, session);
                         params.put(Map.class, session.getPathParameters());
+                        params.put(CloseReason.class, new CloseReason(CloseReason.CloseCodes.getCloseCode(cm.getReason()), cm.getString()));
                         invokeMethod(params, webSocketClose, session);
                     } catch (Exception e) {
                         AnnotatedEndpoint.this.onError(session, e);

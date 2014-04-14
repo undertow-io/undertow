@@ -37,6 +37,7 @@ import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.FutureResult;
 
+import javax.websocket.CloseReason;
 import javax.websocket.Session;
 import java.net.URI;
 
@@ -105,7 +106,6 @@ public class AnnotatedEndpointTest {
     @org.junit.Test
     public void testAnnotatedClientEndpoint() throws Exception {
 
-
         Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
 
         Assert.assertEquals("hi Bob (protocol=foo)", AnnotatedClientEndpoint.message());
@@ -114,6 +114,21 @@ public class AnnotatedEndpointTest {
         Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
     }
 
+    @org.junit.Test
+    public void testCloseReason() throws Exception {
+        MessageEndpoint.reset();
+
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
+
+        Assert.assertEquals("hi Bob (protocol=foo)", AnnotatedClientEndpoint.message());
+
+        session.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, "Foo!"));
+        Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
+        CloseReason cr = MessageEndpoint.getReason();
+        Assert.assertEquals(CloseReason.CloseCodes.VIOLATED_POLICY.getCode(), cr.getCloseCode().getCode());
+        Assert.assertEquals("Foo!", cr.getReasonPhrase());
+
+    }
 
     @org.junit.Test
     public void testAnnotatedClientEndpointWithConfigurator() throws Exception {
