@@ -169,10 +169,63 @@ public class DefaultServlet extends HttpServlet {
         switch (req.getDispatcherType()) {
             case INCLUDE:
             case FORWARD:
+            case ERROR:
                 doGet(req, resp);
                 break;
             default:
                 super.doPost(req, resp);
+        }
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        switch (req.getDispatcherType()) {
+            case INCLUDE:
+            case FORWARD:
+            case ERROR:
+                doGet(req, resp);
+                break;
+            default:
+                super.doPut(req, resp);
+        }
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        switch (req.getDispatcherType()) {
+            case INCLUDE:
+            case FORWARD:
+            case ERROR:
+                doGet(req, resp);
+                break;
+            default:
+                super.doDelete(req, resp);
+        }
+    }
+
+    @Override
+    protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        switch (req.getDispatcherType()) {
+            case INCLUDE:
+            case FORWARD:
+            case ERROR:
+                doGet(req, resp);
+                break;
+            default:
+                super.doOptions(req, resp);
+        }
+    }
+
+    @Override
+    protected void doTrace(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        switch (req.getDispatcherType()) {
+            case INCLUDE:
+            case FORWARD:
+            case ERROR:
+                doGet(req, resp);
+                break;
+            default:
+                super.doTrace(req, resp);
         }
     }
 
