@@ -34,6 +34,7 @@ import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.XnioWorker;
+import org.xnio.ssl.XnioSsl;
 
 import javax.servlet.DispatcherType;
 import javax.websocket.ClientEndpoint;
@@ -56,6 +57,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
@@ -67,6 +69,7 @@ import java.util.concurrent.Executor;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class ServerWebSocketContainer implements ServerContainer {
+
 
     private final ClassIntrospecter classIntrospecter;
 
@@ -95,14 +98,25 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     private ServletContextImpl contextToAddFilter = null;
 
+    private final List<WebsocketClientSslProvider> clientSslProviders;
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
+        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, clientMode);
+    }
+
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
         this.threadSetupAction = threadSetupAction;
         this.dispatchToWorker = dispatchToWorker;
         this.clientMode = clientMode;
+        List<WebsocketClientSslProvider> clientSslProviders = new ArrayList<WebsocketClientSslProvider>();
+        for (WebsocketClientSslProvider provider : ServiceLoader.load(WebsocketClientSslProvider.class, classLoader)) {
+            clientSslProviders.add(provider);
+        }
+
+        this.clientSslProviders = Collections.unmodifiableList(clientSslProviders);
     }
 
     @Override
@@ -122,7 +136,14 @@ public class ServerWebSocketContainer implements ServerContainer {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
         }
         Endpoint instance = config.getFactory().createInstanceForExisting(annotatedEndpointInstance);
-        return connectToServerInternal(instance, config, path);
+        XnioSsl ssl = null;
+        for (WebsocketClientSslProvider provider : clientSslProviders) {
+            ssl = provider.getSsl(xnioWorker, annotatedEndpointInstance, path);
+            if (ssl != null) {
+                break;
+            }
+        }
+        return connectToServerInternal(instance, ssl, config, path);
     }
 
     @Override
@@ -133,7 +154,14 @@ public class ServerWebSocketContainer implements ServerContainer {
         }
         try {
             InstanceHandle<Endpoint> instance = config.getFactory().createInstance();
-            return connectToServerInternal(instance.getInstance(), config, uri);
+            XnioSsl ssl = null;
+            for (WebsocketClientSslProvider provider : clientSslProviders) {
+                ssl = provider.getSsl(xnioWorker, aClass, uri);
+                if (ssl != null) {
+                    break;
+                }
+            }
+            return connectToServerInternal(instance.getInstance(), ssl, config, uri);
         } catch (InstantiationException e) {
             throw new RuntimeException(e);
         }
@@ -143,18 +171,26 @@ public class ServerWebSocketContainer implements ServerContainer {
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()), cec);
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation);
+        XnioSsl ssl = null;
+        for (WebsocketClientSslProvider provider : clientSslProviders) {
+            ssl = provider.getSsl(xnioWorker, endpointInstance, cec, path);
+            if (ssl != null) {
+                break;
+            }
+        }
+
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation);
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
         final List<Extension> extensions = new ArrayList<Extension>();
         final Map<String, Extension> extMap = new HashMap<String, Extension>();
-        for(Extension ext : cec.getExtensions()) {
+        for (Extension ext : cec.getExtensions()) {
             extMap.put(ext.getName(), ext);
         }
-        for(WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
+        for (WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
             Extension ext = extMap.get(e.getName());
-            if(ext == null) {
+            if (ext == null) {
                 throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), clientNegotiation.getSupportedExtensions());
             }
             extensions.add(ExtensionImpl.create(e));
@@ -181,21 +217,23 @@ public class ServerWebSocketContainer implements ServerContainer {
         }
     }
 
-    private Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
+    private Session connectToServerInternal(final Endpoint endpointInstance, XnioSsl ssl, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation); //TODO: fix this
+
+
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation); //TODO: fix this
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
         final List<Extension> extensions = new ArrayList<Extension>();
         final Map<String, Extension> extMap = new HashMap<String, Extension>();
-        for(Extension ext : cec.getConfig().getExtensions()) {
+        for (Extension ext : cec.getConfig().getExtensions()) {
             extMap.put(ext.getName(), ext);
         }
-        for(WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
+        for (WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
             Extension ext = extMap.get(e.getName());
-            if(ext == null) {
+            if (ext == null) {
                 throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), clientNegotiation.getSupportedExtensions());
             }
             extensions.add(ExtensionImpl.create(e));
@@ -434,9 +472,9 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     private static List<WebSocketExtension> toExtensionList(final List<Extension> extensions) {
         List<WebSocketExtension> ret = new ArrayList<WebSocketExtension>();
-        for(Extension e : extensions) {
+        for (Extension e : extensions) {
             final List<WebSocketExtension.Parameter> parameters = new ArrayList<WebSocketExtension.Parameter>();
-            for(Extension.Parameter p : e.getParameters()) {
+            for (Extension.Parameter p : e.getParameters()) {
                 parameters.add(new WebSocketExtension.Parameter(p.getName(), p.getValue()));
             }
             ret.add(new WebSocketExtension(e.getName(), parameters));
@@ -457,9 +495,9 @@ public class ServerWebSocketContainer implements ServerContainer {
         public void afterRequest(final Map<String, String> headers) {
 
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
-            if(configurator != null) {
+            if (configurator != null) {
                 final Map<String, List<String>> newHeaders = new HashMap<String, List<String>>();
-                for(Map.Entry<String, String> entry : headers.entrySet()) {
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
                     ArrayList<String> arrayList = new ArrayList<String>();
                     arrayList.add(entry.getValue());
                     newHeaders.put(entry.getKey(), arrayList);
@@ -476,17 +514,17 @@ public class ServerWebSocketContainer implements ServerContainer {
         @Override
         public void beforeRequest(Map<String, String> headers) {
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
-            if(configurator != null) {
+            if (configurator != null) {
                 final Map<String, List<String>> newHeaders = new HashMap<String, List<String>>();
-                for(Map.Entry<String, String> entry : headers.entrySet()) {
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
                     ArrayList<String> arrayList = new ArrayList<String>();
                     arrayList.add(entry.getValue());
                     newHeaders.put(entry.getKey(), arrayList);
                 }
                 configurator.beforeRequest(newHeaders);
                 headers.clear(); //TODO: more efficient way
-                for(Map.Entry<String, List<String>> entry : newHeaders.entrySet()) {
-                    if(!entry.getValue().isEmpty()) {
+                for (Map.Entry<String, List<String>> entry : newHeaders.entrySet()) {
+                    if (!entry.getValue().isEmpty()) {
                         headers.put(entry.getKey(), entry.getValue().get(0));
                     }
                 }

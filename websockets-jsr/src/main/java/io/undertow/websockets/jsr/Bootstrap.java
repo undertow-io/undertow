@@ -38,7 +38,7 @@ public class Bootstrap implements ServletExtension {
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
         setup.addAll(deploymentInfo.getThreadSetupActions());
         final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
-        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), info.getWorker(), info.getBuffers(), threadSetupAction, info.isDispatchToWorkerThread(), false);
+        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), info.getWorker(), info.getBuffers(), threadSetupAction, info.isDispatchToWorkerThread(), false);
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);

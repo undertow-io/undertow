@@ -10,6 +10,7 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioWorker;
 import org.xnio.http.HttpUpgrade;
+import org.xnio.ssl.XnioSsl;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,7 +29,16 @@ public class WebSocketClient {
         return connect(worker, bufferPool, optionMap, uri, version, null);
     }
 
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
+        return connect(worker, ssl, bufferPool, optionMap, uri, version, null);
+    }
+
     public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
+        return connect(worker, null, bufferPool, optionMap, uri, version, clientNegotiation);
+    }
+
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
+
         final FutureResult<WebSocketChannel> ioFuture = new FutureResult<WebSocketChannel>();
         final URI newUri;
         try {
@@ -38,16 +48,27 @@ public class WebSocketClient {
         }
         final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation);
         final Map<String, String> headers = handshake.createHeaders();
-        if(clientNegotiation != null) {
+        if (clientNegotiation != null) {
             clientNegotiation.beforeRequest(headers);
         }
-        IoFuture<StreamConnection> result = HttpUpgrade.performUpgrade(worker, null, newUri, headers, new ChannelListener<StreamConnection>() {
-            @Override
-            public void handleEvent(StreamConnection channel) {
-                WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool);
-                ioFuture.setResult(result);
-            }
-        }, null, optionMap, handshake.handshakeChecker(newUri, headers));
+        IoFuture<? extends StreamConnection> result;
+        if (ssl == null) {
+            result = HttpUpgrade.performUpgrade(worker, ssl, null, newUri, headers, new ChannelListener<StreamConnection>() {
+                @Override
+                public void handleEvent(StreamConnection channel) {
+                    WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool);
+                    ioFuture.setResult(result);
+                }
+            }, null, optionMap, handshake.handshakeChecker(newUri, headers));
+        } else {
+            result = HttpUpgrade.performUpgrade(worker, null, newUri, headers, new ChannelListener<StreamConnection>() {
+                @Override
+                public void handleEvent(StreamConnection channel) {
+                    WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool);
+                    ioFuture.setResult(result);
+                }
+            }, null, optionMap, handshake.handshakeChecker(newUri, headers));
+        }
         result.addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
             @Override
             public void notify(IoFuture<? extends StreamConnection> res, Object attachment) {
