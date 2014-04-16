@@ -46,24 +46,35 @@ public final class ClassUtils {
     public static Map<Class<?>, Boolean> getHandlerTypes(Class<? extends MessageHandler> clazz) {
         Map<Class<?>, Boolean> types = new IdentityHashMap<Class<?>, Boolean>(2);
         for (Class<?> c = clazz; c != Object.class; c = c.getSuperclass()) {
-            for (Type type : c.getGenericInterfaces()) {
-                if (type instanceof ParameterizedType) {
-                    ParameterizedType pt = (ParameterizedType) type;
-                    Type rawType = pt.getRawType();
-                    if (rawType == MessageHandler.Whole.class) {
-                        Type messageType = pt.getActualTypeArguments()[0];
-                        types.put((Class<?>) messageType, Boolean.FALSE);
-                    } else if (rawType == MessageHandler.Partial.class) {
-                        Type messageType = pt.getActualTypeArguments()[0];
-                        types.put((Class<?>) messageType, Boolean.TRUE);
-                    }
-                }
-            }
+            exampleGenericInterfaces(types, c);
         }
         if (types.isEmpty()) {
             throw JsrWebSocketMessages.MESSAGES.unknownHandlerType(clazz);
         }
         return types;
+    }
+
+    private static void exampleGenericInterfaces(Map<Class<?>, Boolean> types, Class<?> c) {
+        for (Type type : c.getGenericInterfaces()) {
+            if (type instanceof ParameterizedType) {
+                ParameterizedType pt = (ParameterizedType) type;
+                Type rawType = pt.getRawType();
+                if (rawType == MessageHandler.Whole.class) {
+                    Type messageType = pt.getActualTypeArguments()[0];
+                    types.put((Class<?>) messageType, Boolean.FALSE);
+                } else if (rawType == MessageHandler.Partial.class) {
+                    Type messageType = pt.getActualTypeArguments()[0];
+                    types.put((Class<?>) messageType, Boolean.TRUE);
+                } else if(rawType instanceof Class) {
+                    Class rawClass = (Class) rawType;
+                    if(rawClass.getGenericInterfaces() != null) {
+                        exampleGenericInterfaces(types, rawClass);
+                    }
+                }
+            } else if(type instanceof Class) {
+                exampleGenericInterfaces(types, (Class)type);
+            }
+        }
     }
 
     /**
