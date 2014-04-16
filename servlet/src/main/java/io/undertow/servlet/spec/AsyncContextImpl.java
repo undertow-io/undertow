@@ -42,6 +42,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.Connectors;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
@@ -49,6 +50,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
@@ -355,7 +357,15 @@ public class AsyncContextImpl implements AsyncContext {
     public <T extends AsyncListener> T createListener(final Class<T> clazz) throws ServletException {
         try {
             InstanceFactory<T> factory = ((ServletContextImpl) this.servletRequest.getServletContext()).getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(clazz);
-            return factory.createInstance().getInstance();
+
+            final InstanceHandle<T> instance = factory.createInstance();
+            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                @Override
+                public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                    instance.release();
+                }
+            });
+            return instance.getInstance();
         } catch (Exception e) {
             throw new ServletException(e);
         }
