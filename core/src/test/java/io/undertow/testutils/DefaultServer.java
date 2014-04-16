@@ -188,7 +188,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (sslServer == null && !isApacheTest()) {
             throw new IllegalStateException("SSL Server not started.");
         }
-        return "https://" + getHostAddress(DEFAULT) + ":" + getHostSSLPort(DEFAULT);
+        return "https://" +  NetworkUtils.formatPossibleIpv6Address(getHostAddress(DEFAULT)) + ":" + getHostSSLPort(DEFAULT);
     }
 
     public DefaultServer(Class<?> klass) throws InitializationError {
