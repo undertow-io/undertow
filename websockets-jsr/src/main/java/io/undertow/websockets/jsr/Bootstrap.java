@@ -38,12 +38,13 @@ public class Bootstrap implements ServletExtension {
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
         setup.addAll(deploymentInfo.getThreadSetupActions());
         final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
-        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), info.getWorker(), info.getBuffers(), threadSetupAction, false);
+        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), info.getWorker(), info.getBuffers(), threadSetupAction, false);
+
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);
             }
-            for(ServerEndpointConfig programatic : info.getProgramaticEndpoints()) {
+            for (ServerEndpointConfig programatic : info.getProgramaticEndpoints()) {
                 container.addEndpoint(programatic);
             }
         } catch (DeploymentException e) {
@@ -63,7 +64,7 @@ public class Bootstrap implements ServletExtension {
             ServerWebSocketContainer container = (ServerWebSocketContainer) sce.getServletContext().getAttribute(ServerContainer.class.getName());
             FilterRegistration.Dynamic filter = sce.getServletContext().addFilter(FILTER_NAME, JsrWebSocketFilter.class);
             filter.setAsyncSupported(true);
-            if(!container.getConfiguredServerEndpoints().isEmpty()){
+            if (!container.getConfiguredServerEndpoints().isEmpty()) {
                 filter.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
             } else {
                 container.setContextToAddFilter((ServletContextImpl) sce.getServletContext());
