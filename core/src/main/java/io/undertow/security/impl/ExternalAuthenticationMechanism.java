@@ -52,7 +52,7 @@ public class ExternalAuthenticationMechanism implements AuthenticationMechanism 
         String name = exchange.getAttachment(EXTERNAL_AUTHENTICATION_TYPE);
         securityContext.authenticationComplete(account, name != null ? name: this.name, false);
 
-        return null;
+        return AuthenticationMechanismOutcome.AUTHENTICATED;
     }
 
     @Override
