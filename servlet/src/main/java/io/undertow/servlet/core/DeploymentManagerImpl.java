@@ -523,6 +523,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 object.stop();
             }
             deployment.getSessionManager().stop();
+            deployment.getApplicationListeners().contextDestroyed();
+            deployment.getApplicationListeners().stop();
         } finally {
             handle.tearDown();
         }

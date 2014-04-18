@@ -33,6 +33,7 @@ import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -75,6 +76,13 @@ public class ServletContextListenerTestCase {
     public void testServletContextInitialized() throws IOException {
         Assert.assertNotNull(ServletContextTestListener.servletContextInitializedEvent);
     }
+    @AfterClass
+    public static void tearDown()throws Exception{
+        manager.stop();
+        manager.undeploy();
+        Assert.assertNotNull(ServletContextTestListener.servletContextDestroyedEvent);
+    }
+
 
     @Test
     public void testServletContextAttributeListener() throws IOException {
