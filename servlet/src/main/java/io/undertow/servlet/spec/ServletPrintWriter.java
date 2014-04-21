@@ -45,10 +45,22 @@ public class ServletPrintWriter {
     public void close() {
         try {
             boolean done = false;
+            CharBuffer buffer;
+            if(underflow == null) {
+                buffer = CharBuffer.wrap(EMPTY_CHAR);
+            } else {
+                buffer = CharBuffer.wrap(underflow);
+                underflow = null;
+            }
             do {
-                CoderResult result = charsetEncoder.encode(CharBuffer.wrap(EMPTY_CHAR), outputStream.underlyingBuffer(), true);
+                CoderResult result = charsetEncoder.encode(buffer, outputStream.underlyingBuffer(), true);
                 if (result.isOverflow()) {
                     outputStream.flushInternal();
+                    if(outputStream.underlyingBuffer().remaining() == 0) {
+                        outputStream.close();
+                        error = true;
+                        return;
+                    }
                 } else {
                     done = true;
                 }
@@ -68,6 +80,10 @@ public class ServletPrintWriter {
         try {
             if (!buffer.hasRemaining()) {
                 outputStream.flushInternal();
+                if(!buffer.hasRemaining()) {
+                    error = true;
+                    return;
+                }
             }
             final CharBuffer cb;
             if(underflow == null) {
@@ -79,12 +95,17 @@ public class ServletPrintWriter {
                 cb = CharBuffer.wrap(newArray);
                 underflow = null;
             }
+            int last = -1;
             while (cb.hasRemaining()) {
                 int remaining = buffer.remaining();
                 CoderResult result = charsetEncoder.encode(cb, buffer, false);
                 outputStream.updateWritten(remaining - buffer.remaining());
                 if (result.isOverflow() || !buffer.hasRemaining()) {
                     outputStream.flushInternal();
+                    if(!buffer.hasRemaining()) {
+                        error = true;
+                        return;
+                    }
                 }
                 if (result.isUnderflow()) {
                     underflow = new char[cb.remaining()];
@@ -95,6 +116,17 @@ public class ServletPrintWriter {
                     error = true;
                     return;
                 }
+                if (result.isUnmappable()) {
+                    //this should not happen
+                    error = true;
+                    return;
+                }
+                if(last == cb.remaining()) {
+                    underflow = new char[cb.remaining()];
+                    cb.get(underflow);
+                    return;
+                }
+                last = cb.remaining();
             }
         } catch (IOException e) {
             error = true;
