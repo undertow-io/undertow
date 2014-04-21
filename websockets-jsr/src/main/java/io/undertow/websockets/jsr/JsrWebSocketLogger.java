@@ -43,7 +43,7 @@ public interface JsrWebSocketLogger extends BasicLogger {
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 26001, value = "Unable to instance endpoint")
-    void endpointCreationFailed(@Cause InstantiationException cause);
+    void endpointCreationFailed(@Cause Exception cause);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 26002, value = "Unable to instance server configuration %s")
