@@ -164,7 +164,11 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
 
     protected void onFullCloseMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
         Pooled<ByteBuffer[]> data = message.getData();
-        WebSockets.sendClose(data.getResource(), channel, new FreeDataCallback(data));
+        if(channel.isCloseFrameSent()) {
+            data.free();
+        } else {
+            WebSockets.sendClose(data.getResource(), channel, new FreeDataCallback(data));
+        }
     }
 
     private static class FreeDataCallback implements WebSocketCallback<Void> {
