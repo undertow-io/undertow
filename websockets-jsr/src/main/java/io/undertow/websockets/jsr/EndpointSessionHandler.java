@@ -80,9 +80,14 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
             //session.setTimeout(getContainer().getMaxSessionIdleTimeout());
             session.getAsyncRemote().setSendTimeout(getContainer().getDefaultAsyncSendTimeout());
-            instance.getInstance().onOpen(session, config.getEndpointConfiguration());
+            try {
+                instance.getInstance().onOpen(session, config.getEndpointConfiguration());
+            } catch (Exception e) {
+                instance.getInstance().onError(session, e);
+                IoUtils.safeClose(session);
+            }
             channel.resumeReceives();
-        } catch (InstantiationException e) {
+        } catch (Exception e) {
             JsrWebSocketLogger.REQUEST_LOGGER.endpointCreationFailed(e);
             IoUtils.safeClose(channel);
         }
