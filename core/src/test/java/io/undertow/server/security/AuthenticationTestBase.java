@@ -259,6 +259,16 @@ public abstract class AuthenticationTestBase {
         assertEquals("Expected EventType not matched.", eventType, notifications.get(0).getEventType());
     }
 
+    protected static void assertNotifiactions(final SecurityNotification.EventType ... eventTypes) {
+        List<SecurityNotification> notifications = auditReceiver.takeNotifications();
+        assertEquals("A single notification is expected.", eventTypes.length, notifications.size());
+        final List<SecurityNotification.EventType> types = new ArrayList<SecurityNotification.EventType>();
+        for(SecurityNotification i : notifications) {
+            types.add(i.getEventType());
+        }
+        assertEquals("Expected EventType not matched.", Arrays.asList(eventTypes), types);
+    }
+
     protected static String getAuthenticatedUser(final HttpServerExchange exchange) {
         SecurityContext context = exchange.getSecurityContext();
         if (context != null) {
@@ -301,6 +311,9 @@ public abstract class AuthenticationTestBase {
             String user = getAuthenticatedUser(exchange);
             if (user != null) {
                 responseHeader.add(AUTHENTICATED_USER, user);
+            }
+            if(exchange.getQueryParameters().get("logout") != null) {
+                exchange.getSecurityContext().logout();
             }
 
             exchange.endExchange();

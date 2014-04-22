@@ -15,6 +15,7 @@ import io.undertow.security.impl.InMemorySingleSignOnManager;
 import io.undertow.security.impl.SingleSignOnAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
@@ -80,6 +81,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, current);
 
         path.addPrefixPath("/test2", current);
+        path.addPrefixPath("/login", new ResponseCodeHandler(401));
 
 
         DefaultServer.setRootHandler(new SessionAttachmentHandler(path, new InMemorySessionManager(""), new SessionCookieConfig()));
@@ -124,5 +126,22 @@ public class SsoTestCase extends AuthenticationTestBase {
         assertEquals("ResponseHandler", values[0].getValue());
         HttpClientUtils.readResponse(result);
         assertSingleNotificationType(SecurityNotification.EventType.AUTHENTICATED);
+
+        //now test that logout will invalidate the SSO session
+        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1?logout=true");
+        get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
+        result = client.execute(get);
+        assertEquals(200, result.getStatusLine().getStatusCode());
+
+        values = result.getHeaders("ProcessedBy");
+        assertEquals(1, values.length);
+        assertEquals("ResponseHandler", values[0].getValue());
+        HttpClientUtils.readResponse(result);
+        assertNotifiactions(SecurityNotification.EventType.AUTHENTICATED, SecurityNotification.EventType.LOGGED_OUT);
+
+
+        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test2");
+        result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
     }
 }
