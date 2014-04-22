@@ -92,9 +92,11 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
     protected long getMaxCloseBufferSize() {
         return -1;
     }
+
     protected long getMaxPingBufferSize() {
         return -1;
     }
+
     protected long getMaxTextBufferSize() {
         return -1;
     }
@@ -164,11 +166,19 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
 
     protected void onFullCloseMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
         Pooled<ByteBuffer[]> data = message.getData();
-        if(channel.isCloseFrameSent()) {
+        try {
+            CloseMessage cm = new CloseMessage(data.getResource());
+            onCloseMessage(cm, channel);
+            if (!channel.isCloseFrameSent()) {
+                WebSockets.sendClose(cm.toByteBuffer(), channel, null);
+            }
+        } finally {
             data.free();
-        } else {
-            WebSockets.sendClose(data.getResource(), channel, new FreeDataCallback(data));
         }
+    }
+
+    protected void onCloseMessage(CloseMessage cm, WebSocketChannel channel) {
+
     }
 
     private static class FreeDataCallback implements WebSocketCallback<Void> {
