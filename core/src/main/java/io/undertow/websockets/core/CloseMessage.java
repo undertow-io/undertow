@@ -30,8 +30,8 @@ public class CloseMessage {
 
     private static final Charset utf8 = Charset.forName("UTF-8");
 
-    private final int reason;
-    private final String string;
+    private final int code;
+    private final String reason;
  /*
     * For the exact meaning of the codes refer to the <a href="http://tools.ietf.org/html/rfc6455#section-7.4">WebSocket
     * RFC Section 7.4</a>.
@@ -48,31 +48,31 @@ public class CloseMessage {
 
     public CloseMessage(final ByteBuffer buffer) {
         assert buffer.remaining() >= 2;
-        reason = (buffer.get() & 0XFF) << 8 | (buffer.get() & 0xFF);
-        string = new UTF8Output(buffer).extract();
+        code = (buffer.get() & 0XFF) << 8 | (buffer.get() & 0xFF);
+        reason = new UTF8Output(buffer).extract();
     }
 
-    public CloseMessage(int reason, String string) {
+    public CloseMessage(int code, String reason) {
+        this.code = code;
         this.reason = reason;
-        this.string = string;
     }
 
     public CloseMessage(final ByteBuffer[] buffers) {
         this(WebSockets.mergeBuffers(buffers));
     }
 
-    public int getReason() {
+    public String getReason() {
         return reason;
     }
 
-    public String getString() {
-        return string;
+    public int getCode() {
+        return code;
     }
 
     public ByteBuffer toByteBuffer() {
-        byte[] data = string.getBytes(utf8);
+        byte[] data = reason.getBytes(utf8);
         ByteBuffer buffer = ByteBuffer.allocate(data.length + 2);
-        buffer.putShort((short)reason);
+        buffer.putShort((short) code);
         buffer.put(data);
         buffer.flip();
         return buffer;

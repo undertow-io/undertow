@@ -203,7 +203,7 @@ public class AnnotatedEndpoint extends Endpoint {
                         final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
                         params.put(Session.class, session);
                         params.put(Map.class, session.getPathParameters());
-                        params.put(CloseReason.class, new CloseReason(CloseReason.CloseCodes.getCloseCode(cm.getReason()), cm.getString()));
+                        params.put(CloseReason.class, new CloseReason(CloseReason.CloseCodes.getCloseCode(cm.getCode()), cm.getReason()));
                         invokeMethod(params, webSocketClose, session);
                     } catch (Exception e) {
                         AnnotatedEndpoint.this.onError(session, e);
