@@ -21,8 +21,8 @@ package io.undertow.server.handlers.form;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.undertow.UndertowMessages;
@@ -35,7 +35,7 @@ import io.undertow.util.HeaderMap;
  */
 public final class FormData implements Iterable<String> {
 
-    private final Map<String, Deque<FormValue>> values = new HashMap<String, Deque<FormValue>>();
+    private final Map<String, Deque<FormValue>> values = new LinkedHashMap<String, Deque<FormValue>>();
 
     private final int maxValues;
     private int valueCount = 0;
