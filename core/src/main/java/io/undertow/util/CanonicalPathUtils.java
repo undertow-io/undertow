@@ -128,17 +128,15 @@ public class CanonicalPathUtils {
                 }
             }
         }
-        //the path is pointing at a higher directory than the root
-        //so we just return /
-        if (eatCount > 0) {
-            return "/";
-        }
         final StringBuilder result = new StringBuilder();
         if (tokenEnd != 0) {
             result.append(path.substring(0, tokenEnd));
         }
         for (int i = parts.size() - 1; i >= 0; --i) {
             result.append(parts.get(i));
+        }
+        if(result.length() == 0) {
+            return "/";
         }
         return result.toString();
     }
