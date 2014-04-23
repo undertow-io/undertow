@@ -58,6 +58,7 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("/b", CanonicalPathUtils.canonicalize("/a/../c/../e/../b"));
         Assert.assertEquals("/b", CanonicalPathUtils.canonicalize("/a/c/../../b"));
         Assert.assertEquals("/", CanonicalPathUtils.canonicalize("/a/../.."));
+        Assert.assertEquals("/foo", CanonicalPathUtils.canonicalize("/a/../../foo"));
 
         //preserve trailing /
         Assert.assertEquals("/a/", CanonicalPathUtils.canonicalize("/a/"));
