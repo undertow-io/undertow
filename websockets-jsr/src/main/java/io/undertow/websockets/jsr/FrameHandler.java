@@ -29,6 +29,7 @@ import io.undertow.websockets.jsr.util.ClassUtils;
 import org.xnio.Buffers;
 import org.xnio.Pooled;
 
+import javax.websocket.CloseReason;
 import javax.websocket.DecodeException;
 import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
@@ -84,9 +85,10 @@ class FrameHandler extends AbstractReceiveListener {
             public void run() {
                 WebSockets.sendClose(toSend, channel, null);
                 try {
-                    if (singleBuffer.remaining() > 2) {
-                        final int code = singleBuffer.getShort();
-                        session.close(new javax.websocket.CloseReason(javax.websocket.CloseReason.CloseCodes.getCloseCode(code), new UTF8Output(singleBuffer).extract()));
+                    if (singleBuffer.remaining() > 1) {
+                        final CloseReason.CloseCode code = CloseReason.CloseCodes.getCloseCode(singleBuffer.getShort());
+                        final String reasonPhrase = singleBuffer.remaining() > 1 ? new UTF8Output(singleBuffer).extract() : null;
+                        session.close(new CloseReason(code, reasonPhrase));
                     } else {
                         session.close();
                     }
