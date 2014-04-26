@@ -362,7 +362,11 @@ public class AsyncContextImpl implements AsyncContext {
             exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                 @Override
                 public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                    instance.release();
+                    try {
+                        instance.release();
+                    } finally {
+                        nextListener.proceed();
+                    }
                 }
             });
             return instance.getInstance();
