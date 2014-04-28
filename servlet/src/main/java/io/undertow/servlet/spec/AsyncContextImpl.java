@@ -70,7 +70,6 @@ import org.xnio.XnioExecutor;
 public class AsyncContextImpl implements AsyncContext {
 
     public static final AttachmentKey<Boolean> ASYNC_SUPPORTED = AttachmentKey.create(Boolean.class);
-    public static final AttachmentKey<Executor> ASYNC_EXECUTOR = AttachmentKey.create(Executor.class);
 
     private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<BoundAsyncListener>();
 
@@ -328,9 +327,9 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private Executor asyncExecutor() {
-        Executor executor = exchange.getAttachment(ASYNC_EXECUTOR);
+        Executor executor = servletRequestContext.getDeployment().getAsyncExecutor();
         if (executor == null) {
-            executor = exchange.getDispatchExecutor();
+            executor = servletRequestContext.getDeployment().getExecutor();
         }
         if (executor == null) {
             executor = exchange.getConnection().getWorker();
