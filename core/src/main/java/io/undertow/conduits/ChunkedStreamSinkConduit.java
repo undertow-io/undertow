@@ -83,7 +83,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private int chunkleft = 0;
 
     private final ByteBuffer chunkingBuffer = ByteBuffer.allocate(12); //12 is the most
-    private final ByteBuffer chunkingSepBuffer = ByteBuffer.allocate(2);
+    private final ByteBuffer chunkingSepBuffer;
     private Pooled<ByteBuffer> lastChunkBuffer;
 
 
@@ -118,6 +118,8 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         this.finishListener = finishListener;
         this.attachable = attachable;
         config = (configurable ? CONF_FLAG_CONFIGURABLE : 0) | (passClose ? CONF_FLAG_PASS_CLOSE : 0);
+        chunkingSepBuffer = ByteBuffer.allocate(2);
+        chunkingSepBuffer.flip();
     }
 
     @Override
@@ -135,7 +137,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         }
         this.state |= FLAG_FIRST_DATA_WRITTEN;
         int oldLimit = src.limit();
-        if (chunkleft == 0) {
+        if (chunkleft == 0 && !chunkingSepBuffer.hasRemaining()) {
             chunkingBuffer.clear();
             written += src.remaining();
             putIntAsHexString(chunkingBuffer, src.remaining());
@@ -314,6 +316,10 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         ByteBuffer lastChunkBuffer = this.lastChunkBuffer.getResource();
         if (writeFinal) {
             lastChunkBuffer.put(CRLF);
+        } else if(chunkingSepBuffer.hasRemaining()) {
+            //the end of chunk /r/n has not been written yet
+            //just add it to this buffer to make managing state easier
+            lastChunkBuffer.put(chunkingSepBuffer);
         }
         lastChunkBuffer.put(LAST_CHUNK);
         //we just assume it will fit
