@@ -39,6 +39,7 @@ import org.xnio.ssl.XnioSsl;
 import javax.servlet.DispatcherType;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.ClientEndpointConfig;
+import javax.websocket.CloseReason;
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
 import javax.websocket.Extension;
@@ -47,6 +48,7 @@ import javax.websocket.Session;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpoint;
 import javax.websocket.server.ServerEndpointConfig;
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -68,7 +70,7 @@ import java.util.concurrent.Executor;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class ServerWebSocketContainer implements ServerContainer {
+public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
 
     private final ClassIntrospecter classIntrospecter;
@@ -454,6 +456,19 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     public void setContextToAddFilter(ServletContextImpl contextToAddFilter) {
         this.contextToAddFilter = contextToAddFilter;
+    }
+
+    @Override
+    public synchronized void close() {
+        for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
+            for (Session session : endpoint.getOpenSessions()) {
+                try {
+                    session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, ""));
+                } catch (Exception e) {
+                    JsrWebSocketLogger.ROOT_LOGGER.couldNotCloseOnUndeploy(e);
+                }
+            }
+        }
     }
 
     private static final class ServerInstanceFactoryConfigurator extends ServerEndpointConfig.Configurator {
