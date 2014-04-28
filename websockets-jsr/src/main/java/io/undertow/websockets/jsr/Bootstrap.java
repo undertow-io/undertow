@@ -59,9 +59,11 @@ public class Bootstrap implements ServletExtension {
 
     private static final class WebSocketListener implements ServletContextListener {
 
+        private ServerWebSocketContainer container;
+
         @Override
         public void contextInitialized(ServletContextEvent sce) {
-            ServerWebSocketContainer container = (ServerWebSocketContainer) sce.getServletContext().getAttribute(ServerContainer.class.getName());
+            container = (ServerWebSocketContainer) sce.getServletContext().getAttribute(ServerContainer.class.getName());
             FilterRegistration.Dynamic filter = sce.getServletContext().addFilter(FILTER_NAME, JsrWebSocketFilter.class);
             filter.setAsyncSupported(true);
             if (!container.getConfiguredServerEndpoints().isEmpty()) {
@@ -74,7 +76,7 @@ public class Bootstrap implements ServletExtension {
         @Override
         public void contextDestroyed(ServletContextEvent sce) {
             SecurityActions.removeContainer(sce.getServletContext().getClassLoader());
-
+            container.close();
         }
     }
 

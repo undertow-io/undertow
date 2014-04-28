@@ -1,6 +1,7 @@
 package io.undertow.websockets.jsr;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -46,6 +47,8 @@ public class ConfiguredServerEndpoint {
     }
 
     public Set<Session> getOpenSessions() {
-        return openSessions;
+        synchronized (openSessions) {
+            return new HashSet<Session>(openSessions);
+        }
     }
 }

@@ -69,4 +69,7 @@ public interface JsrWebSocketLogger extends BasicLogger {
     @Message(id = 26007, value = "On Endpoint class %s path param %s on method %s does not reference a valid parameter, valid parameters are %s.")
     void pathTemplateNotFound(Class<?> endpointClass, PathParam param, Method method, Set<String> paths);
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 26008, value = "Could not close endpoint on undeploy.")
+    void couldNotCloseOnUndeploy(@Cause Exception e);
 }
