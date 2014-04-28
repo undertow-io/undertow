@@ -79,6 +79,13 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         if (src.remaining() == 0) {
             return 0;
         }
+        //we may already have some input, if so compress it
+        if(!deflater.needsInput()) {
+            deflateData();
+            if(!deflater.needsInput()) {
+                return 0;
+            }
+        }
         byte[] data = new byte[src.remaining()];
         src.get(data);
         preDeflate(data);
