@@ -608,11 +608,17 @@ public class JsrWebSocketServer07Test {
             public void onOpen(final Session session, EndpointConfig config) {
                 connected.set(true);
                 session.addMessageHandler(new MessageHandler.Partial<String>() {
+
+                    StringBuilder sb = new StringBuilder();
+
                     @Override
                     public void onMessage(String message, boolean last) {
-                        Assert.assertTrue(last);
+                        sb.append(message);
+                        if(!last) {
+                            return;
+                        }
                         try {
-                            session.getBasicRemote().sendText(message);
+                            session.getBasicRemote().sendText(sb.toString());
                         } catch (IOException e) {
                             e.printStackTrace();
                             cause.set(e);
