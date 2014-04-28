@@ -178,11 +178,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             }
 
             final MultipartParser.ParseState parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes(), exchange.getRequestCharset());
-            final Pooled<ByteBuffer> resource = exchange.getConnection().getBufferPool().allocate();
             StreamSourceChannel requestChannel = exchange.getRequestChannel();
             if (requestChannel == null) {
                 throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
             }
+            final Pooled<ByteBuffer> resource = exchange.getConnection().getBufferPool().allocate();
             final ByteBuffer buf = resource.getResource();
             try {
                 while (!parser.isComplete()) {
@@ -294,10 +294,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         @Override
         public void close() throws IOException {
             //we have to dispatch this, as it may result in file IO
-            exchange.dispatch(new Runnable() {
+            final List<File> files = new ArrayList<File>(getCreatedFiles());
+            exchange.getConnection().getWorker().execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (final File file : getCreatedFiles()) {
+                    for (final File file : files) {
                         if (file.exists()) {
                             if (!file.delete()) {
                                 UndertowLogger.REQUEST_LOGGER.cannotRemoveUploadedFile(file);
