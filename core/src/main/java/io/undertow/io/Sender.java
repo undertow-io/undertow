@@ -14,8 +14,6 @@ import java.nio.charset.Charset;
  * lead to stack overflows if send is called many times.
  *
  *
- * TODO: Look at more closely aligning this with the web socket senders
- *
  * @author Stuart Douglas
  */
 public interface Sender {
@@ -76,7 +74,6 @@ public interface Sender {
      * The CharSequence is encoded to UTF8
      *
      * @param data     The data to send
-     * @param callback The callback
      */
     void send(final String data);
 
@@ -85,7 +82,6 @@ public interface Sender {
      *
      * @param data     The buffer to end.
      * @param charset  The charset to use
-     * @param callback The callback
      */
     void send(final String data, final Charset charset);
 

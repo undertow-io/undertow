@@ -21,6 +21,7 @@ package io.undertow.testutils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -43,13 +44,14 @@ public class HttpClientUtils {
     }
 
     public static String readResponse(InputStream stream) throws IOException {
-        final StringBuilder builder = new StringBuilder();
+
         byte[] data = new byte[100];
         int read;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         while ((read = stream.read(data)) != -1) {
-            builder.append(new String(data,0,read,"UTF-8"));
+            out.write(data, 0, read);
         }
-        return builder.toString();
+        return new String(out.toByteArray(), Charset.forName("UTF-8"));
     }
 
     public static byte[] readRawResponse(final HttpResponse response) throws IOException {
