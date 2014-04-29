@@ -93,7 +93,7 @@ public class AccessLogFileTestCase {
     private void verifySingleLogMessageToFile(File logFileName, DefaultAccessLogReceiver logReceiver) throws IOException, InterruptedException {
 
         CompletionLatchHandler latchHandler;
-        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header} %{i,non-existent}", AccessLogFileTestCase.class.getClassLoader())));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -103,7 +103,7 @@ public class AccessLogFileTestCase {
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latchHandler.await();
             logReceiver.awaitWrittenForTest();
-            Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header single-val\n", FileUtils.readFile(logFileName));
+            Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header single-val -\n", FileUtils.readFile(logFileName));
         } finally {
             client.getConnectionManager().shutdown();
         }

@@ -38,8 +38,10 @@ import io.undertow.UndertowMessages;
 public class ExchangeAttributeParser {
 
     private final List<ExchangeAttributeBuilder> builders;
+    private final List<ExchangeAttributeWrapper> wrappers;
 
-    ExchangeAttributeParser(final ClassLoader classLoader) {
+    ExchangeAttributeParser(final ClassLoader classLoader, List<ExchangeAttributeWrapper> wrappers) {
+        this.wrappers = wrappers;
         ServiceLoader<ExchangeAttributeBuilder> loader = ServiceLoader.load(ExchangeAttributeBuilder.class, classLoader);
         final List<ExchangeAttributeBuilder> builders = new ArrayList<ExchangeAttributeBuilder>();
         for (ExchangeAttributeBuilder instance : loader) {
@@ -71,7 +73,7 @@ public class ExchangeAttributeParser {
                 case 0: {
                     if (c == '%' || c == '$') {
                         if (pos != i) {
-                            attributes.add(parseSingleToken(valueString.substring(pos, i)));
+                            attributes.add(wrap(parseSingleToken(valueString.substring(pos, i))));
                             pos = i;
                         }
                         if (c == '%') {
@@ -87,11 +89,11 @@ public class ExchangeAttributeParser {
                         state = 2;
                     } else if (c == '%') {
                         //literal percent
-                        attributes.add(new ConstantExchangeAttribute("%"));
+                        attributes.add(wrap(new ConstantExchangeAttribute("%")));
                         pos = i + 1;
                         state = 0;
                     } else {
-                        attributes.add(parseSingleToken(valueString.substring(pos, i + 1)));
+                        attributes.add(wrap(parseSingleToken(valueString.substring(pos, i + 1))));
                         pos = i + 1;
                         state = 0;
                     }
@@ -99,7 +101,7 @@ public class ExchangeAttributeParser {
                 }
                 case 2: {
                     if (c == '}') {
-                        attributes.add(parseSingleToken(valueString.substring(pos, i + 1)));
+                        attributes.add(wrap(parseSingleToken(valueString.substring(pos, i + 1))));
                         pos = i + 1;
                         state = 0;
                     }
@@ -115,7 +117,7 @@ public class ExchangeAttributeParser {
                 }
                 case 4: {
                     if (c == '}') {
-                        attributes.add(parseSingleToken(valueString.substring(pos, i + 1)));
+                        attributes.add(wrap(parseSingleToken(valueString.substring(pos, i + 1))));
                         pos = i + 1;
                         state = 0;
                     }
@@ -129,7 +131,7 @@ public class ExchangeAttributeParser {
             case 1:
             case 3:{
                 if(pos != valueString.length()) {
-                    attributes.add(parseSingleToken(valueString.substring(pos)));
+                    attributes.add(wrap(parseSingleToken(valueString.substring(pos))));
                 }
                 break;
             }
@@ -155,6 +157,14 @@ public class ExchangeAttributeParser {
             UndertowLogger.ROOT_LOGGER.unknownVariable(token);
         }
         return new ConstantExchangeAttribute(token);
+    }
+
+    private ExchangeAttribute wrap(ExchangeAttribute attribute) {
+        ExchangeAttribute res = attribute;
+        for(ExchangeAttributeWrapper w : wrappers) {
+            res = w.wrap(res);
+        }
+        return res;
     }
 
 }

@@ -21,6 +21,7 @@ package io.undertow.server.handlers.accesslog;
 
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.attribute.SubstituteEmptyWrapper;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -92,7 +93,7 @@ public class AccessLogHandler implements HttpHandler {
         this.next = next;
         this.accessLogReceiver = accessLogReceiver;
         this.formatString = handleCommonNames(formatString);
-        this.tokens = ExchangeAttributes.parser(classLoader).parse(this.formatString);
+        this.tokens = ExchangeAttributes.parser(classLoader, new SubstituteEmptyWrapper("-")).parse(this.formatString);
     }
 
     private static String handleCommonNames(String formatString) {
