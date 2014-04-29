@@ -1,0 +1,35 @@
+
+RULE handling NEED_WRAP
+CLASS org.xnio.ssl.JsseConnectedSslStreamChannel
+METHOD handleHandshake
+#AT INVOKE org.xnio.ssl.JsseConnectedSslStreamChannel.handleWrapResult
+AFTER INVOKE org.xnio.Pooled.getResource 1
+IF TRUE
+DO
+    debug("Read is trying to wrap as a result of NEED_WRAP... wait for the channel to be closed"),
+    signalWake("handleHandshake at invoke handleWrapResult", true),
+    waitFor("channel closed"),
+    debug("Proceeding with handleWrapResult")
+ENDRULE
+
+RULE before close channel
+CLASS org.xnio.ssl.JsseConnectedSslStreamChannel
+METHOD closeAction
+AT ENTRY
+IF TRUE 
+DO
+    debug("Channel is closing... waiting for handleHandshake first"),
+    waitFor("handleHandshake at invoke handleWrapResult"),
+    debug("Proceeding with closeAction")
+ENDRULE
+
+
+RULE after close channel
+CLASS org.xnio.ssl.JsseConnectedSslStreamChannel
+METHOD closeAction
+AT EXIT
+IF TRUE 
+DO
+    debug("Channel is closed... waking read"),
+    signalWake("channel closed", true)
+ENDRULE

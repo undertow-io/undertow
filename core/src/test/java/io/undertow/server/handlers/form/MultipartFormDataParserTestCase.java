@@ -19,7 +19,6 @@
 package io.undertow.server.handlers.form;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.Charset;
 
 import io.undertow.server.HttpHandler;
@@ -52,9 +51,12 @@ public class MultipartFormDataParserTestCase {
         HttpHandler fd = new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                System.out.println("In handler");
                 final FormDataParser parser = FormParserFactory.builder().build().createParser(exchange);
+                System.out.println("Created parser");
                 try {
                     FormData data = parser.parseBlocking();
+                    System.out.println("done parsing");
                     exchange.setResponseCode(500);
                     if (data.getFirst("formValue").getValue().equals("myValue")) {
                         FormData.FormValue file = data.getFirst("file");
@@ -67,7 +69,7 @@ public class MultipartFormDataParserTestCase {
                         }
                     }
                     exchange.endExchange();
-                } catch (IOException e) {
+                } catch (Throwable e) {
                     e.printStackTrace();
                     exchange.setResponseCode(500);
                     exchange.endExchange();
