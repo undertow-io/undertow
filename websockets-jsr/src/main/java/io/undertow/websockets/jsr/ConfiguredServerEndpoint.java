@@ -1,16 +1,14 @@
 package io.undertow.websockets.jsr;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.WeakHashMap;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.util.PathTemplate;
 
 import javax.websocket.Endpoint;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpointConfig;
-
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.util.PathTemplate;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Stuart Douglas
@@ -21,7 +19,7 @@ public class ConfiguredServerEndpoint {
     private final InstanceFactory<Endpoint> endpointFactory;
     private final PathTemplate pathTemplate;
     private final EncodingFactory encodingFactory;
-    private final Set<Session> openSessions = Collections.newSetFromMap(Collections.synchronizedMap(new WeakHashMap<Session, Boolean>()));
+    private final Set<Session> openSessions = Collections.newSetFromMap(new ConcurrentHashMap<Session, Boolean>());
 
     public ConfiguredServerEndpoint(final ServerEndpointConfig endpointConfiguration, final InstanceFactory<Endpoint> endpointFactory, final PathTemplate pathTemplate, final EncodingFactory encodingFactory) {
         this.endpointConfiguration = endpointConfiguration;
@@ -47,8 +45,6 @@ public class ConfiguredServerEndpoint {
     }
 
     public Set<Session> getOpenSessions() {
-        synchronized (openSessions) {
-            return new HashSet<Session>(openSessions);
-        }
+        return openSessions;
     }
 }
