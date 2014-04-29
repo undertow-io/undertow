@@ -3,6 +3,9 @@ package io.undertow.attribute;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
 
+import java.util.Arrays;
+import java.util.Collections;
+
 /**
  * Utility class for retrieving exchange attributes
  *
@@ -11,7 +14,11 @@ import io.undertow.util.HttpString;
 public class ExchangeAttributes {
 
     public static ExchangeAttributeParser parser(final ClassLoader classLoader) {
-         return new ExchangeAttributeParser(classLoader);
+         return new ExchangeAttributeParser(classLoader, Collections.<ExchangeAttributeWrapper>emptyList());
+    }
+
+    public static ExchangeAttributeParser parser(final ClassLoader classLoader, ExchangeAttributeWrapper ... wrappers) {
+        return new ExchangeAttributeParser(classLoader, Arrays.asList(wrappers));
     }
 
     public static ExchangeAttribute cookie(final String cookieName) {
