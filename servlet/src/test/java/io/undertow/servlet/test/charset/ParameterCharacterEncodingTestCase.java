@@ -1,12 +1,5 @@
 package io.undertow.servlet.test.charset;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.servlet.ServletException;
-
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
@@ -24,6 +17,13 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import javax.servlet.ServletException;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.undertow.servlet.Servlets.multipartConfig;
 
@@ -44,9 +44,9 @@ public class ParameterCharacterEncodingTestCase {
     public void testUrlCharacterEncoding() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            String message = "abcčšž";
+            String message = "abc (\"čšž\")";
             String charset = "UTF-8";
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=" + charset + "&message=" + message);
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=" + charset + "&message=" + URLEncoder.encode(message, "UTF-8"));
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
@@ -56,6 +56,21 @@ public class ParameterCharacterEncodingTestCase {
         }
     }
 
+    @Test
+    public void testUrlPathEncodings() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String message = "abc(\"čšž\")";
+            String charset = "UTF-8";
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + URLEncoder.encode(message, "UTF-8") + "?charset=" + charset);
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(message, response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
     @Test
     public void testMultipartCharacterEncoding() throws IOException {

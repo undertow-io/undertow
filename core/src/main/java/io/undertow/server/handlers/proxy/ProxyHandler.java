@@ -516,6 +516,13 @@ public final class ProxyHandler implements HttpHandler {
                 return realEncode(part, pos);
             }
         }
+        if (pos != part.length()) {
+            String original = part.substring(pos);
+            String encoded = URLEncoder.encode(original, UTF_8);
+            if (!encoded.equals(original)) {
+                return realEncode(part, pos);
+            }
+        }
         return part;
     }
 
