@@ -40,6 +40,9 @@ public class EchoServlet extends HttpServlet {
         }
         PrintWriter writer = resp.getWriter();
         String message = req.getParameter("message");
+        if(message == null) {
+            message = req.getServletPath().substring(1);
+        }
         System.out.println("Received message: " + message);
         writer.write(message);
         writer.close();
