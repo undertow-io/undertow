@@ -70,7 +70,7 @@ public class WebSocketClient {
             clientNegotiation.beforeRequest(headers);
         }
         IoFuture<? extends StreamConnection> result;
-        if (ssl == null) {
+        if (ssl != null) {
             result = HttpUpgrade.performUpgrade(worker, ssl, null, newUri, headers, new ChannelListener<StreamConnection>() {
                 @Override
                 public void handleEvent(StreamConnection channel) {
