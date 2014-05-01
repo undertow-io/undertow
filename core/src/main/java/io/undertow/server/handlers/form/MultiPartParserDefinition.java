@@ -18,16 +18,6 @@
 
 package io.undertow.server.handlers.form;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Executor;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -44,8 +34,17 @@ import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executor;
+
 /**
- *
  * @author Stuart Douglas
  */
 public class MultiPartParserDefinition implements FormParserFactory.ParserDefinition {
@@ -73,11 +72,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
             String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
-            if(boundary == null) {
+            if (boundary == null) {
                 UndertowLogger.REQUEST_LOGGER.debugf("Could not find boundary in multipart request with ContentType: %s, multipart data will not be available", mimeType);
                 return null;
             }
-            final MultiPartUploadHandler parser =  new MultiPartUploadHandler(exchange, boundary, maxIndividualFileSize, defaultEncoding);
+            final MultiPartUploadHandler parser = new MultiPartUploadHandler(exchange, boundary, maxIndividualFileSize, defaultEncoding);
             exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                 @Override
                 public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
@@ -185,13 +184,17 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             final Pooled<ByteBuffer> resource = exchange.getConnection().getBufferPool().allocate();
             final ByteBuffer buf = resource.getResource();
             try {
-                while (!parser.isComplete()) {
+                while (true) {
                     buf.clear();
                     requestChannel.awaitReadable();
                     int c = requestChannel.read(buf);
                     buf.flip();
                     if (c == -1) {
-                        throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
+                        if (parser.isComplete()) {
+                            break;
+                        } else {
+                            throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
+                        }
                     } else if (c != 0) {
                         parser.parse(buf);
                     }
@@ -242,7 +245,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         @Override
         public void data(final ByteBuffer buffer) throws IOException {
             this.currentFileSize += buffer.remaining();
-            if(this.maxIndividualFileSize > 0 && this.currentFileSize > this.maxIndividualFileSize) {
+            if (this.maxIndividualFileSize > 0 && this.currentFileSize > this.maxIndividualFileSize) {
                 throw UndertowMessages.MESSAGES.maxFileSizeExceeded(this.maxIndividualFileSize);
             }
             if (file == null) {
