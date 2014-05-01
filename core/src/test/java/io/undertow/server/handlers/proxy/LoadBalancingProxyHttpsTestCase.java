@@ -80,8 +80,8 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
         JsseXnioSsl ssl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext());
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl)
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl)
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, false))
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, false))
                 , 10000, ResponseCodeHandler.HANDLE_404));
     }
 

@@ -25,6 +25,7 @@ import io.undertow.server.handlers.proxy.ProxyCallback;
 import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.server.handlers.proxy.ProxyConnectionPool;
+import org.xnio.OptionMap;
 import org.xnio.ssl.XnioSsl;
 
 import java.net.URI;
@@ -92,7 +93,7 @@ public class Node {
             synchronized (this) {
                 if(connectionPool == null) {
                     try {
-                        connectionPool = new ProxyConnectionPool(connectionPoolManager, new URI(nodeConfig.getType(), null, nodeConfig.getHostname(), nodeConfig.getPort(), "/", "", ""), xnioSsl, client);
+                        connectionPool = new ProxyConnectionPool(connectionPoolManager, new URI(nodeConfig.getType(), null, nodeConfig.getHostname(), nodeConfig.getPort(), "/", "", ""), xnioSsl, client, OptionMap.EMPTY);
                     } catch (URISyntaxException e) {
                         throw new RuntimeException(e);
                     }

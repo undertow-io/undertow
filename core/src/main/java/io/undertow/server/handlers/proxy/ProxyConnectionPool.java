@@ -19,7 +19,6 @@
 package io.undertow.server.handlers.proxy;
 
 import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
@@ -60,6 +59,8 @@ public class ProxyConnectionPool implements Closeable {
 
     private final ConnectionPoolManager connectionPoolManager;
 
+    private final OptionMap options;
+
     /**
      * flag that is set when a problem is detected with this host. It will be taken out of consideration
      * until the flag is cleared.
@@ -75,15 +76,16 @@ public class ProxyConnectionPool implements Closeable {
 
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<XnioIoThread, HostThreadData>();
 
-    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, UndertowClient client) {
-        this(connectionPoolManager, uri, null, client);
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, UndertowClient client, OptionMap options) {
+        this(connectionPoolManager, uri, null, client, options);
     }
 
-    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, XnioSsl ssl, UndertowClient client) {
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, XnioSsl ssl, UndertowClient client, OptionMap options) {
         this.connectionPoolManager = connectionPoolManager;
         this.uri = uri;
         this.ssl = ssl;
         this.client = client;
+        this.options = options;
     }
 
     public URI getUri() {
@@ -183,7 +185,7 @@ public class ProxyConnectionPool implements Closeable {
                 scheduleFailedHostRetry(exchange);
                 callback.failed(exchange);
             }
-        }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
+        }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
     }
 
     private void redistributeQueued(HostThreadData hostData) {
@@ -259,7 +261,7 @@ public class ProxyConnectionPool implements Closeable {
                     public void failed(IOException e) {
                         scheduleFailedHostRetry(exchange);
                     }
-                }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
+                }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
             }
         }, connectionPoolManager.getProblemServerRetry(), TimeUnit.SECONDS);
     }

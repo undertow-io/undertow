@@ -34,6 +34,7 @@ import org.xnio.XnioWorker;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -92,20 +93,24 @@ public class HttpClientProvider implements ClientProvider {
         return new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
-                handleConnected(connection, listener, uri, ssl, bufferPool, options);
+                handleConnected(connection, listener, bufferPool, options);
             }
         };
     }
 
 
-    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
         if (options.get(UndertowOptions.ENABLE_SPDY, false) && connection instanceof SslConnection && SpdyClientProvider.isEnabled()) {
-            SpdyClientProvider.handlePotentialSpdyConnection(connection, listener, uri, ssl, bufferPool, options, new ChannelListener<SslConnection>() {
-                @Override
-                public void handleEvent(SslConnection channel) {
-                    listener.completed(new HttpClientConnection(connection, options, bufferPool));
-                }
-            });
+            try {
+                SpdyClientProvider.handlePotentialSpdyConnection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
+                    @Override
+                    public void handleEvent(SslConnection channel) {
+                        listener.completed(new HttpClientConnection(connection, options, bufferPool));
+                    }
+                });
+            } catch (Exception e) {
+                listener.failed(new IOException(e));
+            }
         } else {
             listener.completed(new HttpClientConnection(connection, options, bufferPool));
         }

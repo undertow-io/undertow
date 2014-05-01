@@ -25,6 +25,7 @@ import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.CopyOnWriteMap;
+import org.xnio.OptionMap;
 import org.xnio.ssl.XnioSsl;
 
 import java.net.URI;
@@ -161,7 +162,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl) {
 
-        ProxyConnectionPool pool = new ProxyConnectionPool(manager, host, ssl, client);
+        ProxyConnectionPool pool = new ProxyConnectionPool(manager, host, ssl, client, OptionMap.EMPTY);
         Host h = new Host(pool, jvmRoute, host, ssl);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];
@@ -173,6 +174,23 @@ public class LoadBalancingProxyClient implements ProxyClient {
         }
         return this;
     }
+
+
+    public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl, OptionMap options) {
+
+        ProxyConnectionPool pool = new ProxyConnectionPool(manager, host, ssl, client, options);
+        Host h = new Host(pool, jvmRoute, host, ssl);
+        Host[] existing = hosts;
+        Host[] newHosts = new Host[existing.length + 1];
+        System.arraycopy(existing, 0, newHosts, 0, existing.length);
+        newHosts[existing.length] = h;
+        this.hosts = newHosts;
+        if (jvmRoute != null) {
+            this.routes.put(jvmRoute, h);
+        }
+        return this;
+    }
+
     public synchronized LoadBalancingProxyClient removeHost(final URI uri) {
         int found = -1;
         Host[] existing = hosts;

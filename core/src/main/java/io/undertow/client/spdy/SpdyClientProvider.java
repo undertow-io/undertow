@@ -132,7 +132,7 @@ public class SpdyClientProvider implements ClientProvider {
     }
 
     private void handleConnected(StreamConnection connection, final ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
-        handlePotentialSpdyConnection(connection, listener, uri, ssl, bufferPool, options, new ChannelListener<SslConnection>() {
+        handlePotentialSpdyConnection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
             @Override
             public void handleEvent(SslConnection channel) {
                 listener.failed(UndertowMessages.MESSAGES.spdyNotSupported());
@@ -147,7 +147,7 @@ public class SpdyClientProvider implements ClientProvider {
     /**
      * Not really part of the public API, but is used by the HTTP client to initiate a SPDY connection for HTTPS requests.
      */
-    public static void handlePotentialSpdyConnection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> spdyFailedListener) {
+    public static void handlePotentialSpdyConnection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> spdyFailedListener) {
         final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(listener, connection, options, bufferPool);
         final SslConnection sslConnection = (SslConnection) connection;
 
@@ -155,7 +155,7 @@ public class SpdyClientProvider implements ClientProvider {
         try {
             NPN_PUT_METHOD.invoke(null, JsseXnioSsl.getSslEngine(sslConnection), spdySelectionProvider);
         } catch (Exception e) {
-            listener.failed(new IOException(e));
+            spdyFailedListener.handleEvent(sslConnection);
             return;
         }
 
