@@ -19,6 +19,7 @@
 package io.undertow.testutils;
 
 import org.apache.http.client.HttpRequestRetryHandler;
+import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
@@ -34,6 +35,8 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import java.io.IOException;
 import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author Stuart Douglas
@@ -59,6 +62,27 @@ public class TestHttpClient extends DefaultHttpClient {
         }
     };
 
+    private static final List<TestHttpClient> instances = new CopyOnWriteArrayList<TestHttpClient>();
+
+    public TestHttpClient() {
+        instances.add(this);
+    }
+
+    public TestHttpClient(HttpParams params) {
+        super(params);
+        instances.add(this);
+    }
+
+    public TestHttpClient(ClientConnectionManager conman) {
+        super(conman);
+        instances.add(this);
+    }
+
+    public TestHttpClient(ClientConnectionManager conman, HttpParams params) {
+        super(conman, params);
+        instances.add(this);
+    }
+
     @Override
     protected HttpRequestRetryHandler createHttpRequestRetryHandler() {
         return new DefaultHttpRequestRetryHandler(0, false);
@@ -81,8 +105,12 @@ public class TestHttpClient extends DefaultHttpClient {
             registry.register(new Scheme("https", 443, new SSLSocketFactory(sslContext, NO_OP_VERIFIER)));
             registry.register(new Scheme("https", DefaultServer.getHostSSLPort("default"), new SSLSocketFactory(sslContext, NO_OP_VERIFIER)));
         }
-
     }
 
-
+    public static void afterTest() {
+        for(TestHttpClient i : instances) {
+            i.getConnectionManager().shutdown();
+        }
+        instances.clear();
+    }
 }

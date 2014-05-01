@@ -33,7 +33,6 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -44,7 +43,6 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DefaultServer.class)
 public class RealPathTestCase {
-    private static TestHttpClient client;
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -68,19 +66,13 @@ public class RealPathTestCase {
         root.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(root);
-        client = new TestHttpClient();
 
-    }
-
-    @AfterClass
-    public static void cleanup() {
-        client.getConnectionManager().shutdown();
     }
 
     @Test
     public void testRealPath() throws Exception {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/real-path");
-        HttpResponse result = client.execute(get);
+        HttpResponse result = new TestHttpClient().execute(get);
         Assert.assertEquals(200, result.getStatusLine().getStatusCode());
         String response = HttpClientUtils.readResponse(result);
         Assert.assertEquals(new File(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
@@ -89,7 +81,7 @@ public class RealPathTestCase {
     @Test
     public void testPathTranslated() throws Exception {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/file.txt");
-        HttpResponse result = client.execute(get);
+        HttpResponse result = new TestHttpClient().execute(get);
         Assert.assertEquals(200, result.getStatusLine().getStatusCode());
         String response = HttpClientUtils.readResponse(result);
         Assert.assertEquals(new File(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);

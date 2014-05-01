@@ -73,6 +73,7 @@ public class HeadTestCase {
 
     @Test
     public void sendHttpHead() throws IOException {
+        connection = null;
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         HttpHead head = new HttpHead(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();

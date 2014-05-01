@@ -80,6 +80,7 @@ public class PreChunkedResponseTransferCodingTestCase {
 
     @Test
     public void sendHttpRequest() throws IOException {
+        connection = null;
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
         try {

@@ -18,9 +18,6 @@
 
 package io.undertow.testutils;
 
-import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
-import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
-import static org.xnio.SslClientAuthMode.REQUESTED;
 import io.undertow.UndertowOptions;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
@@ -36,26 +33,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Inet4Address;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -63,6 +40,7 @@ import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
+import org.junit.runners.model.Statement;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
@@ -77,6 +55,28 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+
+import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
+import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
+import static org.xnio.SslClientAuthMode.REQUESTED;
 
 /**
  * A class that starts a server before the test suite. By swapping out the root handler
@@ -114,6 +114,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
     private static final boolean dump = Boolean.getBoolean("test.dump");
     private static final boolean single = Boolean.getBoolean("test.single");
+    private static final int runs = Integer.getInteger("test.runs", 1);
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
 
@@ -188,7 +189,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (sslServer == null && !isApacheTest()) {
             throw new IllegalStateException("SSL Server not started.");
         }
-        return "https://" +  NetworkUtils.formatPossibleIpv6Address(getHostAddress(DEFAULT)) + ":" + getHostSSLPort(DEFAULT);
+        return "https://" + NetworkUtils.formatPossibleIpv6Address(getHostAddress(DEFAULT)) + ":" + getHostSSLPort(DEFAULT);
     }
 
     public DefaultServer(Class<?> klass) throws InitializationError {
@@ -288,6 +289,29 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         }
     }
 
+
+    @Override
+    protected Description describeChild(FrameworkMethod method) {
+        if (runs > 1) {
+            return describeRepeatTest(method);
+        }
+        return super.describeChild(method);
+    }
+
+    private Description describeRepeatTest(FrameworkMethod method) {
+
+        Description description = Description.createSuiteDescription(
+                testName(method) + " [" + runs + " times]",
+                method.getAnnotations());
+
+        for (int i = 1; i <= runs; i++) {
+            description.addChild(Description.createTestDescription(
+                    getTestClass().getJavaClass(),
+                    "[" + i + "] " + testName(method)));
+        }
+        return description;
+    }
+
     private static ChannelListener<StreamConnection> wrapOpenListener(final ChannelListener<StreamConnection> listener) {
         if (!single) {
             return listener;
@@ -321,7 +345,19 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        super.runChild(method, notifier);
+        try {
+            if (runs > 1) {
+                Statement statement = methodBlock(method);
+                Description description = describeChild(method);
+                for (Description desc : description.getChildren()) {
+                    runLeaf(statement, desc, notifier);
+                }
+            } else {
+                super.runChild(method, notifier);
+            }
+        } finally {
+            TestHttpClient.afterTest();
+        }
     }
 
     @Override
@@ -410,7 +446,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     public static void startSSLServer(OptionMap optionMap) throws IOException {
         SSLContext serverContext = getServerSslContext();
         clientSslContext = createClientSslContext();
-        startSSLServer(optionMap,  proxyAcceptListener != null ? proxyAcceptListener : acceptListener);
+        startSSLServer(optionMap, proxyAcceptListener != null ? proxyAcceptListener : acceptListener);
     }
 
     /**
@@ -424,6 +460,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         clientSslContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
         startSSLServer(serverContext, optionMap, openListener);
     }
+
     /**
      * Start the SSL server using a custom SSLContext with additional options to pass to the JsseXnioSsl instance.
      *
@@ -434,6 +471,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     public static void startSSLServer(final SSLContext context, final OptionMap options) throws IOException {
         startSSLServer(context, options, proxyAcceptListener != null ? proxyAcceptListener : acceptListener);
     }
+
     /**
      * Start the SSL server using a custom SSLContext with additional options to pass to the JsseXnioSsl instance.
      *
