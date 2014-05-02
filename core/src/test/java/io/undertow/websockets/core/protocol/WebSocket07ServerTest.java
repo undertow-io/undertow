@@ -18,6 +18,7 @@
 package io.undertow.websockets.core.protocol;
 
 import io.undertow.testutils.DefaultServer;
+import io.undertow.util.NetworkUtils;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -96,7 +97,7 @@ public class WebSocket07ServerTest extends AbstractWebSocketServerTest {
         final FutureResult latch = new FutureResult();
         final byte[] payload =  "payload".getBytes();
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ':' + DefaultServer.getHostPort("default") + '/'));
+        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ':' + DefaultServer.getHostPort("default") + '/'));
         client.connect();
         client.send(new PingWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
