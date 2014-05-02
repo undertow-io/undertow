@@ -42,7 +42,7 @@ public class WebSocketClient {
         final FutureResult<WebSocketChannel> ioFuture = new FutureResult<WebSocketChannel>();
         final URI newUri;
         try {
-            newUri = new URI(uri.getScheme().equals("wss") ? "https" : "http", uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath().isEmpty() ? "/" : uri.getPath(), uri.getQuery(), uri.getFragment());
+            newUri = new URI(uri.getScheme().equals("wss") ? "https" : "http", uri.getUserInfo(), uri.getHost(), uri.getPort() == -1 ? (uri.getScheme().equals("wss") ? 443 : 80) : uri.getPort(), uri.getPath().isEmpty() ? "/" : uri.getPath(), uri.getQuery(), uri.getFragment());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
