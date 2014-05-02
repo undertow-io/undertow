@@ -138,4 +138,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5024, value = "Could not register resource change listener for caching resource manager, automatic invalidation of cached resource will not work")
     void couldNotRegisterChangeListener(@Cause Exception e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5027, value = "Timing out request to %s")
+    void timingOutRequest(String requestURI);
 }
