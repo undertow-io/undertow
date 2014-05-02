@@ -324,6 +324,22 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         super.runChild(method, notifier);
     }
 
+    @Override
+    protected String testName(FrameworkMethod method) {
+        if (!proxy && !ajp) {
+            return super.testName(method);
+        } else {
+            StringBuilder sb = new StringBuilder(super.testName(method));
+            if (proxy) {
+                sb.append("{proxy}");
+            }
+            if (ajp) {
+                sb.append("{ajp");
+            }
+            return sb.toString();
+        }
+    }
+
 
     /**
      * Sets the root handler for the default web server
