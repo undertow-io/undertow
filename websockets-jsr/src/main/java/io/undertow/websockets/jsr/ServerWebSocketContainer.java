@@ -170,7 +170,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
     @Override
-    public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
+    public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, final URI path) throws DeploymentException, IOException {
+        ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
+
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()), cec);
         XnioSsl ssl = null;
