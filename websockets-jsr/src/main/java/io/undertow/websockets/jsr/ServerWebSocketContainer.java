@@ -432,15 +432,21 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         if (existing != null) {
             return existing;
         }
-        if (clientMode && type.isAnnotationPresent(ClientEndpoint.class)) {
-            try {
-                addEndpointInternal(type);
-                return clientEndpoints.get(type);
-            } catch (DeploymentException e) {
-                throw new RuntimeException(e);
+        synchronized (this) {
+            existing = clientEndpoints.get(type);
+            if (existing != null) {
+                return existing;
             }
+            if (type.isAnnotationPresent(ClientEndpoint.class)) {
+                try {
+                    addEndpointInternal(type);
+                    return clientEndpoints.get(type);
+                } catch (DeploymentException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return null;
         }
-        return null;
     }
 
 
