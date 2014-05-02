@@ -24,6 +24,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.websockets.jsr.DefaultWebSocketClientSslProvider;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import org.junit.AfterClass;
@@ -32,12 +33,14 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
 
+import javax.net.ssl.SSLContext;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.ContainerProvider;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
+import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -80,17 +83,23 @@ public class ProgramaticLazyEndpointTest {
 
 
         DefaultServer.setRootHandler(manager.start());
+        DefaultServer.startSSLServer();
     }
 
     @AfterClass
-    public static void after() {
+    public static void after() throws IOException {
         deployment = null;
+        DefaultServer.stopSSLServer();
     }
 
     @org.junit.Test
     public void testStringOnMessage() throws Exception {
+        SSLContext context = DefaultServer.getClientSSLContext();
         ProgramaticClientEndpoint endpoint = new ProgramaticClientEndpoint();
-        ContainerProvider.getWebSocketContainer().connectToServer(endpoint, ClientEndpointConfig.Builder.create().build(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/foo"));
+
+        ClientEndpointConfig clientEndpointConfig = ClientEndpointConfig.Builder.create().build();
+        clientEndpointConfig.getUserProperties().put(DefaultWebSocketClientSslProvider.SSL_CONTEXT, context);
+        ContainerProvider.getWebSocketContainer().connectToServer(endpoint, clientEndpointConfig, new URI("wss://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default") + "/foo"));
         Assert.assertEquals("Hello Stuart", endpoint.getResponses().poll(15, TimeUnit.SECONDS));
     }
 
