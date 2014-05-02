@@ -86,7 +86,7 @@ import org.xnio.ssl.XnioSsl;
  */
 public class DefaultServer extends BlockJUnit4ClassRunner {
 
-    private static final String DEFAULT = "default";
+    static final String DEFAULT = "default";
     private static final int PROXY_OFFSET = 1111;
     public static final int APACHE_PORT = 9080;
     public static final int APACHE_SSL_PORT = 9443;
