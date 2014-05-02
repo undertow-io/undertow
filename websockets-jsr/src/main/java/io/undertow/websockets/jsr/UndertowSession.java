@@ -170,7 +170,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public void close() throws IOException {
-        close(null);
+        close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, null));
     }
 
     @Override
