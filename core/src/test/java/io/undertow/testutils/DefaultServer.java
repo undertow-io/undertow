@@ -334,7 +334,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 sb.append("{proxy}");
             }
             if (ajp) {
-                sb.append("{ajp");
+                sb.append("{ajp}");
             }
             return sb.toString();
         }
