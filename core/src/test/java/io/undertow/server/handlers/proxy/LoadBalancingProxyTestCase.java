@@ -26,6 +26,7 @@ import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
+import org.xnio.Options;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -48,6 +49,7 @@ public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCa
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addHttpListener(port + 1, DefaultServer.getHostAddress("default"))
+                .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(jvmRoute("JSESSIONID", "s1", path()
                         .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new StringSendHandler("server1"))))
@@ -55,6 +57,7 @@ public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCa
 
         server2 = Undertow.builder()
                 .addHttpListener(port + 2, DefaultServer.getHostAddress("default"))
+                .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(jvmRoute("JSESSIONID", "s2", path()
                         .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new StringSendHandler("server2"))))

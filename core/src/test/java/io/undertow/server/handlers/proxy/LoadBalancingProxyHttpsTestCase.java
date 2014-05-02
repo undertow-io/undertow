@@ -31,6 +31,7 @@ import io.undertow.testutils.DefaultServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
+import org.xnio.Options;
 import org.xnio.ssl.JsseXnioSsl;
 
 import java.net.URI;
@@ -55,6 +56,7 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
         server1 = Undertow.builder()
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_SPDY, false)
+                .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(jvmRoute("JSESSIONID", "s1", path()
                         .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new StringSendHandler("server1"))))
@@ -66,6 +68,7 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
         server2 = Undertow.builder()
                 .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_SPDY, false)
+                .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
