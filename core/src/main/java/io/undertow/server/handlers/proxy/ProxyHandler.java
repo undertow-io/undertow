@@ -47,6 +47,7 @@ import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.SameThreadExecutor;
+import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -70,7 +71,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * An HTTP handler which proxies content to a remote server.
- *
+ * <p/>
  * This handler acts like a filter. The {@link ProxyClient} has a chance to decide if it
  * knows how to proxy the request. If it does then it will provide a connection that can
  * used to connect to the remote server, otherwise the next handler will be invoked and the
@@ -79,6 +80,8 @@ import java.util.concurrent.TimeUnit;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ProxyHandler implements HttpHandler {
+
+    private static final Logger log = Logger.getLogger(ProxyHandler.class);
 
     public static final String UTF_8 = "UTF-8";
     private final ProxyClient proxyClient;
@@ -112,7 +115,8 @@ public final class ProxyHandler implements HttpHandler {
 
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final ProxyClient.ProxyTarget target = proxyClient.findTarget(exchange);
-        if(target == null) {
+        if (target == null) {
+            log.debugf("No proxy target for request to %s", exchange.getRequestURL());
             next.handleRequest(exchange);
             return;
         }
@@ -120,8 +124,11 @@ public final class ProxyHandler implements HttpHandler {
             final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
                 public void run() {
+
+                    UndertowLogger.REQUEST_LOGGER.timingOutRequest(exchange.getRequestURI());
+
                     ProxyConnection connectionAttachment = exchange.getAttachment(CONNECTION);
-                    if(connectionAttachment != null) {
+                    if (connectionAttachment != null) {
                         //we rely on the close listener to end the exchange
                         ClientConnection clientConnection = connectionAttachment.getConnection();
                         IoUtils.safeClose(clientConnection);
@@ -143,6 +150,7 @@ public final class ProxyHandler implements HttpHandler {
         exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : exchange.getIoThread(), new Runnable() {
             @Override
             public void run() {
+                log.debugf("Proxying request %s, opening connection", exchange.getRequestURL());
                 proxyClient.getConnection(target, exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
             }
         });
@@ -299,7 +307,7 @@ public final class ProxyHandler implements HttpHandler {
             }
             outboundRequestHeaders.put(Headers.X_FORWARDED_PROTO, exchange.getRequestScheme());
 
-            if(exchange.getRequestScheme().equals("https")) {
+            if (exchange.getRequestScheme().equals("https")) {
                 request.putAttachment(ProxiedRequestAttachments.IS_SSL, true);
             }
 
@@ -474,7 +482,7 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void handleException(Channel channel, IOException exception) {
-            if(exchange.isResponseStarted()) {
+            if (exchange.isResponseStarted()) {
                 IoUtils.safeClose(clientConnection);
                 UndertowLogger.REQUEST_IO_LOGGER.debug("Exception reading from target server", exception);
                 if (!exchange.isResponseStarted()) {
