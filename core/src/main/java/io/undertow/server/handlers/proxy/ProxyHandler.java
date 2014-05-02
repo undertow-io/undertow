@@ -299,6 +299,12 @@ public final class ProxyHandler implements HttpHandler {
                     outboundRequestHeaders.put(entry.getKey(), headerValue.replace('\n', ' '));
                 }
             }
+            if(!exchange.isPersistent()) {
+                //just because the client side is non-persistent
+                //we don't want to close the connection to the backend
+                outboundRequestHeaders.put(Headers.CONNECTION, "keep-alive");
+            }
+
             SocketAddress address = exchange.getConnection().getPeerAddress();
             if (address instanceof InetSocketAddress) {
                 outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, ((InetSocketAddress) address).getHostString());
