@@ -111,6 +111,10 @@ public class ExchangeAttributes {
         return ThreadNameAttribute.INSTANCE;
     }
 
+    public static ExchangeAttribute constant(String value) {
+        return new ConstantExchangeAttribute(value);
+    }
+
     public static String  resolve(final HttpServerExchange exchange, final ExchangeAttribute[] attributes) {
         final StringBuilder result = new StringBuilder();
         for (int i = 0; i < attributes.length; ++i) {

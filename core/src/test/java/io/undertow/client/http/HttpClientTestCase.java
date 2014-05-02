@@ -39,12 +39,17 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
+import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.ssl.JsseXnioSsl;
+import org.xnio.ssl.XnioSsl;
 
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -153,6 +158,44 @@ public class HttpClientTestCase {
 
 
     @Test
+    public void testSsl() throws Exception {
+        //
+        DefaultServer.setRootHandler(SIMPLE_MESSAGE_HANDLER);
+        final UndertowClient client = createClient();
+
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<ClientResponse>();
+        final CountDownLatch latch = new CountDownLatch(10);
+        DefaultServer.startSSLServer();
+        SSLContext context = DefaultServer.getClientSSLContext();
+        XnioSsl ssl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, context);
+
+        final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
+        try {
+            connection.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < 10; i++) {
+                        final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath("/");
+                        connection.sendRequest(request, createClientCallback(responses, latch));
+                    }
+                }
+
+            });
+
+            latch.await(10, TimeUnit.MINUTES);
+
+            Assert.assertEquals(10, responses.size());
+            for (final ClientResponse response : responses) {
+                Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
+            }
+        } finally {
+            IoUtils.safeClose(connection);
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+
+    @Test
     public void testConnectionClose() throws Exception {
         //
         DefaultServer.setRootHandler(SIMPLE_MESSAGE_HANDLER);
@@ -168,13 +211,7 @@ public class HttpClientTestCase {
             latch.await();
             final ClientResponse response = responses.iterator().next();
             Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
-            try {
-                request = new ClientRequest().setPath("/1324").setMethod(Methods.GET);
-                connection.sendRequest(request, createClientCallback(responses, latch));
-                Assert.fail();
-            } catch (IllegalStateException e) {
-                // OK
-            }
+            Assert.assertEquals(false, connection.isOpen());
         } finally {
             IoUtils.safeClose(connection);
         }
@@ -279,6 +316,16 @@ public class HttpClientTestCase {
                         latch.countDown();
                     }
                 });
+                try {
+                    result.getRequestChannel().shutdownWrites();
+                    if(!result.getRequestChannel().flush()) {
+                        result.getRequestChannel().getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, null));
+                        result.getRequestChannel().resumeWrites();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    latch.countDown();
+                }
             }
 
             @Override

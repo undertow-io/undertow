@@ -58,7 +58,7 @@ public interface UndertowClientMessages {
     IOException unknownTransferEncoding(String transferEncodingString);
 
     @Message(id = 1033, value = "Invalid connection state")
-    IllegalStateException invalidConnectionState();
+    IOException invalidConnectionState();
 
     @Message(id = 1034, value = "Unknown AJP packet type %s")
     IOException unknownAjpMessageType(byte packetType);
