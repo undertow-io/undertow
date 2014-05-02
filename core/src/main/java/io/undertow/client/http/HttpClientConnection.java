@@ -109,6 +109,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private static final int UPGRADE_REQUESTED = 1 << 29;
     private static final int CLOSE_REQ = 1 << 30;
     private static final int CLOSED = 1 << 31;
+    private int count = 0;
 
     private int state;
 
@@ -204,8 +205,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
     @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
+        count++;
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
-            throw UndertowClientMessages.MESSAGES.invalidConnectionState();
+            clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());
+            return;
         }
         final HttpClientExchange httpClientExchange = new HttpClientExchange(clientCallback, request, this);
         if (currentRequest == null) {
@@ -313,7 +316,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
     private void handleError(IOException exception) {
         currentRequest.setFailed(exception);
-        IoUtils.safeClose(connection);
+        UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
+        safeClose(connection);
     }
 
     public StreamConnection performUpgrade() throws IOException {

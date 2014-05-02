@@ -39,11 +39,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
+import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
 import java.net.URI;
@@ -168,13 +170,7 @@ public class HttpClientTestCase {
             latch.await();
             final ClientResponse response = responses.iterator().next();
             Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
-            try {
-                request = new ClientRequest().setPath("/1324").setMethod(Methods.GET);
-                connection.sendRequest(request, createClientCallback(responses, latch));
-                Assert.fail();
-            } catch (IllegalStateException e) {
-                // OK
-            }
+            Assert.assertEquals(false, connection.isOpen());
         } finally {
             IoUtils.safeClose(connection);
         }
@@ -279,6 +275,16 @@ public class HttpClientTestCase {
                         latch.countDown();
                     }
                 });
+                try {
+                    result.getRequestChannel().shutdownWrites();
+                    if(!result.getRequestChannel().flush()) {
+                        result.getRequestChannel().getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, null));
+                        result.getRequestChannel().resumeWrites();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    latch.countDown();
+                }
             }
 
             @Override
