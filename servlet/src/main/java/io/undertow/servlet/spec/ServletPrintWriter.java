@@ -40,14 +40,27 @@ public class ServletPrintWriter {
     private static final char[] EMPTY_CHAR = {};
 
     private final ServletOutputStreamImpl outputStream;
-    private final CharsetEncoder charsetEncoder;
+    private final String charset;
+    private CharsetEncoder charsetEncoder;
     private boolean error = false;
     private boolean closed = false;
     private char[] underflow;
 
     public ServletPrintWriter(final ServletOutputStreamImpl outputStream, final String charset) throws UnsupportedEncodingException {
+        this.charset = charset;
         this.outputStream = outputStream;
-        this.charsetEncoder = Charset.forName(charset).newEncoder();
+
+        //for some known charset we get optimistic and hope that
+        //only ascii will be output
+        //in this case we can avoid creating the encoder altogether
+        if (!charset.equalsIgnoreCase("utf-8") &&
+                !charset.equalsIgnoreCase("iso-8859-1")) {
+            createEncoder();
+        }
+    }
+
+    private void createEncoder() {
+        this.charsetEncoder = Charset.forName(this.charset).newEncoder();
         //replace malformed and unmappable with question marks
         this.charsetEncoder.onUnmappableCharacter(CodingErrorAction.REPLACE);
         this.charsetEncoder.onMalformedInput(CodingErrorAction.REPLACE);
@@ -62,38 +75,40 @@ public class ServletPrintWriter {
     }
 
     public void close() {
-        if(closed) {
+        if (closed) {
             return;
         }
         closed = true;
         try {
             boolean done = false;
             CharBuffer buffer;
-            if(underflow == null) {
+            if (underflow == null) {
                 buffer = CharBuffer.wrap(EMPTY_CHAR);
             } else {
                 buffer = CharBuffer.wrap(underflow);
                 underflow = null;
             }
-            do {
-                ByteBuffer out = outputStream.underlyingBuffer();
-                if(out == null) {
-                    //servlet output stream has already been closed
-                    error = true;
-                    return;
-                }
-                CoderResult result = charsetEncoder.encode(buffer, out, true);
-                if (result.isOverflow()) {
-                    outputStream.flushInternal();
-                    if(out.remaining() == 0) {
-                        outputStream.close();
+            if (charsetEncoder != null) {
+                do {
+                    ByteBuffer out = outputStream.underlyingBuffer();
+                    if (out == null) {
+                        //servlet output stream has already been closed
                         error = true;
                         return;
                     }
-                } else {
-                    done = true;
-                }
-            } while (!done);
+                    CoderResult result = charsetEncoder.encode(buffer, out, true);
+                    if (result.isOverflow()) {
+                        outputStream.flushInternal();
+                        if (out.remaining() == 0) {
+                            outputStream.close();
+                            error = true;
+                            return;
+                        }
+                    } else {
+                        done = true;
+                    }
+                } while (!done);
+            }
             outputStream.close();
         } catch (IOException e) {
             error = true;
@@ -106,7 +121,7 @@ public class ServletPrintWriter {
 
     public void write(final CharBuffer input) {
         ByteBuffer buffer = outputStream.underlyingBuffer();
-        if(buffer == null) {
+        if (buffer == null) {
             //stream has been closed
             error = true;
             return;
@@ -114,13 +129,40 @@ public class ServletPrintWriter {
         try {
             if (!buffer.hasRemaining()) {
                 outputStream.flushInternal();
-                if(!buffer.hasRemaining()) {
+                if (!buffer.hasRemaining()) {
                     error = true;
                     return;
                 }
             }
+
+            if (charsetEncoder == null) {
+                //fast path, basically we are hoping this is ascii only
+
+                boolean ok = true;
+                for (int i = input.position(); i < input.limit(); ++i) {
+                    char c = input.get(i);
+                    if (c > 127) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok) {
+                    //so we have a pure ascii buffer, just write it out and skip all the encoder cost
+                    while (input.hasRemaining()) {
+                        while (input.hasRemaining() && buffer.hasRemaining()) {
+                            buffer.put((byte) input.get());
+                        }
+                        if (!buffer.hasRemaining()) {
+                            outputStream.flushInternal();
+                        }
+                    }
+                    return;
+                } else {
+                    createEncoder();
+                }
+            }
             final CharBuffer cb;
-            if(underflow == null) {
+            if (underflow == null) {
                 cb = input;
             } else {
                 char[] newArray = new char[underflow.length + input.remaining()];
@@ -136,7 +178,7 @@ public class ServletPrintWriter {
                 outputStream.updateWritten(remaining - buffer.remaining());
                 if (result.isOverflow() || !buffer.hasRemaining()) {
                     outputStream.flushInternal();
-                    if(!buffer.hasRemaining()) {
+                    if (!buffer.hasRemaining()) {
                         error = true;
                         return;
                     }
@@ -155,7 +197,7 @@ public class ServletPrintWriter {
                     error = true;
                     return;
                 }
-                if(last == cb.remaining()) {
+                if (last == cb.remaining()) {
                     underflow = new char[cb.remaining()];
                     cb.get(underflow);
                     return;
