@@ -437,6 +437,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      * @return The underlying buffer
      */
     ByteBuffer underlyingBuffer() {
+        if(anyAreSet(state, FLAG_CLOSED)) {
+            return null;
+        }
         return buffer();
     }
 

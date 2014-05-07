@@ -42,6 +42,7 @@ public class ServletPrintWriter {
     private final ServletOutputStreamImpl outputStream;
     private final CharsetEncoder charsetEncoder;
     private boolean error = false;
+    private boolean closed = false;
     private char[] underflow;
 
     public ServletPrintWriter(final ServletOutputStreamImpl outputStream, final String charset) throws UnsupportedEncodingException {
@@ -61,6 +62,10 @@ public class ServletPrintWriter {
     }
 
     public void close() {
+        if(closed) {
+            return;
+        }
+        closed = true;
         try {
             boolean done = false;
             CharBuffer buffer;
@@ -71,10 +76,16 @@ public class ServletPrintWriter {
                 underflow = null;
             }
             do {
-                CoderResult result = charsetEncoder.encode(buffer, outputStream.underlyingBuffer(), true);
+                ByteBuffer out = outputStream.underlyingBuffer();
+                if(out == null) {
+                    //servlet output stream has already been closed
+                    error = true;
+                    return;
+                }
+                CoderResult result = charsetEncoder.encode(buffer, out, true);
                 if (result.isOverflow()) {
                     outputStream.flushInternal();
-                    if(outputStream.underlyingBuffer().remaining() == 0) {
+                    if(out.remaining() == 0) {
                         outputStream.close();
                         error = true;
                         return;
@@ -95,6 +106,11 @@ public class ServletPrintWriter {
 
     public void write(final CharBuffer input) {
         ByteBuffer buffer = outputStream.underlyingBuffer();
+        if(buffer == null) {
+            //stream has been closed
+            error = true;
+            return;
+        }
         try {
             if (!buffer.hasRemaining()) {
                 outputStream.flushInternal();
