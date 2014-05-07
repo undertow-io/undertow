@@ -128,7 +128,7 @@ public interface JsrWebSocketMessages {
     @Message(id = 3030, value = "Received a text frame however endpoint does not have a method capable of handling it")
     RuntimeException receivedTextFrameButNoMethod();
 
-    @Message(id = 3031, value = "Received a binary frame however endpont does not have a method capable of handling it")
+    @Message(id = 3031, value = "Received a binary frame however endpoint does not have a method capable of handling it")
     RuntimeException receivedBinaryFrameButNoMethod();
 
     @Message(id = 3033, value = "Method %s has invalid parameters at locations %s. It looks like you may have accidentally used javax.ws.rs.PathParam instead of javax.websocket.server.PathParam")

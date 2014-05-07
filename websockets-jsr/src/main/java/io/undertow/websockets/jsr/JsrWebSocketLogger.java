@@ -42,11 +42,11 @@ public interface JsrWebSocketLogger extends BasicLogger {
     JsrWebSocketLogger REQUEST_LOGGER = Logger.getMessageLogger(JsrWebSocketLogger.class, JsrWebSocketLogger.class.getPackage().getName() + ".request");
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 26001, value = "Unable to instance endpoint")
+    @Message(id = 26001, value = "Unable to instantiate endpoint")
     void endpointCreationFailed(@Cause Exception cause);
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 26002, value = "Unable to instance server configuration %s")
+    @Message(id = 26002, value = "Unable to instantiate server configuration %s")
     void couldNotInitializeConfiguration(Class<?> clazz, @Cause Throwable t);
 
     @LogMessage(level = Logger.Level.INFO)
@@ -72,4 +72,9 @@ public interface JsrWebSocketLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 26008, value = "Could not close endpoint on undeploy.")
     void couldNotCloseOnUndeploy(@Cause Exception e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 26009, value = "XNIO worker was not set on WebSocketDeploymentInfo, web socket client will not be available.")
+    void xnioWorkerWasNull();
+
 }

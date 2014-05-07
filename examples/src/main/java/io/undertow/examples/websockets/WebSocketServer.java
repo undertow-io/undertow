@@ -22,7 +22,7 @@ public class WebSocketServer {
 
     public static void main(final String[] args) {
         Undertow server = Undertow.builder()
-                .addListener(8080, "localhost")
+                .addHttpListener(8080, "localhost")
                 .setHandler(path()
                         .addPrefixPath("/myapp", websocket(new WebSocketConnectionCallback() {
 
