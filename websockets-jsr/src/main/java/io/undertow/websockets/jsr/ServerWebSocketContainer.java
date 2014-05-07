@@ -346,7 +346,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 seenPaths.add(template);
 
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, serverEndpoint.decoders(), serverEndpoint.encoders());
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(xnioWorker, endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory, template.getParameterNames());
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory, template.getParameterNames());
                 Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
                 ServerEndpointConfig.Configurator configurator;
                 if (configuratorClass != ServerEndpointConfig.Configurator.class) {
@@ -369,7 +369,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             } else if (clientEndpoint != null) {
                 JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedClientEndpoint(endpoint);
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, clientEndpoint.decoders(), clientEndpoint.encoders());
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(xnioWorker, endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory, Collections.<String>emptySet());
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory, Collections.<String>emptySet());
 
                 ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
                         .decoders(Arrays.asList(clientEndpoint.decoders()))

@@ -47,7 +47,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executor;
 
 /**
  * Factory that creates annotated end points.
@@ -56,7 +55,6 @@ import java.util.concurrent.Executor;
  */
 public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
-    private final Executor executor;
     private final InstanceFactory<?> underlyingFactory;
     private final Class<?> endpointClass;
     private final BoundMethod OnOpen;
@@ -66,8 +64,8 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     private final BoundMethod binaryMessage;
     private final BoundMethod pongMessage;
 
-    private AnnotatedEndpointFactory(Executor executor, final Class<?> endpointClass, final InstanceFactory<?> underlyingFactory, final BoundMethod OnOpen, final BoundMethod OnClose, final BoundMethod OnError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
-        this.executor = executor;
+    private AnnotatedEndpointFactory(final Class<?> endpointClass, final InstanceFactory<?> underlyingFactory, final BoundMethod OnOpen, final BoundMethod OnClose, final BoundMethod OnError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
+
         this.underlyingFactory = underlyingFactory;
         this.endpointClass = endpointClass;
         this.OnOpen = OnOpen;
@@ -80,7 +78,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     }
 
 
-    public static AnnotatedEndpointFactory create(final Executor executor, final Class<?> endpointClass, final InstanceFactory<?> underlyingInstance, final EncodingFactory encodingFactory, final Set<String> paths) throws DeploymentException {
+    public static AnnotatedEndpointFactory create(final Class<?> endpointClass, final InstanceFactory<?> underlyingInstance, final EncodingFactory encodingFactory, final Set<String> paths) throws DeploymentException {
         final Set<Class<? extends Annotation>> found = new HashSet<Class<? extends Annotation>>();
         BoundMethod OnOpen = null;
         BoundMethod OnClose = null;
@@ -238,7 +236,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
             }
             c = c.getSuperclass();
         } while (c != Object.class && c != null);
-        return new AnnotatedEndpointFactory(executor, endpointClass, underlyingInstance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
+        return new AnnotatedEndpointFactory(endpointClass, underlyingInstance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
     }
 
     private static BoundPathParameters createBoundPathParameters(final Method method, Set<String> paths, Class<?> endpointClass) throws DeploymentException {
@@ -279,7 +277,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     @Override
     public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
         final InstanceHandle<?> instance = underlyingFactory.createInstance();
-        final AnnotatedEndpoint endpoint = new AnnotatedEndpoint(executor, instance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
+        final AnnotatedEndpoint endpoint = new AnnotatedEndpoint(instance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
         return new InstanceHandle<Endpoint>() {
             @Override
             public Endpoint getInstance() {
@@ -294,7 +292,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     }
 
     public Endpoint createInstanceForExisting(final Object instance) {
-        return new AnnotatedEndpoint(executor, new ImmediateInstanceHandle<Object>(instance), OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
+        return new AnnotatedEndpoint(new ImmediateInstanceHandle<Object>(instance), OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
     }
 
 

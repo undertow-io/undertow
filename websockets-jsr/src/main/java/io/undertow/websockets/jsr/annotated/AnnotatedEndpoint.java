@@ -57,7 +57,7 @@ import java.util.concurrent.Executor;
 public class AnnotatedEndpoint extends Endpoint {
 
     private final InstanceHandle<?> instance;
-    private final Executor executor;
+    private Executor executor;
 
     private final BoundMethod webSocketOpen;
     private final BoundMethod webSocketClose;
@@ -66,7 +66,7 @@ public class AnnotatedEndpoint extends Endpoint {
     private final BoundMethod binaryMessage;
     private final BoundMethod pongMessage;
 
-    AnnotatedEndpoint(final Executor executor, final InstanceHandle<?> instance, final BoundMethod webSocketOpen, final BoundMethod webSocketClose, final BoundMethod webSocketError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
+    AnnotatedEndpoint(final InstanceHandle<?> instance, final BoundMethod webSocketOpen, final BoundMethod webSocketClose, final BoundMethod webSocketError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
         this.instance = instance;
         this.webSocketOpen = webSocketOpen;
         this.webSocketClose = webSocketClose;
@@ -74,11 +74,12 @@ public class AnnotatedEndpoint extends Endpoint {
         this.textMessage = textMessage;
         this.binaryMessage = binaryMessage;
         this.pongMessage = pongMessage;
-        this.executor = new OrderedExecutor(executor);
     }
 
     @Override
     public void onOpen(final Session session, final EndpointConfig endpointConfiguration) {
+
+        this.executor = new OrderedExecutor(((UndertowSession)session).getWebSocketChannel().getWorker());
 
         UndertowSession s = (UndertowSession) session;
         boolean partialText = textMessage == null || (textMessage.hasParameterType(boolean.class) && !textMessage.getMessageType().equals(boolean.class));

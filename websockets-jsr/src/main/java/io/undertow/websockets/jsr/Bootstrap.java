@@ -52,6 +52,9 @@ public class Bootstrap implements ServletExtension {
         if (info == null) {
             return;
         }
+        if(info.getWorker() == null) {
+            JsrWebSocketLogger.ROOT_LOGGER.xnioWorkerWasNull();
+        }
         final List<ThreadSetupAction> setup = new ArrayList<ThreadSetupAction>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
         setup.addAll(deploymentInfo.getThreadSetupActions());
