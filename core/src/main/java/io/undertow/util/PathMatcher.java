@@ -39,6 +39,9 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class PathMatcher<T> {
 
+    private static final char PATH_SEPARATOR = '/';
+    private static final String STRING_PATH_SEPARATOR = "/";
+
     private volatile T defaultHandler;
     private final ConcurrentMap<String, T> paths = new CopyOnWriteMap<String, T>();
     private final ConcurrentMap<String, T> exactPathMatches = new CopyOnWriteMap<String, T>();
@@ -107,15 +110,16 @@ public class PathMatcher<T> {
         if (path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
-        if (path.equals("/")) {
+
+        final String normalizedPath = this.normalizeSlashes(path);
+
+        if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath)) {
             this.defaultHandler = handler;
             return this;
         }
-        if (path.charAt(0) != '/') {
-            paths.put("/" + path, handler);
-        } else {
-            paths.put(path, handler);
-        }
+
+        paths.put(normalizedPath, handler);
+
         buildLengths();
         return this;
     }
@@ -125,28 +129,25 @@ public class PathMatcher<T> {
         if (path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
-        if (path.charAt(0) != '/') {
-            exactPathMatches.put("/" + path, handler);
-        } else {
-            exactPathMatches.put(path, handler);
-        }
+        exactPathMatches.put(this.normalizeSlashes(path), handler);
         return this;
     }
 
     public T getExactPath(final String path) {
-        if (path.isEmpty() || path.charAt(0) != '/') {
-            return exactPathMatches.get("/" + path);
-        } else {
-            return exactPathMatches.get(path);
-        }
+        return exactPathMatches.get(this.normalizeSlashes(path));
     }
 
     public T getPrefixPath(final String path) {
-        if (path.charAt(0) != '/') {
-            return paths.get("/" + path);
-        } else {
-            return paths.get(path);
+
+        final String normalizedPath = this.normalizeSlashes(path);
+
+        // enable the prefix path mechanism to return the default handler
+        if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath) && !paths.containsKey(normalizedPath)) {
+            return this.defaultHandler;
         }
+
+        // return the value for the given path
+        return paths.get(normalizedPath);
     }
 
     private void buildLengths() {
@@ -178,16 +179,15 @@ public class PathMatcher<T> {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
 
-        if (path.equals("/")) {
+        final String normalizedPath = this.normalizeSlashes(path);
+
+        if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath)) {
             defaultHandler = null;
             return this;
         }
 
-        if (path.charAt(0) != '/') {
-            paths.remove("/" + path);
-        } else {
-            paths.remove(path);
-        }
+        paths.remove(normalizedPath);
+
         buildLengths();
         return this;
     }
@@ -196,11 +196,9 @@ public class PathMatcher<T> {
         if (path == null || path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
-        if (path.charAt(0) != '/') {
-            exactPathMatches.remove("/" + path);
-        } else {
-            exactPathMatches.remove(path);
-        }
+
+        exactPathMatches.remove(this.normalizeSlashes(path));
+
         return this;
     }
 
@@ -232,5 +230,37 @@ public class PathMatcher<T> {
         public T getValue() {
             return value;
         }
+    }
+
+    /**
+     * Adds a '/' prefix to the beginning of a path if one isn't present
+     * and removes trailing slashes if any are present.
+     *
+     * @param path the path to normalize
+     * @return a normalized (with respect to slashes) result
+     */
+    private String normalizeSlashes(final String path) {
+        // prepare
+        final StringBuilder builder = new StringBuilder(path);
+        boolean modified = false;
+
+        // remove all trailing '/'s except the first one
+        while (builder.length() > 0 && builder.length() != 1 && PathMatcher.PATH_SEPARATOR == builder.charAt(builder.length() - 1)) {
+            builder.deleteCharAt(builder.length() - 1);
+            modified = true;
+        }
+
+        // add a slash at the beginning if one isn't present
+        if (builder.length() == 0 || PathMatcher.PATH_SEPARATOR != builder.charAt(0)) {
+            builder.insert(0, PathMatcher.PATH_SEPARATOR);
+            modified = true;
+        }
+
+        // only create string when it was modified
+        if (modified) {
+            return builder.toString();
+        }
+
+        return path;
     }
 }
