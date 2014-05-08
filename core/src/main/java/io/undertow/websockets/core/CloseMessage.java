@@ -29,9 +29,13 @@ public class CloseMessage {
    public static final int UNEXPECTED_ERROR = 1011;
 
     public CloseMessage(final ByteBuffer buffer) {
-        assert buffer.remaining() >= 2;
-        reason = (buffer.get() & 0XFF) << 8 | (buffer.get() & 0xFF);
-        string = new UTF8Output(buffer).extract();
+        if(buffer.remaining() >= 2) {
+            reason = (buffer.get() & 0XFF) << 8 | (buffer.get() & 0xFF);
+            string = new UTF8Output(buffer).extract();
+        } else {
+            reason = GOING_AWAY;
+            string = "";
+        }
     }
 
     public CloseMessage(int reason, String string) {
