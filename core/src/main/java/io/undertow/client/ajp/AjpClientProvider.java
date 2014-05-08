@@ -31,7 +31,7 @@ public class AjpClientProvider implements ClientProvider {
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
-        worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), new ChannelListener<StreamConnection>() {
+        worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
                 handleConnected(connection, listener, uri, ssl, bufferPool, options);
@@ -48,7 +48,7 @@ public class AjpClientProvider implements ClientProvider {
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
-        ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), new ChannelListener<StreamConnection>() {
+        ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
                 handleConnected(connection, listener, uri, ssl, bufferPool, options);

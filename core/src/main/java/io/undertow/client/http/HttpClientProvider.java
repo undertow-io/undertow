@@ -37,8 +37,9 @@ public class HttpClientProvider implements ClientProvider {
             if(ssl == null) {
                 throw UndertowMessages.MESSAGES.sslWasNull();
             }
+
         }
-        worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), new ChannelListener<StreamConnection>() {
+        worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80: uri.getPort()), new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
                 handleConnected(connection, listener, uri, ssl, bufferPool, options);
