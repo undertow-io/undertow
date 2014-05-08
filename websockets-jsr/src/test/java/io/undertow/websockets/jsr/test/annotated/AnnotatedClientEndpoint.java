@@ -54,4 +54,7 @@ public class AnnotatedClientEndpoint {
         MESSAGES.add("CLOSED");
     }
 
+    public static void reset() {
+        MESSAGES.clear();
+    }
 }

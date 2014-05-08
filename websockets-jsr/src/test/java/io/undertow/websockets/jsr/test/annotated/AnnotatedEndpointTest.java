@@ -105,7 +105,7 @@ public class AnnotatedEndpointTest {
 
     @org.junit.Test
     public void testAnnotatedClientEndpoint() throws Exception {
-
+        AnnotatedClientEndpoint.reset();
         Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
 
         Assert.assertEquals("hi Bob (protocol=foo)", AnnotatedClientEndpoint.message());
