@@ -59,9 +59,9 @@ public class HttpClientProvider implements ClientProvider {
                 listener.failed(UndertowMessages.MESSAGES.sslWasNull());
                 return;
             }
-            ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(),  uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         } else {
-            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            worker.openStreamConnection(new InetSocketAddress(uri.getHost(),  uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         }
     }
 
@@ -72,9 +72,9 @@ public class HttpClientProvider implements ClientProvider {
                 listener.failed(UndertowMessages.MESSAGES.sslWasNull());
                 return;
             }
-            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         } else {
-            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
         }
     }
 
