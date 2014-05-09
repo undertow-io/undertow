@@ -137,24 +137,26 @@ public class ServletPrintWriter {
 
             if (charsetEncoder == null) {
                 //fast path, basically we are hoping this is ascii only
-                    boolean ok = true;
-                    //so we have a pure ascii buffer, just write it out and skip all the encoder cost
-                    while (input.hasRemaining()) {
-                        if (!buffer.hasRemaining()) {
-                            outputStream.flushInternal();
-                        }
-                        char c = input.get();
-                        if(c > 127) {
-                            ok = false;
-                            input.position(input.position() - 1); //push the character back
-                            break;
-                        }
-                        buffer.put((byte)c);
+                int remaining = buffer.remaining();
+                boolean ok = true;
+                //so we have a pure ascii buffer, just write it out and skip all the encoder cost
+                while (input.hasRemaining()) {
+                    if (!buffer.hasRemaining()) {
+                        outputStream.flushInternal();
                     }
-                    if(ok) {
-                        return;
+                    char c = input.get();
+                    if (c > 127) {
+                        ok = false;
+                        input.position(input.position() - 1); //push the character back
+                        break;
                     }
-                    createEncoder();
+                    buffer.put((byte) c);
+                }
+                outputStream.updateWritten(remaining - buffer.remaining());
+                if (ok) {
+                    return;
+                }
+                createEncoder();
             }
             final CharBuffer cb;
             if (underflow == null) {

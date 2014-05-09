@@ -580,7 +580,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (anyAreSet(state, FLAG_CLOSED)) return;
             state |= FLAG_CLOSED;
             state &= ~FLAG_READY;
-            if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
+            if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null && servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
                 if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
                     if (buffer == null) {
                         servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
