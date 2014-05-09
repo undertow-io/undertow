@@ -72,7 +72,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private StreamSinkChannel channel;
     private long written;
     private int state;
-    private final long contentLength;
     private AsyncContextImpl asyncContext;
 
     private WriteListener listener;
@@ -102,8 +101,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     /**
      * Construct a new instance.  No write timeout is configured.
      */
-    public ServletOutputStreamImpl(long contentLength, final ServletRequestContext servletRequestContext) {
-        this.contentLength = contentLength;
+    public ServletOutputStreamImpl(final ServletRequestContext servletRequestContext) {
         this.threadSetupAction = servletRequestContext.getDeployment().getThreadSetupAction();
         this.servletRequestContext = servletRequestContext;
     }
@@ -111,9 +109,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     /**
      * Construct a new instance.  No write timeout is configured.
      */
-    public ServletOutputStreamImpl(Long contentLength, final ServletRequestContext servletRequestContext, int bufferSize) {
+    public ServletOutputStreamImpl(final ServletRequestContext servletRequestContext, int bufferSize) {
         this.bufferSize = bufferSize;
-        this.contentLength = contentLength;
         this.servletRequestContext = servletRequestContext;
     }
 
@@ -283,7 +280,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (listener == null) {
             //if we have received the exact amount of content write it out in one go
             //this is a common case when writing directly from a buffer cache.
-            if (this.written == 0 && len == contentLength) {
+            if (this.written == 0 && len == servletRequestContext.getOriginalResponse().getContentLength()) {
                 if (channel == null) {
                     channel = servletRequestContext.getExchange().getResponseChannel();
                 }
@@ -362,6 +359,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     void updateWritten(final long len) throws IOException {
         this.written += len;
+        long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
         if (contentLength != -1 && this.written >= contentLength) {
             close();
         }
@@ -369,6 +367,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     void updateWrittenAsync(final long len) throws IOException {
         this.written += len;
+        long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
         if (contentLength != -1 && this.written >= contentLength) {
             state |= FLAG_CLOSED;
             //if buffersToWrite is set we are already flushing

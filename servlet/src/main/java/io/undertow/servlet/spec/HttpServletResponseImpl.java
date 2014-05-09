@@ -308,9 +308,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private void createOutputStream() {
         if (servletOutputStream == null) {
             if (bufferSize == null) {
-                servletOutputStream = new ServletOutputStreamImpl(contentLength, exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY));
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY));
             } else {
-                servletOutputStream = new ServletOutputStreamImpl(contentLength, exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY), bufferSize);
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY), bufferSize);
             }
         }
     }
@@ -702,6 +702,10 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         // This URL belongs to our web application, so it is encodeable
         return true;
 
+    }
+
+    public long getContentLength() {
+        return contentLength;
     }
 
     public static enum ResponseState {
