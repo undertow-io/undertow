@@ -18,12 +18,6 @@
 
 package io.undertow.conduits;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-
 import org.xnio.Buffers;
 import org.xnio.channels.FixedLengthOverflowException;
 import org.xnio.channels.FixedLengthUnderflowException;
@@ -31,6 +25,12 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.min;
 import static org.xnio.Bits.allAreClear;
@@ -77,7 +77,7 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
 
     protected void reset(long contentLength, boolean propagateClose) {
         this.state = contentLength;
-        if(propagateClose) {
+        if (propagateClose) {
             config |= CONF_FLAG_PASS_CLOSE;
         } else {
             config &= ~CONF_FLAG_PASS_CLOSE;
@@ -93,13 +93,17 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
         if (allAreSet(val, FLAG_CLOSE_REQUESTED)) {
             throw new ClosedChannelException();
         }
-        if (src.remaining() > remaining) {
+        int oldLimit = src.limit();
+        if (remaining == 0) {
             throw new FixedLengthOverflowException();
+        } else if (src.remaining() > remaining) {
+            src.limit((int) (src.position() + remaining));
         }
         int res = 0;
         try {
             return res = next.write(src);
         } finally {
+            src.limit(oldLimit);
             exitWrite(val, (long) res);
         }
     }
@@ -116,13 +120,33 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
             throw new ClosedChannelException();
         }
         long toWrite = Buffers.remaining(srcs, offset, length);
-        if (toWrite > remaining) {
+        if (remaining == 0) {
             throw new FixedLengthOverflowException();
+        }
+        int[] limits = null;
+        if (toWrite > remaining) {
+            limits = new int[length];
+            long r = remaining;
+            for (int i = offset; i < offset + length; ++i) {
+                limits[i - offset] = srcs[i].limit();
+                int br = srcs[i].remaining();
+                if(br < r) {
+                    r -= br;
+                } else {
+                    srcs[i].limit((int) (srcs[i].position() + r));
+                    r = 0;
+                }
+            }
         }
         long res = 0L;
         try {
             return res = next.write(srcs, offset, length);
         } finally {
+            if (limits != null) {
+                for (int i = offset; i < offset + length; ++i) {
+                    srcs[i].limit(limits[i - offset]);
+                }
+            }
             exitWrite(val, res);
         }
     }
