@@ -13,7 +13,7 @@ public class Predicates {
 
     /**
      * Creates a procedure that returns true if the given ExchangeAttributes are equal.
-     * @param Attributes to be compared in the predictor.
+     * @param attributes to be compared in the predictor.
      * @return A new EqualsPredicate.
      */
     public static Predicate equals(final ExchangeAttribute[] attributes){
@@ -174,6 +174,34 @@ public class Predicates {
      */
     public static Predicate regex(final String attribute, final String pattern, final ClassLoader classLoader, final boolean requireFullMatch) {
         return new RegularExpressionPredicate(pattern, ExchangeAttributes.parser(classLoader).parse(attribute), requireFullMatch);
+    }
+
+    /**
+     * A predicate that returns true if authentication is required
+     *
+     * @return A predicate that returns true if authentication is required
+     */
+    public static Predicate authRequired() {
+        return AuthenticationRequiredPredicate.INSTANCE;
+    }
+
+    /**
+     * parses the predicate string, and returns the result, using the TCCL to load predicate definitions
+     * @param predicate The prediate string
+     * @return The predicate
+     */
+    public static Predicate parse(final String predicate) {
+        return PredicateParser.parse(predicate, Thread.currentThread().getContextClassLoader());
+    }
+
+    /**
+     * parses the predicate string, and returns the result
+     * @param predicate The prediate string
+     * @param classLoader The class loader to load the predicates from
+     * @return The predicate
+     */
+    public static Predicate parse(final String predicate, ClassLoader classLoader) {
+        return PredicateParser.parse(predicate, classLoader);
     }
 
     private Predicates() {

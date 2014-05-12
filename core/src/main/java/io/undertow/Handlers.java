@@ -8,6 +8,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.handlers.AccessControlListHandler;
 import io.undertow.server.handlers.DateHandler;
+import io.undertow.server.handlers.DisableCacheHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
 import io.undertow.server.handlers.HttpContinueAcceptingHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
@@ -432,6 +433,16 @@ public class Handlers {
     public static ProxyHandler proxyHandler(ProxyClient proxyClient) {
         return new ProxyHandler(proxyClient, ResponseCodeHandler.HANDLE_404);
     }
+
+    /**
+     * Handler that sets the headers that disable caching of the response
+     * @param next The next handler
+     * @return The handler
+     */
+    public static HttpHandler disableCache(final HttpHandler next) {
+        return new DisableCacheHandler(next);
+    }
+
     private Handlers() {
 
     }

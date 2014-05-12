@@ -19,6 +19,7 @@
 package io.undertow.servlet.core;
 
 import io.undertow.Handlers;
+import io.undertow.predicate.Predicates;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.AuthenticationMode;
@@ -287,6 +288,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         final SecurityPathMatches securityPathMatches = buildSecurityConstraints();
         current = new ServletAuthenticationCallHandler(current);
+        if(deploymentInfo.isDisableCachingForSecuredPages()) {
+            current = Handlers.predicate(Predicates.authRequired(), Handlers.disableCache(current), current);
+        }
         if (!securityPathMatches.isEmpty()) {
             current = new ServletAuthenticationConstraintHandler(current);
         }
