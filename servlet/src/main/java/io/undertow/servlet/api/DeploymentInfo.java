@@ -93,6 +93,7 @@ public class DeploymentInfo implements Cloneable {
     private MetricsCollector metricsCollector = null;
     private SessionConfigWrapper sessionConfigWrapper = null;
     private boolean eagerFilterInit = false;
+    private boolean disableCachingForSecuredPages = true;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -995,6 +996,14 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public boolean isDisableCachingForSecuredPages() {
+        return disableCachingForSecuredPages;
+    }
+
+    public void setDisableCachingForSecuredPages(boolean disableCachingForSecuredPages) {
+        this.disableCachingForSecuredPages = disableCachingForSecuredPages;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1065,6 +1074,7 @@ public class DeploymentInfo implements Cloneable {
         info.metricsCollector = metricsCollector;
         info.sessionConfigWrapper = sessionConfigWrapper;
         info.eagerFilterInit = eagerFilterInit;
+        info.disableCachingForSecuredPages = disableCachingForSecuredPages;
         return info;
     }
 

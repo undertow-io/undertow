@@ -195,14 +195,22 @@ public class Predicates {
     }
 
     /**
+     * A predicate that returns true if authentication is required
+     *
+     * @return A predicate that returns true if authentication is required
+     */
+    public static Predicate authRequired() {
+        return AuthenticationRequiredPredicate.INSTANCE;
+    }
+
+    /**
      * parses the predicate string, and returns the result, using the TCCL to load predicate definitions
      * @param predicate The prediate string
      * @return The predicate
      */
-    public static final Predicate parse(final String predicate) {
+    public static Predicate parse(final String predicate) {
         return PredicateParser.parse(predicate, Thread.currentThread().getContextClassLoader());
     }
-
 
     /**
      * parses the predicate string, and returns the result
@@ -210,7 +218,7 @@ public class Predicates {
      * @param classLoader The class loader to load the predicates from
      * @return The predicate
      */
-    public static final Predicate parse(final String predicate, ClassLoader classLoader) {
+    public static Predicate parse(final String predicate, ClassLoader classLoader) {
         return PredicateParser.parse(predicate, classLoader);
     }
 

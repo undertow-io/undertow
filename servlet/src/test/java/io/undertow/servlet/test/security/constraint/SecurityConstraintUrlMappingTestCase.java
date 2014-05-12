@@ -211,6 +211,11 @@ public class SecurityConstraintUrlMappingTestCase {
             result = client.execute(get);
             assertEquals(200, result.getStatusLine().getStatusCode());
 
+            //make sure that caching is disabled
+            Assert.assertEquals("0", result.getHeaders("Expires")[0].getValue());
+            Assert.assertEquals("no-cache", result.getHeaders("Pragma")[0].getValue());
+            Assert.assertEquals("no-cache, no-store, must-revalidate", result.getHeaders("Cache-Control")[0].getValue());
+
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);
         } finally {
