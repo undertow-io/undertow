@@ -27,6 +27,7 @@ import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.util.SavedRequest;
+import io.undertow.util.Headers;
 import io.undertow.util.RedirectBuilder;
 
 import javax.servlet.RequestDispatcher;
@@ -74,6 +75,12 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         ServletRequest req = servletRequestContext.getServletRequest();
         ServletResponse resp = servletRequestContext.getServletResponse();
         RequestDispatcher disp = req.getRequestDispatcher(location);
+        //make sure the login page is never cached
+        exchange.getResponseHeaders().add(Headers.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+        exchange.getResponseHeaders().add(Headers.PRAGMA, "no-cache");
+        exchange.getResponseHeaders().add(Headers.EXPIRES, "0");
+
+
         try {
             disp.forward(req, resp);
         } catch (ServletException e) {
