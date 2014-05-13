@@ -22,8 +22,6 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcurrentDirectDeque;
-import io.undertow.util.FastConcurrentDirectDeque;
-import io.undertow.util.PortableConcurrentDirectDeque;
 
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
@@ -67,11 +65,7 @@ public class InMemorySessionManager implements SessionManager {
         this.maxSize = maxSessions;
         ConcurrentDirectDeque<String> evictionQueue = null;
         if (maxSessions > 0) {
-            try {
-                evictionQueue = new FastConcurrentDirectDeque<String>();
-            } catch (Throwable e) {
-                evictionQueue = new PortableConcurrentDirectDeque<String>();
-            }
+            evictionQueue = ConcurrentDirectDeque.newInstance();
         }
         this.evictionQueue = evictionQueue;
     }
