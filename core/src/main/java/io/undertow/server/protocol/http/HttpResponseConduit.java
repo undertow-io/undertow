@@ -86,6 +86,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         this.exchange = exchange;
     }
     void reset(HttpServerExchange exchange) {
+
         this.exchange = exchange;
         state = STATE_START;
         fiCookie = -1L;
@@ -228,12 +229,13 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
     private void bufferDone() {
         HttpServerConnection connection = (HttpServerConnection)exchange.getConnection();
-        if(connection.getExtraBytes() == null) {
+        if(connection.getExtraBytes() != null && connection.isOpen() && exchange.isRequestComplete()) {
             //if we are pipelining we hold onto the buffer
+            pooledBuffer.getResource().clear();
+        } else {
+
             pooledBuffer.free();
             pooledBuffer = null;
-        } else {
-            pooledBuffer.getResource().clear();
         }
     }
 
