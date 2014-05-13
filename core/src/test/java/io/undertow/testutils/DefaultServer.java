@@ -35,6 +35,7 @@ import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
+import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
@@ -213,6 +214,31 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     @Override
     public void run(final RunNotifier notifier) {
+        notifier.addListener(new RunListener() {
+            @Override
+            public void testStarted(Description description) throws Exception {
+                DebuggingSlicePool.currentLabel = description.getClassName() + "." + description.getMethodName();
+                super.testStarted(description);
+            }
+
+            @Override
+            public void testFinished(Description description) throws Exception {
+
+                if(!DebuggingSlicePool.BUFFERS.isEmpty()) {
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    for(DebuggingSlicePool.DebuggingBuffer b : DebuggingSlicePool.BUFFERS) {
+                        b.getAllocationPoint().printStackTrace();
+                        notifier.fireTestFailure(new Failure(description,  new RuntimeException(b.getLabel(), b.getAllocationPoint())));
+                    }
+                    DebuggingSlicePool.BUFFERS.clear();
+                }
+                super.testFinished(description);
+            }
+        });
         runInternal(notifier);
         super.run(notifier);
     }
@@ -238,8 +264,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         .set(Options.BALANCING_TOKENS, 1)
                         .set(Options.BALANCING_CONNECTIONS, 2)
                         .getMap();
+                DebuggingSlicePool pool = new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192));
                 if (ajp) {
-                    openListener = new AjpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), 8192);
+                    openListener = new AjpOpenListener(pool, 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
                     if (!proxy) {
                         int port = 8888;
@@ -247,7 +274,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     } else {
                         server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
 
-                        proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
+                        proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                         proxyOpenListener.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000, HANDLE_404));
@@ -255,7 +282,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                     }
                 } else {
-                    openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
+                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
                     if (!proxy) {
                         server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
@@ -263,7 +290,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
                         server = worker.createStreamConnectionServer(targetAddress, acceptListener, serverOptions);
 
-                        proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
+                        proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                         ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
