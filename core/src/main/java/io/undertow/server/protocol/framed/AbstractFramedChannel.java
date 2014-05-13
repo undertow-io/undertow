@@ -45,6 +45,7 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -87,6 +88,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private final Deque<S> newFrames = new ArrayDeque<S>();
 
     private volatile R receiver = null;
+    private final List<R> receivers = new CopyOnWriteArrayList<R>();
 
     private boolean receivesSuspended = true;
 
@@ -283,6 +285,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     if (data.getFrameLength() > frameData.getResource().remaining()) {
                         receiver = newChannel;
                     }
+                    receivers.add(newChannel);
                     return newChannel;
                 }
             }
@@ -425,7 +428,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     protected synchronized void queueFrame(final S channel) throws IOException {
         assert !newFrames.contains(channel);
-        if(isWritesBroken() || !this.channel.getSinkChannel().isOpen()) {
+        if (isWritesBroken() || !this.channel.getSinkChannel().isOpen()) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         newFrames.add(channel);
@@ -511,11 +514,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * Called when a source sub channel fails to fulfil its contract, and leaves the channel in an inconsistent state.
      * <p/>
      * The underlying read side will be forcibly closed.
+     *
      * @param cause The possibly null cause
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected void markReadsBroken(Throwable cause) {
-        if (readsBrokenUpdater.compareAndSet(this, 0 ,1)) {
+        if (readsBrokenUpdater.compareAndSet(this, 0, 1)) {
             handleBrokenSourceChannel(cause);
             safeClose(channel.getSourceChannel());
 
@@ -533,7 +537,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * The underlying channel will be closed, and any sub channels that have writes resumed will have their
      * listeners notified. It is expected that these listeners will then attempt to use the channel, and their standard
      * error handling logic will take over.
-     *
      *
      * @param cause The possibly null cause
      */
@@ -589,6 +592,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if (isLastFrameReceived()) {
                 IoUtils.safeClose(AbstractFramedChannel.this.channel.getSourceChannel());
             }
+            receivers.remove(channel);
             if (channel == receiver) {
                 receiver = null;
                 if (receivesSuspended) {
@@ -654,7 +658,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         ChannelListeners.invokeChannelListener(sender, sender.getWriteListener());
                     }
                 }
-                if(pendingFrames.isEmpty()) {
+                if (pendingFrames.isEmpty()) {
                     channel.suspendWrites();
                 }
             }
@@ -668,25 +672,35 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
         @Override
         public void handleEvent(final StreamSinkChannel c) {
-            R receiver = AbstractFramedChannel.this.receiver;
-            if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
-                ChannelListeners.invokeChannelListener(receiver, ((SimpleSetter) receiver.getReadSetter()).get());
+            try {
+                R receiver = AbstractFramedChannel.this.receiver;
+                if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
+                    ChannelListeners.invokeChannelListener(receiver, ((SimpleSetter) receiver.getReadSetter()).get());
+                }
+                synchronized (AbstractFramedChannel.this) {
+                    for (final S channel : pendingFrames) {
+                        //if this was a clean shutdown there should not be any senders
+                        channel.markBroken();
+                    }
+                    for (final S channel : newFrames) {
+                        //if this was a clean shutdown there should not be any senders
+                        channel.markBroken();
+                    }
+                    for (final S channel : heldFrames) {
+                        //if this was a clean shutdown there should not be any senders
+                        channel.markBroken();
+                    }
+                }
+            } finally {
+                for (R r : receivers) {
+                    IoUtils.safeClose(r);
+                }
+                if (readData != null) {
+                    readData.free();
+                }
+                ChannelListeners.invokeChannelListener((C) AbstractFramedChannel.this, closeSetter.get());
+
             }
-            synchronized (AbstractFramedChannel.this) {
-                for (final S channel : pendingFrames) {
-                    //if this was a clean shutdown there should not be any senders
-                    channel.markBroken();
-                }
-                for (final S channel : newFrames) {
-                    //if this was a clean shutdown there should not be any senders
-                    channel.markBroken();
-                }
-                for (final S channel : heldFrames) {
-                    //if this was a clean shutdown there should not be any senders
-                    channel.markBroken();
-                }
-            }
-            ChannelListeners.invokeChannelListener((C) AbstractFramedChannel.this, closeSetter.get());
         }
     }
 
@@ -704,6 +718,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "[ " + (receiver == null ? "No Receiver" : receiver.toString()) + " " + pendingFrames.toString() + " -- " + heldFrames.toString() + " -- " + newFrames.toString()+ "]" ;
+        return getClass().getSimpleName() + "[ " + (receiver == null ? "No Receiver" : receiver.toString()) + " " + pendingFrames.toString() + " -- " + heldFrames.toString() + " -- " + newFrames.toString() + "]";
     }
 }
