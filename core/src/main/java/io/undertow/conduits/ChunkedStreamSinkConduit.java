@@ -32,6 +32,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
+import io.undertow.util.ImmediatePooled;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -305,8 +306,8 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     }
 
     private void createLastChunk(final boolean writeFinal) throws UnsupportedEncodingException {
-        lastChunkBuffer = bufferPool.allocate();
-        ByteBuffer lastChunkBuffer = this.lastChunkBuffer.getResource();
+        Pooled<ByteBuffer> lastChunkBufferPooled =  bufferPool.allocate();
+        ByteBuffer lastChunkBuffer = lastChunkBufferPooled.getResource();
         if (writeFinal) {
             lastChunkBuffer.put(CRLF);
         } else if(chunkingSepBuffer.hasRemaining()) {
@@ -331,7 +332,16 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         } else {
             lastChunkBuffer.put(CRLF);
         }
+        //horrible hack
+        //there is a situation where we can get a buffer leak here if the connection is terminated abnormaly
+        //this should be fixed once this channel has its lifecycle tied to the connection, same as fixed length
         lastChunkBuffer.flip();
+        ByteBuffer data = ByteBuffer.allocate(lastChunkBuffer.remaining());
+        data.put(lastChunkBuffer);
+        data.flip();
+        this.lastChunkBuffer = new ImmediatePooled<ByteBuffer>(data);
+
+        lastChunkBufferPooled.free();
     }
 
     @Override
