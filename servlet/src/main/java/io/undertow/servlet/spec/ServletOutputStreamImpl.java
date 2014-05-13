@@ -667,6 +667,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 resumeWrites();
                 return;
             }
+
+            if (pooledBuffer != null) {
+                pooledBuffer.free();
+                buffer = null;
+            } else {
+                buffer = null;
+            }
         }
         channel.shutdownWrites();
         state |= FLAG_DELEGATE_SHUTDOWN;
@@ -752,6 +759,10 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         internalListener.handleEvent(null);
     }
 
+    ServletRequestContext getServletRequestContext() {
+        return servletRequestContext;
+    }
+
 
     private class WriteChannelListener implements ChannelListener<StreamSinkChannel> {
 
@@ -820,6 +831,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     }
                     if (anyAreSet(state, FLAG_CLOSED)) {
                         try {
+
+                            if (pooledBuffer != null) {
+                                pooledBuffer.free();
+                                buffer = null;
+                            } else {
+                                buffer = null;
+                            }
                             channel.shutdownWrites();
                             state |= FLAG_DELEGATE_SHUTDOWN;
                             if (!channel.flush()) {

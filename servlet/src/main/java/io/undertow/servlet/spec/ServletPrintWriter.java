@@ -1,5 +1,6 @@
 package io.undertow.servlet.spec;
 
+import javax.servlet.DispatcherType;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -57,6 +58,10 @@ public class ServletPrintWriter {
     }
 
     public void close() {
+
+        if (outputStream.getServletRequestContext().getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE) {
+            return;
+        }
         if (closed) {
             return;
         }
