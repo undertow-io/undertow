@@ -1472,6 +1472,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     private void closeAndFlushResponse() {
+        if(!connection.isOpen()) {
+            //not much point trying to flush
+            return;
+        }
         try {
             if (isResponseChannelAvailable()) {
                 getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
