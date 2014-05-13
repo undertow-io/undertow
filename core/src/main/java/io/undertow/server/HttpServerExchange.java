@@ -1130,9 +1130,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (exchangeCompletionListenersCount > 0) {
             int i = exchangeCompletionListenersCount - 1;
             ExchangeCompletionListener next = exchangeCompleteListeners[i];
+            exchangeCompletionListenersCount = -1;
             next.exchangeEvent(this, new ExchangeCompleteNextListener(exchangeCompleteListeners, this, i));
         } else if (exchangeCompletionListenersCount == 0) {
-            exchangeCompletionListenersCount--;
+            exchangeCompletionListenersCount = -1;
             connection.exchangeComplete(this);
         }
     }
@@ -1470,6 +1471,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
             closeAndFlushResponse();
         }
+        //make sure the listeners have been invoked
+        //unless the connection has been killed this is a no-op
+        invokeExchangeCompleteListeners();
         return this;
     }
 
