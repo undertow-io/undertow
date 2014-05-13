@@ -14,10 +14,9 @@ import java.util.concurrent.Executor;
 
 /**
  * This class provides the connector part of the {@link HttpServerExchange} API.
- *
+ * <p/>
  * It contains methods that logically belong on the exchange, however should only be used
  * by connector implementations.
- *
  *
  * @author Stuart Douglas
  */
@@ -42,15 +41,13 @@ public class Connectors {
     /**
      * Attached buffered data to the exchange. The will generally be used to allow data to be re-read.
      *
-     *
-     *
      * @param exchange The HTTP server exchange
-     * @param buffers The buffers to attach
+     * @param buffers  The buffers to attach
      */
     public static void ungetRequestBytes(final HttpServerExchange exchange, Pooled<ByteBuffer>... buffers) {
         Pooled<ByteBuffer>[] existing = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
         Pooled<ByteBuffer>[] newArray;
-        if(existing == null) {
+        if (existing == null) {
             newArray = new Pooled[buffers.length];
             System.arraycopy(buffers, 0, newArray, 0, buffers.length);
         } else {
@@ -59,6 +56,18 @@ public class Connectors {
             System.arraycopy(buffers, 0, newArray, existing.length, buffers.length);
         }
         exchange.putAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA, newArray); //todo: force some kind of wakeup?
+        exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+            @Override
+            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                Pooled<ByteBuffer>[] bufs = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
+                if (bufs != null) {
+                    for (Pooled<ByteBuffer> i : bufs) {
+                        i.free();
+                    }
+                }
+                nextListener.proceed();
+            }
+        });
     }
 
     public static void terminateRequest(final HttpServerExchange exchange) {
@@ -169,7 +178,7 @@ public class Connectors {
             exchange.setInCall(false);
             boolean resumed = exchange.runResumeReadWrite();
             if (exchange.isDispatched()) {
-                if(resumed) {
+                if (resumed) {
                     throw new RuntimeException("resumed and dispatched");
                 }
                 final Runnable dispatchTask = exchange.getDispatchTask();
@@ -180,7 +189,7 @@ public class Connectors {
                     executor = executor == null ? exchange.getConnection().getWorker() : executor;
                     executor.execute(dispatchTask);
                 }
-            } else if(!resumed) {
+            } else if (!resumed) {
                 exchange.endExchange();
             }
         } catch (Throwable t) {
