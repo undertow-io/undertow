@@ -152,6 +152,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             if (recordRequestStartTime) {
                 Connectors.setRequestStartTime(httpServerExchange);
             }
+            connection.setCurrentExchange(httpServerExchange);
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);

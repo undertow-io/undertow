@@ -50,6 +50,8 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     protected final StreamSinkConduit originalSinkConduit;
     protected final List<CloseListener> closeListeners = new LinkedList<CloseListener>();
 
+    protected HttpServerExchange current;
+
     private final int bufferSize;
     /**
      * Any extra bytes that were read from the channel. This could be data for this requests, or the next response.
@@ -287,6 +289,9 @@ public abstract class AbstractServerConnection  extends ServerConnection {
                 } catch (Throwable e) {
                     UndertowLogger.REQUEST_LOGGER.exceptionInvokingCloseListener(l, e);
                 }
+            }
+            if(current != null) {
+                current.endExchange();
             }
             ChannelListeners.invokeChannelListener(AbstractServerConnection.this, listener);
         }

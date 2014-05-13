@@ -183,6 +183,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 if(recordRequestStartTime) {
                     Connectors.setRequestStartTime(httpServerExchange);
                 }
+                connection.setCurrentExchange(httpServerExchange);
                 Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
 
             } catch (Throwable t) {

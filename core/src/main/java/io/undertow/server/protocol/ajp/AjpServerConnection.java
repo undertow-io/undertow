@@ -141,4 +141,8 @@ public final class AjpServerConnection extends AbstractServerConnection {
     protected void exchangeComplete(HttpServerExchange exchange) {
         ajpReadListener.exchangeComplete(exchange);
     }
+
+    void setCurrentExchange(HttpServerExchange exchange) {
+        this.current = exchange;
+    }
 }

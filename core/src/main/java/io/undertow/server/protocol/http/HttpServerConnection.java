@@ -253,6 +253,10 @@ public final class HttpServerConnection extends AbstractServerConnection {
         this.upgradeListener = upgradeListener;
     }
 
+    void setCurrentExchange(HttpServerExchange exchange) {
+        this.current = exchange;
+    }
+
     public void setPipelineBuffer(PipeliningBufferingStreamSinkConduit pipelineBuffer) {
         this.pipelineBuffer = pipelineBuffer;
         this.responseConduit = new HttpResponseConduit(pipelineBuffer, bufferPool);
