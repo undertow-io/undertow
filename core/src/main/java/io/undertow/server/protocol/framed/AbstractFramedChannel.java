@@ -25,6 +25,7 @@ import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -87,6 +88,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private final Deque<S> newFrames = new ArrayDeque<S>();
 
     private volatile R receiver = null;
+    private final List<R> receivers = new CopyOnWriteArrayList<R>();
 
     private boolean receivesSuspended = true;
 
@@ -288,6 +290,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     if (data.getFrameLength() > frameData.getResource().remaining()) {
                         receiver = newChannel;
                     }
+                    receivers.add(newChannel);
                     return newChannel;
                 }
             }
@@ -601,6 +604,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if (isLastFrameReceived()) {
                 safeClose(AbstractFramedChannel.this.channel.getSourceChannel());
             }
+            receivers.remove(channel);
             if (channel == receiver) {
                 receiver = null;
                 if (receivesSuspended) {
@@ -705,6 +709,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         ChannelListeners.invokeChannelListener((C)AbstractFramedChannel.this, task);
                     }
                 } finally {
+                    for(R r : receivers) {
+                        IoUtils.safeClose(r);
+                    }
+                    if(readData != null) {
+                        readData.free();
+                    }
                     ChannelListeners.invokeChannelListener((C) AbstractFramedChannel.this, closeSetter.get());
                 }
             }
