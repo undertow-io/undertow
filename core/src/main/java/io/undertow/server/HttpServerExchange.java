@@ -1441,6 +1441,10 @@ public final class HttpServerExchange extends AbstractAttachable {
                                     }, new ChannelExceptionHandler<StreamSourceChannel>() {
                                         @Override
                                         public void handleException(final StreamSourceChannel channel, final IOException e) {
+
+                                            //make sure the listeners have been invoked
+                                            //unless the connection has been killed this is a no-op
+                                            invokeExchangeCompleteListeners();
                                             UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
                                             IoUtils.safeClose(connection);
                                         }
@@ -1465,15 +1469,15 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
             closeAndFlushResponse();
         }
-        //make sure the listeners have been invoked
-        //unless the connection has been killed this is a no-op
-        invokeExchangeCompleteListeners();
         return this;
     }
 
     private void closeAndFlushResponse() {
         if(!connection.isOpen()) {
             //not much point trying to flush
+
+            //make sure the listeners have been invoked
+            invokeExchangeCompleteListeners();
             return;
         }
         try {
@@ -1493,6 +1497,9 @@ public final class HttpServerExchange extends AbstractAttachable {
                         }, new ChannelExceptionHandler<Channel>() {
                             @Override
                             public void handleException(final Channel channel, final IOException exception) {
+
+                                //make sure the listeners have been invoked
+                                invokeExchangeCompleteListeners();
                                 UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
                                 IoUtils.safeClose(connection);
                             }
