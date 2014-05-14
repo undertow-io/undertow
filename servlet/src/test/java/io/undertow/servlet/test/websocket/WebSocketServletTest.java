@@ -71,6 +71,7 @@ public class WebSocketServletTest {
                                                     new StringWriteChannelListener(string)
                                                             .setup(channel.send(WebSocketFrameType.TEXT, string.length()));
                                                 }
+                                                channel.sendClose();
                                             } catch (IOException e) {
                                                 e.printStackTrace();
                                                 throw new RuntimeException(e);
@@ -83,13 +84,13 @@ public class WebSocketServletTest {
                                                 e.printStackTrace();
                                                 new StringWriteChannelListener("ERROR")
                                                         .setup(channel.send(WebSocketFrameType.TEXT, "ERROR".length()));
+                                                channel.sendClose();
                                             } catch (IOException ex) {
                                                 ex.printStackTrace();
                                                 throw new RuntimeException(ex);
                                             }
                                         }
                                     }.setup(ws);
-                                    channel.getReceiveSetter().set(null);
 
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
