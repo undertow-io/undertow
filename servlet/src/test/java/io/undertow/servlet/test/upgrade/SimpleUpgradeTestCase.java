@@ -83,6 +83,7 @@ public class SimpleUpgradeTestCase {
 
             out.write("exit\r\n\r\n".getBytes());
             out.flush();
+            out.close();
 
         } finally {
             client.getConnectionManager().shutdown();
