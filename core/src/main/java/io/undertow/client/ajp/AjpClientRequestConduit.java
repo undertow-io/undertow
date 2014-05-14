@@ -38,6 +38,7 @@ import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Collections;
 import java.util.HashMap;
@@ -219,10 +220,27 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
         buf.put((byte) 0);
     }
 
+    /**
+     * Called when the target requests a body chunk
+     * @param requestedSize The size of the requested chunk
+     */
     void setBodyChunkRequested(int requestedSize) {
         this.requestedChunkSize = requestedSize;
         if (anyAreSet(state, FLAG_WRITES_RESUMED)) {
             next.resumeWrites();
+        }
+    }
+
+    /**
+     * Called then the request is done. This means no more chunks will be forthcoming,
+     * and if the request has not been full written then the channel is closed.
+     */
+    void setRequestDone() {
+        if(!anyAreSet(state, FLAG_SHUTDOWN)) {
+            state |= FLAG_SHUTDOWN;
+            if (anyAreSet(state, FLAG_WRITES_RESUMED)) {
+                next.resumeWrites();
+            }
         }
     }
 
@@ -433,6 +451,9 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
 
 
     public int write(final ByteBuffer src) throws IOException {
+        if(anyAreSet(state, FLAG_SHUTDOWN)) {
+            throw new ClosedChannelException();
+        }
         if (!processWrite()) {
             return 0;
         }
