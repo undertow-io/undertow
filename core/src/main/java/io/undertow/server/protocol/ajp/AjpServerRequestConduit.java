@@ -229,6 +229,9 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
             final long maxEntitySize = exchange.getMaxEntitySize();
             if (maxEntitySize > 0) {
                 if (totalRead > maxEntitySize) {
+                    //kill the connection, nothing else can be sent on it
+                    terminateReads();
+                    exchange.setPersistent(false);
                     throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxEntitySize);
                 }
             }

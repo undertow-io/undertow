@@ -110,10 +110,7 @@ class AjpClientResponseConduit extends AbstractStreamSourceConduit<StreamSourceC
             val = true;
             int read = next.read(headerBuffer);
             if (read == -1) {
-                if (allAreClear(state, STATE_FINISHED)) {
-                    state |= STATE_FINISHED;
-                    finishListener.handleEvent(this);
-                }
+                handleFinish();
                 return -1;
             } else if (!headerRead()) {
                 return 0;
@@ -138,14 +135,12 @@ class AjpClientResponseConduit extends AbstractStreamSourceConduit<StreamSourceC
                         return 0;
                     }
                     case AJP13_END_RESPONSE: {
+                        ajpClientRequestConduit.setRequestDone();
                         byte persistent = headerBuffer.get();
                         if (persistent == 0) {
                             connection.requestClose();
                         }
-                        if (allAreClear(state, STATE_FINISHED)) {
-                            state |= STATE_FINISHED;
-                            finishListener.handleEvent(this);
-                        }
+                        handleFinish();
                         return -1;
                     }
                     case AJP13_SEND_BODY_CHUNK: {
@@ -183,6 +178,14 @@ class AjpClientResponseConduit extends AbstractStreamSourceConduit<StreamSourceC
             return read;
         } finally {
             dst.limit(limit);
+        }
+    }
+
+    private void handleFinish() {
+        if (allAreClear(state, STATE_FINISHED)) {
+            state |= STATE_FINISHED;
+            finishListener.handleEvent(this);
+            ajpClientRequestConduit.setRequestDone();
         }
     }
 
