@@ -167,6 +167,10 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
         if (headerRead != HEADER_LENGTH) {
             int read = next.read(headerBuffer);
             if (read == -1) {
+                this.state = STATE_FINISHED;
+                if (finishListener != null) {
+                    finishListener.handleEvent(this);
+                }
                 return read;
             } else if (headerBuffer.hasRemaining()) {
                 return 0;
