@@ -108,7 +108,7 @@ public class AbstractWebSocketServerTest {
                                     }
                                 }
                             }.setup(ws);
-                            channel.getReceiveSetter().set(null);
+                            channel.sendClose();
 
                         } catch (IOException e) {
                             throw new RuntimeException(e);
@@ -164,7 +164,7 @@ public class AbstractWebSocketServerTest {
                                 sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
                                 sink.resumeWrites();
                             }
-                            channel.getReceiveSetter().set(null);
+                            channel.sendClose();
 
                         } catch (IOException e) {
                             throw new RuntimeException(e);

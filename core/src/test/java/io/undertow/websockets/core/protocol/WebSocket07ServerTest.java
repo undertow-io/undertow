@@ -84,7 +84,7 @@ public class WebSocket07ServerTest extends AbstractWebSocketServerTest {
                                 sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
                                 sink.resumeWrites();
                             }
-                            channel.getReceiveSetter().set(null);
+                            channel.sendClose();
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
