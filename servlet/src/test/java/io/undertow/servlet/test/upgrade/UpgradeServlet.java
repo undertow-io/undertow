@@ -63,6 +63,13 @@ public class UpgradeServlet extends HttpServlet {
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
 
+            } finally {
+
+                try {
+                    wc.close();
+                } catch (Exception e) {
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
+                }
             }
         }
 

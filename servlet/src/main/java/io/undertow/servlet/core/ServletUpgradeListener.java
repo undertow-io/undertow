@@ -61,12 +61,12 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Htt
                 }
             }
         });
-        this.exchange.getIoThread().execute(new Runnable() {
+        this.exchange.getConnection().getWorker().execute(new Runnable() {
             @Override
             public void run() {
                 final ThreadSetupAction.Handle handle = threadSetupAction.setup(ServletUpgradeListener.this.exchange);
                 try {
-                    //run the upgrade in the IO thread, to prevent threading issues
+                    //run the upgrade in the worker thread
                     instance.getInstance().init(new WebConnectionImpl(channel, ServletUpgradeListener.this.exchange.getConnection().getBufferPool()));
                 } finally {
                     handle.tearDown();
