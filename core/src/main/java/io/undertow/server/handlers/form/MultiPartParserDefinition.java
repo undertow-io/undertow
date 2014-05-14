@@ -31,12 +31,11 @@ import io.undertow.util.MalformedMessageException;
 import io.undertow.util.MultipartParser;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
-import org.xnio.Pooled;
-import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -177,18 +176,14 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             }
 
             final MultipartParser.ParseState parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes(), exchange.getRequestCharset());
-            StreamSourceChannel requestChannel = exchange.getRequestChannel();
-            if (requestChannel == null) {
+            InputStream inputStream = exchange.getInputStream();
+            if (inputStream == null) {
                 throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
             }
-            final Pooled<ByteBuffer> resource = exchange.getConnection().getBufferPool().allocate();
-            final ByteBuffer buf = resource.getResource();
+            byte[] buf = new byte[1024];
             try {
                 while (true) {
-                    buf.clear();
-                    requestChannel.awaitReadable();
-                    int c = requestChannel.read(buf);
-                    buf.flip();
+                    int c = inputStream.read(buf);
                     if (c == -1) {
                         if (parser.isComplete()) {
                             break;
@@ -196,14 +191,12 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                             throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
                         }
                     } else if (c != 0) {
-                        parser.parse(buf);
+                        parser.parse(ByteBuffer.wrap(buf, 0, c));
                     }
                 }
                 exchange.putAttachment(FORM_DATA, data);
             } catch (MalformedMessageException e) {
                 throw new IOException(e);
-            } finally {
-                resource.free();
             }
             return exchange.getAttachment(FORM_DATA);
         }
