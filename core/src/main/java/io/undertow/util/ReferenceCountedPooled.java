@@ -73,18 +73,31 @@ public class ReferenceCountedPooled<T> implements Pooled<T> {
     public Pooled<T> createView(final T newValue) {
         increaseReferenceCount();
         return new Pooled<T>() {
+
+            boolean free = false;
+
             @Override
             public void discard() {
-                ReferenceCountedPooled.this.discard();
+                if(!free) {
+                    free = true;
+                    ReferenceCountedPooled.this.discard();
+                }
             }
 
             @Override
             public void free() {
-                ReferenceCountedPooled.this.free();
+                //make sure that a given view can only be freed once
+                if(!free) {
+                    free = true;
+                    ReferenceCountedPooled.this.free();
+                }
             }
 
             @Override
             public T getResource() throws IllegalStateException {
+                if(free) {
+                    throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
+                }
                 return newValue;
             }
 

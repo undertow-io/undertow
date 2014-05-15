@@ -296,4 +296,7 @@ public interface UndertowMessages {
 
     @Message(id = 90, value = "Jetty NPN not available")
     IOException jettyNPNNotAvailable();
+
+    @Message(id = 91, value = "Buffer has already been freed")
+    IllegalStateException bufferAlreadyFreed();
 }
