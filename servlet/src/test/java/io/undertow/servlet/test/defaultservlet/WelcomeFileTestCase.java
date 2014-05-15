@@ -18,11 +18,6 @@
 
 package io.undertow.servlet.test.defaultservlet;
 
-import java.io.IOException;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -35,13 +30,17 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas
@@ -62,21 +61,34 @@ public class WelcomeFileTestCase {
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceManager(new TestResourceLoader(WelcomeFileTestCase.class))
-                .addWelcomePages("doesnotexist.html", "index.html", "default", "servletPath/servletFile.xhtml");
+                .addWelcomePages("doesnotexist.html", "index.html", "default", "servletPath/servletFile.xhtml")
+                .addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
+                        .addMapping("/path/default"))
 
-        builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
-                .addMapping("/path/default"));
+                .addServlet(new ServletInfo("ServletPath", PathTestServlet.class)
+                        .addMapping("/foo/servletPath/*"))
 
-        builder.addServlet(new ServletInfo("ServletPath", PathTestServlet.class)
-                .addMapping("/foo/servletPath/*"));
-
-        builder.addFilter(new FilterInfo("Filter", NoOpFilter.class));
-        builder.addFilterUrlMapping("Filter", "/*", DispatcherType.REQUEST);
+                .addFilter(new FilterInfo("Filter", NoOpFilter.class))
+                .addFilterUrlMapping("Filter", "/*", DispatcherType.REQUEST);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         root.addPrefixPath(builder.getContextPath(), manager.start());
 
+
+        builder = new DeploymentInfo()
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
+                .setContextPath("/servletContext2")
+                .setDeploymentName("servletContext2.war")
+                .setResourceManager(new TestResourceLoader(WelcomeFileTestCase.class))
+                .addWelcomePages("doesnotexist.html", "index.do")
+                .addServlet(new ServletInfo("*.do", PathTestServlet.class)
+                        .addMapping("*.do"));
+
+        manager = container.addDeployment(builder);
+        manager.deploy();
+        root.addPrefixPath(builder.getContextPath(), manager.start());
         DefaultServer.setRootHandler(root);
     }
 
@@ -96,6 +108,22 @@ public class WelcomeFileTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertTrue(response.contains("Redirected home page"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testWelcomeFileExtensionBasedMapping() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext2");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("pathInfo:null queryString:null servletPath:/index.do requestUri:/servletContext2/index.do", response);
+
         } finally {
             client.getConnectionManager().shutdown();
         }
