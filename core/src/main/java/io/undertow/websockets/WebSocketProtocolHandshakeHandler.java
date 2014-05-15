@@ -166,8 +166,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (!exchange.getRequestMethod().equals(Methods.GET)) {
             // Only GET is supported to start the handshake
-            exchange.setResponseCode(403);
-            exchange.endExchange();
+            next.handleRequest(exchange);
             return;
         }
         final AsyncWebSocketHttpServerExchange facade = new AsyncWebSocketHttpServerExchange(exchange);
