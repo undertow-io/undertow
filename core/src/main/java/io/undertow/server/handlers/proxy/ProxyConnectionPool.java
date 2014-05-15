@@ -1,5 +1,6 @@
 package io.undertow.server.handlers.proxy;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
@@ -221,15 +222,19 @@ class ProxyConnectionPool implements Closeable {
                 if (closed) {
                     return;
                 }
+
+                UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Attempting to reconnect to failed host %s", getUri());
                 client.connect(new ClientCallback<ClientConnection>() {
                     @Override
                     public void completed(ClientConnection result) {
+                        UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Connected to previously failed host %s, returning to service", getUri());
                         problem = false;
                         returnConnection(result);
                     }
 
                     @Override
                     public void failed(IOException e) {
+                        UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Failed to reconnect to failed host %s", getUri());
                         scheduleFailedHostRetry(exchange);
                     }
                 }, getUri(), exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);

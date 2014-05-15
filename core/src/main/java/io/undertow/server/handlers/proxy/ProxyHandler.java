@@ -234,6 +234,7 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void failed(HttpServerExchange exchange) {
+            UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailedToResolveBackend(exchange.getRequestURI());
             if (!exchange.isResponseStarted()) {
                 exchange.setResponseCode(503);
                 exchange.endExchange();
@@ -383,6 +384,7 @@ public final class ProxyHandler implements HttpHandler {
 
                 @Override
                 public void failed(IOException e) {
+                    UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
                     if (!exchange.isResponseStarted()) {
                         exchange.setResponseCode(503);
                         exchange.endExchange();
@@ -437,6 +439,7 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void failed(IOException e) {
+            UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
             if (!exchange.isResponseStarted()) {
                 exchange.setResponseCode(500);
                 exchange.endExchange();
