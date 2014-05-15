@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.proxy;
 
+import io.undertow.UndertowLogger;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpServerExchange;
@@ -241,6 +242,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
                     @Override
                     public void failed(HttpServerExchange exchange) {
+                        UndertowLogger.PROXY_REQUEST_LOGGER.proxyFailedToConnectToBackend(exchange.getRequestURI(), host.uri);
                         callback.failed(exchange);
                     }
 

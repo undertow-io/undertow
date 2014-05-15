@@ -30,6 +30,7 @@ import org.jboss.logging.annotations.MessageLogger;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.sql.SQLException;
 
 /**
@@ -44,6 +45,7 @@ public interface UndertowLogger extends BasicLogger {
     UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, ClientConnection.class.getPackage().getName());
 
     UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
+    UndertowLogger PROXY_REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".proxy");
     UndertowLogger REQUEST_DUMPER_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.dump");
     /**
      * Logger used for IO exceptions. Generally these should be suppressed, because they are of little interest, and it is easy for an
@@ -150,4 +152,16 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5027, value = "Timing out request to %s")
     void timingOutRequest(String requestURI);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5028, value = "Proxy request to %s failed")
+    void proxyRequestFailed(String requestURI, @Cause Exception e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5030, value = "Proxy request to %s could not resolve a backend server")
+    void proxyRequestFailedToResolveBackend(String requestURI);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5031, value = "Proxy request to %s could not connect to backend server %s")
+    void proxyFailedToConnectToBackend(String requestURI, URI uri);
 }
