@@ -26,6 +26,7 @@ import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import org.jboss.logging.Logger;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
@@ -45,6 +46,8 @@ import java.util.Collections;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class AnnotatedAutobahnServer implements Runnable {
+
+    private static final Logger log = Logger.getLogger(AnnotatedAutobahnServer.class);
 
     private static ServerWebSocketContainer deployment;
 
@@ -101,7 +104,7 @@ public class AnnotatedAutobahnServer implements Runnable {
 
             openListener.setRootHandler(manager.start());
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("failed to start server", e);
         }
     }
 

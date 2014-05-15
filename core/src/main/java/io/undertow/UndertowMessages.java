@@ -281,4 +281,7 @@ public interface UndertowMessages {
 
     @Message(id = 85, value = "Could not generate unique session id")
     RuntimeException couldNotGenerateUniqueSessionId();
+
+    @Message(id = 91, value = "Buffer has already been freed")
+    IllegalStateException bufferAlreadyFreed();
 }

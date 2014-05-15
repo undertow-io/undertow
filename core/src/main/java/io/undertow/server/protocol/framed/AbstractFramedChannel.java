@@ -297,9 +297,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             forceFree = true;
             throw e;
         } finally {
-            if (!pooled.getResource().hasRemaining() || forceFree) {
-                pooled.free();
-                this.readData = null;
+            //if the receive caused the channel to break the close listener may be have been called
+            //which will make readData null
+            if(readData != null) {
+                if (!pooled.getResource().hasRemaining() || forceFree) {
+                    pooled.free();
+                    this.readData = null;
+                }
             }
         }
     }
@@ -672,6 +676,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
         @Override
         public void handleEvent(final StreamSinkChannel c) {
+            if(Thread.currentThread() != c.getIoThread()) {
+                ChannelListeners.invokeChannelListener(c.getIoThread(), c, this);
+                return;
+            }
             try {
                 R receiver = AbstractFramedChannel.this.receiver;
                 if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
@@ -692,11 +700,14 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                 }
             } finally {
-                for (R r : receivers) {
-                    IoUtils.safeClose(r);
-                }
-                if (readData != null) {
-                    readData.free();
+                synchronized (AbstractFramedChannel.this) {
+                    for (R r : receivers) {
+                        IoUtils.safeClose(r);
+                    }
+                    if (readData != null) {
+                        readData.free();
+                        readData = null;
+                    }
                 }
                 ChannelListeners.invokeChannelListener((C) AbstractFramedChannel.this, closeSetter.get());
 
