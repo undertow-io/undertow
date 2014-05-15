@@ -57,6 +57,13 @@ public class ServletInfo implements Cloneable {
     private MultipartConfigElement multipartConfig;
     private ServletSecurityInfo servletSecurityInfo;
     private Executor executor;
+    /**
+     * If this is true this servlet will not be considered when evaluating welcome file mappings,
+     * and if the mapped path is a directory a welcome file match will be performed that may result in another servlet
+     * being selected.
+     *
+     * Generally intended to be used by the default and JSP servlet.
+     */
     private boolean requireWelcomeFileMapping;
 
     public ServletInfo(final String name, final Class<? extends Servlet> servletClass) {
@@ -260,6 +267,10 @@ public class ServletInfo implements Cloneable {
         return this;
     }
 
+    /**
+     *
+     * @return
+     */
     public boolean isRequireWelcomeFileMapping() {
         return requireWelcomeFileMapping;
     }

@@ -96,7 +96,7 @@ class ServletPathMatchesData {
                 ext = path.substring(extensionPos + 1, path.length());
                 ServletChain handler = match.extensionMatches.get(ext);
                 if (handler != null) {
-                    return new ServletPathMatch(handler, path, match.requireWelcomeFileMatch);
+                    return new ServletPathMatch(handler, path, handler.getManagedServlet().getServletInfo().isRequireWelcomeFileMapping());
                 } else {
                     return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
                 }
