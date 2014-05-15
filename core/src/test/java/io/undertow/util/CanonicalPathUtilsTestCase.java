@@ -60,10 +60,11 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("/", CanonicalPathUtils.canonicalize("/a/../.."));
         Assert.assertEquals("/foo", CanonicalPathUtils.canonicalize("/a/../../foo"));
 
-        //preserve trailing /
+        //preserve (single) trailing /
         Assert.assertEquals("/a/", CanonicalPathUtils.canonicalize("/a/"));
         Assert.assertEquals("/", CanonicalPathUtils.canonicalize("/"));
         Assert.assertEquals("/bbb/a", CanonicalPathUtils.canonicalize("/cc/../bbb/a/."));
+        Assert.assertEquals("/aaa/bbb/", CanonicalPathUtils.canonicalize("/aaa/bbb//////"));
     }
 
 }
