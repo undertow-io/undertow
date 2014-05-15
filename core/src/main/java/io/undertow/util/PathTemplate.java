@@ -56,7 +56,25 @@ public class PathTemplate implements Comparable<PathTemplate> {
         this.parameterNames = Collections.unmodifiableSet(parameterNames);
     }
 
-    public static PathTemplate create(final String path) {
+    public static PathTemplate create(final String inputPath) {
+        // a path is required
+        if(inputPath == null) {
+            throw UndertowMessages.MESSAGES.pathMustBeSpecified();
+        }
+
+        // prepend a "/" if none is present
+        if(!inputPath.startsWith("/")) {
+            return PathTemplate.create("/" + inputPath);
+        }
+
+        // otherwise normalize template
+        final StringBuilder builder = new StringBuilder(inputPath);
+        while(builder != null && builder.length() > 1 && '/' == builder.charAt(builder.length() - 1)) {
+            builder.deleteCharAt(builder.length() - 1);
+        }
+
+        // create string from modified string
+        final String path = builder.toString();
 
         int state = 0;
         String base = "";

@@ -32,6 +32,7 @@ public class PathTemplateTestCase {
 
     @Test
     public void testMatches() {
+        // test normal use
         testMatch("/docs/mydoc", "/docs/mydoc");
         testMatch("/docs/{docId}", "/docs/mydoc", "docId", "mydoc");
         testMatch("/docs/{docId}/{op}", "/docs/mydoc/read", "docId", "mydoc", "op", "read");
@@ -40,9 +41,36 @@ public class PathTemplateTestCase {
         testMatch("/docs/{docId}/read", "/docs/mydoc/read", "docId", "mydoc");
         testMatch("/docs/{docId}/read", "/docs/mydoc/read?myQueryParam", "docId", "mydoc");
 
+        // test no leading slash
+        testMatch("docs/mydoc", "/docs/mydoc");
+        testMatch("docs/{docId}", "/docs/mydoc", "docId", "mydoc");
+        testMatch("docs/{docId}/{op}", "/docs/mydoc/read", "docId", "mydoc", "op", "read");
+        testMatch("docs/{docId}/{op}/{allowed}", "/docs/mydoc/read/true", "docId", "mydoc", "op", "read", "allowed", "true");
+        testMatch("docs/{docId}/operation/{op}", "/docs/mydoc/operation/read", "docId", "mydoc", "op", "read");
+        testMatch("docs/{docId}/read", "/docs/mydoc/read", "docId", "mydoc");
+        testMatch("docs/{docId}/read", "/docs/mydoc/read?myQueryParam", "docId", "mydoc");
+
+        // test trailing slashes
+        testMatch("/docs/mydoc/", "/docs/mydoc");
+        testMatch("/docs/{docId}/", "/docs/mydoc", "docId", "mydoc");
+        testMatch("/docs/{docId}/{op}/", "/docs/mydoc/read", "docId", "mydoc", "op", "read");
+        testMatch("/docs/{docId}/{op}/{allowed}/", "/docs/mydoc/read/true", "docId", "mydoc", "op", "read", "allowed", "true");
+        testMatch("/docs/{docId}/operation/{op}/", "/docs/mydoc/operation/read", "docId", "mydoc", "op", "read");
+        testMatch("/docs/{docId}/read/", "/docs/mydoc/read", "docId", "mydoc");
+
+        // test straight replacement of template
         testMatch("/{foo}", "/bob", "foo", "bob");
+        testMatch("{foo}", "/bob", "foo", "bob");
+        testMatch("/{foo}/", "/bob", "foo", "bob");
+
+        // test that brackets (and the possibility of recursive templates) don't mess up the matching
+        testMatch("/{value}", "/{value}", "value", "{value}");
     }
 
+    @Test(expected=IllegalArgumentException.class)
+    public void testNullPath() {
+        PathTemplate.create(null);
+    }
 
     @Test
     public void testDetectDuplicates() {
