@@ -20,6 +20,7 @@ package io.undertow.websockets.spi;
 
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
+import io.undertow.websockets.core.WebSocketChannel;
 import org.xnio.IoFuture;
 import org.xnio.Pool;
 
@@ -28,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -156,4 +158,6 @@ public interface WebSocketHttpExchange extends Closeable {
     Principal getUserPrincipal();
 
     boolean isUserInRole(String role);
+
+    Set<WebSocketChannel> getPeerConnections();
 }

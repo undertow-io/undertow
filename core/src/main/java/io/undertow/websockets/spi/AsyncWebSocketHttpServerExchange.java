@@ -28,6 +28,7 @@ import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.websockets.core.WebSocketChannel;
 import org.xnio.ChannelListener;
 import org.xnio.FinishedIoFuture;
 import org.xnio.FutureResult;
@@ -47,6 +48,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Stuart Douglas
@@ -55,9 +57,11 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     private final HttpServerExchange exchange;
     private Sender sender;
+    private final Set<WebSocketChannel> peerConnections;
 
-    public AsyncWebSocketHttpServerExchange(final HttpServerExchange exchange) {
+    public AsyncWebSocketHttpServerExchange(final HttpServerExchange exchange, Set<WebSocketChannel> peerConnections) {
         this.exchange = exchange;
+        this.peerConnections = peerConnections;
     }
 
 
@@ -272,5 +276,10 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
             return false;
         }
         return authenticatedAccount.getRoles().contains(role);
+    }
+
+    @Override
+    public Set<WebSocketChannel> getPeerConnections() {
+        return peerConnections;
     }
 }

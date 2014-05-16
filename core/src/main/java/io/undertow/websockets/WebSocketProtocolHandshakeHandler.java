@@ -33,8 +33,10 @@ import io.undertow.websockets.spi.AsyncWebSocketHttpServerExchange;
 import org.xnio.StreamConnection;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link HttpHandler} which will process the {@link HttpServerExchange} and do the actual handshake/upgrade
@@ -51,6 +53,8 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     private final HttpUpgradeListener upgradeListener;
 
     private final WebSocketConnectionCallback callback;
+
+    private final Set<WebSocketChannel> peerConnections = Collections.newSetFromMap(new ConcurrentHashMap<WebSocketChannel, Boolean>());
 
     /**
      * The handler that is invoked if there are no web socket headers
@@ -169,7 +173,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             next.handleRequest(exchange);
             return;
         }
-        final AsyncWebSocketHttpServerExchange facade = new AsyncWebSocketHttpServerExchange(exchange);
+        final AsyncWebSocketHttpServerExchange facade = new AsyncWebSocketHttpServerExchange(exchange, peerConnections);
         Handshake handshaker = null;
         for (Handshake method : handshakes) {
             if (method.matches(facade)) {
@@ -187,6 +191,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
                     @Override
                     public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
                         WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
+                        peerConnections.add(channel);
                         callback.onConnect(facade, channel);
                     }
                 });
@@ -195,5 +200,9 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             }
             handshaker.handshake(facade);
         }
+    }
+
+    public Set<WebSocketChannel> getPeerConnections() {
+        return peerConnections;
     }
 }

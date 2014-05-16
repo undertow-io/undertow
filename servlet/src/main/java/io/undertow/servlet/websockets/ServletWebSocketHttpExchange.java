@@ -21,6 +21,7 @@ package io.undertow.servlet.websockets;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
+import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.FinishedIoFuture;
 import org.xnio.FutureResult;
@@ -44,6 +45,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
 * @author Stuart Douglas
@@ -53,10 +55,12 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
     private final HttpServletRequest request;
     private final HttpServletResponse response;
     private final HttpServerExchange exchange;
+    private final Set<WebSocketChannel> peerConnections;
 
-    public ServletWebSocketHttpExchange(final HttpServletRequest request, final HttpServletResponse response) {
+    public ServletWebSocketHttpExchange(final HttpServletRequest request, final HttpServletResponse response, Set<WebSocketChannel> peerConnections) {
         this.request = request;
         this.response = response;
+        this.peerConnections = peerConnections;
         this.exchange = SecurityActions.requireCurrentServletRequestContext().getOriginalRequest().getExchange();
     }
 
@@ -217,5 +221,10 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
     @Override
     public boolean isUserInRole(String role) {
         return request.isUserInRole(role);
+    }
+
+    @Override
+    public Set<WebSocketChannel> getPeerConnections() {
+        return peerConnections;
     }
 }

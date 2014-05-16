@@ -37,7 +37,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Stuart Douglas
@@ -49,6 +52,8 @@ public class WebSocketServlet extends HttpServlet {
     private final List<Handshake> handshakes;
 
     private WebSocketConnectionCallback callback;
+
+    private Set<WebSocketChannel> peerConnections;
 
     public WebSocketServlet() {
         this.handshakes = handshakes();
@@ -63,6 +68,7 @@ public class WebSocketServlet extends HttpServlet {
     @Override
     public void init(final ServletConfig config) throws ServletException {
         super.init(config);
+        peerConnections = Collections.newSetFromMap(new ConcurrentHashMap<WebSocketChannel, Boolean>());
         try {
             final String sessionHandler = config.getInitParameter(SESSION_HANDLER);
             if (sessionHandler != null) {
@@ -87,7 +93,7 @@ public class WebSocketServlet extends HttpServlet {
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
 
-        final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp);
+        final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp, peerConnections);
         Handshake handshaker = null;
         for (Handshake method : handshakes) {
             if (method.matches(facade)) {
@@ -106,6 +112,7 @@ public class WebSocketServlet extends HttpServlet {
             @Override
             public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
                 WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
+                peerConnections.add(channel);
                 callback.onConnect(facade, channel);
             }
         });

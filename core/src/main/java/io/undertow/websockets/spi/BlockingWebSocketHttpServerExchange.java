@@ -19,6 +19,7 @@
 package io.undertow.websockets.spi;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.websockets.core.WebSocketChannel;
 import org.xnio.FinishedIoFuture;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Set;
 
 /**
  * @author Stuart Douglas
@@ -37,8 +39,8 @@ public class BlockingWebSocketHttpServerExchange extends AsyncWebSocketHttpServe
     private final OutputStream out;
     private final InputStream in;
 
-    public BlockingWebSocketHttpServerExchange(final HttpServerExchange exchange) {
-        super(exchange);
+    public BlockingWebSocketHttpServerExchange(final HttpServerExchange exchange, Set<WebSocketChannel> peerConnections) {
+        super(exchange, peerConnections);
         out = exchange.getOutputStream();
         in = exchange.getInputStream();
     }

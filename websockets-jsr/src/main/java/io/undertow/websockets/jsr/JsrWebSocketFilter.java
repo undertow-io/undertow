@@ -43,7 +43,10 @@ import javax.servlet.http.HttpServletResponse;
 import javax.websocket.server.ServerContainer;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Filter that provides HTTP upgrade functionality. This should be run after all user filters, but before any servlets.
@@ -59,6 +62,7 @@ public class JsrWebSocketFilter implements Filter {
 
     private WebSocketConnectionCallback callback;
     private PathTemplateMatcher<WebSocketHandshakeHolder> pathTemplateMatcher;
+    private Set<WebSocketChannel> peerConnections;
 
     protected WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config) {
         List<Handshake> handshakes = new ArrayList<Handshake>();
@@ -70,6 +74,7 @@ public class JsrWebSocketFilter implements Filter {
 
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
+        peerConnections = Collections.newSetFromMap(new ConcurrentHashMap<WebSocketChannel, Boolean>());
         ServerWebSocketContainer container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
         container.deploymentComplete();
         pathTemplateMatcher = new PathTemplateMatcher<WebSocketHandshakeHolder>();
@@ -84,7 +89,7 @@ public class JsrWebSocketFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
         if (req.getHeader(Headers.UPGRADE_STRING) != null) {
-            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp);
+            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp, peerConnections);
 
             String path;
             if (req.getPathInfo() == null) {
@@ -112,6 +117,7 @@ public class JsrWebSocketFilter implements Filter {
                         @Override
                         public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
                             WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
+                            peerConnections.add(channel);
                             callback.onConnect(facade, channel);
                         }
                     });

@@ -20,6 +20,7 @@ package io.undertow.websockets.core;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -63,23 +64,36 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     protected StreamSourceFrameChannel fragmentedChannel;
 
     /**
+     * Represents all web socket channels that are attached to the same endpoint.
+     */
+    private final Set<WebSocketChannel> peerConnections;
+
+    /**
      * Create a new {@link WebSocketChannel}
      * 8
      *
      * @param connectedStreamChannel The {@link org.xnio.channels.ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
      *                               Be aware that it already must be "upgraded".
      * @param bufferPool             The {@link org.xnio.Pool} which will be used to acquire {@link java.nio.ByteBuffer}'s from.
-     * @param version                The {@link io.undertow.websockets.core.WebSocketVersion} of the {@link io.undertow.websockets.core.WebSocketChannel}
+     * @param version                The {@link WebSocketVersion} of the {@link WebSocketChannel}
      * @param wsUrl                  The url for which the channel was created.
      * @param client
+     * @param peerConnections        The concurrent set that is used to track open connections associtated with an endpoint
      */
-    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported) {
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, Set<WebSocketChannel> peerConnections) {
         super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null);
         this.client = client;
         this.version = version;
         this.wsUrl = wsUrl;
         this.extensionsSupported = extensionsSupported;
         this.subProtocol = subProtocol;
+        this.peerConnections = peerConnections;
+        addCloseTask(new ChannelListener<WebSocketChannel>() {
+            @Override
+            public void handleEvent(WebSocketChannel channel) {
+                WebSocketChannel.this.peerConnections.remove(WebSocketChannel.this);
+            }
+        });
     }
 
     @Override
@@ -343,6 +357,15 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         return (WebSocketFramePriority) super.getFramePriority();
     }
 
+    /**
+     * Returns all 'peer' web socket connections that were created from the same endpoint.
+     *
+     *
+     * @return all 'peer' web socket connections
+     */
+    public Set<WebSocketChannel> getPeerConnections() {
+        return Collections.unmodifiableSet(peerConnections);
+    }
 
     /**
      * Interface that represents a frame channel that is in the process of being created
