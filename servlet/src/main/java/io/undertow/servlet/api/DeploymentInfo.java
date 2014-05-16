@@ -111,6 +111,7 @@ public class DeploymentInfo implements Cloneable {
     private final Set<String> securityRoles = new HashSet<String>();
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<NotificationReceiver>();
     private final Map<String, AuthenticationMechanismFactory> authenticationMechanisms = new HashMap<String, AuthenticationMechanismFactory>();
+    private final List<LifecycleInterceptor> lifecycleInterceptors = new ArrayList<LifecycleInterceptor>();
 
     /**
      * additional servlet extensions
@@ -1004,6 +1005,15 @@ public class DeploymentInfo implements Cloneable {
         this.disableCachingForSecuredPages = disableCachingForSecuredPages;
     }
 
+    public DeploymentInfo addLifecycleInterceptor(final LifecycleInterceptor interceptor) {
+        lifecycleInterceptors.add(interceptor);
+        return this;
+    }
+
+    public List<LifecycleInterceptor> getLifecycleInterceptors() {
+        return Collections.unmodifiableList(lifecycleInterceptors);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1075,6 +1085,7 @@ public class DeploymentInfo implements Cloneable {
         info.sessionConfigWrapper = sessionConfigWrapper;
         info.eagerFilterInit = eagerFilterInit;
         info.disableCachingForSecuredPages = disableCachingForSecuredPages;
+        this.lifecycleInterceptors.addAll(lifecycleInterceptors);
         return info;
     }
 

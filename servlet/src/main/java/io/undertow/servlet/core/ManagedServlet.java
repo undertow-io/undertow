@@ -19,6 +19,7 @@
 package io.undertow.servlet.core;
 
 import java.io.File;
+import java.util.List;
 
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
@@ -35,6 +36,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.api.LifecycleInterceptor;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.spec.ServletConfigImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
@@ -211,7 +213,8 @@ public class ManagedServlet implements Lifecycle {
                 throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(servletInfo.getName(), e);
             }
             instance = handle.getInstance();
-            instance.init(new ServletConfigImpl(servletInfo, servletContext));
+            new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), servletInfo, instance, new ServletConfigImpl(servletInfo, servletContext)).proceed();
+
             //if a servlet implements FileChangeCallback it will be notified of file change events
             final ResourceManager resourceManager = servletContext.getDeployment().getDeploymentInfo().getResourceManager();
             if(instance instanceof ResourceChangeListener && resourceManager.isResourceChangeListenerSupported()) {
@@ -225,8 +228,17 @@ public class ManagedServlet implements Lifecycle {
                 if(changeListener != null) {
                     resourceManager.removeResourceChangeListener(changeListener);
                 }
-                instance.destroy();
+                invokeDestroy();
                 handle.release();
+            }
+        }
+
+        private void invokeDestroy() {
+            List<LifecycleInterceptor> interceptors = servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors();
+            try {
+                new LifecyleInterceptorInvocation(interceptors, servletInfo, instance).proceed();
+            } catch (ServletException e) {
+                throw new RuntimeException(e);
             }
         }
 
@@ -282,8 +294,8 @@ public class ManagedServlet implements Lifecycle {
                 throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(servletInfo.getName(), e);
             }
             instance = instanceHandle.getInstance();
+            new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), servletInfo, instance, new ServletConfigImpl(servletInfo, servletContext)).proceed();
 
-            instance.init(new ServletConfigImpl(servletInfo, servletContext));
             return new InstanceHandle<Servlet>() {
                 @Override
                 public Servlet getInstance() {

@@ -76,7 +76,7 @@ public class ManagedFilter implements Lifecycle {
                     throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(filterInfo.getName(), e);
                 }
                 Filter filter = handle.getInstance();
-                filter.init(new FilterConfigImpl(filterInfo, servletContext));
+                new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), filterInfo, filter, new FilterConfigImpl(filterInfo, servletContext)).proceed();
                 this.filter = filter;
             }
         }
@@ -92,7 +92,11 @@ public class ManagedFilter implements Lifecycle {
     public synchronized void stop() {
         started = false;
         if (handle != null) {
-            filter.destroy();
+            try {
+                new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), filterInfo, filter).proceed();
+            } catch (ServletException e) {
+                throw new RuntimeException(e);
+            }
             handle.release();
         }
         filter = null;
