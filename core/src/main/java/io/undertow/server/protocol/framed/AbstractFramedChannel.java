@@ -262,7 +262,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         safeClose(channel.getSourceChannel());
                         throw e;
                     }
-                    throw UndertowMessages.MESSAGES.channelIsClosed();
+                    forceFree = true;
+                    return null;
                 }
                 pooled.getResource().flip();
             }
