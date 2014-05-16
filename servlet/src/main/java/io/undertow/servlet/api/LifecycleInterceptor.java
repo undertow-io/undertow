@@ -14,13 +14,13 @@ import javax.servlet.ServletException;
  */
 public interface LifecycleInterceptor {
 
-    void init(ServletInfo servletInfo, Servlet servlet, LifecycleContext context);
+    void init(ServletInfo servletInfo, Servlet servlet, LifecycleContext context) throws ServletException;
 
-    void init(FilterInfo filterInfo, Filter filter,  LifecycleContext context);
+    void init(FilterInfo filterInfo, Filter filter,  LifecycleContext context) throws ServletException;
 
-    void destroy(ServletInfo servletInfo, Servlet servlet,  LifecycleContext context);
+    void destroy(ServletInfo servletInfo, Servlet servlet,  LifecycleContext context) throws ServletException;
 
-    void destroy(FilterInfo filterInfo, Filter filter, LifecycleContext context);
+    void destroy(FilterInfo filterInfo, Filter filter, LifecycleContext context) throws ServletException;
 
     public interface LifecycleContext {
         void proceed() throws ServletException;
