@@ -90,8 +90,6 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final ThreadSetupAction threadSetupAction;
     private final boolean dispatchToWorker;
 
-    private final boolean clientMode;
-
     private volatile long defaultAsyncSendTimeout;
     private volatile long maxSessionIdleTimeout;
     private volatile int defaultMaxBinaryMessageBufferSize;
@@ -103,16 +101,15 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final List<WebsocketClientSslProvider> clientSslProviders;
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
-        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, clientMode);
+        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker);
     }
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
         this.threadSetupAction = threadSetupAction;
         this.dispatchToWorker = dispatchToWorker;
-        this.clientMode = clientMode;
         List<WebsocketClientSslProvider> clientSslProviders = new ArrayList<WebsocketClientSslProvider>();
         for (WebsocketClientSslProvider provider : ServiceLoader.load(WebsocketClientSslProvider.class, classLoader)) {
             clientSslProviders.add(provider);
