@@ -18,17 +18,17 @@
 
 package io.undertow.servlet.spec;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import javax.servlet.ServletOutputStream;
-import javax.servlet.WriteListener;
-
 import io.undertow.servlet.UndertowServletMessages;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
+
+import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
 
 import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -44,6 +44,7 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
     private final StreamSinkChannel channel;
 
     private WriteListener listener;
+    private final Executor ioExecutor;
 
     /**
      * If this stream is ready for a write
@@ -59,8 +60,9 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
      */
     private ByteBuffer buffer;
 
-    protected UpgradeServletOutputStream(final StreamSinkChannel channel) {
+    protected UpgradeServletOutputStream(final StreamSinkChannel channel, Executor ioExecutor) {
         this.channel = channel;
+        this.ioExecutor = ioExecutor;
     }
 
     @Override
@@ -90,7 +92,16 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
                     copy.flip();
                     this.buffer = copy;
                     state = state & ~FLAG_READY;
-                    channel.resumeWrites();
+                    if (Thread.currentThread() == channel.getIoThread()) {
+                        channel.resumeWrites();
+                    } else {
+                        ioExecutor.execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                channel.resumeWrites();
+                            }
+                        });
+                    }
                     return;
                 }
             } while (buffer.hasRemaining());
@@ -125,7 +136,16 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
                 channel.shutdownWrites();
                 state |= FLAG_DELEGATE_SHUTDOWN;
                 if (!channel.flush()) {
-                    channel.resumeWrites();
+                    if (Thread.currentThread() == channel.getIoThread()) {
+                        channel.resumeWrites();
+                    } else {
+                        ioExecutor.execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                channel.resumeWrites();
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -158,13 +178,18 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
         if (writeListener == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("writeListener");
         }
-        if(listener != null) {
+        if (listener != null) {
             throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
         }
         listener = writeListener;
         channel.getWriteSetter().set(new WriteChannelListener());
         state |= FLAG_READY;
-        channel.resumeWrites();
+        ioExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                channel.resumeWrites();
+            }
+        });
     }
 
     private class WriteChannelListener implements ChannelListener<StreamSinkChannel> {

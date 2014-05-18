@@ -31,6 +31,7 @@ import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreClear;
@@ -46,6 +47,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
 
     private final StreamSourceChannel channel;
     private final Pool<ByteBuffer> bufferPool;
+    private final Executor ioExecutor;
 
     private volatile ReadListener listener;
 
@@ -60,9 +62,10 @@ public class UpgradeServletInputStream extends ServletInputStream {
     private int state;
     private Pooled<ByteBuffer> pooled;
 
-    public UpgradeServletInputStream(final StreamSourceChannel channel, final Pool<ByteBuffer> bufferPool) {
+    public UpgradeServletInputStream(final StreamSourceChannel channel, final Pool<ByteBuffer> bufferPool, Executor ioExecutor) {
         this.channel = channel;
         this.bufferPool = bufferPool;
+        this.ioExecutor = ioExecutor;
     }
 
     @Override
@@ -88,7 +91,12 @@ public class UpgradeServletInputStream extends ServletInputStream {
         channel.getReadSetter().set(new ServletInputStreamChannelListener());
 
         //we resume from an async task, after the request has been dispatched
-        channel.wakeupReads();
+        ioExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                channel.wakeupReads();
+            }
+        });
     }
 
     @Override
@@ -180,7 +188,16 @@ public class UpgradeServletInputStream extends ServletInputStream {
                     state &= ~FLAG_READY;
                     pooled.free();
                     pooled = null;
-                    channel.resumeReads();
+                    if(Thread.currentThread() == channel.getIoThread()) {
+                        channel.resumeReads();
+                    } else {
+                        ioExecutor.execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                channel.resumeReads();
+                            }
+                        });
+                    }
                 }
             }
         }
