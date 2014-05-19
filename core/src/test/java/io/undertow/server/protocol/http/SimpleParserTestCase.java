@@ -42,6 +42,7 @@ import org.xnio.OptionMap;
  */
 public class SimpleParserTestCase {
 
+    private final ParseState parseState = new ParseState();
 
     @Test
     public void testEncodedSlashDisallowed() {
@@ -116,12 +117,26 @@ public class SimpleParserTestCase {
         Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
     }
 
-
     @Test
     public void testSimpleRequest() {
         byte[] in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\n".getBytes();
         runTest(in);
     }
+
+
+
+    @Test
+    public void testSimpleRequestWithHeaderCaching() {
+        byte[] in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: foo\r\n\r\n".getBytes();
+        runTest(in, "foo");
+        in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader:       foo\r\n\r\n".getBytes();
+        runTest(in, "foo");
+        in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader:      some value\r\n\r\n".getBytes();
+        runTest(in);
+        in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some value\r\n\r\n".getBytes();
+        runTest(in);
+    }
+
 
     @Test
     public void testCarriageReturnLineEnds() {
@@ -230,18 +245,20 @@ public class SimpleParserTestCase {
     }
 
     private void runTest(final byte[] in) {
-        final ParseState context = new ParseState();
+        runTest(in, "some value");
+    }
+    private void runTest(final byte[] in, String lastHeader) {
+        parseState.reset();
         HttpServerExchange result = new HttpServerExchange(null);
-        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), parseState, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/somepath", result.getRequestURI());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
 
         Assert.assertEquals(2, result.getRequestHeaders().getHeaderNames().size());
         Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));
-        Assert.assertEquals("some value", result.getRequestHeaders().getFirst(new HttpString("OtherHeader")));
+        Assert.assertEquals(lastHeader, result.getRequestHeaders().getFirst(new HttpString("OtherHeader")));
 
-        Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
+        Assert.assertEquals(ParseState.PARSE_COMPLETE, parseState.state);
     }
-
 }

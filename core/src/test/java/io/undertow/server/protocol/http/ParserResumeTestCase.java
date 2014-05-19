@@ -39,6 +39,7 @@ public class ParserResumeTestCase {
     public static final String DATA = "POST http://www.somehost.net/apath+with+spaces%20and%20I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n?key1=value1&key2=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
     public static final HttpRequestParser PARSER = HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
 
+    final ParseState context = new ParseState();
     @Test
     public void testMethodSplit() {
         byte[] in = DATA.getBytes();
@@ -53,8 +54,8 @@ public class ParserResumeTestCase {
 
     @Test
     public void testOneCharacterAtATime() {
+        context.reset();
         byte[] in = DATA.getBytes();
-        final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(1);
@@ -62,22 +63,22 @@ public class ParserResumeTestCase {
             PARSER.handle(buffer, context, result);
             buffer.limit(buffer.limit() + 1);
         }
-        runAssertions(result, context);
+        runAssertions(result);
     }
 
     private void testResume(final int split, byte[] in) {
-        final ParseState context = new ParseState();
+        context.reset();
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(split);
         PARSER.handle(buffer, context, result);
         buffer.limit(buffer.capacity());
         PARSER.handle(buffer, context, result);
-        runAssertions(result, context);
+        runAssertions(result);
         Assert.assertEquals(4, buffer.remaining());
     }
 
-    private void runAssertions(final HttpServerExchange result, final ParseState context) {
+    private void runAssertions(final HttpServerExchange result) {
         Assert.assertSame(Methods.POST, result.getRequestMethod());
         Assert.assertEquals("/apath with spaces and Iñtërnâtiônàližætiøn", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/apath+with+spaces%20and%20I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n", result.getRequestURI());
