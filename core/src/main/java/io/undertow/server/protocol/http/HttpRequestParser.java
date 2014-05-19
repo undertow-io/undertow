@@ -741,7 +741,7 @@ public abstract class HttpRequestParser {
         while (pos < buffer.limit() && buffer.get(pos) == ' ') {
             pos++;
         }
-        if (existing.length() + 3 + pos > buffer.remaining()) {
+        if (existing.length() + 3 + pos > buffer.limit()) {
             return false;
         }
         int i = 0;

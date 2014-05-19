@@ -58,11 +58,15 @@ public class ParserResumeTestCase {
         byte[] in = DATA.getBytes();
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
+        int oldLimit = buffer.limit();
         buffer.limit(1);
         while (context.state != ParseState.PARSE_COMPLETE) {
             PARSER.handle(buffer, context, result);
-            buffer.limit(buffer.limit() + 1);
+            if(context.state != ParseState.PARSE_COMPLETE) {
+                buffer.limit(buffer.limit() + 1);
+            }
         }
+        Assert.assertEquals(oldLimit, buffer.limit() + 4);
         runAssertions(result);
     }
 
