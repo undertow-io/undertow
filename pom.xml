@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>13</version>
+        <version>14</version>
     </parent>
 
     <groupId>io.undertow</groupId>
@@ -51,8 +51,8 @@
 
     <properties>
         <!-- Build configuration -->
-        <maven.compiler.source>1.6</maven.compiler.source>
-        <maven.compiler.target>1.6</maven.compiler.target>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
         <!--
             Dependency versions. Please keep alphabetical.
 
