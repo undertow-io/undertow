@@ -737,12 +737,12 @@ public abstract class HttpRequestParser {
     }
 
     protected boolean handleCachedHeader(String existing, ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
-        if (existing.length() + 3 > buffer.remaining()) {
-            return false;
-        }
         int pos = buffer.position();
-        while (buffer.get(pos) == ' ') {
+        while (pos < buffer.limit() && buffer.get(pos) == ' ') {
             pos++;
+        }
+        if (existing.length() + 3 + pos > buffer.remaining()) {
+            return false;
         }
         int i = 0;
         while (i < existing.length()) {
