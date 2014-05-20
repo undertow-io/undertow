@@ -206,6 +206,7 @@ public abstract class HttpRequestParser {
                     && buffer.get(position + 3) == ' ') {
                 buffer.position(position + 4);
                 builder.setRequestMethod(Methods.GET);
+                currentState.state = ParseState.PATH;
             } else {
                 handleHttpVerb(buffer, currentState, builder);
             }
