@@ -27,6 +27,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Methods;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.junit.Assert;
@@ -81,6 +82,10 @@ public class RoutingHandlerTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("foo", HttpClientUtils.readResponse(result));
 
+            HttpDelete delete = new HttpDelete(DefaultServer.getDefaultServerURL() + "/foo");
+            result = client.execute(delete);
+            Assert.assertEquals(405, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("", HttpClientUtils.readResponse(result));
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/foo");
             result = client.execute(post);

@@ -51,6 +51,10 @@ public final class ResponseCodeHandler implements HttpHandler {
      */
     public static final ResponseCodeHandler HANDLE_404 = new ResponseCodeHandler(404);
     /**
+     * A handler which sets a 405 code.
+     */
+    public static final ResponseCodeHandler HANDLE_405 = new ResponseCodeHandler(405);
+    /**
      * A handler which sets a 406 code.
      */
     public static final ResponseCodeHandler HANDLE_406 = new ResponseCodeHandler(406);
