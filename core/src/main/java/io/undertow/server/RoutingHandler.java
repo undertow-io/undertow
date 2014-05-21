@@ -39,6 +39,7 @@ public class RoutingHandler implements HttpHandler {
     private final Map<HttpString, PathTemplateMatcher<RoutingMatch>> matches = new CopyOnWriteMap<HttpString, PathTemplateMatcher<RoutingMatch>>();
 
     private volatile HttpHandler fallbackHandler = ResponseCodeHandler.HANDLE_404;
+    private volatile HttpHandler invalidMethodHandler = ResponseCodeHandler.HANDLE_405;
 
     /**
      * If this is true then path matches will be added to the query parameters for easy access by
@@ -59,7 +60,7 @@ public class RoutingHandler implements HttpHandler {
 
         PathTemplateMatcher<RoutingMatch> matcher = matches.get(exchange.getRequestMethod());
         if (matcher == null) {
-            fallbackHandler.handleRequest(exchange);
+            invalidMethodHandler.handleRequest(exchange);
             return;
         }
         PathTemplateMatcher.PathMatchResult<RoutingMatch> match = matcher.match(exchange.getRelativePath());
