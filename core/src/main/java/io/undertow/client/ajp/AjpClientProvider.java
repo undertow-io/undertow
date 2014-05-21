@@ -49,36 +49,58 @@ public class AjpClientProvider implements ClientProvider {
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
-        worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), new ChannelListener<StreamConnection>() {
+        connect(listener, null, uri, worker, ssl, bufferPool, options);
+    }
+
+    @Override
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        connect(listener, null, uri, ioThread, ssl, bufferPool, options);
+    }
+
+    @Override
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        ChannelListener<StreamConnection> openListener = new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
                 handleConnected(connection, listener, uri, ssl, bufferPool, options);
             }
-        }, options).addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
+        };
+        IoFuture.Notifier<StreamConnection, Object> notifier = new IoFuture.Notifier<StreamConnection, Object>() {
             @Override
             public void notify(IoFuture<? extends StreamConnection> ioFuture, Object o) {
                 if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
                     listener.failed(ioFuture.getException());
                 }
             }
-        }, null);
+        };
+        if(bindAddress == null) {
+            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, options).addNotifier(notifier, null);
+        } else {
+            worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, null, options).addNotifier(notifier, null);
+        }
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
-        ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), new ChannelListener<StreamConnection>() {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress,final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        ChannelListener<StreamConnection> openListener = new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
                 handleConnected(connection, listener, uri, ssl, bufferPool, options);
             }
-        }, options).addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
+        };
+        IoFuture.Notifier<StreamConnection, Object> notifier = new IoFuture.Notifier<StreamConnection, Object>() {
             @Override
             public void notify(IoFuture<? extends StreamConnection> ioFuture, Object o) {
-                if(ioFuture.getStatus() == IoFuture.Status.FAILED) {
+                if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
                     listener.failed(ioFuture.getException());
                 }
             }
-        }, null);
+        };
+        if(bindAddress == null) {
+            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, options).addNotifier(notifier, null);
+        } else {
+            ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, null, options).addNotifier(notifier, null);
+        }
     }
 
     private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
