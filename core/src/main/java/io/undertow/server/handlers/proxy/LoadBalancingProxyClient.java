@@ -29,6 +29,7 @@ import io.undertow.util.CopyOnWriteMap;
 import org.xnio.OptionMap;
 import org.xnio.ssl.XnioSsl;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
@@ -36,9 +37,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.AVAILABLE;
-import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.FULL;
-import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.PROBLEM;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.*;
 import static org.xnio.IoUtils.safeClose;
 
 /**
@@ -178,8 +177,12 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
 
     public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl, OptionMap options) {
+        return addHost(null, host, jvmRoute, ssl, options);
+    }
 
-        ProxyConnectionPool pool = new ProxyConnectionPool(manager, host, ssl, client, options);
+
+    public synchronized LoadBalancingProxyClient addHost(final InetSocketAddress bindAddress, final URI host, String jvmRoute, XnioSsl ssl, OptionMap options) {
+        ProxyConnectionPool pool = new ProxyConnectionPool(manager, bindAddress, host, ssl, client, options);
         Host h = new Host(pool, jvmRoute, host, ssl);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];

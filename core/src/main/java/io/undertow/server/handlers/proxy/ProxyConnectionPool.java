@@ -35,6 +35,7 @@ import org.xnio.ssl.XnioSsl;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -53,6 +54,8 @@ import java.util.concurrent.TimeUnit;
 public class ProxyConnectionPool implements Closeable {
 
     private final URI uri;
+
+    private final InetSocketAddress bindAddress;
 
     private final XnioSsl ssl;
 
@@ -81,7 +84,17 @@ public class ProxyConnectionPool implements Closeable {
         this(connectionPoolManager, uri, null, client, options);
     }
 
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager,InetSocketAddress bindAddress, URI uri, UndertowClient client, OptionMap options) {
+        this(connectionPoolManager, bindAddress, uri, null, client, options);
+    }
+
+
     public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, XnioSsl ssl, UndertowClient client, OptionMap options) {
+        this(connectionPoolManager, null, uri, ssl, client, options);
+    }
+
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, InetSocketAddress bindAddress,URI uri, XnioSsl ssl, UndertowClient client, OptionMap options) {
+        this.bindAddress = bindAddress;
         this.connectionPoolManager = connectionPoolManager;
         this.uri = uri;
         this.ssl = ssl;
@@ -91,6 +104,10 @@ public class ProxyConnectionPool implements Closeable {
 
     public URI getUri() {
         return uri;
+    }
+
+    public InetSocketAddress getBindAddress() {
+        return bindAddress;
     }
 
     public void close() {
@@ -186,7 +203,7 @@ public class ProxyConnectionPool implements Closeable {
                 scheduleFailedHostRetry(exchange);
                 callback.failed(exchange);
             }
-        }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
+        }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
     }
 
     private void redistributeQueued(HostThreadData hostData) {
@@ -266,7 +283,7 @@ public class ProxyConnectionPool implements Closeable {
                         UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Failed to reconnect to failed host %s", getUri());
                         scheduleFailedHostRetry(exchange);
                     }
-                }, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
+                }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
             }
         }, connectionPoolManager.getProblemServerRetry(), TimeUnit.SECONDS);
     }
