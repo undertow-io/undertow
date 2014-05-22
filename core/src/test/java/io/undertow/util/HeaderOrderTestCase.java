@@ -48,6 +48,7 @@ public class HeaderOrderTestCase {
             if(Modifier.isTransient(field.getModifiers())) {
                 continue;
             }
+
             Object value = field.get(null);
             if(!(value instanceof HttpString)) {
                 continue;
