@@ -82,6 +82,10 @@
         <version.org.jboss.spec.javax.websockets>1.0.0.Final</version.org.jboss.spec.javax.websockets>
         <version.xnio>3.3.0.Beta1</version.xnio>
         
+        <!-- jacoco -->
+        <version.org.jacoco>0.7.1.201405082137</version.org.jacoco>
+        <jacoco.agent.argLine></jacoco.agent.argLine>
+
         <!-- Surefire args -->
         <surefire.jpda.args/>
         <surefire.system.args>-da ${surefire.jpda.args}</surefire.system.args>
@@ -442,6 +446,39 @@
             <modules>
                 <module>dist</module>
             </modules>
+        </profile>
+
+        <profile>
+            <id>test-coverage</id>
+            <modules>
+                <module>coverage-report</module>
+            </modules>
+            <properties>
+                <jacoco.agent.argLine>${jacoco.activated.agent.argLine}</jacoco.agent.argLine>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${version.org.jacoco}</version>
+                        <executions>
+                            <execution>
+                                <id>agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>io.undertow*</include>
+                                    </includes>
+                                    <propertyName>jacoco.activated.agent.argLine</propertyName>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
