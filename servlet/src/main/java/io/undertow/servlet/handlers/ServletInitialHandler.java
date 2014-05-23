@@ -257,6 +257,9 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                         exchange.setResponseCode(500);
                         exchange.getResponseHeaders().clear();
                         String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
+                        if (location == null) {
+                            location = servletContext.getDeployment().getErrorPages().getErrorLocation(500);
+                        }
                         if (location != null) {
                             RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
                             try {

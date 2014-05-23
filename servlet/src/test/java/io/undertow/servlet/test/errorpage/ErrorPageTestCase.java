@@ -103,6 +103,30 @@ public class ErrorPageTestCase {
         manager2.deploy();
         root.addPrefixPath(builder2.getContextPath(), manager2.start());
 
+
+        DeploymentInfo builder3 = new DeploymentInfo();
+
+        builder3.addServlet(new ServletInfo("error", ErrorServlet.class)
+                .addMapping("/error"));
+
+        builder3.addServlet(new ServletInfo("path", PathServlet.class)
+                .addMapping("/*"));
+
+        builder3.addErrorPage(new ErrorPage("/404", 404));
+        builder3.addErrorPage(new ErrorPage("/500", 500));
+        builder3.addErrorPage(new ErrorPage("/parentException", ParentException.class));
+        builder3.addErrorPage(new ErrorPage("/childException", ChildException.class));
+        builder3.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
+
+        builder3.setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setClassLoader(ErrorPageTestCase.class.getClassLoader())
+                .setContextPath("/servletContext3")
+                .setServletStackTraces(ServletStackTraces.NONE)
+                .setDeploymentName("servletContext3.war");
+
+        final DeploymentManager manager3 = container.addDeployment(builder3);
+        manager3.deploy();
+        root.addPrefixPath(builder3.getContextPath(), manager3.start());
     }
 
 
@@ -125,7 +149,6 @@ public class ErrorPageTestCase {
         }
     }
 
-
     @Test
     public void testErrorPagesWithNoDefaultErrorPage() throws IOException {
         TestHttpClient client = new TestHttpClient();
@@ -145,6 +168,25 @@ public class ErrorPageTestCase {
         }
     }
 
+    //see UNDERTOW-249
+    @Test
+    public void testErrorPagesWith500PageMapped() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            runTest(3, client, 404, null, "/404");
+            runTest(3, client, 500, null, "/500");
+            runTest(3, client, 501, null, "<html><head><title>Error</title></head><body>Not Implemented</body></html>");
+            runTest(3, client, null, ParentException.class, "/parentException");
+            runTest(3, client, null, ChildException.class, "/childException");
+            runTest(3, client, null, RuntimeException.class, "/runtimeException");
+            runTest(3, client, null, IllegalStateException.class, "/runtimeException");
+            runTest(3, client, null, Exception.class, "/500");
+            runTest(3, client, null, IOException.class, "/500");
+            runTest(3, client, null, ServletException.class, "/500");
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
     private void runTest(int deploymentNo, final TestHttpClient client, Integer statusCode, Class<?> exception, String expected) throws IOException {
         final HttpGet get;
         final HttpResponse result;
