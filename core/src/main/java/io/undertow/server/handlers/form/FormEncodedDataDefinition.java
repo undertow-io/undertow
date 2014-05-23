@@ -25,10 +25,10 @@ import java.nio.ByteBuffer;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
@@ -113,7 +113,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
             try {
                 doParse(channel);
                 if (state == 4) {
-                    Connectors.executeRootHandler(handler, exchange);
+                    exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
                 }
             } catch (IOException e) {
                 IoUtils.safeClose(channel);
@@ -216,7 +216,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                     channel.getReadSetter().set(this);
                     channel.resumeReads();
                 } else {
-                    Connectors.executeRootHandler(handler, exchange);
+                    exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
                 }
             }
         }

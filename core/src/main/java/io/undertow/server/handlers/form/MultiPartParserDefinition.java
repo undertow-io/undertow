@@ -21,7 +21,6 @@ package io.undertow.server.handlers.form;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -29,6 +28,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.MalformedMessageException;
 import io.undertow.util.MultipartParser;
+import io.undertow.util.SameThreadExecutor;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 
@@ -205,7 +205,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         public void run() {
             try {
                 parseBlocking();
-                Connectors.executeRootHandler(handler, exchange);
+                exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
             } catch (Throwable e) {
                 UndertowLogger.REQUEST_LOGGER.debug("Exception parsing data", e);
                 exchange.setResponseCode(500);
