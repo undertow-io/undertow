@@ -19,6 +19,7 @@
 package io.undertow.util;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -44,6 +45,9 @@ public class HeaderOrderTestCase {
         Field[] fields = Headers.class.getDeclaredFields();
         final List<HttpString> headers = new ArrayList<HttpString>();
         for(final Field field : fields) {
+            if(Modifier.isTransient(field.getModifiers())) {
+                continue;
+            }
             Object value = field.get(null);
             if(!(value instanceof HttpString)) {
                 continue;
