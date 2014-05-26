@@ -44,6 +44,8 @@ public final class HeaderMapTestCase {
     public void testSimple() {
         final HeaderMap headerMap = new HeaderMap();
         headerMap.add(Headers.HOST, "yay.undertow.io");
+        assertTrue(headerMap.contains(Headers.HOST));
+        assertTrue(headerMap.contains("host"));
         assertEquals(1, headerMap.size());
         assertNotEquals(-1L, headerMap.fastIterate());
         assertEquals(-1L, headerMap.fiNext(headerMap.fastIterate()));
@@ -51,6 +53,8 @@ public final class HeaderMapTestCase {
         assertEquals("yay.undertow.io", headerMap.getFirst(Headers.HOST));
         assertEquals("yay.undertow.io", headerMap.getLast(Headers.HOST));
         assertEquals("yay.undertow.io", headerMap.get(Headers.HOST, 0));
+        headerMap.remove("host");
+        assertEquals(0, headerMap.size());
     }
 
     @Test
