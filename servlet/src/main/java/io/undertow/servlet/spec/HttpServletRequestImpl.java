@@ -715,12 +715,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (readStarted) {
                 return null;
             }
-            readStarted = true;
-            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getServletChain().getManagedServlet();
+            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet();
             final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
             if (parser == null) {
                 return null;
             }
+            readStarted = true;
             try {
                 return parsedFormData = parser.parseBlocking();
             } catch (IOException e) {

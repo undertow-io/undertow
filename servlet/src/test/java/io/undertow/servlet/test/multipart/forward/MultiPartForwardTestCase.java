@@ -40,7 +40,6 @@ import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -88,7 +87,6 @@ public class MultiPartForwardTestCase {
     }
 
     @Test
-    @Ignore // currently failing
     public void multiPartFormRequestForwardedToMultipartServlet() throws IOException {
 
         String response = sendRequest("/forward", createMultiPartFormPostEntity());
