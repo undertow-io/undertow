@@ -118,6 +118,7 @@ public class SpdyClientConnection implements ClientConnection {
                             handleError(exception);
                         }
                     }));
+                    sinkChannel.resumeWrites();
                 }
             } catch (IOException e) {
                 handleError(e);
