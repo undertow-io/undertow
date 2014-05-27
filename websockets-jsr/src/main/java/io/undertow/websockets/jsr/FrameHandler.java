@@ -314,16 +314,14 @@ class FrameHandler extends AbstractReceiveListener {
     protected static byte[] toArray(ByteBuffer... payload) {
         if (payload.length == 1) {
             ByteBuffer buf = payload[0];
-            if (buf.hasArray() && buf.arrayOffset() == 0 && buf.position() == 0) {
+            if (buf.hasArray()
+                    && buf.arrayOffset() == 0
+                    && buf.position() == 0
+                    && buf.array().length == buf.remaining()) {
                 return buf.array();
             }
         }
-        int size = (int) Buffers.remaining(payload);
-        byte[] data = new byte[size];
-        for (ByteBuffer buf : payload) {
-            buf.get(data);
-        }
-        return data;
+        return Buffers.take(payload, 0, payload.length);
     }
 
     public final void addHandler(MessageHandler handler) {
