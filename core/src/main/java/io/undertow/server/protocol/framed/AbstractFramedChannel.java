@@ -371,6 +371,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             S next = it.next();
             //todo: rather than adding empty buffers just store the offsets
             data[j * 3] = next.getFrameHeader();
+            ByteBuffer frameHeaderByteBuffer = next.getFrameHeader();
+            data[j * 3] = frameHeaderByteBuffer != null
+                        ? frameHeaderByteBuffer
+                        : Buffers.EMPTY_BYTE_BUFFER;
             data[(j * 3) + 1] = next.getBuffer();
             data[(j * 3) + 2] = next.getFrameFooter();
             ++j;
@@ -392,7 +396,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
         while (max > 0) {
             S sinkChannel = pendingFrames.get(0);
-            if (sinkChannel.getFrameHeader().hasRemaining()
+            if (sinkChannel.getFrameHeader() != null && sinkChannel.getFrameHeader().hasRemaining()
                     || sinkChannel.getBuffer().hasRemaining()
                     || sinkChannel.getFrameFooter().hasRemaining()) {
                 break;
