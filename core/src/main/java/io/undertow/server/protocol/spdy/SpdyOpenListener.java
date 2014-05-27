@@ -24,6 +24,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.spdy.SpdyChannel;
+import io.undertow.util.ImmediatePooled;
 import org.eclipse.jetty.npn.NextProtoNego;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -36,6 +37,7 @@ import org.xnio.conduits.PushBackStreamSourceConduit;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 
+import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -47,6 +49,8 @@ import java.util.List;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class SpdyOpenListener implements ChannelListener<StreamConnection>, OpenListener {
+
+    private static final String PROTOCOL_KEY = SpdyOpenListener.class.getName() + ".protocol";
 
     private static final String SPDY_3 = "spdy/3";
     private static final String SPDY_3_1 = "spdy/3.1";
@@ -94,23 +98,44 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
         }
         final PotentialSPDYConnection potentialConnection = new PotentialSPDYConnection(channel);
         channel.getSourceChannel().setReadListener(potentialConnection);
-        NextProtoNego.put(JsseXnioSsl.getSslEngine((SslConnection) channel), new NextProtoNego.ServerProvider() {
-            @Override
-            public void unsupported() {
-                potentialConnection.selected = HTTP_1_1;
+        final SSLEngine sslEngine = JsseXnioSsl.getSslEngine((SslConnection) channel);
+        String existing = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
+        //resuming an existing session, no need for NPN
+        if (existing != null) {
+            UndertowLogger.REQUEST_LOGGER.debug("Resuming existing session, not doing NPN negotiation");
+            if(existing.equals(SPDY_3_1) || existing.equals(SPDY_3)) {
+                SpdyChannel sc = new SpdyChannel(channel, bufferPool, new ImmediatePooled<ByteBuffer>(ByteBuffer.wrap(new byte[0])), heapBufferPool);
+                sc.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize));
+                sc.resumeReceives();
+            } else {
+                if (delegate == null) {
+                    UndertowLogger.REQUEST_IO_LOGGER.couldNotInitiateSpdyConnection();
+                    IoUtils.safeClose(channel);
+                    return;
+                }
+                channel.getSourceChannel().setReadListener(null);
+                delegate.handleEvent(channel);
             }
+        } else {
+            NextProtoNego.put(sslEngine, new NextProtoNego.ServerProvider() {
+                @Override
+                public void unsupported() {
+                    potentialConnection.selected = HTTP_1_1;
+                }
 
-            @Override
-            public List<String> protocols() {
-                return Arrays.asList(SPDY_3_1, SPDY_3, HTTP_1_1);
-            }
+                @Override
+                public List<String> protocols() {
+                    return Arrays.asList(SPDY_3_1, SPDY_3, HTTP_1_1);
+                }
 
-            @Override
-            public void protocolSelected(String s) {
-                potentialConnection.selected = s;
-            }
-        });
-        potentialConnection.handleEvent(channel.getSourceChannel());
+                @Override
+                public void protocolSelected(String s) {
+                    sslEngine.getSession().putValue(PROTOCOL_KEY, s);
+                    potentialConnection.selected = s;
+                }
+            });
+            potentialConnection.handleEvent(channel.getSourceChannel());
+        }
     }
 
     @Override
@@ -121,7 +146,7 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
     @Override
     public void setRootHandler(final HttpHandler rootHandler) {
         this.rootHandler = rootHandler;
-        if(delegate != null) {
+        if (delegate != null) {
             delegate.setRootHandler(rootHandler);
         }
     }
@@ -165,6 +190,8 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                     }
                     buffer.getResource().flip();
                     if (SPDY_3.equals(selected) || SPDY_3_1.equals(selected)) {
+
+                        NextProtoNego.remove(JsseXnioSsl.getSslEngine((SslConnection) channel));
                         //cool, we have a spdy connection.
                         SpdyChannel channel = new SpdyChannel(this.channel, bufferPool, buffer, heapBufferPool);
                         free = false;
@@ -172,6 +199,7 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                         channel.resumeReceives();
                         return;
                     } else if (HTTP_1_1.equals(selected) || res > 0) {
+                        NextProtoNego.remove(JsseXnioSsl.getSslEngine((SslConnection) channel));
                         if (delegate == null) {
                             UndertowLogger.REQUEST_IO_LOGGER.couldNotInitiateSpdyConnection();
                             IoUtils.safeClose(channel);

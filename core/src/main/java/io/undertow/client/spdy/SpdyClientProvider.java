@@ -59,6 +59,8 @@ import java.util.Set;
  */
 public class SpdyClientProvider implements ClientProvider {
 
+    private static final String PROTOCOL_KEY = SpdyClientProvider.class.getName() + ".protocol";
+
     private static final String SPDY_3 = "spdy/3";
     private static final String SPDY_3_1 = "spdy/3.1";
     private static final String HTTP_1_1 = "http/1.1";
@@ -166,80 +168,86 @@ public class SpdyClientProvider implements ClientProvider {
      * Not really part of the public API, but is used by the HTTP client to initiate a SPDY connection for HTTPS requests.
      */
     public static void handlePotentialSpdyConnection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> spdyFailedListener) {
-        final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(listener, connection, options, bufferPool);
+
         final SslConnection sslConnection = (SslConnection) connection;
+        final SSLEngine sslEngine = JsseXnioSsl.getSslEngine(sslConnection);
 
+        String existing = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
+        if(existing != null) {
+            if (existing.equals(SPDY_3) || existing.equals(SPDY_3_1)) {
+                listener.completed(createSpdyChannel(connection, bufferPool));
+            } else {
+                sslConnection.getSourceChannel().suspendReads();
+                spdyFailedListener.handleEvent(sslConnection);
+            }
+        } else {
 
-        try {
-            NPN_PUT_METHOD.invoke(null, JsseXnioSsl.getSslEngine(sslConnection), spdySelectionProvider);
-        } catch (Exception e) {
-            spdyFailedListener.handleEvent(sslConnection);
-            return;
-        }
+            final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(sslEngine);
+            try {
+                NPN_PUT_METHOD.invoke(null, sslEngine, spdySelectionProvider);
+            } catch (Exception e) {
+                spdyFailedListener.handleEvent(sslConnection);
+                return;
+            }
 
-        try {
-            sslConnection.startHandshake();
-            sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
-                @Override
-                public void handleEvent(StreamSourceChannel channel) {
+            try {
+                sslConnection.startHandshake();
+                sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+                    @Override
+                    public void handleEvent(StreamSourceChannel channel) {
 
-                    if (spdySelectionProvider.selected != null) {
-                        if (spdySelectionProvider.selected.equals(HTTP_1_1)) {
-                            sslConnection.getSourceChannel().suspendReads();
-                            spdyFailedListener.handleEvent(sslConnection);
-                            return;
-                        } else if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
-                            listener.completed(createSpdyChannel());
-                        }
-                    } else {
-                        ByteBuffer buf = ByteBuffer.allocate(100);
-                        try {
-                            int read = channel.read(buf);
-                            if (read > 0) {
-                                PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
-                                pb.pushBack(new ImmediatePooled<ByteBuffer>(buf));
-                                connection.getSourceChannel().setConduit(pb);
-                            }
-                            if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
+                        if (spdySelectionProvider.selected != null) {
+                            if (spdySelectionProvider.selected.equals(HTTP_1_1)) {
                                 sslConnection.getSourceChannel().suspendReads();
                                 spdyFailedListener.handleEvent(sslConnection);
                                 return;
-                            } else if (spdySelectionProvider.selected != null) {
-                                //we have spdy
-                                if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
-                                    listener.completed(createSpdyChannel());
-                                }
+                            } else if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
+                                listener.completed(createSpdyChannel(connection, bufferPool));
                             }
-                        } catch (IOException e) {
-                            listener.failed(e);
+                        } else {
+                            ByteBuffer buf = ByteBuffer.allocate(100);
+                            try {
+                                int read = channel.read(buf);
+                                if (read > 0) {
+                                    PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
+                                    pb.pushBack(new ImmediatePooled<ByteBuffer>(buf));
+                                    connection.getSourceChannel().setConduit(pb);
+                                }
+                                if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
+                                    sslConnection.getSourceChannel().suspendReads();
+                                    spdyFailedListener.handleEvent(sslConnection);
+                                    return;
+                                } else if (spdySelectionProvider.selected != null) {
+                                    //we have spdy
+                                    if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
+                                        listener.completed(createSpdyChannel(connection, bufferPool));
+                                    }
+                                }
+                            } catch (IOException e) {
+                                listener.failed(e);
+                            }
                         }
                     }
-                }
 
-                private SpdyClientConnection createSpdyChannel() {
-                    return new SpdyClientConnection(new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024)));
-                }
-            });
-            sslConnection.getSourceChannel().resumeReads();
-        } catch (IOException e) {
-            listener.failed(e);
+                });
+                sslConnection.getSourceChannel().resumeReads();
+            } catch (IOException e) {
+                listener.failed(e);
+            }
         }
 
     }
 
+    private static SpdyClientConnection createSpdyChannel(StreamConnection connection, Pool<ByteBuffer> bufferPool) {
+        return new SpdyClientConnection(new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024)));
+    }
 
     private static class SpdySelectionProvider implements NextProtoNego.ClientProvider {
-        private final ClientCallback<ClientConnection> listener;
-        private final StreamConnection connection;
-        private final OptionMap options;
-        private final Pool<ByteBuffer> bufferPool;
         private String selected;
+        private final SSLEngine sslEngine;
 
-        public SpdySelectionProvider(ClientCallback<ClientConnection> listener, StreamConnection connection, OptionMap options, Pool<ByteBuffer> bufferPool) {
-            this.listener = listener;
-            this.connection = connection;
-            this.options = options;
-            this.bufferPool = bufferPool;
+        private SpdySelectionProvider(SSLEngine sslEngine) {
+            this.sslEngine = sslEngine;
         }
 
         @Override
@@ -254,16 +262,16 @@ public class SpdyClientProvider implements ClientProvider {
 
         @Override
         public String selectProtocol(List<String> protocols) {
+            NextProtoNego.remove(sslEngine);
             if (protocols.contains(SPDY_3_1)) {
                 selected = SPDY_3_1;
-                return SPDY_3_1;
             } else if (protocols.contains(SPDY_3)) {
                 selected = SPDY_3;
-                return SPDY_3;
             } else {
                 selected = HTTP_1_1;
-                return HTTP_1_1;
             }
+            sslEngine.getSession().putValue(PROTOCOL_KEY, selected);
+            return selected;
         }
 
         private String getSelected() {
