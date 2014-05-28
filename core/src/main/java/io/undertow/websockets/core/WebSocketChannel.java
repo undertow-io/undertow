@@ -356,6 +356,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
                 }
             }
             ));
+            closeChannel.resumeWrites();
         }
     }
 

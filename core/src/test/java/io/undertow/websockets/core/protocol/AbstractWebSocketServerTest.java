@@ -25,10 +25,8 @@ import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedBinaryMessage;
 import io.undertow.websockets.core.BufferedTextMessage;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
@@ -37,20 +35,17 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.ChannelListener;
 import org.xnio.FutureResult;
 import org.xnio.Pooled;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -81,7 +76,6 @@ public class AbstractWebSocketServerTest {
                         } else {
                             WebSockets.sendText(string, channel, null);
                         }
-                        channel.sendClose();
                     }
                 });
                 channel.resumeReceives();
@@ -123,7 +117,6 @@ public class AbstractWebSocketServerTest {
                                 data.free();
                             }
                         });
-                        channel.sendClose();
                     }
                 });
                 channel.resumeReceives();
@@ -147,28 +140,16 @@ public class AbstractWebSocketServerTest {
             // ignore 00 tests for now
             return;
         }
-        final CountDownLatch latch = new CountDownLatch(1);
-
         final AtomicBoolean connected = new AtomicBoolean(false);
         DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
-                channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
+                channel.getReceiveSetter().set(new AbstractReceiveListener() {
                     @Override
-                    public void handleEvent(final WebSocketChannel channel) {
-                        try {
-                            final StreamSourceFrameChannel ws = channel.receive();
-                            if (ws == null) {
-                                return;
-                            }
-                            Assert.assertEquals(WebSocketFrameType.CLOSE, ws.getType());
-                            channel.close();
-                            channel.getReceiveSetter().set(null);
-                            latch.countDown();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                    protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+                        message.getData().free();
+                        channel.sendClose();
                     }
                 });
                 channel.resumeReceives();
@@ -177,20 +158,11 @@ public class AbstractWebSocketServerTest {
 
         final AtomicBoolean receivedResponse = new AtomicBoolean(false);
 
+        final FutureResult latch = new FutureResult();
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new CloseWebSocketFrame(), new WebSocketTestClient.FrameListener() {
-            @Override
-            public void onFrame(WebSocketFrame frame) {
-                receivedResponse.set(true);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                t.printStackTrace();
-            }
-        });
-        latch.await();
+        client.send(new CloseWebSocketFrame(), new FrameChecker(CloseWebSocketFrame.class, new byte[0], latch));
+        latch.getIoFuture().get();
         Assert.assertFalse(receivedResponse.get());
         client.destroy();
     }

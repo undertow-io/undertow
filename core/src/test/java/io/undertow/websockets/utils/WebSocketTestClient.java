@@ -31,6 +31,7 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
+import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -41,9 +42,9 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
- *
  * Client which can be used to Test a websocket server
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -53,6 +54,7 @@ public final class WebSocketTestClient {
     private Channel ch;
     private final URI uri;
     private final WebSocketVersion version;
+    private volatile boolean closed;
 
     public WebSocketTestClient(WebSocketVersion version, URI uri) {
         this.uri = uri;
@@ -96,6 +98,7 @@ public final class WebSocketTestClient {
 
         handshaker.handshake(ch).syncUninterruptibly();
         handshakeLatch.await();
+
         return this;
     }
 
@@ -107,6 +110,9 @@ public final class WebSocketTestClient {
         ch.getPipeline().addLast("responseHandler", new SimpleChannelUpstreamHandler() {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+                if (e.getMessage() instanceof CloseWebSocketFrame) {
+                    closed = true;
+                }
                 listener.onFrame((WebSocketFrame) e.getMessage());
                 ctx.getPipeline().remove(this);
             }
@@ -128,10 +134,29 @@ public final class WebSocketTestClient {
      * Destroy the client and also close open connections if any exist
      */
     public void destroy() {
+        if (!closed) {
+            final CountDownLatch latch = new CountDownLatch(1);
+            send(new CloseWebSocketFrame(), new FrameListener() {
+                @Override
+                public void onFrame(WebSocketFrame frame) {
+                    latch.countDown();
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    latch.countDown();
+                }
+            });
+            try {
+                latch.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        bootstrap.releaseExternalResources();
         if (ch != null) {
             ch.close().syncUninterruptibly();
         }
-        bootstrap.releaseExternalResources();
     }
 
     public interface FrameListener {

@@ -73,7 +73,6 @@ public class WebSocket07ServerTest extends AbstractWebSocketServerTest {
                                 data.free();
                             }
                         });
-                        channel.sendClose();
                     }
                 });
                 channel.resumeReceives();
