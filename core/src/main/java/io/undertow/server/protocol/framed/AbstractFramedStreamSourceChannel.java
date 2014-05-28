@@ -419,6 +419,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         if (anyAreSet(state, STATE_DONE)) {
             return -1;
         }
+        if(!dst.hasRemaining()) {
+            return 0;
+        }
         beforeRead();
         if (waitingForFrame) {
             return 0;
