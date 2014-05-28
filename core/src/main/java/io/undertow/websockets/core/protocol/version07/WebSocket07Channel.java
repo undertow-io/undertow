@@ -331,6 +331,7 @@ public class WebSocket07Channel extends WebSocketChannel {
                         }
                         b = buffer.get();
                         lengthBuffer.put(b);
+                        state = State.READING_EXTENDED_SIZE8;
                     case READING_EXTENDED_SIZE8:
                         if (!buffer.hasRemaining()) {
                             return;
@@ -346,6 +347,7 @@ public class WebSocket07Channel extends WebSocketChannel {
                             state = State.DONE;
                             break;
                         }
+                        state = State.READING_MASK_1;
                     case READING_MASK_1:
                         if (!buffer.hasRemaining()) {
                             return;
