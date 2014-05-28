@@ -113,8 +113,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
 
     @Override
     protected void lastDataRead() {
-        /*
-        if(!closeFrameReceived) {
+        if(!closeFrameReceived && !closeFrameSent) {
             //the peer has likely already gone away, but try and send a close frame anyway
             //this will likely just result in the write() failing an immediate connection termination
             //which is what we want
@@ -125,7 +124,6 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
                 IoUtils.safeClose(this);
             }
         }
-        */
     }
 
     protected boolean isReadsBroken() {
@@ -305,6 +303,9 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      *                    to transmit no payload at all.
      */
     public final StreamSinkFrameChannel send(WebSocketFrameType type, long payloadSize) throws IOException {
+        if(closeFrameSent || (closeFrameReceived && type != WebSocketFrameType.CLOSE)) {
+            throw WebSocketMessages.MESSAGES.channelClosed();
+        }
         if (payloadSize < 0) {
             throw WebSocketMessages.MESSAGES.negativePayloadLength();
         }

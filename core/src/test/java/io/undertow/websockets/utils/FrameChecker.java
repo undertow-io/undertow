@@ -18,6 +18,7 @@
 package io.undertow.websockets.utils;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.junit.Assert;
@@ -33,6 +34,7 @@ public final class FrameChecker implements WebSocketTestClient.FrameListener {
     private final Class<? extends WebSocketFrame> clazz;
     private final byte[] expectedPayload;
     private final FutureResult<?> latch;
+    private volatile boolean first = true;
 
     public FrameChecker(Class<? extends WebSocketFrame> clazz, byte[] expectedPayload, FutureResult<?> latch) {
         this.clazz = clazz;
@@ -44,20 +46,26 @@ public final class FrameChecker implements WebSocketTestClient.FrameListener {
     @Override
     public void onFrame(WebSocketFrame frame) {
         try {
-            Assert.assertTrue(clazz.isInstance(frame));
+            if (first) {
+                first = false;
+                Assert.assertTrue(clazz.isInstance(frame));
 
-            if (frame instanceof TextWebSocketFrame) {
-                String buf = ((TextWebSocketFrame) frame).getText();
+                if (frame instanceof TextWebSocketFrame) {
+                    String buf = ((TextWebSocketFrame) frame).getText();
 
-                Assert.assertEquals(new String(expectedPayload, Charset.forName("UTF-8")), buf);
+                    Assert.assertEquals(new String(expectedPayload, Charset.forName("UTF-8")), buf);
+                } else {
+                    ChannelBuffer buf = frame.getBinaryData();
+                    byte[] data = new byte[buf.readableBytes()];
+                    buf.readBytes(data);
+
+                    Assert.assertArrayEquals(expectedPayload, data);
+                }
+                latch.setResult(null);
+
             } else {
-                ChannelBuffer buf = frame.getBinaryData();
-                byte[] data = new byte[buf.readableBytes()];
-                buf.readBytes(data);
-
-                Assert.assertArrayEquals(expectedPayload, data);
+                Assert.assertTrue(CloseWebSocketFrame.class.isInstance(frame));
             }
-            latch.setResult(null);
         } catch (Throwable e) {
             latch.setException(new IOException(e));
         }

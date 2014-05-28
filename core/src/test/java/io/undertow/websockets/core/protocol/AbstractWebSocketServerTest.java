@@ -20,14 +20,16 @@ package io.undertow.websockets.core.protocol;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.NetworkUtils;
-import io.undertow.util.StringReadChannelListener;
-import io.undertow.util.StringWriteChannelListener;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedBinaryMessage;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
@@ -39,12 +41,11 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Assert;
-import org.junit.runner.RunWith;
 import org.junit.Test;
-
+import org.junit.runner.RunWith;
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
+import org.xnio.Pooled;
 
 import java.io.IOException;
 import java.net.URI;
@@ -70,48 +71,17 @@ public class AbstractWebSocketServerTest {
             @Override
             public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
-                channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
+                channel.getReceiveSetter().set(new AbstractReceiveListener() {
                     @Override
-                    public void handleEvent(final WebSocketChannel channel) {
-                        try {
-                            final StreamSourceFrameChannel ws = channel.receive();
-                            if (ws == null) {
-                                return;
-                            }
-                            new StringReadChannelListener(exchange.getBufferPool()) {
-                                @Override
-                                protected void stringDone(final String string) {
-                                    try {
-                                        if (string.equals("hello")) {
-                                            new StringWriteChannelListener("world")
-                                                    .setup(channel.send(WebSocketFrameType.TEXT, "world".length()));
-                                        } else {
-                                            new StringWriteChannelListener(string)
-                                                    .setup(channel.send(WebSocketFrameType.TEXT, string.length()));
-                                        }
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                        throw new RuntimeException(e);
-                                    }
-                                }
+                    protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+                        String string = message.getData();
 
-                                @Override
-                                protected void error(final IOException e) {
-                                    try {
-                                        e.printStackTrace();
-                                        new StringWriteChannelListener("ERROR")
-                                                .setup(channel.send(WebSocketFrameType.TEXT, "ERROR".length()));
-                                    } catch (IOException ex) {
-                                        ex.printStackTrace();
-                                        throw new RuntimeException(ex);
-                                    }
-                                }
-                            }.setup(ws);
-                            channel.sendClose();
-
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+                        if (string.equals("hello")) {
+                            WebSockets.sendText("world", channel, null);
+                        } else {
+                            WebSockets.sendText(string, channel, null);
                         }
+                        channel.sendClose();
                     }
                 });
                 channel.resumeReceives();
@@ -137,36 +107,23 @@ public class AbstractWebSocketServerTest {
             @Override
             public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
-                channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
+                channel.getReceiveSetter().set(new AbstractReceiveListener() {
+
                     @Override
-                    public void handleEvent(final WebSocketChannel channel) {
-                        try {
-                            final StreamSourceFrameChannel ws = channel.receive();
-                            if (ws == null) {
-                                return;
+                    protected void onFullBinaryMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+                        final Pooled<ByteBuffer[]> data = message.getData();
+                        WebSockets.sendBinary(data.getResource(), channel, new WebSocketCallback<Void>() {
+                            @Override
+                            public void complete(WebSocketChannel channel, Void context) {
+                                data.free();
                             }
-                            Assert.assertEquals(WebSocketFrameType.BINARY, ws.getType());
-                            ByteBuffer buf = ByteBuffer.allocate(32);
-                            while (ws.read(buf) != -1){
-                                //noting is needed
-                            }
-                            buf.flip();
 
-                            StreamSinkFrameChannel sink = channel.send(WebSocketFrameType.BINARY, buf.remaining());
-                            Assert.assertEquals(WebSocketFrameType.BINARY, sink.getType());
-                            while (buf.hasRemaining()) {
-                                sink.write(buf);
+                            @Override
+                            public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
+                                data.free();
                             }
-                            sink.shutdownWrites();
-                            if(!sink.flush()) {
-                                sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
-                                sink.resumeWrites();
-                            }
-                            channel.sendClose();
-
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                        });
+                        channel.sendClose();
                     }
                 });
                 channel.resumeReceives();

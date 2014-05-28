@@ -213,12 +213,15 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void shutdownWrites() throws IOException {
+        if(anyAreSet(state, STATE_BROKEN)) {
+            return;
+        }
         state |= STATE_WRITES_SHUTDOWN;
         queueFinalFrame();
     }
 
     private void queueFinalFrame() throws IOException {
-        if (allAreClear(state, STATE_READY_FOR_FLUSH | STATE_FINAL_FRAME_QUEUED)) {
+        if (allAreClear(state, STATE_READY_FOR_FLUSH | STATE_FINAL_FRAME_QUEUED | STATE_BROKEN)) {
             buffer.getResource().flip();
             state |= STATE_READY_FOR_FLUSH | STATE_FINAL_FRAME_QUEUED;
             channel.queueFrame((S) this);
@@ -420,6 +423,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     public void close() throws IOException {
         state |= STATE_CLOSED;
         buffer.free();
+        if(header != null && header.getByteBuffer() != null) {
+            header.getByteBuffer().free();
+        }
+        if(trailer != null) {
+            trailer.free();
+        }
         //TODO: need to think about this more
         //if the frame has had nothing written out it should not break the parent channel
         channel.close();
@@ -493,17 +502,27 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     public void markBroken() {
         this.state |= STATE_BROKEN;
-        wakeupWrites();
-        wakeupWaiters();
-        if (isWriteResumed()) {
-            ChannelListener<? super S> writeListener = this.writeSetter.get();
-            if (writeListener != null) {
-                ChannelListeners.invokeChannelListener(getIoThread(), (S) this, writeListener);
+        try {
+            wakeupWrites();
+            wakeupWaiters();
+            if (isWriteResumed()) {
+                ChannelListener<? super S> writeListener = this.writeSetter.get();
+                if (writeListener != null) {
+                    ChannelListeners.invokeChannelListener(getIoThread(), (S) this, writeListener);
+                }
             }
-        }
-        ChannelListener<? super S> closeListener = this.closeSetter.get();
-        if (closeListener != null) {
-            ChannelListeners.invokeChannelListener(getIoThread(), (S) this, closeListener);
+            ChannelListener<? super S> closeListener = this.closeSetter.get();
+            if (closeListener != null) {
+                ChannelListeners.invokeChannelListener(getIoThread(), (S) this, closeListener);
+            }
+        } finally {
+            if(header != null && header.getByteBuffer() != null) {
+                header.getByteBuffer().free();
+            }
+            if(trailer != null) {
+                trailer.free();
+            }
+            buffer.free();
         }
     }
 

@@ -19,12 +19,13 @@ package io.undertow.websockets.core.protocol;
 
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.NetworkUtils;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedBinaryMessage;
+import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
@@ -32,11 +33,9 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
-import org.junit.Assert;
 import org.junit.Test;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
+import org.xnio.Pooled;
 
 import java.io.IOException;
 import java.net.URI;
@@ -59,35 +58,22 @@ public class WebSocket07ServerTest extends AbstractWebSocketServerTest {
             @Override
             public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
-                channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
+                channel.getReceiveSetter().set(new AbstractReceiveListener() {
                     @Override
-                    public void handleEvent(final WebSocketChannel channel) {
-                        try {
-                            final StreamSourceFrameChannel ws = channel.receive();
-                            if (ws == null) {
-                                return;
+                    protected void onFullPingMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+                        final Pooled<ByteBuffer[]> data = message.getData();
+                        WebSockets.sendPong(data.getResource(), channel, new WebSocketCallback<Void>() {
+                            @Override
+                            public void complete(WebSocketChannel channel, Void context) {
+                                data.free();
                             }
-                            Assert.assertEquals(WebSocketFrameType.PING, ws.getType());
-                            ByteBuffer buf = ByteBuffer.allocate(32);
-                            while (ws.read(buf) != -1) {
-                                // consume
-                            }
-                            buf.flip();
 
-                            StreamSinkFrameChannel sink = channel.send(WebSocketFrameType.PONG, buf.remaining());
-                            Assert.assertEquals(WebSocketFrameType.PONG, sink.getType());
-                            while (buf.hasRemaining()) {
-                                sink.write(buf);
+                            @Override
+                            public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
+                                data.free();
                             }
-                            sink.shutdownWrites();
-                            if(!sink.flush()) {
-                                sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
-                                sink.resumeWrites();
-                            }
-                            channel.sendClose();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                        });
+                        channel.sendClose();
                     }
                 });
                 channel.resumeReceives();
