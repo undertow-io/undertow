@@ -263,6 +263,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         throw e;
                     }
                     forceFree = true;
+                    lastDataRead();
                     return null;
                 }
                 pooled.getResource().flip();
@@ -312,6 +313,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
             }
         }
+    }
+
+    /**
+     * Method than is invoked when read() returns -1.
+     */
+    protected void lastDataRead() {
+
     }
 
     /**

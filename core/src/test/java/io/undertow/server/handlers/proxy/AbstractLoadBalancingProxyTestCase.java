@@ -88,6 +88,8 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                 Assert.assertEquals(200, result.getStatusLine().getStatusCode());
                 resultString.append(HttpClientUtils.readResponse(result));
                 resultString.append(' ');
+            } catch (Throwable t) {
+                throw new RuntimeException("Failed with i=" + i, t);
             } finally {
                 client.getConnectionManager().shutdown();
             }

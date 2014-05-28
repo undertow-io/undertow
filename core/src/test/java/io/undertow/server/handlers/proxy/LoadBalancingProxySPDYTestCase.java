@@ -30,7 +30,6 @@ import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import org.eclipse.jetty.npn.NextProtoNego;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 import org.xnio.Options;
@@ -48,7 +47,6 @@ import static io.undertow.Handlers.path;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@Ignore
 public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTestCase {
 
     @BeforeClass

@@ -111,7 +111,22 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         super.markReadsBroken(cause);
     }
 
-
+    @Override
+    protected void lastDataRead() {
+        /*
+        if(!closeFrameReceived) {
+            //the peer has likely already gone away, but try and send a close frame anyway
+            //this will likely just result in the write() failing an immediate connection termination
+            //which is what we want
+            closeFrameReceived = true; //not strictly true, but the read side is gone
+            try {
+                sendClose();
+            } catch (IOException e) {
+                IoUtils.safeClose(this);
+            }
+        }
+        */
+    }
 
     protected boolean isReadsBroken() {
         return super.isReadsBroken();

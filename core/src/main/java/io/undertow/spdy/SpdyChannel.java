@@ -18,6 +18,7 @@
 
 package io.undertow.spdy;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
@@ -59,6 +60,10 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     static final int HEADERS = 8;
     static final int WINDOW_UPDATE = 9;
 
+    static final int CLOSE_OK = 0;
+    static final int CLOSE_PROTOCOL_ERROR = 1;
+    static final int CLOSE_INTERNAL_ERROR = 2;
+
     static final int FLAG_FIN = 1;
     static final int FLAG_UNIDIRECTIONAL = 2;
     static final int CONTROL_FRAME = 1 << 31;
@@ -89,6 +94,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     private boolean peerGoneAway = false;
 
     private int streamIdCounter = 1;
+    private int lastGoodStreamId;
 
     public SpdyChannel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, Pool<ByteBuffer> heapBufferPool) {
         super(connectedStreamChannel, bufferPool, SpdyFramePriority.INSTANCE, data);
@@ -106,6 +112,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
             case SYN_STREAM: {
                 SpdySynStreamParser parser = (SpdySynStreamParser) frameParser.parser;
                 channel = new SpdySynStreamStreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), deflater, parser.getHeaderMap(), parser.streamId);
+                lastGoodStreamId = parser.streamId;
                 if (!Bits.anyAreSet(frameParser.flags, FLAG_FIN)) {
                     incomingStreams.put(parser.streamId, channel);
                 }
@@ -114,6 +121,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
             case SYN_REPLY: {
                 SpdySynReplyParser parser = (SpdySynReplyParser) frameParser.parser;
                 channel = new SpdySynReplyStreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), parser.getHeaderMap(), parser.streamId);
+                lastGoodStreamId = parser.streamId;
                 if (!Bits.anyAreSet(frameParser.flags, FLAG_FIN)) {
                     incomingStreams.put(parser.streamId, channel);
                 }
@@ -164,6 +172,17 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     }
 
+    protected void lastDataRead() {
+        if(!peerGoneAway) {
+            //the peer has performed an unclean close
+            //we assume something happened to the underlying connection
+            //we attempt to send our own GOAWAY, however it will probably fail,
+            //which will trigger a forces close of our write side
+            sendGoAway(CLOSE_PROTOCOL_ERROR);
+            peerGoneAway = true;
+        }
+    }
+
     @Override
     protected boolean isLastFrameReceived() {
         return peerGoneAway;
@@ -176,11 +195,13 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     @Override
     protected void handleBrokenSourceChannel(Throwable e) {
+        UndertowLogger.REQUEST_LOGGER.debugf(e, "Closing SPDY channel to %s due to broken read side", getPeerAddress());
         IoUtils.safeClose(this);
     }
 
     @Override
     protected void handleBrokenSinkChannel(Throwable e) {
+        UndertowLogger.REQUEST_LOGGER.debugf(e, "Closing SPDY channel to %s due to broken write side", getPeerAddress());
         IoUtils.safeClose(this);
     }
 
@@ -249,6 +270,24 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
             }
         } catch (IOException e) {
             exceptionHandler.handleException(ping, e);
+        }
+    }
+
+
+    public void sendGoAway(int status) {
+        sendGoAway(status, new SpdyControlMessageExceptionHandler());
+    }
+
+    public void sendGoAway(int status, final ChannelExceptionHandler<SpdyStreamSinkChannel> exceptionHandler) {
+        SpdyGoAwayStreamSinkChannel goAway = new SpdyGoAwayStreamSinkChannel(this, status, lastGoodStreamId);
+        try {
+            goAway.shutdownWrites();
+            if (!goAway.flush()) {
+                goAway.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, exceptionHandler));
+                goAway.resumeWrites();
+            }
+        } catch (IOException e) {
+            exceptionHandler.handleException(goAway, e);
         }
     }
 

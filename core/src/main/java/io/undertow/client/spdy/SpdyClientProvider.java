@@ -239,7 +239,8 @@ public class SpdyClientProvider implements ClientProvider {
     }
 
     private static SpdyClientConnection createSpdyChannel(StreamConnection connection, Pool<ByteBuffer> bufferPool) {
-        return new SpdyClientConnection(new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024)));
+        SpdyChannel spdyChannel = new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024));
+        return new SpdyClientConnection(spdyChannel);
     }
 
     private static class SpdySelectionProvider implements NextProtoNego.ClientProvider {

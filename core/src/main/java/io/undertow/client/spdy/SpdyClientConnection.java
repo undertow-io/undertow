@@ -73,6 +73,12 @@ public class SpdyClientConnection implements ClientConnection {
         this.spdyChannel = spdyChannel;
         spdyChannel.getReceiveSetter().set(new SpdyRecieveListener());
         spdyChannel.resumeReceives();
+        spdyChannel.addCloseTask(new ChannelListener<SpdyChannel>() {
+            @Override
+            public void handleEvent(SpdyChannel channel) {
+                ChannelListeners.invokeChannelListener(SpdyClientConnection.this, closeSetter.get());
+            }
+        });
     }
 
     @Override
