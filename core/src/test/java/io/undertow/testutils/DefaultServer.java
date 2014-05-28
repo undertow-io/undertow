@@ -23,7 +23,7 @@ import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
-import io.undertow.server.handlers.RequestDumplingHandler;
+import io.undertow.server.handlers.RequestDumpingHandler;
 import io.undertow.server.handlers.SSLHeaderHandler;
 import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
@@ -416,7 +416,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             handler = new SSLHeaderHandler(handler);
         }
         if (dump) {
-            rootHandler.next = new RequestDumplingHandler(handler);
+            rootHandler.next = new RequestDumpingHandler(handler);
         } else {
             rootHandler.next = handler;
         }

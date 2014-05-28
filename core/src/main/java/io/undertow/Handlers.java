@@ -40,6 +40,7 @@ import io.undertow.server.handlers.PredicateContextHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.RedirectHandler;
+import io.undertow.server.handlers.RequestDumpingHandler;
 import io.undertow.server.handlers.RequestLimit;
 import io.undertow.server.handlers.RequestLimitingHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
@@ -477,6 +478,16 @@ public class Handlers {
      */
     public static HttpHandler disableCache(final HttpHandler next) {
         return new DisableCacheHandler(next);
+    }
+
+    /**
+     * Returns a handler that dumps requests to the log for debugging purposes.
+     *
+     * @param next The next handler
+     * @return The request dumping handler
+     */
+    public static HttpHandler requestDump(final HttpHandler next) {
+        return new RequestDumpingHandler(next);
     }
 
     private Handlers() {

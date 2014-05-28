@@ -36,11 +36,11 @@ import io.undertow.util.LocaleUtils;
  *
  * @author Stuart Douglas
  */
-public class RequestDumplingHandler implements HttpHandler {
+public class RequestDumpingHandler implements HttpHandler {
 
     private final HttpHandler next;
 
-    public RequestDumplingHandler(final HttpHandler next) {
+    public RequestDumpingHandler(final HttpHandler next) {
         this.next = next;
     }
 
