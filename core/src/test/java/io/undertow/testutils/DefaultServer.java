@@ -23,12 +23,14 @@ import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
+import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.RequestDumpingHandler;
 import io.undertow.server.handlers.SSLHeaderHandler;
 import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
+import io.undertow.server.protocol.spdy.SpdyOpenListener;
 import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
@@ -112,6 +114,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final char[] STORE_PASSWORD = "password".toCharArray();
 
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
+    private static final boolean spdy = Boolean.getBoolean("test.spdy");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
     private static final boolean dump = Boolean.getBoolean("test.dump");
     private static final boolean single = Boolean.getBoolean("test.single");
@@ -281,6 +284,23 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         proxyServer.resumeAccepts();
 
                     }
+                } else if (spdy) {
+                    openListener = new SpdyOpenListener(pool, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), 8192);
+                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+
+                    SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
+                    SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
+                    XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, serverContext);
+                    server = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
+                    server.resumeAccepts();
+
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
+                    proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
+                    proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
+                    proxyOpenListener.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null,null), null,  new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext),  OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404));
+                    proxyServer.resumeAccepts();
+
+
                 } else {
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
@@ -359,8 +379,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (ajpIgnore == null) {
             ajpIgnore = method.getMethod().getDeclaringClass().getAnnotation(AjpIgnore.class);
         }
-        if (ajp && ajpIgnore != null) {
-            if (!proxy || !ajpIgnore.apacheOnly()) {
+        if ((ajp || spdy) && ajpIgnore != null) {
+            if (!proxy || !ajpIgnore.apacheOnly() || spdy) {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
             }
@@ -399,6 +419,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             if (ajp) {
                 sb.append("{ajp}");
             }
+            if(spdy) {
+                sb.append("{spdy}");
+            }
             return sb.toString();
         }
     }
@@ -410,10 +433,23 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @param handler The handler to use
      */
     public static void setRootHandler(HttpHandler handler) {
-        if (proxy && !ajp) {
+        if ((proxy || spdy) && !ajp) {
             //if we are testing HTTP proxy we always add the SSLHeaderHandler
             //this allows the SSL information to be propagated to be backend
-            handler = new SSLHeaderHandler(handler);
+            handler = new SSLHeaderHandler(new ProxyPeerAddressHandler(handler));
+        }
+        if(spdy) {
+            final HttpHandler existing = handler;
+            handler = new HttpHandler() {
+                @Override
+                public void handleRequest(HttpServerExchange exchange) throws Exception {
+                    if(!exchange.getRequestHeaders().contains(":method")) {
+                        //make sure we have not fallen back to a stanard HTTPS connection
+                        throw new RuntimeException("Not a SPDY connection");
+                    }
+                    existing.handleRequest(exchange);
+                }
+            };
         }
         if (dump) {
             rootHandler.next = new RequestDumpingHandler(handler);
@@ -507,6 +543,18 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      *                applicable.
      */
     public static void startSSLServer(final SSLContext context, final OptionMap options, ChannelListener openListener) throws IOException {
+        startSSLServer(context, options, openListener, getHostSSLPort(DEFAULT));
+    }
+
+
+    /**
+     * Start the SSL server using a custom SSLContext with additional options to pass to the JsseXnioSsl instance.
+     *
+     * @param context - The SSLContext to use for JsseXnioSsl initialisation.
+     * @param options - Additional options to be passed to the JsseXnioSsl, this will be merged with the default options where
+     *                applicable.
+     */
+    public static void startSSLServer(final SSLContext context, final OptionMap options, ChannelListener openListener, int port) throws IOException {
         if (isApacheTest()) {
             return;
         }
@@ -516,7 +564,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
         XnioSsl xnioSsl = new JsseXnioSsl(xnio, combined, context);
         sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)),
-                getHostSSLPort(DEFAULT)), openListener, combined);
+                port), openListener, combined);
         sslServer.resumeAccepts();
     }
 

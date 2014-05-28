@@ -192,7 +192,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                     headerName = URLUtils.decode(headerName, charset, true, decodeBuffer);
                 }
 
-                currentPos = i;
+                currentPos = i + 1;
                 decodeRequired = false;
             } else if (c == '&' && headerName != null) {
                 String value = path.substring(currentPos, i);

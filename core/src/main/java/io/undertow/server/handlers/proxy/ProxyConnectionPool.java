@@ -199,6 +199,7 @@ public class ProxyConnectionPool implements Closeable {
                     data.connections--;
                 }
                 problem = true;
+                UndertowLogger.REQUEST_LOGGER.debug("Failed to connect", e);
                 redistributeQueued(getData());
                 scheduleFailedHostRetry(exchange);
                 callback.failed(exchange);
