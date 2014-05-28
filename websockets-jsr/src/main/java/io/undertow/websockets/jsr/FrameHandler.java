@@ -180,10 +180,10 @@ class FrameHandler extends AbstractReceiveListener {
 
     private void invokeBinaryHandler(final BufferedBinaryMessage context, final HandlerWrapper handler, final boolean finalFragment) {
 
+        final Pooled<ByteBuffer[]> pooled = context.getData();
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
-                Pooled<ByteBuffer[]> pooled = context.getData();
                 try {
                     if (handler.isPartialHandler()) {
                         MessageHandler.Partial mHandler = (MessageHandler.Partial) handler.getHandler();
@@ -233,11 +233,11 @@ class FrameHandler extends AbstractReceiveListener {
 
     private void invokeTextHandler(final BufferedTextMessage data, final HandlerWrapper handler, final boolean finalFragment) {
 
+        final String message = data.getData();
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
                 MessageHandler mHandler = handler.getHandler();
-                final String message = data.getData();
 
                 if (mHandler instanceof MessageHandler.Partial) {
                     if (handler.getMessageType() == String.class) {
