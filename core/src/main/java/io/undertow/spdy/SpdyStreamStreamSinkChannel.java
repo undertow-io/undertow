@@ -20,6 +20,8 @@ package io.undertow.spdy;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
 
+import java.io.IOException;
+
 /**
  * @author Stuart Douglas
  */
@@ -45,8 +47,12 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
     }
 
     SendFrameHeader generateSendFrameHeader() {
-         header = createFrameHeaderImpl();
+        header = createFrameHeaderImpl();
         return header;
+    }
+
+    void clearHeader() {
+        this.header = null;
     }
 
     @Override
@@ -81,7 +87,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
         return actualBytes;
     }
 
-    synchronized void updateFlowControlWindow(final int delta) {
+    synchronized void updateFlowControlWindow(final int delta) throws IOException {
         boolean exhausted = flowControlWindow == 0;
         flowControlWindow += delta;
         if(exhausted) {

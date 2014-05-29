@@ -45,6 +45,11 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
 
     @Override
     protected SendFrameHeader createFrameHeaderImpl() {
+        final int fcWindow = grabFlowControlBytes(getBuffer().remaining());
+        if(fcWindow == 0) {
+            //flow control window is exhausted
+            return new SendFrameHeader(getBuffer().remaining(), null);
+        }
         Pooled<ByteBuffer> header = getChannel().getHeapBufferPool().allocate();
         ByteBuffer buffer = header.getResource();
         if (first) {
@@ -113,7 +118,6 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
         }
         int remainingInBuffer = 0;
         if (getBuffer().remaining() > 0) {
-            int fcWindow = grabFlowControlBytes(getBuffer().remaining());
             if (fcWindow > 0) {
                 remainingInBuffer = getBuffer().remaining() - fcWindow;
                 getBuffer().limit(getBuffer().position() + fcWindow);

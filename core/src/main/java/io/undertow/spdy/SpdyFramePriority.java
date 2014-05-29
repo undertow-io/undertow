@@ -41,6 +41,8 @@ class SpdyFramePriority implements FramePriority<SpdyChannel, SpdyStreamSourceCh
             SendFrameHeader header = ((SpdyStreamStreamSinkChannel) newFrame).generateSendFrameHeader();
             //if no header is generated then flow control means we can't send anything
             if(header.getByteBuffer() == null) {
+                //we clear the header, as we want to generate a new real header when the flow control window is updated
+                ((SpdyStreamStreamSinkChannel) newFrame).clearHeader();
                 return false;
             }
         }
@@ -59,6 +61,9 @@ class SpdyFramePriority implements FramePriority<SpdyChannel, SpdyStreamSourceCh
                 if(header.getByteBuffer() != null) {
                     pendingFrames.add(pending);
                     it.remove();
+                } else {
+                    //we clear the header, as we want to generate a new real header when the flow control window is updated
+                    ((SpdyStreamStreamSinkChannel) pending).clearHeader();
                 }
             }
         }

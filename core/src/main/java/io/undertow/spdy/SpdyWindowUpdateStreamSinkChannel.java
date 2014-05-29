@@ -46,6 +46,7 @@ class SpdyWindowUpdateStreamSinkChannel extends SpdyControlFrameStreamSinkChanne
         SpdyProtocolUtils.putInt(buf, 8);
         SpdyProtocolUtils.putInt(buf, streamId);
         SpdyProtocolUtils.putInt(buf, deltaWindowSize);
+        buf.flip();
         return new SendFrameHeader(new ImmediatePooled<ByteBuffer>(buf));
     }
 

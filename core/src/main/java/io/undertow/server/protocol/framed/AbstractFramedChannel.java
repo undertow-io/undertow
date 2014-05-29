@@ -288,8 +288,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                     return null;
                 } else {
+                    boolean moreData = data.getFrameLength() > frameData.getResource().remaining();
                     R newChannel = createChannel(data, frameData);
-                    if (data.getFrameLength() > frameData.getResource().remaining()) {
+                    if (moreData) {
                         receiver = newChannel;
                     }
                     receivers.add(newChannel);
@@ -340,9 +341,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     protected abstract FrameHeaderData parseFrame(ByteBuffer data) throws IOException;
 
-    protected synchronized void recalculateHeldFrames() {
+    protected synchronized void recalculateHeldFrames() throws IOException {
         if(!heldFrames.isEmpty()) {
             framePriority.frameAdded(null, pendingFrames, heldFrames);
+            flushSenders();
         }
     }
 

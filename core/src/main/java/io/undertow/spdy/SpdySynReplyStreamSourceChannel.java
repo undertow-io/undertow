@@ -41,6 +41,7 @@ public class SpdySynReplyStreamSourceChannel extends SpdyStreamSourceChannel {
         super(framedChannel, data, frameDataRemaining);
         this.headers = headers;
         this.streamId = streamId;
+        this.flowControlWindow = framedChannel.getInitialWindowSize();
     }
 
     @Override
@@ -106,6 +107,9 @@ public class SpdySynReplyStreamSourceChannel extends SpdyStreamSourceChannel {
     }
 
     private void updateFlowControlWindow(final int read) {
+        if(read == 0) {
+            return;
+        }
         flowControlWindow -= read;
         //TODO: RST stream if flow control limits are exceeded?
         //TODO: make this configurable, we should be able to set the policy that is used to determine when to update the window size
@@ -113,7 +117,9 @@ public class SpdySynReplyStreamSourceChannel extends SpdyStreamSourceChannel {
         spdyChannel.updateReceiveFlowControlWindow(read);
         int initialWindowSize = spdyChannel.getInitialWindowSize();
         if (flowControlWindow < (initialWindowSize / 2)) {
-            spdyChannel.sendUpdateWindowSize(streamId, initialWindowSize - flowControlWindow);
+            int delta = initialWindowSize - flowControlWindow;
+            flowControlWindow += delta;
+            spdyChannel.sendUpdateWindowSize(streamId, delta);
         }
     }
 

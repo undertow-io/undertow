@@ -120,6 +120,9 @@ public class SpdySynStreamStreamSourceChannel extends SpdyStreamSourceChannel {
     }
 
     private void updateFlowControlWindow(final int read) {
+        if(read <= 0) {
+            return;
+        }
         flowControlWindow -= read;
         //TODO: RST stream if flow control limits are exceeded?
         //TODO: make this configurable, we should be able to set the policy that is used to determine when to update the window size
@@ -127,7 +130,9 @@ public class SpdySynStreamStreamSourceChannel extends SpdyStreamSourceChannel {
         spdyChannel.updateReceiveFlowControlWindow(read);
         int initialWindowSize = spdyChannel.getInitialWindowSize();
         if(flowControlWindow < (initialWindowSize / 2)) {
-            spdyChannel.sendUpdateWindowSize(streamId, initialWindowSize - flowControlWindow);
+            int delta = initialWindowSize - flowControlWindow;
+            flowControlWindow += delta;
+            spdyChannel.sendUpdateWindowSize(streamId, delta);
         }
     }
 

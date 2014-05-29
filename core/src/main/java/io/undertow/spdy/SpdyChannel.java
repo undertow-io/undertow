@@ -145,6 +145,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
             case WINDOW_UPDATE: {
                 SpdyWindowUpdateParser parser = (SpdyWindowUpdateParser) frameParser.parser;
                 handleWindowUpdate(parser.getStreamId(), parser.getDeltaWindowSize());
+                frameData.free();
                 //we don't return window update notifications, they are handled internally
                 return null;
             }
@@ -235,7 +236,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         return initialWindowSize;
     }
 
-    public synchronized void handleWindowUpdate(int streamId, int deltaWindowSize) {
+    public synchronized void handleWindowUpdate(int streamId, int deltaWindowSize) throws IOException {
         if (streamId == 0) {
             boolean exhausted = sendWindowSize == 0;
             sendWindowSize += deltaWindowSize;
@@ -252,7 +253,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         }
     }
 
-    synchronized void notifyFlowControlAllowed() {
+    synchronized void notifyFlowControlAllowed() throws IOException {
         super.recalculateHeldFrames();
     }
 
@@ -314,11 +315,16 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     }
 
     public synchronized void updateReceiveFlowControlWindow(int read) {
+        if(read <= 0) {
+            return;
+        }
         receiveWindowSize -= read;
         //TODO: make this configurable, we should be able to set the policy that is used to determine when to update the window size
         int initialWindowSize = this.initialWindowSize;
         if (receiveWindowSize < (initialWindowSize / 2)) {
-            sendUpdateWindowSize(0, initialWindowSize - receiveWindowSize);
+            int delta = initialWindowSize - receiveWindowSize;
+            receiveWindowSize += delta;
+            sendUpdateWindowSize(0, delta);
         }
     }
 
