@@ -93,7 +93,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                 exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
                 exchange.setProtocol(new HttpString(exchange.getRequestHeaders().getFirst(VERSION)));
                 exchange.setRequestMethod(new HttpString(exchange.getRequestHeaders().getFirst(METHOD)));
-                exchange.getRequestHeaders().add(Headers.HOST, exchange.getRequestHeaders().getFirst(HOST));
+                exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(HOST));
                 final String path = exchange.getRequestHeaders().getFirst(PATH);
                 setRequestPath(exchange, path, encoding, allowEncodingSlash, decodeBuffer);
 

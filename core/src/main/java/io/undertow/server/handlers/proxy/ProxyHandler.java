@@ -125,13 +125,17 @@ public final class ProxyHandler implements HttpHandler {
                 @Override
                 public void run() {
 
-                    UndertowLogger.REQUEST_LOGGER.timingOutRequest(exchange.getRequestURI());
 
                     ProxyConnection connectionAttachment = exchange.getAttachment(CONNECTION);
                     if (connectionAttachment != null) {
-                        //we rely on the close listener to end the exchange
                         ClientConnection clientConnection = connectionAttachment.getConnection();
+                        UndertowLogger.REQUEST_LOGGER.timingOutRequest(clientConnection.getPeerAddress() + "" + exchange.getRequestURI());
                         IoUtils.safeClose(clientConnection);
+                    } else {
+                        UndertowLogger.REQUEST_LOGGER.timingOutRequest(exchange.getRequestURI());
+                    }
+                    if (exchange.isResponseStarted()) {
+                        IoUtils.safeClose(exchange.getConnection());
                     } else {
                         exchange.setResponseCode(503);
                         exchange.endExchange();
@@ -173,8 +177,8 @@ public final class ProxyHandler implements HttpHandler {
      * Adds a request header to the outgoing request. If the header resolves to null or an empty string
      * it will not be added, however any existing header with the same name will be removed.
      *
-     * @param header    The header name
-     * @param value     The header value attribute.
+     * @param header The header name
+     * @param value  The header value attribute.
      * @return this
      */
     public ProxyHandler addRequestHeader(final HttpString header, final String value) {
@@ -306,7 +310,7 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
             copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
 
-            if(!exchange.isPersistent()) {
+            if (!exchange.isPersistent()) {
                 //just because the client side is non-persistent
                 //we don't want to close the connection to the backend
                 outboundRequestHeaders.put(Headers.CONNECTION, "keep-alive");

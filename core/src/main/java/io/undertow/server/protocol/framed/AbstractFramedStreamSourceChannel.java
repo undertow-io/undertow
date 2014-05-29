@@ -538,6 +538,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         if(data != null) {
             data.free();
+            data = null;
         }
         ChannelListeners.invokeChannelListener(this, (ChannelListener<? super AbstractFramedStreamSourceChannel<C,R,S>>) closeSetter.get());
     }
