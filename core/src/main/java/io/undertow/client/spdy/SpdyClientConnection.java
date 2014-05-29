@@ -71,7 +71,7 @@ public class SpdyClientConnection implements ClientConnection {
 
     public SpdyClientConnection(SpdyChannel spdyChannel) {
         this.spdyChannel = spdyChannel;
-        spdyChannel.getReceiveSetter().set(new SpdyRecieveListener());
+        spdyChannel.getReceiveSetter().set(new SpdyReceiveListener());
         spdyChannel.resumeReceives();
         spdyChannel.addCloseTask(new ChannelListener<SpdyChannel>() {
             @Override
@@ -83,11 +83,12 @@ public class SpdyClientConnection implements ClientConnection {
 
     @Override
     public void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
-        request.getRequestHeaders().add(PATH, request.getPath());
-        request.getRequestHeaders().add(SCHEME, "https");
-        request.getRequestHeaders().add(VERSION, request.getProtocol().toString());
-        request.getRequestHeaders().add(METHOD, request.getMethod().toString());
-        request.getRequestHeaders().add(HOST, request.getRequestHeaders().getFirst(Headers.HOST));
+        request.getRequestHeaders().put(PATH, request.getPath());
+        request.getRequestHeaders().put(SCHEME, "https");
+        request.getRequestHeaders().put(VERSION, request.getProtocol().toString());
+        request.getRequestHeaders().put(METHOD, request.getMethod().toString());
+        request.getRequestHeaders().put(HOST, request.getRequestHeaders().getFirst(Headers.HOST));
+        request.getRequestHeaders().remove(Headers.HOST);
 
         SpdySynStreamStreamSinkChannel sinkChannel = spdyChannel.createStream(request.getRequestHeaders());
         SpdyClientExchange exchange = new SpdyClientExchange(this, sinkChannel, request);
@@ -241,7 +242,7 @@ public class SpdyClientConnection implements ClientConnection {
         return false;
     }
 
-    private class SpdyRecieveListener implements ChannelListener<SpdyChannel> {
+    private class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
 
         @Override
         public void handleEvent(SpdyChannel channel) {
