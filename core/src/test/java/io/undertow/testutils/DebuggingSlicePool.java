@@ -70,5 +70,10 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
         String getLabel() {
             return label;
         }
+
+        @Override
+        public String toString() {
+            return "[debug]" + delegate.toString();
+        }
     }
 }
