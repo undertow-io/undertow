@@ -94,6 +94,13 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         this.waitingForFrame = data == null && frameDataRemaining <= 0;
         this.data = data;
         this.frameDataRemaining = frameDataRemaining;
+        if(data != null) {
+            if(!data.getResource().hasRemaining()) {
+                data.free();
+                this.data = null;
+                this.waitingForFrame = frameDataRemaining <= 0;
+            }
+        }
     }
 
     @Override
@@ -142,6 +149,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         beforeRead();
         if (waitingForFrame) {
+            throughBuffer.position(throughBuffer.limit());
             return 0;
         }
         try {
@@ -256,6 +264,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     protected void lastFrame() {
         state |= STATE_LAST_FRAME;
+        waitingForFrame = false;
     }
 
     @Override
@@ -306,6 +315,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     void dataReady(FrameHeaderData headerData, Pooled<ByteBuffer> frameData) {
         synchronized (lock) {
+            if(data != null && frameDataRemaining == 0) {
+                throw new RuntimeException();
+            }
             if (this.frameDataRemaining == 0 && pendingFrameData.isEmpty()) {
                 if(frameData.getResource().hasRemaining()) {
                     this.data = frameData;

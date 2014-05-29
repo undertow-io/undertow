@@ -92,6 +92,9 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
         flowControlWindow += delta;
         if(exhausted) {
             getChannel().notifyFlowControlAllowed();
+            if(isWriteResumed()) {
+                wakeupWrites();
+            }
         }
     }
 }

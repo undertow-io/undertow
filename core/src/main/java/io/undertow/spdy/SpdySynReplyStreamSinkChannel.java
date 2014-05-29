@@ -46,7 +46,7 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
     @Override
     protected SendFrameHeader createFrameHeaderImpl() {
         final int fcWindow = grabFlowControlBytes(getBuffer().remaining());
-        if(fcWindow == 0) {
+        if(fcWindow == 0 && getBuffer().remaining() > 0) {
             //flow control window is exhausted
             return new SendFrameHeader(getBuffer().remaining(), null);
         }
@@ -136,5 +136,12 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
 
     public HeaderMap getHeaders() {
         return headers;
+    }
+
+    @Override
+    protected void handleFlushComplete() {
+        if(isFinalFrameQueued()) {
+            getChannel().removeStreamSink(getStreamId());
+        }
     }
 }

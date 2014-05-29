@@ -349,9 +349,14 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         return min;
     }
 
-    public void registerStreamSink(SpdySynReplyStreamSinkChannel synResponse) {
+    void registerStreamSink(SpdySynReplyStreamSinkChannel synResponse) {
         outgoingStreams.put(synResponse.getStreamId(), synResponse);
     }
+
+    void removeStreamSink(int streamId) {
+        outgoingStreams.remove(streamId);
+    }
+
 
     class SpdyFrameParser implements FrameHeaderData {
 

@@ -53,7 +53,7 @@ class SpdyFramePriority implements FramePriority<SpdyChannel, SpdyStreamSourceCh
 
     @Override
     public void frameAdded(SpdyStreamSinkChannel addedFrame, List<SpdyStreamSinkChannel> pendingFrames, Deque<SpdyStreamSinkChannel> holdFrames) {
-        Iterator<SpdyStreamSinkChannel> it = pendingFrames.iterator();
+        Iterator<SpdyStreamSinkChannel> it = holdFrames.iterator();
         while (it.hasNext()){
             SpdyStreamSinkChannel pending = it.next();
             if(pending instanceof SpdyStreamStreamSinkChannel) {
