@@ -297,7 +297,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    proxyOpenListener.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null,null), null,  new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext),  OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404));
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext), OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404);
+                    setupProxyHandlerForSSL(proxyHandler);
+                    proxyOpenListener.setRootHandler(proxyHandler);
                     proxyServer.resumeAccepts();
 
 
