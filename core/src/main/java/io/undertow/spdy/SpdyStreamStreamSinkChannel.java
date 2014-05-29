@@ -45,7 +45,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
     }
 
     SendFrameHeader generateSendFrameHeader() {
-        header = createFrameHeaderImpl();
+         header = createFrameHeaderImpl();
         return header;
     }
 

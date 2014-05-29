@@ -118,6 +118,7 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
             int fcWindow = grabFlowControlBytes(getBuffer().remaining());
             if (fcWindow > 0) {
                 remainingInBuffer = getBuffer().remaining() - fcWindow;
+                getBuffer().limit(getBuffer().position() + fcWindow);
                 SpdyProtocolUtils.putInt(buffer, getStreamId());
                 SpdyProtocolUtils.putInt(buffer, ((isWritesShutdown() ? SpdyChannel.FLAG_FIN : 0) << 24) + fcWindow);
             } else {
