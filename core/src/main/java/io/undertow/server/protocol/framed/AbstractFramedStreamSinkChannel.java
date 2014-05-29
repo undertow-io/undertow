@@ -106,6 +106,14 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         }
     }
 
+    protected void suspendWritesInternal() {
+        channel.suspendWrites();
+    }
+
+    protected void resumeWritesInternal() {
+        channel.resumeWrites();
+    }
+
     /**
      * Returns the header for the current frame.
      *

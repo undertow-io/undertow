@@ -84,6 +84,9 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
         int min = Math.min(toSend, this.flowControlWindow);
         int actualBytes = this.getChannel().grabFlowControlBytes(min);
         this.flowControlWindow -= actualBytes;
+        if(actualBytes == 0) {
+            suspendWritesInternal();
+        }
         return actualBytes;
     }
 
@@ -93,7 +96,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
         if(exhausted) {
             getChannel().notifyFlowControlAllowed();
             if(isWriteResumed()) {
-                wakeupWrites();
+                resumeWritesInternal();
             }
         }
     }
