@@ -44,7 +44,7 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
 
     @Override
     protected SendFrameHeader createFrameHeaderImpl() {
-        Pooled<ByteBuffer> header = getChannel().getHeapBufferPool().allocate();
+        Pooled<ByteBuffer> header = getChannel().getBufferPool().allocate();
         ByteBuffer buffer = header.getResource();
         if (first) {
             Pooled<ByteBuffer> outPooled = getChannel().getHeapBufferPool().allocate();
