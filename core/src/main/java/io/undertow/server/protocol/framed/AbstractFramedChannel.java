@@ -282,10 +282,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
                 AbstractFramedStreamSourceChannel<?, ?, ?> existing = data.getExistingChannel();
                 if (existing != null) {
-                    existing.dataReady(data, frameData);
                     if (data.getFrameLength() > frameData.getResource().remaining()) {
                         receiver = (R) existing;
+                        if(!receiver.isReadResumed()) {
+                            channel.getSourceChannel().suspendReads();
+                        }
                     }
+                    existing.dataReady(data, frameData);
                     return null;
                 } else {
                     boolean moreData = data.getFrameLength() > frameData.getResource().remaining();
@@ -629,7 +632,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 if (receivesSuspended) {
                     AbstractFramedChannel.this.channel.getSourceChannel().suspendReads();
                 } else {
-                    AbstractFramedChannel.this.channel.getSourceChannel().resumeReads();
+                    //we need to wake up here, as there seems to be an issue with SSL
+                    //where it may not resume even though data is available.
+                    AbstractFramedChannel.this.channel.getSourceChannel().wakeupReads();
                 }
             }
         }
