@@ -219,7 +219,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                 }
                 exchange.addQueryParam(headerName, value);
                 headerName = null;
-                currentPos = i;
+                currentPos = i + 1;
                 decodeRequired = false;
             } else if (c == '%') {
                 decodeRequired = true;
