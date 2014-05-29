@@ -25,6 +25,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
@@ -79,7 +80,6 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     }
 
     protected DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange, int deflateLevel) {
-
         deflater = new Deflater(deflateLevel, true);
         this.currentBuffer = exchange.getConnection().getBufferPool().allocate();
         this.exchange = exchange;
@@ -228,7 +228,6 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         });
     }
 
-
     @Override
     public void terminateWrites() throws IOException {
         deflater.finish();
@@ -334,7 +333,11 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         } finally {
             if (nextCreated) {
                 if (anyAreSet(WRITES_RESUMED, state) && !anyAreSet(NEXT_SHUTDOWN, state)) {
-                    next.resumeWrites();
+                    try {
+                        next.resumeWrites();
+                    } catch (Exception e) {
+                        UndertowLogger.REQUEST_LOGGER.debug("Failed to resume", e);
+                    }
                 }
             }
         }

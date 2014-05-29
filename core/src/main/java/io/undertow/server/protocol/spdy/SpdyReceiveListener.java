@@ -26,6 +26,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.spdy.SpdyChannel;
 import io.undertow.spdy.SpdyPingStreamSourceChannel;
 import io.undertow.spdy.SpdyStreamSourceChannel;
+import io.undertow.spdy.SpdySynReplyStreamSinkChannel;
 import io.undertow.spdy.SpdySynStreamStreamSourceChannel;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -89,6 +90,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                 final SpdySynStreamStreamSourceChannel dataChannel = (SpdySynStreamStreamSourceChannel) frame;
                 final SpdyServerConnection connection = new SpdyServerConnection(channel, dataChannel, undertowOptions, bufferSize);
 
+
                 final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
                 exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
                 exchange.setProtocol(new HttpString(exchange.getRequestHeaders().getFirst(VERSION)));
@@ -100,6 +102,22 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                 SSLSession session = channel.getSslSession();
                 if(session != null) {
                     connection.setSslSessionInfo(new SpdySslSessionInfo(channel));
+                }
+                dataChannel.getResponseChannel().setCompletionListener(new ChannelListener<SpdySynReplyStreamSinkChannel>() {
+                    @Override
+                    public void handleEvent(SpdySynReplyStreamSinkChannel channel) {
+                        Connectors.terminateResponse(exchange);
+                    }
+                });
+                if(!dataChannel.isOpen()) {
+                    Connectors.terminateRequest(exchange);
+                } else {
+                    dataChannel.setCompletionListener(new ChannelListener<SpdySynStreamStreamSourceChannel>() {
+                        @Override
+                        public void handleEvent(SpdySynStreamStreamSourceChannel channel) {
+                            Connectors.terminateRequest(exchange);
+                        }
+                    });
                 }
 
                 Connectors.executeRootHandler(rootHandler, exchange);

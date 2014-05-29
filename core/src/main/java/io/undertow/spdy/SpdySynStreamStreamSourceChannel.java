@@ -20,6 +20,8 @@ package io.undertow.spdy;
 
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -40,6 +42,7 @@ public class SpdySynStreamStreamSourceChannel extends SpdyStreamSourceChannel {
     private HeaderMap newHeaders = null;
     private SpdySynReplyStreamSinkChannel synResponse;
     private int flowControlWindow;
+    private ChannelListener<SpdySynStreamStreamSourceChannel> completionListener;
 
     SpdySynStreamStreamSourceChannel(SpdyChannel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, Deflater deflater, HeaderMap headers, int streamId) {
         super(framedChannel, data, frameDataRemaining);
@@ -136,7 +139,23 @@ public class SpdySynStreamStreamSourceChannel extends SpdyStreamSourceChannel {
         }
     }
 
+    @Override
+    protected void complete() throws IOException {
+        super.complete();
+        if(completionListener != null) {
+            ChannelListeners.invokeChannelListener(this, completionListener);
+        }
+    }
+
     public HeaderMap getHeaders() {
         return headers;
+    }
+
+    public ChannelListener<SpdySynStreamStreamSourceChannel> getCompletionListener() {
+        return completionListener;
+    }
+
+    public void setCompletionListener(ChannelListener<SpdySynStreamStreamSourceChannel> completionListener) {
+        this.completionListener = completionListener;
     }
 }

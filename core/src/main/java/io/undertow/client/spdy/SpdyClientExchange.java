@@ -113,7 +113,7 @@ public class SpdyClientExchange extends AbstractAttachable implements ClientExch
         }
         headers.remove(SpdyClientConnection.VERSION);
         headers.remove(SpdyClientConnection.STATUS);
-        clientResponse = new ClientResponse(statusCode, status.substring(3), clientRequest.getProtocol(), headers);
+        clientResponse = new ClientResponse(statusCode, status != null ? status.substring(3) : "", clientRequest.getProtocol(), headers);
         if (responseListener != null) {
             responseListener.completed(this);
         }

@@ -43,6 +43,7 @@ import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceChannelWrappingConduit;
+import org.xnio.conduits.StreamSourceConduit;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -65,6 +66,8 @@ public class SpdyServerConnection extends ServerConnection {
     private final SpdySynReplyStreamSinkChannel responseChannel;
     private final ConduitStreamSinkChannel conduitStreamSinkChannel;
     private final ConduitStreamSourceChannel conduitStreamSourceChannel;
+    private final StreamSinkConduit originalSinkConduit;
+    private final StreamSourceConduit originalSourceConduit;
     private final OptionMap undertowOptions;
     private final int bufferSize;
     private SSLSessionInfo sessionInfo;
@@ -75,8 +78,10 @@ public class SpdyServerConnection extends ServerConnection {
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
         responseChannel = requestChannel.getResponseChannel();
-        this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, new StreamSinkChannelWrappingConduit(responseChannel));
-        this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(requestChannel, new StreamSourceChannelWrappingConduit(requestChannel));
+        originalSinkConduit = new StreamSinkChannelWrappingConduit(responseChannel);
+        originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
+        this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
+        this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(requestChannel, originalSourceConduit);
     }
 
     @Override
@@ -202,7 +207,7 @@ public class SpdyServerConnection extends ServerConnection {
         headers.add(STATUS, exchange.getResponseCode() + " " + StatusCodes.getReason(exchange.getResponseCode()));
         headers.add(VERSION, exchange.getProtocol().toString());
         Connectors.flattenCookies(exchange);
-        return conduitStreamSinkChannel.getConduit();
+        return originalSinkConduit;
     }
 
     @Override

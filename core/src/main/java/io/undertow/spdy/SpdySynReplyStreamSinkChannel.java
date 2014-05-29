@@ -22,6 +22,8 @@ import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
 import org.xnio.Pooled;
 
 import java.nio.ByteBuffer;
@@ -36,6 +38,7 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
 
     private boolean first = true;
     private final Deflater deflater;
+    private ChannelListener<SpdySynReplyStreamSinkChannel> completionListener;
 
 
     SpdySynReplyStreamSinkChannel(SpdyChannel channel, int streamId, Deflater deflater) {
@@ -142,6 +145,17 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
     protected void handleFlushComplete() {
         if(isFinalFrameQueued()) {
             getChannel().removeStreamSink(getStreamId());
+            if(completionListener != null) {
+                ChannelListeners.invokeChannelListener(this, completionListener);
+            }
         }
+    }
+
+    public ChannelListener<SpdySynReplyStreamSinkChannel> getCompletionListener() {
+        return completionListener;
+    }
+
+    public void setCompletionListener(ChannelListener<SpdySynReplyStreamSinkChannel> completionListener) {
+        this.completionListener = completionListener;
     }
 }
