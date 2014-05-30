@@ -195,7 +195,6 @@
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
-                        <argLine>-Xmx1024m ${jacoco.agent.argLine}</argLine>
                     </systemPropertyVariables>
                     <argLine>-Xbootclasspath/p:${org.mortbay.jetty.npn:npn-boot:jar} ${jacoco.agent.argLine}</argLine>
                 </configuration>
@@ -226,8 +225,7 @@
                                         <test.dump>${dump}</test.dump>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>
-                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
-                                        </java.util.logging.manager>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
