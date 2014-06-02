@@ -21,6 +21,7 @@ package io.undertow.servlet.websockets;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.CaseInsensitiveMap;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.FinishedIoFuture;
@@ -82,7 +83,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getRequestHeaders() {
-        Map<String, List<String>> headers = new HashMap<String, List<String>>();
+        Map<String, List<String>> headers = new CaseInsensitiveMap<List<String>>();
         final Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String header = headerNames.nextElement();
