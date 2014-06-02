@@ -18,6 +18,10 @@
 
 package io.undertow.predicate;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
@@ -38,9 +42,38 @@ class MaxContentSizePredicate implements Predicate {
     @Override
     public boolean resolve(final HttpServerExchange value) {
         final String length = value.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
-        if(length == null) {
+        if (length == null) {
             return false;
         }
         return Long.parseLong(length) > maxSize;
+    }
+
+    public static class Builder implements PredicateBuilder {
+
+        @Override
+        public String name() {
+            return "max-content-size";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.<String, Class<?>>singletonMap("value", Long.class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("value");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "value";
+        }
+
+        @Override
+        public Predicate build(final Map<String, Object> config) {
+            Long max = (Long) config.get("value");
+            return new MaxContentSizePredicate(max);
+        }
     }
 }

@@ -48,7 +48,7 @@ public class GzipContentEncodingTestCase {
     @BeforeClass
     public static void setup() {
         final EncodingHandler handler = new EncodingHandler(new ContentEncodingRepository()
-                .addEncodingHandler("gzip", new GzipEncodingProvider(), 50, Predicates.maxContentSize(5)))
+                .addEncodingHandler("gzip", new GzipEncodingProvider(), 50, Predicates.parse("max-content-size[5]")))
                 .setNext(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
