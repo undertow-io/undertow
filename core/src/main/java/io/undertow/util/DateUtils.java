@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
@@ -41,7 +42,6 @@ public class DateUtils {
     private static final String RFC1123_PATTERN = "EEE, dd MMM yyyy HH:mm:ss z";
 
     private static volatile String cachedDateString;
-    private static volatile long nextUpdateTime = -1;
 
     /**
      * Thread local cache of this date format. This is technically a small memory leak, however
@@ -55,6 +55,16 @@ public class DateUtils {
             SimpleDateFormat df =  new SimpleDateFormat(RFC1123_PATTERN, LOCALE_US);
             df.setTimeZone(GMT_ZONE);
             return df;
+        }
+    };
+
+    /**
+     * Invalidates the current date
+     */
+    private static final Runnable INVALIDATE_TASK = new Runnable() {
+        @Override
+        public void run() {
+            cachedDateString = null;
         }
     };
 
@@ -238,14 +248,19 @@ public class DateUtils {
     public static void addDateHeaderIfRequired(HttpServerExchange exchange) {
         HeaderMap responseHeaders = exchange.getResponseHeaders();
         if(exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_DATE, true) && !responseHeaders.contains(Headers.DATE)) {
-            long time = System.nanoTime();
-            if(time < nextUpdateTime) {
-                responseHeaders.put(Headers.DATE, cachedDateString);
+            String dateString = cachedDateString;
+            if(dateString != null) {
+                responseHeaders.put(Headers.DATE, dateString);
             } else {
+                //set the time and register a timer to invalidate it
+                //note that this is racey, it does not matter if multiple threads do this
+                //the perf cost of synchronizing would be more than the perf cost of multiple threads running it
                 long realTime = System.currentTimeMillis();
-                String dateString = DateUtils.toDateString(new Date(realTime));
+                long mod = realTime % 1000;
+                long toGo = 1000 - mod;
+                dateString = DateUtils.toDateString(new Date(realTime));
                 cachedDateString = dateString;
-                nextUpdateTime = time + 1000000000;
+                exchange.getConnection().getIoThread().executeAfter(INVALIDATE_TASK, toGo, TimeUnit.MILLISECONDS);
                 responseHeaders.put(Headers.DATE, dateString);
             }
         }
@@ -254,4 +269,5 @@ public class DateUtils {
     private DateUtils() {
 
     }
+
 }
