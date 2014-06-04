@@ -23,18 +23,20 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
 
 /**
+ * Set a fixed response header.
+ * 
  * @author Stuart Douglas
  */
 public class SetHeaderHandler implements HttpHandler {
 
     private final HttpString header;
     private final String value;
-
-    private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
+    private final HttpHandler next;
 
     public SetHeaderHandler(final String header, final String value) {
-        this.header = new HttpString(header);
+        this.next = ResponseCodeHandler.HANDLE_404;
         this.value = value;
+        this.header = new HttpString(header);
     }
 
     public SetHeaderHandler(final HttpHandler next, final String header, final String value) {
