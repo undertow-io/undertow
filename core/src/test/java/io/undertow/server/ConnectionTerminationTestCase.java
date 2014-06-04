@@ -21,6 +21,7 @@ package io.undertow.server;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.util.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 @RunWith(DefaultServer.class)
 @AjpIgnore
 @ProxyIgnore
+@SpdyIgnore
 public class ConnectionTerminationTestCase {
 
     private volatile boolean completionListenerCalled = false;

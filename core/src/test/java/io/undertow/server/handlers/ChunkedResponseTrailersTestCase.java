@@ -25,6 +25,7 @@ import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 public class ChunkedResponseTrailersTestCase {
 
     private static final String MESSAGE = "My HTTP Request!";

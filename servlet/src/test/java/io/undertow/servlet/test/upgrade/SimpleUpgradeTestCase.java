@@ -29,6 +29,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -39,6 +40,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @AjpIgnore
+@SpdyIgnore
 @RunWith(DefaultServer.class)
 public class SimpleUpgradeTestCase {
 

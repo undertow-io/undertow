@@ -29,6 +29,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -45,6 +46,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 public class HttpContinueConduitWrappingHandlerTestCase {
 
     private static volatile boolean accept = false;

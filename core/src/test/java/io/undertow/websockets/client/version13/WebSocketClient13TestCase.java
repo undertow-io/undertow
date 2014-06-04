@@ -20,6 +20,7 @@ package io.undertow.websockets.client.version13;
 
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.util.FileUtils;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.client.WebSocketClient;
@@ -57,6 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 public class WebSocketClient13TestCase {
     private static XnioWorker worker;
 

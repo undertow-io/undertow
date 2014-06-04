@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -46,6 +47,7 @@ import org.xnio.channels.WriteTimeoutException;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 @Ignore("This test fails intermittently")
 public class WriteTimeoutTestCase {
 

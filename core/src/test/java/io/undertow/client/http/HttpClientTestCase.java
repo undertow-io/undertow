@@ -29,6 +29,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
@@ -63,6 +64,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 public class HttpClientTestCase {
 
     private static final String message = "Hello World!";

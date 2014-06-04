@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.util.Headers;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.testutils.TestHttpClient;
@@ -52,6 +53,7 @@ import org.xnio.channels.StreamSourceChannel;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 @Ignore
 public class ReadTimeoutTestCase {
 

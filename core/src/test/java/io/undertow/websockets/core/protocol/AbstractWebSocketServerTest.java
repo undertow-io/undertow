@@ -19,6 +19,7 @@ package io.undertow.websockets.core.protocol;
 
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.util.NetworkUtils;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
@@ -53,6 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 public class AbstractWebSocketServerTest {
 
     @Test

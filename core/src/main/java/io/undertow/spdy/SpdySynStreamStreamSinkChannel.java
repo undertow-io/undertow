@@ -44,6 +44,11 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
 
     @Override
     protected SendFrameHeader createFrameHeaderImpl() {
+
+        int fcWindow = grabFlowControlBytes(getBuffer().remaining());
+        if (fcWindow == 0 && getBuffer().hasRemaining()) {
+            return new SendFrameHeader(getBuffer().remaining(), null);
+        }
         Pooled<ByteBuffer> header = getChannel().getBufferPool().allocate();
         ByteBuffer buffer = header.getResource();
         if (first) {
@@ -115,21 +120,12 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
         }
         int remainingInBuffer = 0;
         if (getBuffer().remaining() > 0) {
-            int fcWindow = grabFlowControlBytes(getBuffer().remaining());
-            if (fcWindow > 0) {
-                remainingInBuffer = getBuffer().remaining() - fcWindow;
-                getBuffer().limit(getBuffer().position() + fcWindow);
-                SpdyProtocolUtils.putInt(buffer, getStreamId());
-                SpdyProtocolUtils.putInt(buffer, ((isWritesShutdown() ? SpdyChannel.FLAG_FIN : 0) << 24) + fcWindow);
-            } else {
-                remainingInBuffer = getBuffer().remaining();
-            }
+            remainingInBuffer = getBuffer().remaining() - fcWindow;
+            getBuffer().limit(getBuffer().position() + fcWindow);
+            SpdyProtocolUtils.putInt(buffer, getStreamId());
+            SpdyProtocolUtils.putInt(buffer, ((isWritesShutdown() ? SpdyChannel.FLAG_FIN : 0) << 24) + fcWindow);
         }
         header.getResource().flip();
-        if (!header.getResource().hasRemaining()) {
-            header.free();
-            return new SendFrameHeader(remainingInBuffer, null);
-        }
         return new SendFrameHeader(remainingInBuffer, header);
     }
 }

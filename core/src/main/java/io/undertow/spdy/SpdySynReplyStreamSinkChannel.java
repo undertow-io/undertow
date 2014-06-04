@@ -49,7 +49,7 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
     @Override
     protected SendFrameHeader createFrameHeaderImpl() {
         final int fcWindow = grabFlowControlBytes(getBuffer().remaining());
-        if(fcWindow == 0 && getBuffer().remaining() > 0) {
+        if(fcWindow == 0 && getBuffer().hasRemaining()) {
             //flow control window is exhausted
             return new SendFrameHeader(getBuffer().remaining(), null);
         }

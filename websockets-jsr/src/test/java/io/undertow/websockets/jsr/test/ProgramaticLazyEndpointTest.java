@@ -24,6 +24,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.websockets.jsr.DefaultWebSocketClientSslProvider;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
@@ -50,6 +51,7 @@ import java.util.concurrent.TimeUnit;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 public class ProgramaticLazyEndpointTest {
 
     private static ServerWebSocketContainer deployment;

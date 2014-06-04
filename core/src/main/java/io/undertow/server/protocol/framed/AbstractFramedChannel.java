@@ -17,6 +17,7 @@
  */
 package io.undertow.server.protocol.framed;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.util.ReferenceCountedPooled;
@@ -115,7 +116,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, FramePriority<C, R, S> framePriority, final Pooled<ByteBuffer> readData) {
         this.framePriority = framePriority;
-        if(readData != null) {
+        if (readData != null) {
             this.readData = new ReferenceCountedPooled<ByteBuffer>(readData, 1);
         }
         IdleTimeoutConduit idle = new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit());
@@ -284,7 +285,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 if (existing != null) {
                     if (data.getFrameLength() > frameData.getResource().remaining()) {
                         receiver = (R) existing;
-                        if(!receiver.isReadResumed()) {
+                        if (!receiver.isReadResumed()) {
                             channel.getSourceChannel().suspendReads();
                         }
                     }
@@ -304,13 +305,14 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         } catch (IOException e) {
             //something has code wrong with parsing, close the read side
             //we don't close the write side, as the underlying implementation will most likely want to send an error
+            UndertowLogger.REQUEST_LOGGER.ioException(e);
             markReadsBroken(e);
             forceFree = true;
             throw e;
         } finally {
             //if the receive caused the channel to break the close listener may be have been called
             //which will make readData null
-            if(readData != null) {
+            if (readData != null) {
                 if (!pooled.getResource().hasRemaining() || forceFree) {
                     pooled.free();
                     this.readData = null;
@@ -345,7 +347,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     protected abstract FrameHeaderData parseFrame(ByteBuffer data) throws IOException;
 
     protected synchronized void recalculateHeldFrames() throws IOException {
-        if(!heldFrames.isEmpty()) {
+        if (!heldFrames.isEmpty()) {
             framePriority.frameAdded(null, pendingFrames, heldFrames);
             flushSenders();
         }
@@ -398,8 +400,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             SendFrameHeader frameHeader = next.getFrameHeader();
             Pooled<ByteBuffer> frameHeaderByteBuffer = frameHeader.getByteBuffer();
             data[j * 3] = frameHeaderByteBuffer != null
-                        ? frameHeaderByteBuffer.getResource()
-                        : Buffers.EMPTY_BYTE_BUFFER;
+                    ? frameHeaderByteBuffer.getResource()
+                    : Buffers.EMPTY_BYTE_BUFFER;
             data[(j * 3) + 1] = next.getBuffer();
             data[(j * 3) + 2] = next.getFrameFooter();
             ++j;
@@ -462,7 +464,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     protected synchronized void queueFrame(final S channel) throws IOException {
         assert !newFrames.contains(channel);
-        if(isWritesBroken() || !this.channel.getSinkChannel().isOpen()) {
+        if (isWritesBroken() || !this.channel.getSinkChannel().isOpen()) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         newFrames.add(channel);
@@ -531,7 +533,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     /**
      * Forcibly closes the {@link io.undertow.server.protocol.framed.AbstractFramedChannel}.
-     *
      */
     @Override
     public void close() throws IOException {
@@ -548,11 +549,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * Called when a source sub channel fails to fulfil its contract, and leaves the channel in an inconsistent state.
      * <p/>
      * The underlying read side will be forcibly closed.
+     *
      * @param cause The possibly null cause
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected void markReadsBroken(Throwable cause) {
-        if (readsBrokenUpdater.compareAndSet(this, 0 ,1)) {
+        if (readsBrokenUpdater.compareAndSet(this, 0, 1)) {
             handleBrokenSourceChannel(cause);
             safeClose(channel.getSourceChannel());
 
@@ -570,7 +572,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * The underlying channel will be closed, and any sub channels that have writes resumed will have their
      * listeners notified. It is expected that these listeners will then attempt to use the channel, and their standard
      * error handling logic will take over.
-     *
      *
      * @param cause The possibly null cause
      */
@@ -694,7 +695,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         ChannelListeners.invokeChannelListener(sender, sender.getWriteListener());
                     }
                 }
-                if(pendingFrames.isEmpty()) {
+                if (pendingFrames.isEmpty()) {
                     channel.suspendWrites();
                 }
             }
@@ -708,40 +709,40 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
         @Override
         public void handleEvent(final StreamSinkChannel c) {
-            if(Thread.currentThread() != c.getIoThread()) {
+            if (Thread.currentThread() != c.getIoThread()) {
                 ChannelListeners.invokeChannelListener(c.getIoThread(), c, this);
                 return;
             }
             R receiver = AbstractFramedChannel.this.receiver;
             try {
-            if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
-                ChannelListeners.invokeChannelListener(receiver, ((SimpleSetter) receiver.getReadSetter()).get());
-            }
-            synchronized (AbstractFramedChannel.this) {
-                for (final S channel : pendingFrames) {
-                    //if this was a clean shutdown there should not be any senders
-                    channel.markBroken();
+                if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
+                    ChannelListeners.invokeChannelListener(receiver, ((SimpleSetter) receiver.getReadSetter()).get());
                 }
-                for (final S channel : newFrames) {
-                    //if this was a clean shutdown there should not be any senders
-                    channel.markBroken();
+                synchronized (AbstractFramedChannel.this) {
+                    for (final S channel : pendingFrames) {
+                        //if this was a clean shutdown there should not be any senders
+                        channel.markBroken();
+                    }
+                    for (final S channel : newFrames) {
+                        //if this was a clean shutdown there should not be any senders
+                        channel.markBroken();
+                    }
+                    for (final S channel : heldFrames) {
+                        //if this was a clean shutdown there should not be any senders
+                        channel.markBroken();
+                    }
                 }
-                for (final S channel : heldFrames) {
-                    //if this was a clean shutdown there should not be any senders
-                    channel.markBroken();
-                }
-            }
             } finally {
                 try {
-                    for(ChannelListener<C> task : closeTasks) {
-                        ChannelListeners.invokeChannelListener((C)AbstractFramedChannel.this, task);
+                    for (ChannelListener<C> task : closeTasks) {
+                        ChannelListeners.invokeChannelListener((C) AbstractFramedChannel.this, task);
                     }
                 } finally {
                     synchronized (AbstractFramedChannel.this) {
-                        for(R r : receivers) {
+                        for (R r : receivers) {
                             IoUtils.safeClose(r);
                         }
-                        if(readData != null) {
+                        if (readData != null) {
                             readData.free();
                             readData = null;
                         }
@@ -770,7 +771,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "[ " + (receiver == null ? "No Receiver" : receiver.toString()) + " " + pendingFrames.toString() + " -- " + heldFrames.toString() + " -- " + newFrames.toString()+ "]" ;
+        return getClass().getSimpleName() + "[ " + (receiver == null ? "No Receiver" : receiver.toString()) + " " + pendingFrames.toString() + " -- " + heldFrames.toString() + " -- " + newFrames.toString() + "]";
     }
 
     protected StreamConnection getUnderlyingConnection() {

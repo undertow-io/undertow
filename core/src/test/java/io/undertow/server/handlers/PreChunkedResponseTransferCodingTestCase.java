@@ -25,6 +25,7 @@ import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.SpdyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StringWriteChannelListener;
@@ -43,6 +44,7 @@ import java.io.OutputStream;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@SpdyIgnore
 public class PreChunkedResponseTransferCodingTestCase {
 
     private static final String MESSAGE = "My HTTP Request!";

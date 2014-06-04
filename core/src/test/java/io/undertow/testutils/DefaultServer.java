@@ -285,7 +285,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                     }
                 } else if (spdy) {
-                    openListener = new SpdyOpenListener(pool, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), 8192);
+                    openListener = new SpdyOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2*8192, 100 * 8192)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
@@ -381,8 +381,18 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (ajpIgnore == null) {
             ajpIgnore = method.getMethod().getDeclaringClass().getAnnotation(AjpIgnore.class);
         }
-        if ((ajp || spdy) && ajpIgnore != null) {
+        if (ajp && ajpIgnore != null) {
             if (!proxy || !ajpIgnore.apacheOnly() || spdy) {
+                notifier.fireTestIgnored(describeChild(method));
+                return;
+            }
+        }
+        if(spdy) {
+            SpdyIgnore spdyIgnore = method.getAnnotation(SpdyIgnore.class);
+            if(spdyIgnore == null) {
+                spdyIgnore = method.getMethod().getDeclaringClass().getAnnotation(SpdyIgnore.class);
+            }
+            if(spdyIgnore != null) {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
             }
