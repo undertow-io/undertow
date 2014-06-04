@@ -26,7 +26,6 @@ import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.CaseInsensitiveMap;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -50,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * @author Stuart Douglas
@@ -83,7 +83,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getRequestHeaders() {
-        Map<String, List<String>> headers = new CaseInsensitiveMap<List<String>>();
+        Map<String, List<String>> headers = new TreeMap<String, List<String>>(String.CASE_INSENSITIVE_ORDER);
         for (final HttpString header : exchange.getRequestHeaders().getHeaderNames()) {
             headers.put(header.toString(), new ArrayList<String>(exchange.getRequestHeaders().get(header)));
         }
