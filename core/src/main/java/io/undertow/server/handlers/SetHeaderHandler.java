@@ -24,7 +24,7 @@ import io.undertow.util.HttpString;
 
 /**
  * Set a fixed response header.
- * 
+ *
  * @author Stuart Douglas
  */
 public class SetHeaderHandler implements HttpHandler {
