@@ -43,6 +43,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Client which can be used to Test a websocket server
@@ -55,6 +56,8 @@ public final class WebSocketTestClient {
     private final URI uri;
     private final WebSocketVersion version;
     private volatile boolean closed;
+
+    private static final AtomicInteger count = new AtomicInteger();
 
     public WebSocketTestClient(WebSocketVersion version, URI uri) {
         this.uri = uri;
@@ -107,7 +110,7 @@ public final class WebSocketTestClient {
      * when an Exception was caught.
      */
     public WebSocketTestClient send(WebSocketFrame frame, final FrameListener listener) {
-        ch.getPipeline().addLast("responseHandler", new SimpleChannelUpstreamHandler() {
+        ch.getPipeline().addLast("responseHandler" + count.incrementAndGet(), new SimpleChannelUpstreamHandler() {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
                 if (e.getMessage() instanceof CloseWebSocketFrame) {
