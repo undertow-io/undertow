@@ -32,7 +32,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
 /**
- * A handler for the HTTP Origin header.
+ * A handler for the HTTP Origin (RFC 6454) header.
  *
  * @author Stuart Douglas
  */
