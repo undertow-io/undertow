@@ -30,6 +30,10 @@ import io.undertow.util.Headers;
  *
  * The current date string is cached, and is updated every second in a racey
  * manner (i.e. it is possible for two thread to update it at once).
+ * <p>
+ * This handler is deprecated, the same functionality is achieved by using the
+ * server option {@link io.undertow.UndertowOptions#ALWAYS_SET_DATE ALWAYS_SET_DATE}.
+ * It is enabled by default.
  *
  * @author Stuart Douglas
  */
@@ -47,6 +51,7 @@ public class DateHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        // better method is used in DateUtils#addDateHeaderIfRequired
         long time = System.nanoTime();
         if(time < nextUpdateTime) {
             exchange.getResponseHeaders().put(Headers.DATE, cachedDateString);
