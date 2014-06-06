@@ -216,11 +216,12 @@ public class InMemorySessionManager implements SessionManager {
         private String sessionId;
         private volatile Object evictionToken;
         private final SessionConfig sessionCookieConfig;
+        private volatile long expireTime = -1;
 
         final XnioExecutor executor;
         final XnioWorker worker;
 
-        XnioExecutor.Key cancelKey;
+        XnioExecutor.Key timerCancelKey;
 
         Runnable cancelTask = new Runnable() {
             @Override
@@ -228,7 +229,12 @@ public class InMemorySessionManager implements SessionManager {
                 worker.execute(new Runnable() {
                     @Override
                     public void run() {
-                        invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT);
+                        long currentTime = System.currentTimeMillis();
+                        if(currentTime >= expireTime) {
+                            invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT);
+                        } else {
+                            timerCancelKey = executor.executeAfter(cancelTask, expireTime - currentTime, TimeUnit.MILLISECONDS);
+                        }
                     }
                 });
             }
@@ -244,13 +250,15 @@ public class InMemorySessionManager implements SessionManager {
         }
 
         synchronized void bumpTimeout() {
-            if (cancelKey != null) {
-                if (!cancelKey.remove()) {
-                    return;
+            final int maxInactiveInterval = getMaxInactiveInterval();
+            if (maxInactiveInterval > 0) {
+                expireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000);
+                if(timerCancelKey == null) {
+                    //+1 second, to make sure that the time has actually expired
+                    //we don't re-schedule every time, as it is expensive
+                    //instead when it expires we check if the timeout has been bumped, and if so we re-schedule
+                    timerCancelKey = executor.executeAfter(cancelTask, maxInactiveInterval + 1, TimeUnit.SECONDS);
                 }
-            }
-            if (getMaxInactiveInterval() > 0) {
-                cancelKey = executor.executeAfter(cancelTask, getMaxInactiveInterval(), TimeUnit.SECONDS);
             }
             if (evictionToken != null) {
                 Object token = evictionToken;
@@ -366,8 +374,8 @@ public class InMemorySessionManager implements SessionManager {
         }
 
         synchronized void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
-            if (cancelKey != null) {
-                cancelKey.remove();
+            if (timerCancelKey != null) {
+                timerCancelKey.remove();
             }
             InMemorySession sess = sessionManager.sessions.get(sessionId);
             if (sess == null) {
@@ -402,8 +410,8 @@ public class InMemorySessionManager implements SessionManager {
         }
 
         private synchronized void destroy() {
-            if (cancelKey != null) {
-                cancelKey.remove();
+            if (timerCancelKey != null) {
+                timerCancelKey.remove();
             }
             cancelTask = null;
         }
