@@ -18,15 +18,16 @@
 
 package io.undertow.util;
 
+import io.undertow.UndertowOptions;
+import io.undertow.server.HttpServerExchange;
+
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
-
-import io.undertow.UndertowOptions;
-import io.undertow.server.HttpServerExchange;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Utility for parsing and generating dates
@@ -41,18 +42,18 @@ public class DateUtils {
 
     private static final String RFC1123_PATTERN = "EEE, dd MMM yyyy HH:mm:ss z";
 
-    private static volatile String cachedDateString;
+    private static final AtomicReference<String> cachedDateString = new AtomicReference<String>();
 
     /**
      * Thread local cache of this date format. This is technically a small memory leak, however
      * in practice it is fine, as it will only be used by server threads.
-     *
+     * <p/>
      * This is the most common date format, which is why we cache it.
      */
     private static final ThreadLocal<SimpleDateFormat> RFC1123_PATTERN_FORMAT = new ThreadLocal<SimpleDateFormat>() {
         @Override
         protected SimpleDateFormat initialValue() {
-            SimpleDateFormat df =  new SimpleDateFormat(RFC1123_PATTERN, LOCALE_US);
+            SimpleDateFormat df = new SimpleDateFormat(RFC1123_PATTERN, LOCALE_US);
             df.setTimeZone(GMT_ZONE);
             return df;
         }
@@ -64,7 +65,7 @@ public class DateUtils {
     private static final Runnable INVALIDATE_TASK = new Runnable() {
         @Override
         public void run() {
-            cachedDateString = null;
+            cachedDateString.set(null);
         }
     };
 
@@ -81,7 +82,7 @@ public class DateUtils {
     private static final ThreadLocal<SimpleDateFormat> COMMON_LOG_PATTERN_FORMAT = new ThreadLocal<SimpleDateFormat>() {
         @Override
         protected SimpleDateFormat initialValue() {
-            SimpleDateFormat df =  new SimpleDateFormat(COMMON_LOG_PATTERN, LOCALE_US);
+            SimpleDateFormat df = new SimpleDateFormat(COMMON_LOG_PATTERN, LOCALE_US);
             return df;
         }
     };
@@ -123,7 +124,7 @@ public class DateUtils {
          */
 
         final int semicolonIndex = date.indexOf(';');
-        final String trimmedDate = semicolonIndex >=0 ? date.substring(0, semicolonIndex) : date;
+        final String trimmedDate = semicolonIndex >= 0 ? date.substring(0, semicolonIndex) : date;
 
         ParsePosition pp = new ParsePosition(0);
         SimpleDateFormat dateFormat = RFC1123_PATTERN_FORMAT.get();
@@ -247,9 +248,9 @@ public class DateUtils {
 
     public static void addDateHeaderIfRequired(HttpServerExchange exchange) {
         HeaderMap responseHeaders = exchange.getResponseHeaders();
-        if(exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_DATE, true) && !responseHeaders.contains(Headers.DATE)) {
-            String dateString = cachedDateString;
-            if(dateString != null) {
+        if (exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_DATE, true) && !responseHeaders.contains(Headers.DATE)) {
+            String dateString = cachedDateString.get();
+            if (dateString != null) {
                 responseHeaders.put(Headers.DATE, dateString);
             } else {
                 //set the time and register a timer to invalidate it
@@ -259,8 +260,9 @@ public class DateUtils {
                 long mod = realTime % 1000;
                 long toGo = 1000 - mod;
                 dateString = DateUtils.toDateString(new Date(realTime));
-                cachedDateString = dateString;
-                exchange.getConnection().getIoThread().executeAfter(INVALIDATE_TASK, toGo, TimeUnit.MILLISECONDS);
+                if (cachedDateString.compareAndSet(null, dateString)) {
+                    exchange.getConnection().getIoThread().executeAfter(INVALIDATE_TASK, toGo, TimeUnit.MILLISECONDS);
+                }
                 responseHeaders.put(Headers.DATE, dateString);
             }
         }
