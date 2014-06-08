@@ -125,7 +125,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
             final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
             try {
-                requestDispatcher.error(servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet().getServletInfo().getName(), msg);
+                requestDispatcher.error(servletRequestContext, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet().getServletInfo().getName(), msg);
             } catch (ServletException e) {
                 throw new RuntimeException(e);
             }

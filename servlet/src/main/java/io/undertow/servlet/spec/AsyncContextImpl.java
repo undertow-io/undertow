@@ -295,6 +295,7 @@ public class AsyncContextImpl implements AsyncContext {
                 //at all other times the dispatch is desirable
                 HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                 response.responseDone();
+                IoUtils.safeClose(exchange.getInputStream());
             } else {
                 doDispatch(new Runnable() {
                     @Override
@@ -302,6 +303,7 @@ public class AsyncContextImpl implements AsyncContext {
 
                         HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                         response.responseDone();
+                        IoUtils.safeClose(exchange.getInputStream());
                     }
                 });
             }

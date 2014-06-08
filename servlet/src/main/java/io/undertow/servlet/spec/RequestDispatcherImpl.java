@@ -307,21 +307,19 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         }
     }
 
-    public void error(final ServletRequest request, final ServletResponse response, final String servletName, final String message) throws ServletException, IOException {
-        error(request, response, servletName, null, message);
+    public void error(ServletRequestContext servletRequestContext, final ServletRequest request, final ServletResponse response, final String servletName, final String message) throws ServletException, IOException {
+        error(servletRequestContext, request, response, servletName, null, message);
     }
 
-    public void error(final ServletRequest request, final ServletResponse response, final String servletName) throws ServletException, IOException {
-        error(request, response, servletName, null, null);
+    public void error(ServletRequestContext servletRequestContext, final ServletRequest request, final ServletResponse response, final String servletName) throws ServletException, IOException {
+        error(servletRequestContext, request, response, servletName, null, null);
     }
 
-    public void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception) throws ServletException, IOException {
-        error(request, response, servletName, exception, exception.getMessage());
+    public void error(ServletRequestContext servletRequestContext, final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception) throws ServletException, IOException {
+        error(servletRequestContext, request, response, servletName, exception, exception.getMessage());
     }
 
-    private void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception, final String message) throws ServletException, IOException {
-
-        final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
+    private void error(ServletRequestContext servletRequestContext, final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception, final String message) throws ServletException, IOException {
         if(request.getDispatcherType() == DispatcherType.ERROR) {
             //we have already dispatched once with an error
             //if we dispatch again we run the risk of a stack overflow
@@ -408,6 +406,10 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 throw new RuntimeException(e);
             }
         } finally {
+            AsyncContextImpl ac = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
+            if(ac != null) {
+                ac.complete();
+            }
             servletRequestContext.setServletRequest(oldRequest);
             servletRequestContext.setServletResponse(oldResponse);
         }

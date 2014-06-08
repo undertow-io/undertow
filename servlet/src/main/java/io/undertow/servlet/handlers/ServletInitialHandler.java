@@ -286,7 +286,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                         if (location != null) {
                             RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
                             try {
-                                dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName(), t);
+                                dispatcher.error(servletRequestContext, request, response, servletChain.getManagedServlet().getServletInfo().getName(), t);
                             } catch (Exception e) {
                                 UndertowLogger.REQUEST_LOGGER.exceptionGeneratingErrorPage(e, location);
                             }
