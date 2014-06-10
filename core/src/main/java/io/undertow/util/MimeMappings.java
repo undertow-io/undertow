@@ -112,6 +112,7 @@ public class MimeMappings {
         defaultMappings.put("aiff", "audio/x-aiff");
         defaultMappings.put("aifc", "audio/x-aiff");
         defaultMappings.put("wav", "audio/x-wav");
+        defaultMappings.put("mp3", "audio/mpeg");
         defaultMappings.put("mpeg", "video/mpeg");
         defaultMappings.put("mpg", "video/mpeg");
         defaultMappings.put("mpe", "video/mpeg");
