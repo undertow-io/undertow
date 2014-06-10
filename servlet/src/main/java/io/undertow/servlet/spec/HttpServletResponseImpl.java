@@ -24,6 +24,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
@@ -42,6 +43,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.RedirectBuilder;
@@ -245,7 +247,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        return new ArrayList<String>(exchange.getResponseHeaders().get(name));
+        HeaderValues headers = exchange.getResponseHeaders().get(name);
+        if(headers == null) {
+            return Collections.emptySet();
+        }
+        return new ArrayList<String>(headers);
     }
 
     @Override
