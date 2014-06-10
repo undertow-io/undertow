@@ -135,7 +135,7 @@ public class HexConverter {
 
         byte[] convertedBack = convertFromHex(hexValue);
 
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (byte current : convertedBack) {
             sb.append((int)current).append(" ");
         }
