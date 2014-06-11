@@ -53,7 +53,7 @@ public class LRUCache<K, V> {
 
     public LRUCache(int maxEntries, final int maxAge) {
         this.maxAge = maxAge;
-        this.cache = new ConcurrentHashMap<K, CacheEntry<K, V>>(16);
+        this.cache = new ConcurrentHashMap<>(16);
         this.accessQueue = ConcurrentDirectDeque.newInstance();
         this.maxEntries = maxEntries;
     }
@@ -67,7 +67,7 @@ public class LRUCache<K, V> {
             } else {
                 expires = System.currentTimeMillis() + maxAge;
             }
-            value = new CacheEntry<K, V>(key, newValue, expires);
+            value = new CacheEntry<>(key, newValue, expires);
             CacheEntry result = cache.putIfAbsent(key, value);
             if (result != null) {
                 value = result;

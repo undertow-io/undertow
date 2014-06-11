@@ -37,14 +37,14 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class InMemorySessionPersistence implements SessionPersistenceManager {
 
-    private static final Map<String, Map<String, SessionEntry>> data = new ConcurrentHashMap<String, Map<String, SessionEntry>>();
+    private static final Map<String, Map<String, SessionEntry>> data = new ConcurrentHashMap<>();
 
     @Override
     public void persistSessions(String deploymentName, Map<String, PersistentSession> sessionData) {
         try {
-            final Map<String, SessionEntry> serializedData = new HashMap<String, SessionEntry>();
+            final Map<String, SessionEntry> serializedData = new HashMap<>();
             for (Map.Entry<String, PersistentSession> sessionEntry : sessionData.entrySet()) {
-                Map<String, byte[]> data = new HashMap<String, byte[]>();
+                Map<String, byte[]> data = new HashMap<>();
                 for (Map.Entry<String, Object> sessionAttribute : sessionEntry.getValue().getSessionData().entrySet()) {
                     try {
                         final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -71,10 +71,10 @@ public class InMemorySessionPersistence implements SessionPersistenceManager {
             long time = System.currentTimeMillis();
             Map<String, SessionEntry> data = this.data.remove(deploymentName);
             if (data != null) {
-                Map<String, PersistentSession> ret = new HashMap<String, PersistentSession>();
+                Map<String, PersistentSession> ret = new HashMap<>();
                 for (Map.Entry<String, SessionEntry> sessionEntry : data.entrySet()) {
                     if (sessionEntry.getValue().expiry.getTime() > time) {
-                        Map<String, Object> session = new HashMap<String, Object>();
+                        Map<String, Object> session = new HashMap<>();
                         for (Map.Entry<String, byte[]> sessionAttribute : sessionEntry.getValue().data.entrySet()) {
                             final ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(sessionAttribute.getValue()));
                             session.put(sessionAttribute.getKey(), in.readObject());

@@ -43,7 +43,7 @@ public class HeaderTokenParser<E extends HeaderToken> {
         char[] headerChars = header.toCharArray();
 
         // The LinkedHashMap is used so that the parameter order can also be retained.
-        Map<E, String> response = new LinkedHashMap<E, String>();
+        Map<E, String> response = new LinkedHashMap<>();
 
         SearchingFor searchingFor = SearchingFor.START_OF_NAME;
         int nameStart = 0;

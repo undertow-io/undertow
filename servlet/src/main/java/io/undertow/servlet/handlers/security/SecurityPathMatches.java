@@ -127,7 +127,7 @@ public class SecurityPathMatches {
         if(currentMatch.uncovered && denyUncoveredHttpMethods) {
             return new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.DENY, Collections.<String>emptySet());
         }
-        final Set<String> allowedRoles = new HashSet<String>();
+        final Set<String> allowedRoles = new HashSet<>();
         for(SingleConstraintMatch match : currentMatch.constraints) {
             if(match.getRequiredRoles().isEmpty()) {
                 return new SingleConstraintMatch(match.getEmptyRoleSemantic(), Collections.<String>emptySet());
@@ -177,9 +177,9 @@ public class SecurityPathMatches {
     public static class Builder {
         private final DeploymentInfo deploymentInfo;
         private final PathSecurityInformation defaultPathSecurityInformation = new PathSecurityInformation();
-        private final Map<String, PathSecurityInformation> exactPathRoleInformation = new HashMap<String, PathSecurityInformation>();
-        private final Map<String, PathSecurityInformation> prefixPathRoleInformation = new HashMap<String, PathSecurityInformation>();
-        private final Map<String, PathSecurityInformation> extensionRoleInformation = new HashMap<String, PathSecurityInformation>();
+        private final Map<String, PathSecurityInformation> exactPathRoleInformation = new HashMap<>();
+        private final Map<String, PathSecurityInformation> prefixPathRoleInformation = new HashMap<>();
+        private final Map<String, PathSecurityInformation> extensionRoleInformation = new HashMap<>();
 
         private Builder(final DeploymentInfo deploymentInfo) {
             this.deploymentInfo = deploymentInfo;
@@ -221,7 +221,7 @@ public class SecurityPathMatches {
         }
 
         private Set<String> expandRolesAllowed(final Set<String> rolesAllowed) {
-            final Set<String> roles = new HashSet<String>(rolesAllowed);
+            final Set<String> roles = new HashSet<>(rolesAllowed);
             if (roles.contains("*")) {
                 roles.remove("*");
                 roles.addAll(deploymentInfo.getSecurityRoles());
@@ -238,7 +238,7 @@ public class SecurityPathMatches {
                 for (String method : webResources.getHttpMethods()) {
                     List<SecurityInformation> securityInformations = info.perMethodRequiredRoles.get(method);
                     if (securityInformations == null) {
-                        info.perMethodRequiredRoles.put(method, securityInformations = new ArrayList<SecurityInformation>());
+                        info.perMethodRequiredRoles.put(method, securityInformations = new ArrayList<>());
                     }
                     securityInformations.add(securityConstraint);
                 }
@@ -254,9 +254,9 @@ public class SecurityPathMatches {
 
 
     private static class PathSecurityInformation {
-        final List<SecurityInformation> defaultRequiredRoles = new ArrayList<SecurityInformation>();
-        final Map<String, List<SecurityInformation>> perMethodRequiredRoles = new HashMap<String, List<SecurityInformation>>();
-        final List<ExcludedMethodRoles> excludedMethodRoles = new ArrayList<ExcludedMethodRoles>();
+        final List<SecurityInformation> defaultRequiredRoles = new ArrayList<>();
+        final Map<String, List<SecurityInformation>> perMethodRequiredRoles = new HashMap<>();
+        final List<ExcludedMethodRoles> excludedMethodRoles = new ArrayList<>();
     }
 
     private static final class ExcludedMethodRoles {
@@ -276,14 +276,14 @@ public class SecurityPathMatches {
 
         private SecurityInformation(final Set<String> roles, final TransportGuaranteeType transportGuaranteeType, final SecurityInfo.EmptyRoleSemantic emptyRoleSemantic) {
             this.emptyRoleSemantic = emptyRoleSemantic;
-            this.roles = new HashSet<String>(roles);
+            this.roles = new HashSet<>(roles);
             this.transportGuaranteeType = transportGuaranteeType;
         }
     }
 
     private static final class RuntimeMatch {
         TransportGuaranteeType type = TransportGuaranteeType.NONE;
-        final List<SingleConstraintMatch> constraints = new ArrayList<SingleConstraintMatch>();
+        final List<SingleConstraintMatch> constraints = new ArrayList<>();
         boolean uncovered = true;
     }
 }

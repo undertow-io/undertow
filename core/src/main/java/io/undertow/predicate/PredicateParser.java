@@ -73,7 +73,7 @@ public class PredicateParser {
 
     private static Map<String, PredicateBuilder> loadBuilders(final ClassLoader classLoader) {
         ServiceLoader<PredicateBuilder> loader = ServiceLoader.load(PredicateBuilder.class, classLoader);
-        final Map<String, PredicateBuilder> ret = new HashMap<String, PredicateBuilder>();
+        final Map<String, PredicateBuilder> ret = new HashMap<>();
         for (PredicateBuilder builder : loader) {
             if (ret.containsKey(builder.name())) {
                 if (ret.get(builder.name()).getClass() != builder.getClass()) {
@@ -102,11 +102,11 @@ public class PredicateParser {
         //shunting yard algorithm
         //gets rid or parentheses and fixes up operator ordering
         Deque<Token> tokens = tokenize(string);
-        Deque<String> operatorStack = new ArrayDeque<String>();
+        Deque<String> operatorStack = new ArrayDeque<>();
 
         //the output, consisting of predicate nodes and string representations of operators
         //it is a bit yuck mixing up the types, but whatever
-        Deque<Object> output = new ArrayDeque<Object>();
+        Deque<Object> output = new ArrayDeque<>();
 
         while (!tokens.isEmpty()) {
             Token token = tokens.poll();
@@ -198,7 +198,7 @@ public class PredicateParser {
             }
             Token next = tokens.peek();
             if (next.token.equals("[")) {
-                final Map<String, Object> values = new HashMap<String, Object>();
+                final Map<String, Object> values = new HashMap<>();
 
                 tokens.poll();
                 next = tokens.poll();
@@ -296,7 +296,7 @@ public class PredicateParser {
         }
 
         Class<?> componentType = type.getComponentType();
-        final List<Object> values = new ArrayList<Object>();
+        final List<Object> values = new ArrayList<>();
         Token token = tokens.poll();
         while (token != null) {
             Token commaOrEnd = tokens.poll();
@@ -327,7 +327,7 @@ public class PredicateParser {
     }
 
     private static void checkParameters(final String string, int pos, final Map<String, Object> values, final PredicateBuilder builder) {
-        final Set<String> required = new HashSet<String>(builder.requiredParameters());
+        final Set<String> required = new HashSet<>(builder.requiredParameters());
         for (String key : values.keySet()) {
             required.remove(key);
         }
@@ -414,7 +414,7 @@ public class PredicateParser {
 
         int pos = 0;
         StringBuilder current = new StringBuilder();
-        Deque<Token> ret = new ArrayDeque<Token>();
+        Deque<Token> ret = new ArrayDeque<>();
         while (pos < string.length()) {
             char c = string.charAt(pos);
             if (currentStringDelim != 0) {

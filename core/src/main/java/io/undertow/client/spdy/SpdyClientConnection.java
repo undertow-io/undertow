@@ -65,9 +65,9 @@ public class SpdyClientConnection implements ClientConnection {
     static final HttpString STATUS = new HttpString(":status");
 
     private final SpdyChannel spdyChannel;
-    private final ChannelListener.SimpleSetter<ClientConnection> closeSetter = new ChannelListener.SimpleSetter<ClientConnection>();
+    private final ChannelListener.SimpleSetter<ClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
 
-    private final Map<Integer, SpdyClientExchange> currentExchanges = new ConcurrentHashMap<Integer, SpdyClientExchange>();
+    private final Map<Integer, SpdyClientExchange> currentExchanges = new ConcurrentHashMap<>();
 
     public SpdyClientConnection(SpdyChannel spdyChannel) {
         this.spdyChannel = spdyChannel;

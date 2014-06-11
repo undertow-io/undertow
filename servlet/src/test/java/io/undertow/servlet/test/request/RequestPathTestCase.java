@@ -146,7 +146,7 @@ public class RequestPathTestCase {
      * because String.split() is retarded
      */
     private static String[] split(String s) {
-        List<String> strings = new ArrayList<String>();
+        List<String> strings = new ArrayList<>();
         int pos = 0;
         for (int i = 0; i < s.length(); ++i) {
             char c = s.charAt(i);

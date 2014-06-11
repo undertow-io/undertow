@@ -91,12 +91,12 @@ public class SimpleErrorPageHandler implements HttpHandler {
     }
 
     public SimpleErrorPageHandler setResponseCodes(final Set<Integer> responseCodes) {
-        this.responseCodes = new HashSet<Integer>(responseCodes);
+        this.responseCodes = new HashSet<>(responseCodes);
         return this;
     }
 
     public SimpleErrorPageHandler setResponseCodes(final Integer... responseCodes) {
-        this.responseCodes = new HashSet<Integer>(Arrays.asList(responseCodes));
+        this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
         return this;
     }
 }

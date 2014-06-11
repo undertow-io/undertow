@@ -251,12 +251,12 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(headers == null) {
             return Collections.emptySet();
         }
-        return new ArrayList<String>(headers);
+        return new ArrayList<>(headers);
     }
 
     @Override
     public Collection<String> getHeaderNames() {
-        final Set<String> headers = new HashSet<String>();
+        final Set<String> headers = new HashSet<>();
         for (final HttpString i : exchange.getResponseHeaders().getHeaderNames()) {
             headers.add(i.toString());
         }

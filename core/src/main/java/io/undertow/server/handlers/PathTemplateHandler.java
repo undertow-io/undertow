@@ -42,7 +42,7 @@ public class PathTemplateHandler implements HttpHandler {
     @Deprecated
     public static final AttachmentKey<PathTemplateMatch> PATH_TEMPLATE_MATCH = AttachmentKey.create(PathTemplateMatch.class);
 
-    private final PathTemplateMatcher<HttpHandler> pathTemplateMatcher = new PathTemplateMatcher<HttpHandler>();
+    private final PathTemplateMatcher<HttpHandler> pathTemplateMatcher = new PathTemplateMatcher<>();
 
     public PathTemplateHandler(boolean rewriteQueryParameters) {
         this.rewriteQueryParameters = rewriteQueryParameters;

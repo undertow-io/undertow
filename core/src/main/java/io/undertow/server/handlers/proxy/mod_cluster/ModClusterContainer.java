@@ -42,11 +42,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class ModClusterContainer {
 
-    private final List<Balancer> balancers = new CopyOnWriteArrayList<Balancer>();
-    private final List<Node> nodes = new CopyOnWriteArrayList<Node>();
-    private final List<Context> contexts = new CopyOnWriteArrayList<Context>();
-    private final List<Node> failedNodes = new CopyOnWriteArrayList<Node>();
-    private final List<VHost> hosts = new CopyOnWriteArrayList<VHost>();
+    private final List<Balancer> balancers = new CopyOnWriteArrayList<>();
+    private final List<Node> nodes = new CopyOnWriteArrayList<>();
+    private final List<Context> contexts = new CopyOnWriteArrayList<>();
+    private final List<Node> failedNodes = new CopyOnWriteArrayList<>();
+    private final List<VHost> hosts = new CopyOnWriteArrayList<>();
     private final List<SessionId> sessionIds = Collections.synchronizedList(new ArrayList<SessionId>());
     private final Random random = new SecureRandom();
     private Timer timer;
@@ -396,7 +396,7 @@ public class ModClusterContainer {
      * Remove the node, host, context corresponding to jvmRoute.
      */
     public void removeNode(String jvmRoute) {
-        List<Context> remcons = new ArrayList<Context>();
+        List<Context> remcons = new ArrayList<>();
         for (Context con : contexts) {
             if (con.getJvmRoute().equals(jvmRoute))
                 remcons.add(con);
@@ -404,7 +404,7 @@ public class ModClusterContainer {
         for (Context con : remcons)
             contexts.remove(con);
 
-        List<VHost> remhosts = new ArrayList<VHost>();
+        List<VHost> remhosts = new ArrayList<>();
         for (VHost hos : hosts) {
             if (hos.getJVMRoute().equals(jvmRoute))
                 remhosts.add(hos);
@@ -412,7 +412,7 @@ public class ModClusterContainer {
         for (VHost hos : remhosts)
             hosts.remove(hos);
 
-        List<Node> remnodes = new ArrayList<Node>();
+        List<Node> remnodes = new ArrayList<>();
         for (Node nod : nodes) {
             if (nod.getJvmRoute().equals(jvmRoute))
                 remnodes.add(nod);
@@ -482,7 +482,7 @@ public class ModClusterContainer {
 
         @Override
         public void run() {
-            List<Node> tmp = new ArrayList<Node>();
+            List<Node> tmp = new ArrayList<>();
             if (failedNodes.isEmpty()) {
                 return;
             }
@@ -547,7 +547,7 @@ public class ModClusterContainer {
 
         @Override
         public void run() {
-            List<Node> tmp = new ArrayList<Node>();
+            List<Node> tmp = new ArrayList<>();
             try {
                 // Retrieve nodes with status "DOWN"
                 for (Node n : nodes) {

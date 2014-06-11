@@ -62,7 +62,7 @@ public class TestHttpClient extends DefaultHttpClient {
         }
     };
 
-    private static final List<TestHttpClient> instances = new CopyOnWriteArrayList<TestHttpClient>();
+    private static final List<TestHttpClient> instances = new CopyOnWriteArrayList<>();
 
     public TestHttpClient() {
         instances.add(this);

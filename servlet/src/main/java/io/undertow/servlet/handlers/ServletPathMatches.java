@@ -166,11 +166,11 @@ public class ServletPathMatches {
         final ManagedServlets servlets = deployment.getServlets();
         final ManagedFilters filters = deployment.getFilters();
 
-        final Map<String, ServletHandler> extensionServlets = new HashMap<String, ServletHandler>();
-        final Map<String, ServletHandler> pathServlets = new HashMap<String, ServletHandler>();
+        final Map<String, ServletHandler> extensionServlets = new HashMap<>();
+        final Map<String, ServletHandler> pathServlets = new HashMap<>();
 
-        final Set<String> pathMatches = new HashSet<String>();
-        final Set<String> extensionMatches = new HashSet<String>();
+        final Set<String> pathMatches = new HashSet<>();
+        final Set<String> extensionMatches = new HashSet<>();
 
         DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
 
@@ -240,8 +240,8 @@ public class ServletPathMatches {
             //resolve the target servlet, will return null if this is the default servlet
             MatchData targetServletMatch = resolveServletForPath(path, pathServlets, extensionServlets, defaultServlet);
 
-            final Map<DispatcherType, List<ManagedFilter>> noExtension = new EnumMap<DispatcherType, List<ManagedFilter>>(DispatcherType.class);
-            final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<String, Map<DispatcherType, List<ManagedFilter>>>();
+            final Map<DispatcherType, List<ManagedFilter>> noExtension = new EnumMap<>(DispatcherType.class);
+            final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<>();
             //initalize the extension map. This contains all the filers in the noExtension map, plus
             //any filters that match the extension key
             for (String ext : extensionMatches) {
@@ -327,7 +327,7 @@ public class ServletPathMatches {
         //now setup name based mappings
         //these are used for name based dispatch
         for (Map.Entry<String, ServletHandler> entry : servlets.getServletHandlers().entrySet()) {
-            final Map<DispatcherType, List<ManagedFilter>> filtersByDispatcher = new EnumMap<DispatcherType, List<ManagedFilter>>(DispatcherType.class);
+            final Map<DispatcherType, List<ManagedFilter>> filtersByDispatcher = new EnumMap<>(DispatcherType.class);
             for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
                 ManagedFilter filter = filters.getManagedFilter(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
@@ -416,7 +416,7 @@ public class ServletPathMatches {
     private static <K, V> void addToListMap(final Map<K, List<V>> map, final K key, final V value) {
         List<V> list = map.get(key);
         if (list == null) {
-            map.put(key, list = new ArrayList<V>());
+            map.put(key, list = new ArrayList<>());
         }
         list.add(value);
     }

@@ -56,7 +56,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      */
     private final StreamSourceChannel underlying;
     private final AbstractFramedChannel<C, R, S> framedChannel;
-    private final Deque<FrameData> pendingFrameData = new LinkedList<FrameData>();
+    private final Deque<FrameData> pendingFrameData = new LinkedList<>();
 
     private int state = 0;
 

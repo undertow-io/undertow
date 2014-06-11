@@ -47,7 +47,7 @@ import io.undertow.util.StatusCodes;
  */
 public class ResourceHandler implements HttpHandler {
 
-    private final List<String> welcomeFiles = new CopyOnWriteArrayList<String>(new String[]{"index.html", "index.htm", "default.html", "default.htm"});
+    private final List<String> welcomeFiles = new CopyOnWriteArrayList<>(new String[]{"index.html", "index.htm", "default.html", "default.htm"});
     /**
      * If directory listing is enabled.
      */

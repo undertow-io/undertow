@@ -132,7 +132,7 @@ public class HttpClientTestCase {
         DefaultServer.setRootHandler(SIMPLE_MESSAGE_HANDLER);
         final UndertowClient client = createClient();
 
-        final List<ClientResponse> responses = new CopyOnWriteArrayList<ClientResponse>();
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
         final ClientConnection connection = client.connect(ADDRESS, worker, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
         try {
@@ -165,7 +165,7 @@ public class HttpClientTestCase {
         DefaultServer.setRootHandler(SIMPLE_MESSAGE_HANDLER);
         final UndertowClient client = createClient();
 
-        final List<ClientResponse> responses = new CopyOnWriteArrayList<ClientResponse>();
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
         DefaultServer.startSSLServer();
         SSLContext context = DefaultServer.getClientSSLContext();
@@ -207,7 +207,7 @@ public class HttpClientTestCase {
         final ClientConnection connection = client.connect(ADDRESS, worker, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
         try {
             ClientRequest request = new ClientRequest().setPath("/1324").setMethod(Methods.GET);
-            final List<ClientResponse> responses = new CopyOnWriteArrayList<ClientResponse>();
+            final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
             request.getRequestHeaders().add(Headers.CONNECTION, Headers.CLOSE.toString());
             connection.sendRequest(request, createClientCallback(responses, latch));
             latch.await();

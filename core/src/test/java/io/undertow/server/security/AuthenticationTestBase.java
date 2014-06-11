@@ -76,13 +76,13 @@ public abstract class AuthenticationTestBase {
     protected static final AuditReceiver auditReceiver = new AuditReceiver();
 
     static {
-        final Set<String> certUsers = new HashSet<String>();
+        final Set<String> certUsers = new HashSet<>();
         certUsers.add("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB");
 
-        final Set<String> gssApiUsers = new HashSet<String>();
+        final Set<String> gssApiUsers = new HashSet<>();
         gssApiUsers.add("jduke@UNDERTOW.IO");
 
-        final Map<String, char[]> passwordUsers = new HashMap<String, char[]>(2);
+        final Map<String, char[]> passwordUsers = new HashMap<>(2);
         passwordUsers.put("userOne", "passwordOne".toCharArray());
         passwordUsers.put("userTwo", "passwordTwo".toCharArray());
 
@@ -262,7 +262,7 @@ public abstract class AuthenticationTestBase {
     protected static void assertNotifiactions(final SecurityNotification.EventType ... eventTypes) {
         List<SecurityNotification> notifications = auditReceiver.takeNotifications();
         assertEquals("A single notification is expected.", eventTypes.length, notifications.size());
-        final List<SecurityNotification.EventType> types = new ArrayList<SecurityNotification.EventType>();
+        final List<SecurityNotification.EventType> types = new ArrayList<>();
         for(SecurityNotification i : notifications) {
             types.add(i.getEventType());
         }
@@ -322,7 +322,7 @@ public abstract class AuthenticationTestBase {
 
     protected static class AuditReceiver implements NotificationReceiver {
 
-        private final List<SecurityNotification> receivedNotifications = new ArrayList<SecurityNotification>();
+        private final List<SecurityNotification> receivedNotifications = new ArrayList<>();
 
         @Override
         public void handleNotification(SecurityNotification notification) {
@@ -331,7 +331,7 @@ public abstract class AuthenticationTestBase {
 
         public List<SecurityNotification> takeNotifications() {
             try {
-                return new ArrayList<SecurityNotification>(receivedNotifications);
+                return new ArrayList<>(receivedNotifications);
             } finally {
                 receivedNotifications.clear();
             }

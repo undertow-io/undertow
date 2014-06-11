@@ -115,7 +115,7 @@ public class BinaryEndpointTest {
 
     public static class ProgramaticClientEndpoint extends Endpoint {
 
-        private final LinkedBlockingDeque<byte[]> responses = new LinkedBlockingDeque<byte[]>();
+        private final LinkedBlockingDeque<byte[]> responses = new LinkedBlockingDeque<>();
 
         @Override
         public void onOpen(Session session, EndpointConfig config) {

@@ -107,7 +107,7 @@ public class ProgramaticLazyEndpointTest {
 
     public static class ProgramaticClientEndpoint extends Endpoint {
 
-        private final LinkedBlockingDeque<String> responses = new LinkedBlockingDeque<String>();
+        private final LinkedBlockingDeque<String> responses = new LinkedBlockingDeque<>();
 
         @Override
         public void onOpen(Session session, EndpointConfig config) {

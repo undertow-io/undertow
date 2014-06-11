@@ -42,7 +42,7 @@ class MetricsChainHandler implements HttpHandler {
 
     public MetricsChainHandler(HttpHandler next, MetricsCollector collector, Deployment deployment) {
         this.next = next;
-        final Map<String, MetricsHandler> servletHandlers = new HashMap<String, MetricsHandler>();
+        final Map<String, MetricsHandler> servletHandlers = new HashMap<>();
         for(Map.Entry<String, ServletHandler> entry : deployment.getServlets().getServletHandlers().entrySet()) {
             MetricsHandler handler = new MetricsHandler(next);
             servletHandlers.put(entry.getKey(), handler);

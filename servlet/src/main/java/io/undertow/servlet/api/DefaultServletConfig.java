@@ -44,24 +44,24 @@ public class DefaultServletConfig {
     public DefaultServletConfig(final boolean defaultAllowed, final Set<String> exceptions) {
         this.defaultAllowed = defaultAllowed;
         if(defaultAllowed) {
-            disallowed = Collections.unmodifiableSet(new HashSet<String>(exceptions));
+            disallowed = Collections.unmodifiableSet(new HashSet<>(exceptions));
             allowed = null;
         } else {
-            allowed = Collections.unmodifiableSet(new HashSet<String>(exceptions));
+            allowed = Collections.unmodifiableSet(new HashSet<>(exceptions));
             disallowed = null;
         }
     }
 
     public DefaultServletConfig(final boolean defaultAllowed) {
         this.defaultAllowed = defaultAllowed;
-        this.allowed = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(DEFAULT_ALLOWED_EXTENSIONS)));
-        this.disallowed = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(DEFAULT_DISALLOWED_EXTENSIONS)));
+        this.allowed = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(DEFAULT_ALLOWED_EXTENSIONS)));
+        this.disallowed = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(DEFAULT_DISALLOWED_EXTENSIONS)));
     }
 
     public DefaultServletConfig() {
         this.defaultAllowed = false;
-        this.allowed = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(DEFAULT_ALLOWED_EXTENSIONS)));
-        this.disallowed = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(DEFAULT_DISALLOWED_EXTENSIONS)));
+        this.allowed = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(DEFAULT_ALLOWED_EXTENSIONS)));
+        this.disallowed = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(DEFAULT_DISALLOWED_EXTENSIONS)));
     }
 
     public boolean isDefaultAllowed() {

@@ -40,7 +40,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * @author Stuart Douglas
  */
 public final class ChannelUpgradeHandler implements HttpHandler {
-    private final CopyOnWriteMap<String, List<Holder>> handlers = new CopyOnWriteMap<String, List<Holder>>();
+    private final CopyOnWriteMap<String, List<Holder>> handlers = new CopyOnWriteMap<>();
     private volatile HttpHandler nonUpgradeHandler = ResponseCodeHandler.HANDLE_404;
 
     /**
@@ -59,7 +59,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         }
         List<Holder> list = handlers.get(productString);
         if (list == null) {
-            handlers.put(productString, list = new CopyOnWriteArrayList<Holder>());
+            handlers.put(productString, list = new CopyOnWriteArrayList<>());
         }
         list.add(new Holder(openListener, handshake));
     }

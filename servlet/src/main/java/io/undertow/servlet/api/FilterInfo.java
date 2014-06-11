@@ -37,7 +37,7 @@ public class FilterInfo implements Cloneable {
     private final String name;
     private final InstanceFactory<? extends Filter> instanceFactory;
 
-    private final Map<String, String> initParams = new HashMap<String, String>();
+    private final Map<String, String> initParams = new HashMap<>();
     private volatile boolean asyncSupported;
 
 
@@ -54,7 +54,7 @@ public class FilterInfo implements Cloneable {
         try {
             final Constructor<Filter> ctor = (Constructor<Filter>) filterClass.getDeclaredConstructor();
             ctor.setAccessible(true);
-            this.instanceFactory = new ConstructorInstanceFactory<Filter>(ctor);
+            this.instanceFactory = new ConstructorInstanceFactory<>(ctor);
             this.name = name;
             this.filterClass = filterClass;
         } catch (NoSuchMethodException e) {

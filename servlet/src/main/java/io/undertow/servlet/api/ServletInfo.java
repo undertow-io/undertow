@@ -43,10 +43,10 @@ public class ServletInfo implements Cloneable {
     private final Class<? extends Servlet> servletClass;
     private final String name;
 
-    private final List<String> mappings = new ArrayList<String>();
-    private final Map<String, String> initParams = new HashMap<String, String>();
-    private final List<SecurityRoleRef> securityRoleRefs = new ArrayList<SecurityRoleRef>();
-    private final List<HandlerWrapper> handlerChainWrappers = new ArrayList<HandlerWrapper>();
+    private final List<String> mappings = new ArrayList<>();
+    private final Map<String, String> initParams = new HashMap<>();
+    private final List<SecurityRoleRef> securityRoleRefs = new ArrayList<>();
+    private final List<HandlerWrapper> handlerChainWrappers = new ArrayList<>();
 
     private InstanceFactory<? extends Servlet> instanceFactory;
     private String jspFile;

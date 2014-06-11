@@ -56,7 +56,7 @@ public class ServletRequestContext {
     private static final RuntimePermission GET_CURRENT_REQUEST = new RuntimePermission("io.undertow.servlet.GET_CURRENT_REQUEST");
     private static final RuntimePermission SET_CURRENT_REQUEST = new RuntimePermission("io.undertow.servlet.SET_CURRENT_REQUEST");
 
-    private static final ThreadLocal<ServletRequestContext> CURRENT = new ThreadLocal<ServletRequestContext>();
+    private static final ThreadLocal<ServletRequestContext> CURRENT = new ThreadLocal<>();
 
     public static void setCurrentRequestContext(ServletRequestContext servletRequestContext) {
         if(System.getSecurityManager() != null) {

@@ -44,7 +44,7 @@ public final class ClassUtils {
      * @return a map of all supported message types by the given handler class.
      */
     public static Map<Class<?>, Boolean> getHandlerTypes(Class<? extends MessageHandler> clazz) {
-        Map<Class<?>, Boolean> types = new IdentityHashMap<Class<?>, Boolean>(2);
+        Map<Class<?>, Boolean> types = new IdentityHashMap<>(2);
         for (Class<?> c = clazz; c != Object.class; c = c.getSuperclass()) {
             exampleGenericInterfaces(types, c);
         }

@@ -43,8 +43,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @RunWith(DefaultServer.class)
 public class GracefulShutdownTestCase {
 
-    static final AtomicReference<CountDownLatch> latch1 = new AtomicReference<CountDownLatch>();
-    static final AtomicReference<CountDownLatch> latch2 = new AtomicReference<CountDownLatch>();
+    static final AtomicReference<CountDownLatch> latch1 = new AtomicReference<>();
+    static final AtomicReference<CountDownLatch> latch2 = new AtomicReference<>();
 
     private static GracefulShutdownHandler shutdown;
 

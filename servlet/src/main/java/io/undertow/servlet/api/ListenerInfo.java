@@ -48,7 +48,7 @@ public class ListenerInfo {
         try {
             final Constructor<EventListener> ctor = (Constructor<EventListener>) listenerClass.getDeclaredConstructor();
             ctor.setAccessible(true);
-            this.instanceFactory = new ConstructorInstanceFactory<EventListener>(ctor);
+            this.instanceFactory = new ConstructorInstanceFactory<>(ctor);
         } catch (NoSuchMethodException e) {
             throw UndertowServletMessages.MESSAGES.componentMustHaveDefaultConstructor("Listener", listenerClass);
         }

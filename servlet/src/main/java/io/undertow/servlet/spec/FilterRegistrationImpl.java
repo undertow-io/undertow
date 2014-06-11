@@ -76,7 +76,7 @@ public class FilterRegistrationImpl implements FilterRegistration, FilterRegistr
     @Override
     public Collection<String> getServletNameMappings() {
         DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
-        final List<String> ret = new ArrayList<String>();
+        final List<String> ret = new ArrayList<>();
         for(final FilterMappingInfo mapping : deploymentInfo.getFilterMappings()) {
             if(mapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
                 if(mapping.getFilterName().equals(filterInfo.getName())) {
@@ -115,7 +115,7 @@ public class FilterRegistrationImpl implements FilterRegistration, FilterRegistr
     @Override
     public Collection<String> getUrlPatternMappings() {
         DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
-        final List<String> ret = new ArrayList<String>();
+        final List<String> ret = new ArrayList<>();
         for(final FilterMappingInfo mapping : deploymentInfo.getFilterMappings()) {
             if(mapping.getMappingType() == FilterMappingInfo.MappingType.URL) {
                 if(mapping.getFilterName().equals(filterInfo.getName())) {
@@ -152,7 +152,7 @@ public class FilterRegistrationImpl implements FilterRegistration, FilterRegistr
 
     @Override
     public Set<String> setInitParameters(final Map<String, String> initParameters) {
-        final Set<String> ret = new HashSet<String>();
+        final Set<String> ret = new HashSet<>();
         for(Map.Entry<String, String> entry : initParameters.entrySet()) {
             if(!setInitParameter(entry.getKey(), entry.getValue())) {
                 ret.add(entry.getKey());

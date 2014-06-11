@@ -48,7 +48,7 @@ public class VHost {
      VHost(VHostBuilder b) {
         this.name = b.name;
         this.JVMRoute = b.JVMRoute;
-        this.aliases = Collections.unmodifiableList(new ArrayList<String>(b.aliases));
+        this.aliases = Collections.unmodifiableList(new ArrayList<>(b.aliases));
     }
 
     /**
@@ -93,7 +93,7 @@ public class VHost {
         /**
          * The list of aliases
          */
-        private final List<String> aliases = new ArrayList<String>();
+        private final List<String> aliases = new ArrayList<>();
 
         VHostBuilder() {
 

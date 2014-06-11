@@ -83,9 +83,9 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getRequestHeaders() {
-        Map<String, List<String>> headers = new TreeMap<String, List<String>>(String.CASE_INSENSITIVE_ORDER);
+        Map<String, List<String>> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         for (final HttpString header : exchange.getRequestHeaders().getHeaderNames()) {
-            headers.put(header.toString(), new ArrayList<String>(exchange.getRequestHeaders().get(header)));
+            headers.put(header.toString(), new ArrayList<>(exchange.getRequestHeaders().get(header)));
         }
         return Collections.unmodifiableMap(headers);
     }
@@ -97,9 +97,9 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
-        Map<String, List<String>> headers = new HashMap<String, List<String>>();
+        Map<String, List<String>> headers = new HashMap<>();
         for (final HttpString header : exchange.getResponseHeaders().getHeaderNames()) {
-            headers.put(header.toString(), new ArrayList<String>(exchange.getResponseHeaders().get(header)));
+            headers.put(header.toString(), new ArrayList<>(exchange.getResponseHeaders().get(header)));
         }
         return Collections.unmodifiableMap(headers);
     }
@@ -128,7 +128,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
         if (sender == null) {
             this.sender = exchange.getResponseSender();
         }
-        final FutureResult<Void> future = new FutureResult<Void>();
+        final FutureResult<Void> future = new FutureResult<>();
         sender.send(data, new IoCallback() {
             @Override
             public void onComplete(final HttpServerExchange exchange, final Sender sender) {
@@ -156,10 +156,10 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
             try {
                 res = channel.read(buffer);
                 if (res == -1) {
-                    return new FinishedIoFuture<byte[]>(data.toByteArray());
+                    return new FinishedIoFuture<>(data.toByteArray());
                 } else if (res == 0) {
                     //callback
-                    final FutureResult<byte[]> future = new FutureResult<byte[]>();
+                    final FutureResult<byte[]> future = new FutureResult<>();
                     channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                         @Override
                         public void handleEvent(final StreamSourceChannel channel) {
@@ -196,7 +196,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
                 }
 
             } catch (IOException e) {
-                final FutureResult<byte[]> future = new FutureResult<byte[]>();
+                final FutureResult<byte[]> future = new FutureResult<>();
                 future.setException(e);
                 return future.getIoFuture();
             }
@@ -246,9 +246,9 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getRequestParameters() {
-        Map<String, List<String>> params = new HashMap<String, List<String>>();
+        Map<String, List<String>> params = new HashMap<>();
         for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
-            params.put(param.getKey(), new ArrayList<String>(param.getValue()));
+            params.put(param.getKey(), new ArrayList<>(param.getValue()));
         }
         return params;
     }

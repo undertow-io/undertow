@@ -78,7 +78,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
 
         int state = 0;
         String base = "";
-        List<Part> parts = new ArrayList<Part>();
+        List<Part> parts = new ArrayList<>();
         int stringStart = 0;
         //0 parsing base
         //1 parsing base, last char was /
@@ -162,7 +162,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 break;
             }
         }
-        final Set<String> templates = new HashSet<String>();
+        final Set<String> templates = new HashSet<>();
         for(Part part : parts) {
             if(part.template) {
                 templates.add(part.part);

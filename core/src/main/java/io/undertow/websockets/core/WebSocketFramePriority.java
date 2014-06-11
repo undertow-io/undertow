@@ -39,7 +39,7 @@ public class WebSocketFramePriority implements FramePriority<WebSocketChannel, S
      * <p/>
      * TODO: provide a way to disable this.
      */
-    private final Queue<StreamSinkFrameChannel> strictOrderQueue = new ConcurrentLinkedDeque<StreamSinkFrameChannel>();
+    private final Queue<StreamSinkFrameChannel> strictOrderQueue = new ConcurrentLinkedDeque<>();
     private StreamSinkFrameChannel currentFragmentedSender;
     boolean closed = false;
     boolean immediateCloseFrame = false;

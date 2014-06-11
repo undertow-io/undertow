@@ -32,7 +32,7 @@ public class TestClassIntrospector implements ClassIntrospecter {
     @Override
     public <T> InstanceFactory<T> createInstanceFactory(final Class<T> clazz) {
         try {
-            return new ConstructorInstanceFactory<T>(clazz.getDeclaredConstructor());
+            return new ConstructorInstanceFactory<>(clazz.getDeclaredConstructor());
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }

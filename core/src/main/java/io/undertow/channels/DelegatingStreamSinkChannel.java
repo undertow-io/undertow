@@ -38,8 +38,8 @@ import org.xnio.channels.StreamSourceChannel;
 public abstract class DelegatingStreamSinkChannel<T extends DelegatingStreamSinkChannel> implements StreamSinkChannel {
 
     protected final StreamSinkChannel delegate;
-    protected final ChannelListener.SimpleSetter<T> writeSetter = new ChannelListener.SimpleSetter<T>();
-    protected final ChannelListener.SimpleSetter<T> closeSetter = new ChannelListener.SimpleSetter<T>();
+    protected final ChannelListener.SimpleSetter<T> writeSetter = new ChannelListener.SimpleSetter<>();
+    protected final ChannelListener.SimpleSetter<T> closeSetter = new ChannelListener.SimpleSetter<>();
 
     public DelegatingStreamSinkChannel(final StreamSinkChannel delegate) {
         this.delegate = delegate;

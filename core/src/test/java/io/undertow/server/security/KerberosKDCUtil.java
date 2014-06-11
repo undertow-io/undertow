@@ -246,7 +246,7 @@ class KerberosKDCUtil {
                 }
 
                 AppConfigurationEntry[] entries = new AppConfigurationEntry[1];
-                Map<String, Object> options = new HashMap<String, Object>();
+                Map<String, Object> options = new HashMap<>();
                 options.put("debug", "true");
                 options.put("refreshKrb5Config", "true");
 

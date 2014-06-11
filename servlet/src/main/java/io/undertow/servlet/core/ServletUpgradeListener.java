@@ -91,7 +91,7 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Htt
 
         private final Executor delegate;
         private volatile boolean queue = true;
-        private final List<Runnable> tasks = new ArrayList<Runnable>();
+        private final List<Runnable> tasks = new ArrayList<>();
 
         private DelayedExecutor(Executor delegate) {
             this.delegate = delegate;

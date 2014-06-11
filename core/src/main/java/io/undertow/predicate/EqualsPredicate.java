@@ -69,7 +69,7 @@ class EqualsPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
+            final Map<String, Class<?>> params = new HashMap<>();
             params.put("value", ExchangeAttribute[].class);
             return params;
         }

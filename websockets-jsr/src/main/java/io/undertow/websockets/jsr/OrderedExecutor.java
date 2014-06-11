@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  */
 public class OrderedExecutor implements Executor {
 
-    private final Deque<Runnable> tasks = new ConcurrentLinkedDeque<Runnable>();
+    private final Deque<Runnable> tasks = new ConcurrentLinkedDeque<>();
     private final Executor delegate;
     private final ExecutorTask task = new ExecutorTask();
     private volatile int state = 0;

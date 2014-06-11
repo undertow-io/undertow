@@ -133,7 +133,7 @@ public class MimeDecodingTestCase {
 
     private static class TestPartHandler implements MultipartParser.PartHandler {
 
-        private final List<Part> parts = new ArrayList<Part>();
+        private final List<Part> parts = new ArrayList<>();
         private Part current;
 
 

@@ -33,7 +33,7 @@ import io.undertow.util.CopyOnWriteMap;
  */
 public class ManagedServlets {
 
-    private final Map<String, ServletHandler> managedServletMap = new CopyOnWriteMap<String, ServletHandler>();
+    private final Map<String, ServletHandler> managedServletMap = new CopyOnWriteMap<>();
     private final DeploymentImpl deployment;
     private final ServletPathMatches servletPaths;
 
@@ -65,7 +65,7 @@ public class ManagedServlets {
     }
 
     public Map<String, ServletHandler> getServletHandlers() {
-        return new HashMap<String, ServletHandler>(managedServletMap);
+        return new HashMap<>(managedServletMap);
     }
 
 }

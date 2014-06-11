@@ -90,7 +90,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
         refererField = "referer";
         userAgentField = "userAgent";
         this.logWriteExecutor = logWriteExecutor;
-        this.pendingMessages = new ConcurrentLinkedDeque<JDBCLogAttribute>();
+        this.pendingMessages = new ConcurrentLinkedDeque<>();
     }
 
     @Override
@@ -156,7 +156,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
             return;
         }
 
-        List<JDBCLogAttribute> messages = new ArrayList<JDBCLogAttribute>();
+        List<JDBCLogAttribute> messages = new ArrayList<>();
         JDBCLogAttribute msg = null;
 
         //only grab at most 1000 messages at a time

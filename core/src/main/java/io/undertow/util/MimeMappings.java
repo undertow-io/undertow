@@ -34,7 +34,7 @@ public class MimeMappings {
     public static final Map<String, String> DEFAULT_MIME_MAPPINGS;
 
     static {
-        Map<String, String> defaultMappings = new HashMap<String, String>(101);
+        Map<String, String> defaultMappings = new HashMap<>(101);
         defaultMappings.put("txt", "text/plain");
         defaultMappings.put("css", "text/css");
         defaultMappings.put("html", "text/html");
@@ -153,7 +153,7 @@ public class MimeMappings {
     }
 
     public static class Builder {
-        private final Map<String, String> mappings = new HashMap<String, String>();
+        private final Map<String, String> mappings = new HashMap<>();
 
 
         private Builder(boolean includeDefault) {

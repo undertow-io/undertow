@@ -48,7 +48,7 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     protected final OptionMap undertowOptions;
     protected final StreamSourceConduit originalSourceConduit;
     protected final StreamSinkConduit originalSinkConduit;
-    protected final List<CloseListener> closeListeners = new LinkedList<CloseListener>();
+    protected final List<CloseListener> closeListeners = new LinkedList<>();
 
     protected HttpServerExchange current;
 

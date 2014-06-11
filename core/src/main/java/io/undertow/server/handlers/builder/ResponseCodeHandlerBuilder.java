@@ -38,14 +38,14 @@ public class ResponseCodeHandlerBuilder implements HandlerBuilder {
 
     @Override
     public Map<String, Class<?>> parameters() {
-        Map<String, Class<?>> parameters = new HashMap<String, Class<?>>();
+        Map<String, Class<?>> parameters = new HashMap<>();
         parameters.put("value", Integer.class);
         return parameters;
     }
 
     @Override
     public Set<String> requiredParameters() {
-        final Set<String> req = new HashSet<String>();
+        final Set<String> req = new HashSet<>();
         req.add("value");
         return req;
     }

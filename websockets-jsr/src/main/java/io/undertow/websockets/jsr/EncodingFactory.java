@@ -100,7 +100,7 @@ public class EncodingFactory {
             Map<Class<?>, List<InstanceHandle<? extends Decoder>>> textDecoders = this.textDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Decoder>>>();
 
             for (Map.Entry<Class<?>, List<InstanceFactory<? extends Encoder>>> entry : this.binaryEncoders.entrySet()) {
-                final List<InstanceHandle<? extends Encoder>> val = new ArrayList<InstanceHandle<? extends Encoder>>(entry.getValue().size());
+                final List<InstanceHandle<? extends Encoder>> val = new ArrayList<>(entry.getValue().size());
                 binaryEncoders.put(entry.getKey(), val);
                 for (InstanceFactory<? extends Encoder> factory : entry.getValue()) {
                     InstanceHandle<? extends Encoder> instance = factory.createInstance();
@@ -109,7 +109,7 @@ public class EncodingFactory {
                 }
             }
             for (Map.Entry<Class<?>, List<InstanceFactory<? extends Decoder>>> entry : this.binaryDecoders.entrySet()) {
-                final List<InstanceHandle<? extends Decoder>> val = new ArrayList<InstanceHandle<? extends Decoder>>(entry.getValue().size());
+                final List<InstanceHandle<? extends Decoder>> val = new ArrayList<>(entry.getValue().size());
                 binaryDecoders.put(entry.getKey(), val);
                 for (InstanceFactory<? extends Decoder> factory : entry.getValue()) {
                     InstanceHandle<? extends Decoder> instance = factory.createInstance();
@@ -118,7 +118,7 @@ public class EncodingFactory {
                 }
             }
             for (Map.Entry<Class<?>, List<InstanceFactory<? extends Encoder>>> entry : this.textEncoders.entrySet()) {
-                final List<InstanceHandle<? extends Encoder>> val = new ArrayList<InstanceHandle<? extends Encoder>>(entry.getValue().size());
+                final List<InstanceHandle<? extends Encoder>> val = new ArrayList<>(entry.getValue().size());
                 textEncoders.put(entry.getKey(), val);
                 for (InstanceFactory<? extends Encoder> factory : entry.getValue()) {
                     InstanceHandle<? extends Encoder> instance = factory.createInstance();
@@ -127,7 +127,7 @@ public class EncodingFactory {
                 }
             }
             for (Map.Entry<Class<?>, List<InstanceFactory<? extends Decoder>>> entry : this.textDecoders.entrySet()) {
-                final List<InstanceHandle<? extends Decoder>> val = new ArrayList<InstanceHandle<? extends Decoder>>(entry.getValue().size());
+                final List<InstanceHandle<? extends Decoder>> val = new ArrayList<>(entry.getValue().size());
                 textDecoders.put(entry.getKey(), val);
                 for (InstanceFactory<? extends Decoder> factory : entry.getValue()) {
                     InstanceHandle<? extends Decoder> instance = factory.createInstance();
@@ -146,10 +146,10 @@ public class EncodingFactory {
     }
 
     public static EncodingFactory createFactory(final ClassIntrospecter classIntrospecter, final List<Class<? extends Decoder>> decoders, final List<Class<? extends Encoder>> encoders) throws DeploymentException {
-        final Map<Class<?>, List<InstanceFactory<? extends Encoder>>> binaryEncoders = new HashMap<Class<?>, List<InstanceFactory<? extends Encoder>>>();
-        final Map<Class<?>, List<InstanceFactory<? extends Decoder>>> binaryDecoders = new HashMap<Class<?>, List<InstanceFactory<? extends Decoder>>>();
-        final Map<Class<?>, List<InstanceFactory<? extends Encoder>>> textEncoders = new HashMap<Class<?>, List<InstanceFactory<? extends Encoder>>>();
-        final Map<Class<?>, List<InstanceFactory<? extends Decoder>>> textDecoders = new HashMap<Class<?>, List<InstanceFactory<? extends Decoder>>>();
+        final Map<Class<?>, List<InstanceFactory<? extends Encoder>>> binaryEncoders = new HashMap<>();
+        final Map<Class<?>, List<InstanceFactory<? extends Decoder>>> binaryDecoders = new HashMap<>();
+        final Map<Class<?>, List<InstanceFactory<? extends Encoder>>> textEncoders = new HashMap<>();
+        final Map<Class<?>, List<InstanceFactory<? extends Decoder>>> textDecoders = new HashMap<>();
 
         for (Class<? extends Decoder> decoder : decoders) {
             if (Decoder.Binary.class.isAssignableFrom(decoder)) {
@@ -158,7 +158,7 @@ public class EncodingFactory {
                     final Class<?> type = method.getReturnType();
                     List<InstanceFactory<? extends Decoder>> list = binaryDecoders.get(type);
                     if (list == null) {
-                        binaryDecoders.put(type, list = new ArrayList<InstanceFactory<? extends Decoder>>());
+                        binaryDecoders.put(type, list = new ArrayList<>());
                     }
                     list.add(classIntrospecter.createInstanceFactory(decoder));
                 } catch (NoSuchMethodException e) {
@@ -170,7 +170,7 @@ public class EncodingFactory {
                     final Class<?> type = method.getReturnType();
                     List<InstanceFactory<? extends Decoder>> list = binaryDecoders.get(type);
                     if (list == null) {
-                        binaryDecoders.put(type, list = new ArrayList<InstanceFactory<? extends Decoder>>());
+                        binaryDecoders.put(type, list = new ArrayList<>());
                     }
                     list.add(classIntrospecter.createInstanceFactory(decoder));
                 } catch (NoSuchMethodException e) {
@@ -182,7 +182,7 @@ public class EncodingFactory {
                     final Class<?> type = method.getReturnType();
                     List<InstanceFactory<? extends Decoder>> list = textDecoders.get(type);
                     if (list == null) {
-                        textDecoders.put(type, list = new ArrayList<InstanceFactory<? extends Decoder>>());
+                        textDecoders.put(type, list = new ArrayList<>());
                     }
                     list.add(classIntrospecter.createInstanceFactory(decoder));
                 } catch (NoSuchMethodException e) {
@@ -194,7 +194,7 @@ public class EncodingFactory {
                     final Class<?> type = method.getReturnType();
                     List<InstanceFactory<? extends Decoder>> list = textDecoders.get(type);
                     if (list == null) {
-                        textDecoders.put(type, list = new ArrayList<InstanceFactory<? extends Decoder>>());
+                        textDecoders.put(type, list = new ArrayList<>());
                     }
                     list.add(createInstanceFactory(classIntrospecter, decoder));
                 } catch (NoSuchMethodException e) {
@@ -210,28 +210,28 @@ public class EncodingFactory {
                 final Class<?> type = findEncodeMethod(encoder, ByteBuffer.class);
                 List<InstanceFactory<? extends Encoder>> list = binaryEncoders.get(type);
                 if (list == null) {
-                    binaryEncoders.put(type, list = new ArrayList<InstanceFactory<? extends Encoder>>());
+                    binaryEncoders.put(type, list = new ArrayList<>());
                 }
                 list.add(createInstanceFactory(classIntrospecter, encoder));
             } else if (Encoder.BinaryStream.class.isAssignableFrom(encoder)) {
                 final Class<?> type = findEncodeMethod(encoder, void.class, OutputStream.class);
                 List<InstanceFactory<? extends Encoder>> list = binaryEncoders.get(type);
                 if (list == null) {
-                    binaryEncoders.put(type, list = new ArrayList<InstanceFactory<? extends Encoder>>());
+                    binaryEncoders.put(type, list = new ArrayList<>());
                 }
                 list.add(createInstanceFactory(classIntrospecter, encoder));
             } else if (Encoder.Text.class.isAssignableFrom(encoder)) {
                 final Class<?> type = findEncodeMethod(encoder, String.class);
                 List<InstanceFactory<? extends Encoder>> list = textEncoders.get(type);
                 if (list == null) {
-                    textEncoders.put(type, list = new ArrayList<InstanceFactory<? extends Encoder>>());
+                    textEncoders.put(type, list = new ArrayList<>());
                 }
                 list.add(createInstanceFactory(classIntrospecter, encoder));
             } else if (Encoder.TextStream.class.isAssignableFrom(encoder)) {
                 final Class<?> type = findEncodeMethod(encoder, void.class, Writer.class);
                 List<InstanceFactory<? extends Encoder>> list = textEncoders.get(type);
                 if (list == null) {
-                    textEncoders.put(type, list = new ArrayList<InstanceFactory<? extends Encoder>>());
+                    textEncoders.put(type, list = new ArrayList<>());
                 }
                 list.add(createInstanceFactory(classIntrospecter, encoder));
             }

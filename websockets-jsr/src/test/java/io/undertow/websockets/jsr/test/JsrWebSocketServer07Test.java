@@ -77,7 +77,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testBinaryWithByteBuffer() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 
@@ -119,7 +119,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testBinaryWithByteArray() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
         class TestEndPoint extends Endpoint {
@@ -156,7 +156,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testText() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 
@@ -193,7 +193,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testBinaryWithByteBufferByCompletion() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
+        final AtomicReference<SendResult> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
         final FutureResult latch2 = new FutureResult();
@@ -244,7 +244,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testTextByCompletion() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
+        final AtomicReference<SendResult> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
         final FutureResult latch2 = new FutureResult();
@@ -293,7 +293,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testBinaryWithByteBufferByFuture() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Future<Void>> sendResult = new AtomicReference<Future<Void>>();
+        final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 
@@ -331,7 +331,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testTextByFuture() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Future<Void>> sendResult = new AtomicReference<Future<Void>>();
+        final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 
@@ -364,7 +364,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testBinaryWithByteArrayUsingStream() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
         class TestEndPoint extends Endpoint {
@@ -405,7 +405,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testTextUsingWriter() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 
@@ -445,7 +445,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testPingPong() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 
@@ -472,7 +472,7 @@ public class JsrWebSocketServer07Test {
     public void testCloseFrame() throws Exception {
         final int code = 1000;
         final String reasonText = "TEST";
-        final AtomicReference<CloseReason> reason = new AtomicReference<CloseReason>();
+        final AtomicReference<CloseReason> reason = new AtomicReference<>();
         ByteBuffer payload = ByteBuffer.allocate(reasonText.length() + 2);
         payload.putShort((short) code);
         payload.put(reasonText.getBytes("UTF-8"));
@@ -518,7 +518,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testCloseFrameWithoutReasonBody() throws Exception {
         final int code = 1000;
-        final AtomicReference<CloseReason> reason = new AtomicReference<CloseReason>();
+        final AtomicReference<CloseReason> reason = new AtomicReference<>();
         ByteBuffer payload = ByteBuffer.allocate(2);
         payload.putShort((short) code);
         payload.flip();
@@ -560,7 +560,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testBinaryWithByteBufferAsync() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 
@@ -603,7 +603,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testTextAsync() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
         class TestEndPoint extends Endpoint {

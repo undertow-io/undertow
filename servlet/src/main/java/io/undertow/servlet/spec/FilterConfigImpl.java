@@ -56,6 +56,6 @@ public class FilterConfigImpl implements FilterConfig {
 
     @Override
     public Enumeration<String> getInitParameterNames() {
-        return new IteratorEnumeration<String>(filterInfo.getInitParams().keySet().iterator());
+        return new IteratorEnumeration<>(filterInfo.getInitParams().keySet().iterator());
     }
 }

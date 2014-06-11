@@ -75,7 +75,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         current = new AuthenticationCallHandler(current);
         current = new AuthenticationConstraintHandler(current);
 
-        List<AuthenticationMechanism> mechs = new ArrayList<AuthenticationMechanism>();
+        List<AuthenticationMechanism> mechs = new ArrayList<>();
         mechs.add(sso);
         mechs.add(new BasicAuthenticationMechanism("Test Realm"));
 
@@ -89,7 +89,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         current = new AuthenticationCallHandler(current);
         current = new AuthenticationConstraintHandler(current);
 
-        mechs = new ArrayList<AuthenticationMechanism>();
+        mechs = new ArrayList<>();
         mechs.add(sso);
         mechs.add(new FormAuthenticationMechanism("form", "/login", "/error"));
 

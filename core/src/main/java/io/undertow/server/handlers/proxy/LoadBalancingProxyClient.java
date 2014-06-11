@@ -62,7 +62,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
      */
     private volatile int problemServerRetry = 10;
 
-    private final Set<String> sessionCookieNames = new CopyOnWriteArraySet<String>();
+    private final Set<String> sessionCookieNames = new CopyOnWriteArraySet<>();
 
     /**
      * The number of connections to create per thread
@@ -77,7 +77,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
     private final AtomicInteger currentHost = new AtomicInteger(0);
     private final UndertowClient client;
 
-    private final Map<String, Host> routes = new CopyOnWriteMap<String, Host>();
+    private final Map<String, Host> routes = new CopyOnWriteMap<>();
 
     private final ExclusivityChecker exclusivityChecker;
 

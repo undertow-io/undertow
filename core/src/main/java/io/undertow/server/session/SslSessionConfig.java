@@ -34,8 +34,8 @@ import java.util.Map;
 public class SslSessionConfig implements SessionConfig {
 
     private final SessionConfig fallbackSessionConfig;
-    private final Map<Key, String> sessions = new HashMap<Key, String>();
-    private final Map<String, Key> reverse = new HashMap<String, Key>();
+    private final Map<Key, String> sessions = new HashMap<>();
+    private final Map<String, Key> reverse = new HashMap<>();
 
     public SslSessionConfig(final SessionConfig fallbackSessionConfig, SessionManager sessionManager) {
         this.fallbackSessionConfig = fallbackSessionConfig;

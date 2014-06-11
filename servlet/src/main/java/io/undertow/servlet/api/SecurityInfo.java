@@ -51,7 +51,7 @@ public class SecurityInfo<T extends SecurityInfo> implements Cloneable {
     }
 
     private volatile EmptyRoleSemantic emptyRoleSemantic = EmptyRoleSemantic.DENY;
-    private final Set<String> rolesAllowed = new HashSet<String>();
+    private final Set<String> rolesAllowed = new HashSet<>();
     private volatile TransportGuaranteeType transportGuaranteeType = TransportGuaranteeType.NONE;
 
     public EmptyRoleSemantic getEmptyRoleSemantic() {
@@ -86,7 +86,7 @@ public class SecurityInfo<T extends SecurityInfo> implements Cloneable {
         return (T) this;
     }
     public Set<String> getRolesAllowed() {
-        return new HashSet<String>(rolesAllowed);
+        return new HashSet<>(rolesAllowed);
     }
 
     @Override

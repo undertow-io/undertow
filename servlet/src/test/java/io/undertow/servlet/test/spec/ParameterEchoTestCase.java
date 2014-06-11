@@ -80,7 +80,7 @@ public class ParameterEchoTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/aaa?param1=1&param2=2&param3=3");
-            final List<NameValuePair> values = new ArrayList<NameValuePair>();
+            final List<NameValuePair> values = new ArrayList<>();
             UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
             post.setEntity(data);
             HttpResponse result = client.execute(post);
@@ -97,7 +97,7 @@ public class ParameterEchoTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/aaa");
-            final List<NameValuePair> values = new ArrayList<NameValuePair>();
+            final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("param1", "1"));
             values.add(new BasicNameValuePair("param2", "2"));
             values.add(new BasicNameValuePair("param3", "3"));
@@ -117,7 +117,7 @@ public class ParameterEchoTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/aaa?param1=1&param2=2");
-            final List<NameValuePair> values = new ArrayList<NameValuePair>();
+            final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("param3", "3"));
             UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
             post.setEntity(data);

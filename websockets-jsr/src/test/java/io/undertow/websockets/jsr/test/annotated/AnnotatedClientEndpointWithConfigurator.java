@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 @ClientEndpoint(subprotocols = {"foo", "bar", "configured-proto"}, configurator = ClientConfigurator.class)
 public class AnnotatedClientEndpointWithConfigurator {
 
-    private static final BlockingDeque<String> MESSAGES = new LinkedBlockingDeque<String>();
+    private static final BlockingDeque<String> MESSAGES = new LinkedBlockingDeque<>();
 
     public static String message() throws InterruptedException {
         return MESSAGES.pollFirst(3, TimeUnit.SECONDS);

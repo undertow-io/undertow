@@ -39,7 +39,7 @@ import io.undertow.util.CopyOnWriteMap;
  */
 public class ListenerRegistry {
 
-    private final ConcurrentMap<String, Listener> listeners = new CopyOnWriteMap<String, Listener>();
+    private final ConcurrentMap<String, Listener> listeners = new CopyOnWriteMap<>();
 
     public Listener getListener(final String name) {
         return listeners.get(name);
@@ -65,12 +65,12 @@ public class ListenerRegistry {
         /**
          * Map that can be used to store additional listener metadata
          */
-        private final Map<String, Object> contextInformation = new CopyOnWriteMap<String, Object>();
+        private final Map<String, Object> contextInformation = new CopyOnWriteMap<>();
 
         /**
          * Information about any HTTP upgrade handlers that are registered on this handler.
          */
-        private final Set<HttpUpgradeMetadata> httpUpgradeMetadata = new CopyOnWriteArraySet<HttpUpgradeMetadata>();
+        private final Set<HttpUpgradeMetadata> httpUpgradeMetadata = new CopyOnWriteArraySet<>();
 
         public Listener(final String protocol, final String name, final String serverName, final InetSocketAddress bindAddress) {
             this.protocol = protocol;
@@ -140,7 +140,7 @@ public class ListenerRegistry {
 
         private final String protocol;
         private final String subProtocol;
-        private final Map<String, Object> contextInformation = new CopyOnWriteMap<String, Object>();
+        private final Map<String, Object> contextInformation = new CopyOnWriteMap<>();
 
 
         public HttpUpgradeMetadata(final String protocol, final String subProtocol) {

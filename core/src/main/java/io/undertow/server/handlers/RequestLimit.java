@@ -95,7 +95,7 @@ public class RequestLimit {
         }
         state = (maximumConcurrentRequests & 0xFFFFFFFFL) << 32;
 
-        this.queue = new LinkedBlockingQueue<SuspendedRequest>(queueSize <= 0 ? Integer.MAX_VALUE : queueSize);
+        this.queue = new LinkedBlockingQueue<>(queueSize <= 0 ? Integer.MAX_VALUE : queueSize);
     }
 
     public void handleRequest(final HttpServerExchange exchange, final HttpHandler next) throws Exception {

@@ -40,7 +40,7 @@ final class JsrWebSocketProtocolHandshakeHandler extends WebSocketProtocolHandsh
     }
 
     private static Set<Handshake> handshakes(ConfiguredServerEndpoint... configs) {
-        Set<Handshake> handshakes = new HashSet<Handshake>();
+        Set<Handshake> handshakes = new HashSet<>();
         for (ConfiguredServerEndpoint config : configs) {
             handshakes.add(new JsrHybi07Handshake(config));
             handshakes.add(new JsrHybi08Handshake(config));

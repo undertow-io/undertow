@@ -52,7 +52,7 @@ public final class AjpServerConnection extends AbstractServerConnection {
 
     public AjpServerConnection(StreamConnection channel, Pool<ByteBuffer> bufferPool, HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel>(channel.getSinkChannel());
+        this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<>(channel.getSinkChannel());
     }
 
     @Override

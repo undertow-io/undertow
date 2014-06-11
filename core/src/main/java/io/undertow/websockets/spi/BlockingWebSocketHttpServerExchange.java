@@ -51,9 +51,9 @@ public class BlockingWebSocketHttpServerExchange extends AsyncWebSocketHttpServe
             while (data.hasRemaining()) {
                 out.write(data.get());
             }
-            return new FinishedIoFuture<Void>(null);
+            return new FinishedIoFuture<>(null);
         } catch (IOException e) {
-            final FutureResult<Void> ioFuture = new FutureResult<Void>();
+            final FutureResult<Void> ioFuture = new FutureResult<>();
             ioFuture.setException(e);
             return ioFuture.getIoFuture();
         }
@@ -68,9 +68,9 @@ public class BlockingWebSocketHttpServerExchange extends AsyncWebSocketHttpServe
             while ((r = in.read(buf)) != -1) {
                 data.write(buf, 0, r);
             }
-            return new FinishedIoFuture<byte[]>(data.toByteArray());
+            return new FinishedIoFuture<>(data.toByteArray());
         } catch (IOException e) {
-            final FutureResult<byte[]> ioFuture = new FutureResult<byte[]>();
+            final FutureResult<byte[]> ioFuture = new FutureResult<>();
             ioFuture.setException(e);
             return ioFuture.getIoFuture();
         }

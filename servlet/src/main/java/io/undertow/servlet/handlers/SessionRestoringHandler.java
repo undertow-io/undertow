@@ -62,7 +62,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         this.servletContext = servletContext;
         this.next = next;
         this.sessionPersistenceManager = sessionPersistenceManager;
-        this.data = new ConcurrentHashMap<String, SessionPersistenceManager.PersistentSession>();
+        this.data = new ConcurrentHashMap<>();
     }
 
     public void start() {
@@ -89,12 +89,12 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         try {
             setTccl(servletContext.getClassLoader());
             this.started = false;
-            final Map<String, SessionPersistenceManager.PersistentSession> objectData = new HashMap<String, SessionPersistenceManager.PersistentSession>();
+            final Map<String, SessionPersistenceManager.PersistentSession> objectData = new HashMap<>();
             for (String sessionId : sessionManager.getTransientSessions()) {
                 Session session = sessionManager.getSession(sessionId);
                 if (session != null) {
                     final HttpSessionEvent event = new HttpSessionEvent(SecurityActions.forSession(session, servletContext, false));
-                    final Map<String, Object> sessionData = new HashMap<String, Object>();
+                    final Map<String, Object> sessionData = new HashMap<>();
                     for (String attr : session.getAttributeNames()) {
                         final Object attribute = session.getAttribute(attr);
                         sessionData.put(attr, attribute);

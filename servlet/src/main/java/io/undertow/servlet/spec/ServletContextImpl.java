@@ -101,8 +101,8 @@ public class ServletContextImpl implements ServletContext {
     private final ConcurrentMap<String, Object> attributes;
     private final SessionCookieConfigImpl sessionCookieConfig;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
-    private volatile Set<SessionTrackingMode> sessionTrackingModes = new HashSet<SessionTrackingMode>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
-    private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = new HashSet<SessionTrackingMode>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
+    private volatile Set<SessionTrackingMode> sessionTrackingModes = new HashSet<>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
+    private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = new HashSet<>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
     private volatile SessionConfig sessionConfig;
     private volatile boolean initialized = false;
 
@@ -114,7 +114,7 @@ public class ServletContextImpl implements ServletContext {
         sessionCookieConfig = new SessionCookieConfigImpl(this);
         sessionCookieConfig.setPath(deploymentInfo.getContextPath());
         if (deploymentInfo.getServletContextAttributeBackingMap() == null) {
-            this.attributes = new ConcurrentHashMap<String, Object>();
+            this.attributes = new ConcurrentHashMap<>();
         } else {
             this.attributes = deploymentInfo.getServletContextAttributeBackingMap();
         }
@@ -197,7 +197,7 @@ public class ServletContextImpl implements ServletContext {
         if (resource == null || !resource.isDirectory()) {
             return null;
         }
-        final Set<String> resources = new HashSet<String>();
+        final Set<String> resources = new HashSet<>();
         for (Resource res : resource.list()) {
             File file = res.getFile();
             if (file != null) {
@@ -340,7 +340,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Enumeration<String> getInitParameterNames() {
-        return new IteratorEnumeration<String>(deploymentInfo.getInitParameters().keySet().iterator());
+        return new IteratorEnumeration<>(deploymentInfo.getInitParameters().keySet().iterator());
     }
 
     @Override
@@ -359,7 +359,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        return new IteratorEnumeration<String>(attributes.keySet().iterator());
+        return new IteratorEnumeration<>(attributes.keySet().iterator());
     }
 
     @Override
@@ -420,7 +420,7 @@ public class ServletContextImpl implements ServletContext {
         if (deploymentInfo.getServlets().containsKey(servletName)) {
             return null;
         }
-        ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<Servlet>(servlet));
+        ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<>(servlet));
         readServletAnnotations(s);
         deploymentInfo.addServlet(s);
         deployment.getServlets().addServlet(s);
@@ -465,7 +465,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public Map<String, ? extends ServletRegistration> getServletRegistrations() {
         ensureNotProgramaticListener();
-        final Map<String, ServletRegistration> ret = new HashMap<String, ServletRegistration>();
+        final Map<String, ServletRegistration> ret = new HashMap<>();
         for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
             ret.put(entry.getKey(), new ServletRegistrationImpl(entry.getValue(), deployment));
         }
@@ -497,7 +497,7 @@ public class ServletContextImpl implements ServletContext {
         if (deploymentInfo.getFilters().containsKey(filterName)) {
             return null;
         }
-        FilterInfo f = new FilterInfo(filterName, filter.getClass(), new ImmediateInstanceFactory<Filter>(filter));
+        FilterInfo f = new FilterInfo(filterName, filter.getClass(), new ImmediateInstanceFactory<>(filter));
         deploymentInfo.addFilter(f);
         deployment.getFilters().addFilter(f);
         return new FilterRegistrationImpl(f, deployment);
@@ -540,7 +540,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
         ensureNotProgramaticListener();
-        final Map<String, FilterRegistration> ret = new HashMap<String, FilterRegistration>();
+        final Map<String, FilterRegistration> ret = new HashMap<>();
         for (Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
             ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deployment));
         }
@@ -560,7 +560,7 @@ public class ServletContextImpl implements ServletContext {
         if (sessionTrackingModes.size() > 1 && sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
             throw UndertowServletMessages.MESSAGES.sslCannotBeCombinedWithAnyOtherMethod();
         }
-        this.sessionTrackingModes = new HashSet<SessionTrackingMode>(sessionTrackingModes);
+        this.sessionTrackingModes = new HashSet<>(sessionTrackingModes);
         //TODO: actually make this work
     }
 

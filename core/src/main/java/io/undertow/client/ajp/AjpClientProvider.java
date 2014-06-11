@@ -44,7 +44,7 @@ public class AjpClientProvider implements ClientProvider {
 
     @Override
     public Set<String> handlesSchemes() {
-        return new HashSet<String>(Arrays.asList(new String[]{"ajp"}));
+        return new HashSet<>(Arrays.asList(new String[]{"ajp"}));
     }
 
     @Override

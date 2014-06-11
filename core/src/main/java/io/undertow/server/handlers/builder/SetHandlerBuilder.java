@@ -39,7 +39,7 @@ public class SetHandlerBuilder implements HandlerBuilder {
 
     @Override
     public Map<String, Class<?>> parameters() {
-        Map<String, Class<?>> parameters = new HashMap<String, Class<?>>();
+        Map<String, Class<?>> parameters = new HashMap<>();
         parameters.put("value", ExchangeAttribute.class);
         parameters.put("attribute", ExchangeAttribute.class);
 
@@ -48,7 +48,7 @@ public class SetHandlerBuilder implements HandlerBuilder {
 
     @Override
     public Set<String> requiredParameters() {
-        final Set<String> req = new HashSet<String>();
+        final Set<String> req = new HashSet<>();
         req.add("value");
         req.add("attribute");
         return req;

@@ -35,7 +35,7 @@ public enum DigestQop {
     static {
         DigestQop[] qops = DigestQop.values();
 
-        Map<String, DigestQop> byToken = new HashMap<String, DigestQop>(qops.length);
+        Map<String, DigestQop> byToken = new HashMap<>(qops.length);
         for (DigestQop current : qops) {
             byToken.put(current.token, current);
         }

@@ -65,14 +65,14 @@ public class DispatcherTypePredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
+            final Map<String, Class<?>> params = new HashMap<>();
             params.put("value", String.class);
             return params;
         }
 
         @Override
         public Set<String> requiredParameters() {
-            final Set<String> params = new HashSet<String>();
+            final Set<String> params = new HashSet<>();
             params.add("value");
             return params;
         }

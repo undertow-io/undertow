@@ -66,7 +66,7 @@ public class Undertow {
     private final int ioThreads;
     private final int workerThreads;
     private final boolean directBuffers;
-    private final List<ListenerConfig> listeners = new ArrayList<ListenerConfig>();
+    private final List<ListenerConfig> listeners = new ArrayList<>();
     private final HttpHandler rootHandler;
     private final OptionMap workerOptions;
     private final OptionMap socketOptions;
@@ -98,7 +98,7 @@ public class Undertow {
 
     public synchronized void start() {
         xnio = Xnio.getInstance(Undertow.class.getClassLoader());
-        channels = new ArrayList<AcceptingChannel<? extends StreamConnection>>();
+        channels = new ArrayList<>();
         try {
             worker = xnio.createWorker(OptionMap.builder()
                     .set(Options.WORKER_IO_THREADS, ioThreads)
@@ -278,7 +278,7 @@ public class Undertow {
         private int ioThreads;
         private int workerThreads;
         private boolean directBuffers;
-        private final List<ListenerConfig> listeners = new ArrayList<ListenerConfig>();
+        private final List<ListenerConfig> listeners = new ArrayList<>();
         private HttpHandler handler;
 
         private final OptionMap.Builder workerOptions = OptionMap.builder();

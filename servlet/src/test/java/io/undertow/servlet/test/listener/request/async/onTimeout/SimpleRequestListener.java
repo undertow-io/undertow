@@ -22,7 +22,7 @@ import javax.servlet.ServletRequestListener;
 
 public class SimpleRequestListener implements ServletRequestListener {
 
-    private static final ThreadLocal<Boolean> IN_REQUEST = new ThreadLocal<Boolean>();
+    private static final ThreadLocal<Boolean> IN_REQUEST = new ThreadLocal<>();
     private static boolean nestedInvocationOccured;
 
     @Override

@@ -34,7 +34,7 @@ public class ServerEndpointConfigImpl implements ServerEndpointConfig {
 
     private final Class<?> endpointclass;
     private final String path;
-    private final Map<String, Object> userProperties = new ConcurrentHashMap<String, Object>();
+    private final Map<String, Object> userProperties = new ConcurrentHashMap<>();
 
     public ServerEndpointConfigImpl(Class<?> endpointclass, String path) {
         this.endpointclass = endpointclass;

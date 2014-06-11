@@ -53,7 +53,7 @@ public class DeploymentImpl implements Deployment {
     private final DeploymentManager deploymentManager;
     private final DeploymentInfo deploymentInfo;
     private final ServletContainer servletContainer;
-    private final List<Lifecycle> lifecycleObjects = new ArrayList<Lifecycle>();
+    private final List<Lifecycle> lifecycleObjects = new ArrayList<>();
     private final ServletPathMatches servletPaths;
     private final ManagedServlets servlets;
     private final ManagedFilters filters;
@@ -175,7 +175,7 @@ public class DeploymentImpl implements Deployment {
     }
 
     public void setMimeExtensionMappings(final Map<String, String> mimeExtensionMappings) {
-        this.mimeExtensionMappings = Collections.unmodifiableMap(new HashMap<String, String>(mimeExtensionMappings));
+        this.mimeExtensionMappings = Collections.unmodifiableMap(new HashMap<>(mimeExtensionMappings));
     }
 
     @Override

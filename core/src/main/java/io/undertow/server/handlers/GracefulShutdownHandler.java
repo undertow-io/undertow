@@ -43,7 +43,7 @@ public class GracefulShutdownHandler implements HttpHandler {
 
     private volatile boolean shutdown = false;
     private final GracefulShutdownListener listener = new GracefulShutdownListener();
-    private final List<ShutdownListener> shutdownListeners = new ArrayList<ShutdownListener>();
+    private final List<ShutdownListener> shutdownListeners = new ArrayList<>();
 
     private final Object lock = new Object();
 

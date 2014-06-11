@@ -93,7 +93,7 @@ public class FileResource implements Resource {
 
     @Override
     public List<Resource> list() {
-        final List<Resource> resources = new ArrayList<Resource>();
+        final List<Resource> resources = new ArrayList<>();
         for (String child : file.list()) {
             resources.add(new FileResource(new File(this.file, child), manager, path));
         }

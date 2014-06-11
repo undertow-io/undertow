@@ -42,7 +42,7 @@ public class CopyOnWriteMap<K,V> implements ConcurrentMap<K, V> {
     }
 
     public CopyOnWriteMap(Map<K, V> existing) {
-        this.delegate = new HashMap<K, V>(existing);
+        this.delegate = new HashMap<>(existing);
     }
 
     @Override
@@ -126,7 +126,7 @@ public class CopyOnWriteMap<K,V> implements ConcurrentMap<K, V> {
 
     @Override
     public synchronized void putAll(Map<? extends K, ? extends V> m) {
-        final Map<K, V> delegate = new HashMap<K, V>(this.delegate);
+        final Map<K, V> delegate = new HashMap<>(this.delegate);
         for(Entry<? extends K, ? extends V> e : m.entrySet()) {
             delegate.put(e.getKey(), e.getValue());
         }
@@ -155,14 +155,14 @@ public class CopyOnWriteMap<K,V> implements ConcurrentMap<K, V> {
 
     //must be called under lock
     private V putInternal(final K key, final V value) {
-        final Map<K, V> delegate = new HashMap<K, V>(this.delegate);
+        final Map<K, V> delegate = new HashMap<>(this.delegate);
         V existing = delegate.put(key, value);
         this.delegate = delegate;
         return existing;
     }
 
     public V removeInternal(final Object key) {
-        final Map<K, V> delegate = new HashMap<K, V>(this.delegate);
+        final Map<K, V> delegate = new HashMap<>(this.delegate);
         V existing = delegate.remove(key);
         this.delegate = delegate;
         return existing;

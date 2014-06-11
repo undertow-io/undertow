@@ -368,7 +368,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         String newRequestUri = servletContext.getContextPath() + newServletPath;
 
         //todo: a more efficent impl
-        Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
+        Map<String, Deque<String>> newQueryParameters = new HashMap<>();
         for (String part : newQueryString.split("&")) {
             String name = part;
             String value = "";
@@ -379,7 +379,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             }
             Deque<String> queue = newQueryParameters.get(name);
             if (queue == null) {
-                newQueryParameters.put(name, queue = new ArrayDeque<String>(1));
+                newQueryParameters.put(name, queue = new ArrayDeque<>(1));
             }
             queue.add(value);
         }

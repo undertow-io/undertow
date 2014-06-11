@@ -42,7 +42,7 @@ public class ServletContainerImpl implements ServletContainer {
 
     @Override
     public Collection<String> listDeployments() {
-        return new HashSet<String>(deployments.keySet());
+        return new HashSet<>(deployments.keySet());
     }
 
     @Override

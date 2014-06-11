@@ -83,7 +83,7 @@ public class ServletSessionListenerOrderingTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
 
-            List<String> expected = new ArrayList<String>();
+            List<String> expected = new ArrayList<>();
             expected.add(FirstListener.class.getSimpleName());
             expected.add(SecondListener.class.getSimpleName());
             expected.add(SecondListener.class.getSimpleName());

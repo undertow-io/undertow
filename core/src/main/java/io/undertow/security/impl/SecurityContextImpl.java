@@ -55,9 +55,9 @@ public class SecurityContextImpl implements SecurityContext {
     private String programaticMechName = "Programatic";
     private AuthenticationState authenticationState = AuthenticationState.NOT_ATTEMPTED;
     private final HttpServerExchange exchange;
-    private final List<AuthenticationMechanism> authMechanisms = new ArrayList<AuthenticationMechanism>();
+    private final List<AuthenticationMechanism> authMechanisms = new ArrayList<>();
     private final IdentityManager identityManager;
-    private final List<NotificationReceiver> notificationReceivers = new ArrayList<NotificationReceiver>();
+    private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
 
 
     // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then

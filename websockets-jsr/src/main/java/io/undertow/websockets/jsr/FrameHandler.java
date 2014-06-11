@@ -56,7 +56,7 @@ class FrameHandler extends AbstractReceiveListener {
     private final Endpoint endpoint;
     private final UndertowSession session;
     protected static final byte[] EMPTY = new byte[0];
-    private final ConcurrentMap<FrameType, HandlerWrapper> handlers = new ConcurrentHashMap<FrameType, HandlerWrapper>();
+    private final ConcurrentMap<FrameType, HandlerWrapper> handlers = new ConcurrentHashMap<>();
     private final Executor executor;
 
     /**
@@ -399,7 +399,7 @@ class FrameHandler extends AbstractReceiveListener {
      * Return a safe copy of all registered {@link MessageHandler}s.
      */
     public final Set<MessageHandler> getHandlers() {
-        Set<MessageHandler> msgHandlers = new HashSet<MessageHandler>();
+        Set<MessageHandler> msgHandlers = new HashSet<>();
         for (HandlerWrapper handler : handlers.values()) {
             msgHandlers.add(handler.getHandler());
         }

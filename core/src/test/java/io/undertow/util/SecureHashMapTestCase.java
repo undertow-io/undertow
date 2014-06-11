@@ -33,7 +33,7 @@ public class SecureHashMapTestCase {
 
     @Test
     public void testGetNonExistentDoesNotNPE() {
-        final SecureHashMap<String, String> map = new SecureHashMap<String, String>();
+        final SecureHashMap<String, String> map = new SecureHashMap<>();
         map.get("nothing");
     }
 
@@ -42,8 +42,8 @@ public class SecureHashMapTestCase {
     public void testLotsOfPutsAndGets() {
 
         SessionIdGenerator generator = new SecureRandomSessionIdGenerator();
-        final Map<String, String> reference = new HashMap<String, String>();
-        final SecureHashMap<String, String> map = new SecureHashMap<String, String>();
+        final Map<String, String> reference = new HashMap<>();
+        final SecureHashMap<String, String> map = new SecureHashMap<>();
         for (int i = 0; i < 10000; ++i) {
             String key = generator.createSessionId();
             String value = generator.createSessionId();

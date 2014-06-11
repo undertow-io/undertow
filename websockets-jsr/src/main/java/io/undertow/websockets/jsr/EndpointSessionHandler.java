@@ -63,7 +63,7 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
             if(endpointFactory != null) {
                 instance = endpointFactory.createInstance();
             } else {
-                instance = new ImmediateInstanceHandle<Endpoint>((Endpoint) config.getEndpointConfiguration().getConfigurator().getEndpointInstance(config.getEndpointConfiguration().getEndpointClass()));
+                instance = new ImmediateInstanceHandle<>((Endpoint) config.getEndpointConfiguration().getConfigurator().getEndpointInstance(config.getEndpointConfiguration().getEndpointClass()));
             }
 
             ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);

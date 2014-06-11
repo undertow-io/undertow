@@ -72,8 +72,8 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     private final Deflater deflater = new Deflater(6);
 
     private SpdyFrameParser frameParser;
-    private final Map<Integer, SpdyStreamSourceChannel> incomingStreams = new ConcurrentHashMap<Integer, SpdyStreamSourceChannel>();
-    private final Map<Integer, SpdyStreamStreamSinkChannel> outgoingStreams = new ConcurrentHashMap<Integer, SpdyStreamStreamSinkChannel>();
+    private final Map<Integer, SpdyStreamSourceChannel> incomingStreams = new ConcurrentHashMap<>();
+    private final Map<Integer, SpdyStreamStreamSinkChannel> outgoingStreams = new ConcurrentHashMap<>();
 
     private volatile int initialWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
 

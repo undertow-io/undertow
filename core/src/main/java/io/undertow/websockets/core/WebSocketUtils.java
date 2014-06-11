@@ -284,7 +284,7 @@ public final class WebSocketUtils {
                     }
                     if (res == 0) {
                         // write first listener
-                        final TransferListener<I, O> listener = new TransferListener<I, O>(allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 1);
+                        final TransferListener<I, O> listener = new TransferListener<>(allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 1);
                         source.suspendReads();
                         source.getReadSetter().set(listener);
                         sink.getWriteSetter().set(listener);
@@ -300,7 +300,7 @@ public final class WebSocketUtils {
                     }
                 }
             } while (transferred > 0L);
-            final TransferListener<I, O> listener = new TransferListener<I, O>(allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 0);
+            final TransferListener<I, O> listener = new TransferListener<>(allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 0);
             sink.suspendWrites();
             sink.getWriteSetter().set(listener);
             source.getReadSetter().set(listener);

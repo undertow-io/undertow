@@ -68,7 +68,7 @@ class ExtensionImpl implements Extension {
     }
 
     public static Extension create(WebSocketExtension extension) {
-        List<Parameter> params = new ArrayList<Parameter>(extension.getParameters().size());
+        List<Parameter> params = new ArrayList<>(extension.getParameters().size());
         for(WebSocketExtension.Parameter p : extension.getParameters()) {
             params.add(new ParameterImpl(p.getName(), p.getValue()));
         }

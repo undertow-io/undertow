@@ -62,7 +62,7 @@ public class QueryParameterAttribute implements ExchangeAttribute {
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        final ArrayDeque<String> value = new ArrayDeque<String>();
+        final ArrayDeque<String> value = new ArrayDeque<>();
         value.add(newValue);
         exchange.getQueryParameters().put(parameter, value);
     }

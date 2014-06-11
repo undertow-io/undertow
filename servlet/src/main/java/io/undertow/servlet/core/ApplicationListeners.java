@@ -74,7 +74,7 @@ public class ApplicationListeners implements Lifecycle {
     };
 
     private ServletContext servletContext;
-    private final List<ManagedListener> allListeners = new ArrayList<ManagedListener>();
+    private final List<ManagedListener> allListeners = new ArrayList<>();
     private ManagedListener[] servletContextListeners;
     private ManagedListener[] servletContextAttributeListeners;
     private ManagedListener[] servletRequestListeners;

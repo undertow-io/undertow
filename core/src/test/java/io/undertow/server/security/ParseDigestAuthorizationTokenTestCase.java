@@ -51,7 +51,7 @@ public class ParseDigestAuthorizationTokenTestCase {
     public void testChrome_22() {
         final String header = "username=\"userTwo\", realm=\"Digest_Realm\", nonce=\"Yxmkh5liIOYNMTM1MTUyNjQzMTE4NJziT7YLEOEJ4QEN1py4Yog=\", uri=\"/\", algorithm=MD5, response=\"5b26e00233607e8a714cd1d910692e08\", opaque=\"00000000000000000000000000000000\", qop=auth, nc=00000001, cnonce=\"8c008c8ce43dc0a7\"";
 
-        Map<DigestAuthorizationToken, String> expected = new HashMap<DigestAuthorizationToken, String>(10);
+        Map<DigestAuthorizationToken, String> expected = new HashMap<>(10);
         expected.put(DigestAuthorizationToken.USERNAME, "userTwo");
         expected.put(DigestAuthorizationToken.REALM, "Digest_Realm");
         expected.put(DigestAuthorizationToken.NONCE, "Yxmkh5liIOYNMTM1MTUyNjQzMTE4NJziT7YLEOEJ4QEN1py4Yog=");
@@ -70,7 +70,7 @@ public class ParseDigestAuthorizationTokenTestCase {
     public void testCurl_7() {
         final String header = "username=\"userTwo\", realm=\"Digest_Realm\", nonce=\"5CgZ39vhie0NMTM1MTUyNDc4ODkwNMwr6sWKVSGfhXB4jBtkupY=\", uri=\"/\", cnonce=\"MTYwOTQ4\", nc=00000001, qop=\"auth\", response=\"c3c1ce9945a0c36d54860eda7846018b\", opaque=\"00000000000000000000000000000000\", algorithm=\"MD5\"";
 
-        Map<DigestAuthorizationToken, String> expected = new HashMap<DigestAuthorizationToken, String>(10);
+        Map<DigestAuthorizationToken, String> expected = new HashMap<>(10);
         expected.put(DigestAuthorizationToken.USERNAME, "userTwo");
         expected.put(DigestAuthorizationToken.REALM, "Digest_Realm");
         expected.put(DigestAuthorizationToken.NONCE, "5CgZ39vhie0NMTM1MTUyNDc4ODkwNMwr6sWKVSGfhXB4jBtkupY=");
@@ -89,7 +89,7 @@ public class ParseDigestAuthorizationTokenTestCase {
     public void testFirefox_16() {
         final String header = "username=\"userOne\", realm=\"Digest_Realm\", nonce=\"nBhFxtSS6rkNMTM1MTUyNjE2MjgyNWA/xW/LOH53vhXGq/2B/yQ=\", uri=\"/\", algorithm=MD5, response=\"b0adb1025da2de0d16f44131858bad6f\", opaque=\"00000000000000000000000000000000\", qop=auth, nc=00000001, cnonce=\"8127726535363b07\"";
 
-        Map<DigestAuthorizationToken, String> expected = new HashMap<DigestAuthorizationToken, String>(10);
+        Map<DigestAuthorizationToken, String> expected = new HashMap<>(10);
         expected.put(DigestAuthorizationToken.USERNAME, "userOne");
         expected.put(DigestAuthorizationToken.REALM, "Digest_Realm");
         expected.put(DigestAuthorizationToken.NONCE, "nBhFxtSS6rkNMTM1MTUyNjE2MjgyNWA/xW/LOH53vhXGq/2B/yQ=");
@@ -108,7 +108,7 @@ public class ParseDigestAuthorizationTokenTestCase {
     public void testOpera_12() {
         final String header = "username=\"userOne\", realm=\"Digest_Realm\", uri=\"/\", algorithm=MD5, nonce=\"D2floAc+FhkNMTM1MTUyMzY2ODc4Mhbi2Zrcuv1lvdgEaPXa+bg=\", cnonce=\"v722VYJEeG28C3SoXS8BEWThGHPDOlXgUCCts70i7Fc=\", opaque=\"00000000000000000000000000000000\", qop=auth, nc=00000001, response=\"8106a5d19bc67982527cbb576658f9d6\"";
 
-        Map<DigestAuthorizationToken, String> expected = new HashMap<DigestAuthorizationToken, String>(10);
+        Map<DigestAuthorizationToken, String> expected = new HashMap<>(10);
         expected.put(DigestAuthorizationToken.USERNAME, "userOne");
         expected.put(DigestAuthorizationToken.REALM, "Digest_Realm");
         expected.put(DigestAuthorizationToken.DIGEST_URI, "/");

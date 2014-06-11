@@ -87,7 +87,6 @@ import io.undertow.util.MimeMappings;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.servlet.SessionTrackingMode;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -155,7 +154,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
         deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
 
-        final List<ThreadSetupAction> setup = new ArrayList<ThreadSetupAction>();
+        final List<ThreadSetupAction> setup = new ArrayList<>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
         setup.addAll(deploymentInfo.getThreadSetupActions());
         final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
@@ -233,7 +232,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void handleExtensions(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
-        Set<Class<?>> loadedExtensions = new HashSet<Class<?>>();
+        Set<Class<?>> loadedExtensions = new HashSet<>();
 
         for (ServletExtension extension : ServiceLoader.load(ServletExtension.class, deploymentInfo.getClassLoader())) {
             loadedExtensions.add(extension.getClass());
@@ -267,7 +266,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
 
-        final Map<String, AuthenticationMechanismFactory> factoryMap = new HashMap<String, AuthenticationMechanismFactory>(deploymentInfo.getAuthenticationMechanisms());
+        final Map<String, AuthenticationMechanismFactory> factoryMap = new HashMap<>(deploymentInfo.getAuthenticationMechanisms());
         if(!factoryMap.containsKey(BASIC_AUTH)) {
             factoryMap.put(BASIC_AUTH, BasicAuthenticationMechanism.FACTORY);
         }
@@ -298,7 +297,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (!securityPathMatches.isEmpty()) {
             current = new ServletSecurityConstraintHandler(securityPathMatches, current);
         }
-        List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
+        List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<>();
         authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism()); //TODO: does this really need to be hard coded?
 
         String mechName = null;
@@ -323,7 +322,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     mechName = method.getName();
                 }
 
-                final Map<String, String> properties = new HashMap<String, String>();
+                final Map<String, String> properties = new HashMap<>();
                 properties.put(AuthenticationMechanismFactory.CONTEXT_PATH, deploymentInfo.getContextPath());
                 properties.put(AuthenticationMechanismFactory.REALM, loginConfig.getRealmName());
                 properties.put(AuthenticationMechanismFactory.ERROR_PAGE, loginConfig.getErrorPage());
@@ -369,7 +368,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     private SecurityPathMatches buildSecurityConstraints() {
         SecurityPathMatches.Builder builder = SecurityPathMatches.builder(deployment.getDeploymentInfo());
-        final Set<String> urlPatterns = new HashSet<String>();
+        final Set<String> urlPatterns = new HashSet<>();
         for (SecurityConstraint constraint : deployment.getDeploymentInfo().getSecurityConstraints()) {
             builder.addSecurityConstraint(constraint);
             for (WebResourceCollection webResources : constraint.getWebResourceCollections()) {
@@ -380,10 +379,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
         for (final ServletInfo servlet : deployment.getDeploymentInfo().getServlets().values()) {
             final ServletSecurityInfo securityInfo = servlet.getServletSecurityInfo();
             if (securityInfo != null) {
-                final Set<String> mappings = new HashSet<String>(servlet.getMappings());
+                final Set<String> mappings = new HashSet<>(servlet.getMappings());
                 mappings.removeAll(urlPatterns);
                 if (!mappings.isEmpty()) {
-                    final Set<String> methods = new HashSet<String>();
+                    final Set<String> methods = new HashSet<>();
 
                     for (HttpMethodSecurityInfo method : securityInfo.getHttpMethodSecurityInfo()) {
                         methods.add(method.getMethod());
@@ -427,7 +426,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void initializeMimeMappings(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
-        final Map<String, String> mappings = new HashMap<String, String>(MimeMappings.DEFAULT_MIME_MAPPINGS);
+        final Map<String, String> mappings = new HashMap<>(MimeMappings.DEFAULT_MIME_MAPPINGS);
         for (MimeMapping mapping : deploymentInfo.getMimeMappings()) {
             mappings.put(mapping.getExtension(), mapping.getMimeType());
         }
@@ -435,8 +434,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void initializeErrorPages(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
-        final Map<Integer, String> codes = new HashMap<Integer, String>();
-        final Map<Class<? extends Throwable>, String> exceptions = new HashMap<Class<? extends Throwable>, String>();
+        final Map<Integer, String> codes = new HashMap<>();
+        final Map<Class<? extends Throwable>, String> exceptions = new HashMap<>();
         String defaultErrorPage = null;
         for (final ErrorPage page : deploymentInfo.getErrorPages()) {
             if (page.getExceptionType() != null) {
@@ -456,7 +455,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
 
     private ApplicationListeners createListeners() {
-        final List<ManagedListener> managedListeners = new ArrayList<ManagedListener>();
+        final List<ManagedListener> managedListeners = new ArrayList<>();
         for (final ListenerInfo listener : deployment.getDeploymentInfo().getListeners()) {
             managedListeners.add(new ManagedListener(listener, false));
         }
@@ -480,12 +479,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             //we need to copy before iterating
             //because listeners can add other listeners
-            ArrayList<Lifecycle> lifecycles = new ArrayList<Lifecycle>(deployment.getLifecycleObjects());
+            ArrayList<Lifecycle> lifecycles = new ArrayList<>(deployment.getLifecycleObjects());
             for (Lifecycle object : lifecycles) {
                 object.start();
             }
             HttpHandler root = deployment.getHandler();
-            final TreeMap<Integer, List<ManagedServlet>> loadOnStartup = new TreeMap<Integer, List<ManagedServlet>>();
+            final TreeMap<Integer, List<ManagedServlet>> loadOnStartup = new TreeMap<>();
             for(Map.Entry<String, ServletHandler> entry: deployment.getServlets().getServletHandlers().entrySet()) {
                 ManagedServlet servlet = entry.getValue().getManagedServlet();
                 Integer loadOnStartupNumber = servlet.getServletInfo().getLoadOnStartup();
@@ -495,7 +494,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     }
                     List<ManagedServlet> list = loadOnStartup.get(loadOnStartupNumber);
                     if(list == null) {
-                        loadOnStartup.put(loadOnStartupNumber, list = new ArrayList<ManagedServlet>());
+                        loadOnStartup.put(loadOnStartupNumber, list = new ArrayList<>());
                     }
                     list.add(servlet);
                 }
@@ -559,7 +558,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
             sessionCookieConfig.setSecure(sc.isSecure());
             if (sc.getSessionTrackingModes() != null) {
-                servletContext.setDefaultSessionTrackingModes(new HashSet<SessionTrackingMode>(sc.getSessionTrackingModes()));
+                servletContext.setDefaultSessionTrackingModes(new HashSet<>(sc.getSessionTrackingModes()));
             }
         }
     }

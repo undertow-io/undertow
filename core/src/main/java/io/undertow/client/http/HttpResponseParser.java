@@ -350,7 +350,7 @@ abstract class HttpResponseParser {
      * @return
      */
     protected static Map<String, HttpString> httpStrings() {
-        final Map<String, HttpString> results = new HashMap<String, HttpString>();
+        final Map<String, HttpString> results = new HashMap<>();
         final Class[] classs = {Headers.class, Methods.class, Protocols.class};
 
         for (Class<?> c : classs) {

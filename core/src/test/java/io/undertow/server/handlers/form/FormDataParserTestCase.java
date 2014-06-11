@@ -62,7 +62,7 @@ public class FormDataParserTestCase {
 
     @Parameterized.Parameters
     public static Collection<Object[]> handlerChains() {
-        List<Object[]> ret = new ArrayList<Object[]>();
+        List<Object[]> ret = new ArrayList<>();
         final FormParserFactory parserFactory = FormParserFactory.builder().build();
         HttpHandler fd = new HttpHandler() {
             @Override
@@ -124,7 +124,7 @@ public class FormDataParserTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
 
-            final List<NameValuePair> data = new ArrayList<NameValuePair>();
+            final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataDefinition.APPLICATION_X_WWW_FORM_URLENCODED);

@@ -51,8 +51,8 @@ public class FilterHandler implements HttpHandler {
     public FilterHandler(final Map<DispatcherType, List<ManagedFilter>> filters, final boolean allowNonStandardWrappers, final HttpHandler next) {
         this.allowNonStandardWrappers = allowNonStandardWrappers;
         this.next = next;
-        this.filters = new EnumMap<DispatcherType, List<ManagedFilter>>(filters);
-        Map<DispatcherType, Boolean> asyncSupported = new EnumMap<DispatcherType, Boolean>(DispatcherType.class);
+        this.filters = new EnumMap<>(filters);
+        Map<DispatcherType, Boolean> asyncSupported = new EnumMap<>(DispatcherType.class);
         for(Map.Entry<DispatcherType, List<ManagedFilter>> entry : filters.entrySet()) {
             boolean supported = true;
             for(ManagedFilter i : entry.getValue()) {

@@ -51,7 +51,7 @@ public class PredicatedHandlersParser {
 
     public static List<PredicatedHandler> parse(final String contents, final ClassLoader classLoader) {
         String[] lines = contents.split("\\n");
-        final List<PredicatedHandler> wrappers = new ArrayList<PredicatedHandler>();
+        final List<PredicatedHandler> wrappers = new ArrayList<>();
 
         for (String line : lines) {
             if (line.trim().length() > 0) {

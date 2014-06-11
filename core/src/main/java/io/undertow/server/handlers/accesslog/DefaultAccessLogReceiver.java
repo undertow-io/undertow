@@ -82,7 +82,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         this.outputDirectory = outputDirectory;
         this.logBaseName = logBaseName;
         this.logNameSuffix = (logNameSuffix != null) ? logNameSuffix : DEFAULT_LOG_SUFFIX;
-        this.pendingMessages = new ConcurrentLinkedDeque<String>();
+        this.pendingMessages = new ConcurrentLinkedDeque<>();
         this.defaultLogFile = new File(outputDirectory, logBaseName + this.logNameSuffix);
         calculateChangeOverPoint();
     }
@@ -119,7 +119,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         if (forceLogRotation) {
             doRotate();
         }
-        List<String> messages = new ArrayList<String>();
+        List<String> messages = new ArrayList<>();
         String msg = null;
         //only grab at most 1000 messages at a time
         for (int i = 0; i < 1000; ++i) {

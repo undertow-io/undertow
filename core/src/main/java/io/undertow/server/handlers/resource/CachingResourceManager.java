@@ -57,7 +57,7 @@ public class CachingResourceManager implements ResourceManager {
         this.maxFileSize = maxFileSize;
         this.underlyingResourceManager = underlyingResourceManager;
         this.dataCache = dataCache;
-        this.cache = new LRUCache<String, Object>(metadataCacheSize, maxAge);
+        this.cache = new LRUCache<>(metadataCacheSize, maxAge);
         this.maxAge = maxAge;
         if(underlyingResourceManager.isResourceChangeListenerSupported()) {
             try {

@@ -63,7 +63,7 @@ public class FileErrorPageHandler implements HttpHandler {
 
     public FileErrorPageHandler(final File file, final Integer... responseCodes) {
         this.file = file;
-        this.responseCodes = new HashSet<Integer>(Arrays.asList(responseCodes));
+        this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
     }
 
     @Override
@@ -149,13 +149,13 @@ public class FileErrorPageHandler implements HttpHandler {
         if (responseCodes == null) {
             this.responseCodes = Collections.emptySet();
         } else {
-            this.responseCodes = new HashSet<Integer>(responseCodes);
+            this.responseCodes = new HashSet<>(responseCodes);
         }
         return this;
     }
 
     public FileErrorPageHandler setResponseCodes(final Integer... responseCodes) {
-        this.responseCodes = new HashSet<Integer>(Arrays.asList(responseCodes));
+        this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
         return this;
     }
 

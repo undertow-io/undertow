@@ -47,8 +47,8 @@ import static org.xnio.Bits.anyAreSet;
  */
 public final class GatedStreamSourceChannel implements StreamSourceChannel {
     private final StreamSourceChannel delegate;
-    private final ChannelListener.SimpleSetter<GatedStreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<GatedStreamSourceChannel>();
-    private final ChannelListener.SimpleSetter<GatedStreamSourceChannel> closeSetter = new ChannelListener.SimpleSetter<GatedStreamSourceChannel>();
+    private final ChannelListener.SimpleSetter<GatedStreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<>();
+    private final ChannelListener.SimpleSetter<GatedStreamSourceChannel> closeSetter = new ChannelListener.SimpleSetter<>();
 
     /**
      * Construct a new instance.

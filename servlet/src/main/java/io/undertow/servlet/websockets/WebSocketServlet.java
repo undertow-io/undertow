@@ -120,7 +120,7 @@ public class WebSocketServlet extends HttpServlet {
     }
 
     protected List<Handshake> handshakes() {
-        List<Handshake> handshakes = new ArrayList<Handshake>();
+        List<Handshake> handshakes = new ArrayList<>();
         handshakes.add(new Hybi13Handshake());
         handshakes.add(new Hybi08Handshake());
         handshakes.add(new Hybi07Handshake());

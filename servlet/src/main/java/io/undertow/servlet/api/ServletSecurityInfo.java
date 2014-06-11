@@ -26,7 +26,7 @@ import java.util.List;
  */
 public class ServletSecurityInfo extends SecurityInfo<ServletSecurityInfo> implements Cloneable {
 
-    private final List<HttpMethodSecurityInfo> httpMethodSecurityInfo = new ArrayList<HttpMethodSecurityInfo>();
+    private final List<HttpMethodSecurityInfo> httpMethodSecurityInfo = new ArrayList<>();
 
     @Override
     protected ServletSecurityInfo createInstance() {
@@ -39,7 +39,7 @@ public class ServletSecurityInfo extends SecurityInfo<ServletSecurityInfo> imple
     }
 
     public List<HttpMethodSecurityInfo> getHttpMethodSecurityInfo() {
-        return new ArrayList<HttpMethodSecurityInfo>(httpMethodSecurityInfo);
+        return new ArrayList<>(httpMethodSecurityInfo);
     }
 
     @Override

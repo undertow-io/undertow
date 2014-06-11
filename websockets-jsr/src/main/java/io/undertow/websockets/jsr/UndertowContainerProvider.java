@@ -45,7 +45,7 @@ public class UndertowContainerProvider extends ContainerProvider {
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.websockets.jsr.MODIFY_WEBSOCKET_CONTAINER");
 
-    private static final Map<ClassLoader, WebSocketContainer> webSocketContainers = new ConcurrentHashMap<ClassLoader, WebSocketContainer>();
+    private static final Map<ClassLoader, WebSocketContainer> webSocketContainers = new ConcurrentHashMap<>();
 
     private static volatile WebSocketContainer defaultContainer;
     private static volatile boolean defaultContainerDisabled = false;

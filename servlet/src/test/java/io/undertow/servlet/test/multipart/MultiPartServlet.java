@@ -45,7 +45,7 @@ public class MultiPartServlet extends HttpServlet {
             writer.println("name: " + part.getName());
             writer.println("filename: " + part.getSubmittedFileName());
             writer.println("content-type: " + part.getContentType());
-            Collection<String> headerNames = new TreeSet<String>(part.getHeaderNames());
+            Collection<String> headerNames = new TreeSet<>(part.getHeaderNames());
             for(String header: headerNames) {
                 writer.println(header + ": " + part.getHeader(header));
             }

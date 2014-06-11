@@ -61,7 +61,7 @@ public class InMemorySessionManager implements SessionManager {
 
     public InMemorySessionManager(String deploymentName, int maxSessions) {
         this.deploymentName = deploymentName;
-        this.sessions = new ConcurrentHashMap<String, InMemorySession>();
+        this.sessions = new ConcurrentHashMap<>();
         this.maxSize = maxSessions;
         ConcurrentDirectDeque<String> evictionQueue = null;
         if (maxSessions > 0) {
@@ -184,7 +184,7 @@ public class InMemorySessionManager implements SessionManager {
 
     @Override
     public Set<String> getAllSessions() {
-        return new HashSet<String>(sessions.keySet());
+        return new HashSet<>(sessions.keySet());
     }
 
     @Override
@@ -431,7 +431,7 @@ public class InMemorySessionManager implements SessionManager {
             this.maxInactiveInterval = maxInactiveInterval;
         }
 
-        final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
+        final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<>();
         volatile long lastAccessed;
         final long creationTime;
         volatile int maxInactiveInterval;

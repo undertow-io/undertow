@@ -40,7 +40,7 @@ public class PathTemplateMatcher<T> {
     /**
      * Map of path template stem to the path templates that share the same base.
      */
-    private Map<String, Set<PathTemplateHolder>> pathTemplateMap = new CopyOnWriteMap<String, Set<PathTemplateHolder>>();
+    private Map<String, Set<PathTemplateHolder>> pathTemplateMap = new CopyOnWriteMap<>();
 
     /**
      * lengths of all registered paths
@@ -48,7 +48,7 @@ public class PathTemplateMatcher<T> {
     private volatile int[] lengths = {};
 
     public PathMatchResult<T> match(final String path) {
-        final Map<String, String> params = new HashMap<String, String>();
+        final Map<String, String> params = new HashMap<>();
         int length = path.length();
         final int[] lengths = this.lengths;
         for (int i = 0; i < lengths.length; ++i) {
@@ -81,7 +81,7 @@ public class PathTemplateMatcher<T> {
     private PathMatchResult<T> handleStemMatch(Set<PathTemplateHolder> entry, final String path, final Map<String, String> params) {
         for (PathTemplateHolder val : entry) {
             if (val.template.matches(path, params)) {
-                return new PathMatchResult<T>(params, val.template.getTemplateString(), val.value);
+                return new PathMatchResult<>(params, val.template.getTemplateString(), val.value);
             } else {
                 params.clear();
             }
@@ -94,9 +94,9 @@ public class PathTemplateMatcher<T> {
         Set<PathTemplateHolder> values = pathTemplateMap.get(trimBase(template));
         Set<PathTemplateHolder> newValues;
         if (values == null) {
-            newValues = new TreeSet<PathTemplateHolder>();
+            newValues = new TreeSet<>();
         } else {
-            newValues = new TreeSet<PathTemplateHolder>(values);
+            newValues = new TreeSet<>(values);
         }
         PathTemplateHolder holder = new PathTemplateHolder(value, template);
         if (newValues.contains(holder)) {
@@ -123,7 +123,7 @@ public class PathTemplateMatcher<T> {
     }
 
     private void buildLengths() {
-        final Set<Integer> lengths = new TreeSet<Integer>(new Comparator<Integer>() {
+        final Set<Integer> lengths = new TreeSet<>(new Comparator<Integer>() {
             @Override
             public int compare(Integer o1, Integer o2) {
                 return -o1.compareTo(o2);
@@ -157,7 +157,7 @@ public class PathTemplateMatcher<T> {
         if (values == null) {
             return this;
         } else {
-            newValues = new TreeSet<PathTemplateHolder>(values);
+            newValues = new TreeSet<>(values);
         }
         Iterator<PathTemplateHolder> it = newValues.iterator();
         while (it.hasNext()) {

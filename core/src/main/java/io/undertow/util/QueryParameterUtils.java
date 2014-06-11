@@ -68,7 +68,7 @@ public class QueryParameterUtils {
      * @return The map of key value parameters
      */
     public static Map<String, Deque<String>> parseQueryString(final String newQueryString) {
-        Map<String, Deque<String>> newQueryParameters = new LinkedHashMap<String, Deque<String>>();
+        Map<String, Deque<String>> newQueryParameters = new LinkedHashMap<>();
         int startPos = 0;
         int equalPos = -1;
         for(int i = 0; i < newQueryString.length(); ++i) {
@@ -99,7 +99,7 @@ public class QueryParameterUtils {
 
         Deque<String> queue = newQueryParameters.get(key);
         if (queue == null) {
-            newQueryParameters.put(key, queue = new ArrayDeque<String>(1));
+            newQueryParameters.put(key, queue = new ArrayDeque<>(1));
         }
         if(value != null) {
             queue.add(value);
@@ -113,7 +113,7 @@ public class QueryParameterUtils {
         //according to the spec the new query parameters have to 'take precedence'
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             if (!newQueryParameters.containsKey(entry.getKey())) {
-                newQueryParameters.put(entry.getKey(), new ArrayDeque<String>(entry.getValue()));
+                newQueryParameters.put(entry.getKey(), new ArrayDeque<>(entry.getValue()));
             } else {
                 newQueryParameters.get(entry.getKey()).addAll(entry.getValue());
             }

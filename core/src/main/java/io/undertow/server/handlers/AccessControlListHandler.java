@@ -41,7 +41,7 @@ public class AccessControlListHandler implements HttpHandler {
     private volatile HttpHandler next;
     private volatile boolean defaultAllow = false;
     private final ExchangeAttribute attribute;
-    private final List<AclMatch> acl = new CopyOnWriteArrayList<AclMatch>();
+    private final List<AclMatch> acl = new CopyOnWriteArrayList<>();
 
     public AccessControlListHandler(final HttpHandler next, ExchangeAttribute attribute) {
         this.next = next;

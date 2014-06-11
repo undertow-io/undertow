@@ -37,7 +37,7 @@ import org.xnio.Xnio;
  */
 public class FileResourceManager implements ResourceManager {
 
-    private final List<ResourceChangeListener> listeners = new ArrayList<ResourceChangeListener>();
+    private final List<ResourceChangeListener> listeners = new ArrayList<>();
 
     private FileSystemWatcher fileSystemWatcher;
 
@@ -116,7 +116,7 @@ public class FileResourceManager implements ResourceManager {
                 @Override
                 public void handleChanges(Collection<FileChangeEvent> changes) {
                     synchronized (FileResourceManager.this) {
-                        final List<ResourceChangeEvent> events = new ArrayList<ResourceChangeEvent>();
+                        final List<ResourceChangeEvent> events = new ArrayList<>();
                         for (FileChangeEvent change : changes) {
                             if (change.getFile().getAbsolutePath().startsWith(base)) {
                                 String path = change.getFile().getAbsolutePath().substring(base.length());

@@ -76,20 +76,20 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     /**
      * List of frames that are ready to send
      */
-    private final List<S> pendingFrames = new LinkedList<S>();
+    private final List<S> pendingFrames = new LinkedList<>();
     /**
      * Frames that are not yet read to send.
      */
-    private final Deque<S> heldFrames = new ArrayDeque<S>();
+    private final Deque<S> heldFrames = new ArrayDeque<>();
 
     /**
      * new frames to be sent. These will be added to either the pending or held frames list
      * depending on the {@link #framePriority} implementation in use.
      */
-    private final Deque<S> newFrames = new ArrayDeque<S>();
+    private final Deque<S> newFrames = new ArrayDeque<>();
 
     private volatile R receiver = null;
-    private final List<R> receivers = new CopyOnWriteArrayList<R>();
+    private final List<R> receivers = new CopyOnWriteArrayList<>();
 
     private boolean receivesSuspended = true;
 
@@ -103,7 +103,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> writesBrokenUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "writesBroken");
 
     private ReferenceCountedPooled<ByteBuffer> readData = null;
-    private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<ChannelListener<C>>();
+    private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<>();
 
     /**
      * Create a new {@link io.undertow.server.protocol.framed.AbstractFramedChannel}
@@ -117,7 +117,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, FramePriority<C, R, S> framePriority, final Pooled<ByteBuffer> readData) {
         this.framePriority = framePriority;
         if (readData != null) {
-            this.readData = new ReferenceCountedPooled<ByteBuffer>(readData, 1);
+            this.readData = new ReferenceCountedPooled<>(readData, 1);
         }
         IdleTimeoutConduit idle = new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit());
         connectedStreamChannel.getSourceChannel().setConduit(idle);
@@ -126,8 +126,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         this.channel = connectedStreamChannel;
         this.bufferPool = bufferPool;
 
-        closeSetter = new ChannelListener.SimpleSetter<C>();
-        receiveSetter = new ChannelListener.SimpleSetter<C>();
+        closeSetter = new ChannelListener.SimpleSetter<>();
+        receiveSetter = new ChannelListener.SimpleSetter<>();
         channel.getSourceChannel().getReadSetter().set(null);
         channel.getSourceChannel().suspendReads();
 
@@ -237,7 +237,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         boolean hasData;
         if (pooled == null) {
             Pooled<ByteBuffer> buf = bufferPool.allocate();
-            this.readData = pooled = new ReferenceCountedPooled<ByteBuffer>(buf, 1);
+            this.readData = pooled = new ReferenceCountedPooled<>(buf, 1);
             hasData = false;
         } else {
             hasData = pooled.getResource().hasRemaining();

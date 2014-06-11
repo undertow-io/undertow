@@ -45,13 +45,13 @@ public enum DigestWWWAuthenticateToken implements HeaderToken {
     private static final HeaderTokenParser<DigestWWWAuthenticateToken> TOKEN_PARSER;
 
     static {
-        Map<String, DigestWWWAuthenticateToken> expected = new LinkedHashMap<String, DigestWWWAuthenticateToken>(
+        Map<String, DigestWWWAuthenticateToken> expected = new LinkedHashMap<>(
                 DigestWWWAuthenticateToken.values().length);
         for (DigestWWWAuthenticateToken current : DigestWWWAuthenticateToken.values()) {
             expected.put(current.getName(), current);
         }
 
-        TOKEN_PARSER = new HeaderTokenParser<DigestWWWAuthenticateToken>(Collections.unmodifiableMap(expected));
+        TOKEN_PARSER = new HeaderTokenParser<>(Collections.unmodifiableMap(expected));
     }
 
     private final String name;

@@ -74,7 +74,7 @@ public class PathTemplateTestCase {
 
     @Test
     public void testDetectDuplicates() {
-        final TreeSet<PathTemplate> seen = new TreeSet<PathTemplate>();
+        final TreeSet<PathTemplate> seen = new TreeSet<>();
         seen.add(PathTemplate.create("/bob/{foo}"));
         Assert.assertTrue(seen.contains(PathTemplate.create("/bob/{ak}")));
         Assert.assertFalse(seen.contains(PathTemplate.create("/bob/{ak}/other")));
@@ -82,11 +82,11 @@ public class PathTemplateTestCase {
 
     private void testMatch(final String template, final String path, final String ... pathParams)  {
         Assert.assertEquals(0, pathParams.length % 2);
-        final Map<String, String> expected = new HashMap<String, String>();
+        final Map<String, String> expected = new HashMap<>();
         for(int i = 0; i < pathParams.length; i+=2) {
             expected.put(pathParams[i], pathParams[i+1]);
         }
-        final Map<String, String> params = new HashMap<String, String>();
+        final Map<String, String> params = new HashMap<>();
 
         PathTemplate pathTemplate = PathTemplate.create(template);
         Assert.assertTrue("Failed. Template: " + pathTemplate, pathTemplate.matches(path, params));

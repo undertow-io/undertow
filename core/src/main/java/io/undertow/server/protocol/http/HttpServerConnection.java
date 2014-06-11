@@ -156,7 +156,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
                 eb.free();
                 unget.free();
                 final ByteBuffer newBuffer = ByteBuffer.wrap(data);
-                setExtraBytes(new ImmediatePooled<ByteBuffer>(newBuffer));
+                setExtraBytes(new ImmediatePooled<>(newBuffer));
             }
         }
     }

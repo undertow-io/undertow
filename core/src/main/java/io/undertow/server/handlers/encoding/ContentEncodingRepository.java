@@ -39,7 +39,7 @@ public class ContentEncodingRepository {
 
     public static final String IDENTITY = "identity";
 
-    private final Map<String, EncodingMapping> encodingMap = new CopyOnWriteMap<String, EncodingMapping>();
+    private final Map<String, EncodingMapping> encodingMap = new CopyOnWriteMap<>();
 
     /**
      * Gets all allow
@@ -51,10 +51,10 @@ public class ContentEncodingRepository {
         if (res == null || res.isEmpty()) {
             return null;
         }
-        final List<EncodingMapping> resultingMappings = new ArrayList<EncodingMapping>();
+        final List<EncodingMapping> resultingMappings = new ArrayList<>();
         final List<List<QValueParser.QValueResult>> found = QValueParser.parse(res);
         for (List<QValueParser.QValueResult> result : found) {
-            List<EncodingMapping> available = new ArrayList<EncodingMapping>();
+            List<EncodingMapping> available = new ArrayList<>();
             boolean includesIdentity = false;
             boolean isQValue0 = false;
 

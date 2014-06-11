@@ -100,7 +100,7 @@ public class URLResource implements Resource {
 
     @Override
     public List<Resource> list() {
-        List<Resource> result = new LinkedList<Resource>();
+        List<Resource> result = new LinkedList<>();
         File file = getFile();
         try {
             if (file != null) {

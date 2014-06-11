@@ -348,7 +348,7 @@ public class FastConcurrentDirectDeque<E>
      */
     private Node linkFirst(E e) {
         checkNotNull(e);
-        final Node<E> newNode = new Node<E>(e);
+        final Node<E> newNode = new Node<>(e);
 
         restartFromHead:
         for (;;)
@@ -381,7 +381,7 @@ public class FastConcurrentDirectDeque<E>
      */
     private Node linkLast(E e) {
         checkNotNull(e);
-        final Node<E> newNode = new Node<E>(e);
+        final Node<E> newNode = new Node<>(e);
 
         restartFromTail:
         for (;;)
@@ -815,7 +815,7 @@ public class FastConcurrentDirectDeque<E>
      * @return the arrayList
      */
     private ArrayList<E> toArrayList() {
-        ArrayList<E> list = new ArrayList<E>();
+        ArrayList<E> list = new ArrayList<>();
         for (Node<E> p = first(); p != null; p = succ(p)) {
             E item = p.item;
             if (item != null)
@@ -828,7 +828,7 @@ public class FastConcurrentDirectDeque<E>
      * Constructs an empty deque.
      */
     public FastConcurrentDirectDeque() {
-        head = tail = new Node<E>(null);
+        head = tail = new Node<>(null);
     }
 
     /**
@@ -845,7 +845,7 @@ public class FastConcurrentDirectDeque<E>
         Node<E> h = null, t = null;
         for (E e : c) {
             checkNotNull(e);
-            Node<E> newNode = new Node<E>(e);
+            Node<E> newNode = new Node<>(e);
             if (h == null)
                 h = t = newNode;
             else {
@@ -863,10 +863,10 @@ public class FastConcurrentDirectDeque<E>
     private void initHeadTail(Node<E> h, Node<E> t) {
         if (h == t) {
             if (h == null)
-                h = t = new Node<E>(null);
+                h = t = new Node<>(null);
             else {
                 // Avoid edge case of a single Node with non-null item.
-                Node<E> newNode = new Node<E>(null);
+                Node<E> newNode = new Node<>(null);
                 t.lazySetNext(newNode);
                 newNode.lazySetPrev(t);
                 t = newNode;
@@ -1172,7 +1172,7 @@ public class FastConcurrentDirectDeque<E>
         Node<E> beginningOfTheEnd = null, last = null;
         for (E e : c) {
             checkNotNull(e);
-            Node<E> newNode = new Node<E>(e);
+            Node<E> newNode = new Node<>(e);
             if (beginningOfTheEnd == null)
                 beginningOfTheEnd = last = newNode;
             else {
@@ -1433,7 +1433,7 @@ public class FastConcurrentDirectDeque<E>
         Object item;
         while ((item = s.readObject()) != null) {
             @SuppressWarnings("unchecked")
-            Node<E> newNode = new Node<E>((E) item);
+            Node<E> newNode = new Node<>((E) item);
             if (h == null)
                 h = t = newNode;
             else {
@@ -1459,9 +1459,9 @@ public class FastConcurrentDirectDeque<E>
     private static final long headOffset;
     private static final long tailOffset;
     static {
-        PREV_TERMINATOR = new Node<Object>();
+        PREV_TERMINATOR = new Node<>();
         PREV_TERMINATOR.next = PREV_TERMINATOR;
-        NEXT_TERMINATOR = new Node<Object>();
+        NEXT_TERMINATOR = new Node<>();
         NEXT_TERMINATOR.prev = NEXT_TERMINATOR;
         try {
             UNSAFE = getUnsafe();

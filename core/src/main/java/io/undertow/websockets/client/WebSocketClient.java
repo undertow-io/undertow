@@ -57,7 +57,7 @@ public class WebSocketClient {
 
     public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
 
-        final FutureResult<WebSocketChannel> ioFuture = new FutureResult<WebSocketChannel>();
+        final FutureResult<WebSocketChannel> ioFuture = new FutureResult<>();
         final URI newUri;
         try {
             newUri = new URI(uri.getScheme().equals("wss") ? "https" : "http", uri.getUserInfo(), uri.getHost(), uri.getPort() == -1 ? (uri.getScheme().equals("wss") ? 443 : 80) : uri.getPort(), uri.getPath().isEmpty() ? "/" : uri.getPath(), uri.getQuery(), uri.getFragment());

@@ -35,7 +35,7 @@ import io.undertow.util.PathMatcher;
  */
 public class PathHandler implements HttpHandler {
 
-    private final PathMatcher<HttpHandler> pathMatcher = new PathMatcher<HttpHandler>();
+    private final PathMatcher<HttpHandler> pathMatcher = new PathMatcher<>();
 
     public PathHandler(final HttpHandler defaultHandler) {
         pathMatcher.addPrefixPath("/", defaultHandler);

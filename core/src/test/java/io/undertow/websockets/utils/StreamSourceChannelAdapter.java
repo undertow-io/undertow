@@ -40,8 +40,8 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public class StreamSourceChannelAdapter implements StreamSourceChannel {
     private final ReadableByteChannel channel;
-    private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>();
-    private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> closeSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>();
+    private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<>();
+    private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> closeSetter = new ChannelListener.SimpleSetter<>();
 
     public StreamSourceChannelAdapter(ReadableByteChannel channel) {
         this.channel = channel;

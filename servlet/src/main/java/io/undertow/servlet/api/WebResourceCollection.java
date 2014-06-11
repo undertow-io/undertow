@@ -28,9 +28,9 @@ import java.util.Set;
  */
 public class WebResourceCollection implements Cloneable {
 
-    private final Set<String> httpMethods = new HashSet<String>();
-    private final Set<String> httpMethodOmissions = new HashSet<String>();
-    private final Set<String> urlPatterns = new HashSet<String>();
+    private final Set<String> httpMethods = new HashSet<>();
+    private final Set<String> httpMethodOmissions = new HashSet<>();
+    private final Set<String> urlPatterns = new HashSet<>();
 
     public WebResourceCollection addHttpMethod(final String s) {
         httpMethods.add(s);

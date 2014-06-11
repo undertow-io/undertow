@@ -73,8 +73,8 @@ public class DefaultServlet extends HttpServlet {
     public static final String DISALLOWED_EXTENSIONS = "disallowed-extensions";
     public static final String RESOLVE_AGAINST_CONTEXT_ROOT = "resolve-against-context-root";
 
-    private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf", "jpeg", "xml")));
-    private static final Set<String> DEFAULT_DISALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("class", "jar", "war")));
+    private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList("js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf", "jpeg", "xml")));
+    private static final Set<String> DEFAULT_DISALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList("class", "jar", "war")));
 
 
     private Deployment deployment;
@@ -94,11 +94,11 @@ public class DefaultServlet extends HttpServlet {
         DefaultServletConfig defaultServletConfig = deployment.getDeploymentInfo().getDefaultServletConfig();
         if (defaultServletConfig != null) {
             defaultAllowed = defaultServletConfig.isDefaultAllowed();
-            allowed = new HashSet<String>();
+            allowed = new HashSet<>();
             if (defaultServletConfig.getAllowed() != null) {
                 allowed.addAll(defaultServletConfig.getAllowed());
             }
-            disallowed = new HashSet<String>();
+            disallowed = new HashSet<>();
             if (defaultServletConfig.getDisallowed() != null) {
                 disallowed.addAll(defaultServletConfig.getDisallowed());
             }
@@ -108,11 +108,11 @@ public class DefaultServlet extends HttpServlet {
         }
         if (config.getInitParameter(ALLOWED_EXTENSIONS) != null) {
             String extensions = config.getInitParameter(ALLOWED_EXTENSIONS);
-            allowed = new HashSet<String>(Arrays.asList(extensions.split(",")));
+            allowed = new HashSet<>(Arrays.asList(extensions.split(",")));
         }
         if (config.getInitParameter(DISALLOWED_EXTENSIONS) != null) {
             String extensions = config.getInitParameter(DISALLOWED_EXTENSIONS);
-            disallowed = new HashSet<String>(Arrays.asList(extensions.split(",")));
+            disallowed = new HashSet<>(Arrays.asList(extensions.split(",")));
         }
         if (config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT) != null) {
             resolveAgainstContextRoot = Boolean.parseBoolean(config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT));

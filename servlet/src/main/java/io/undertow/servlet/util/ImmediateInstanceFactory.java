@@ -34,6 +34,6 @@ public class ImmediateInstanceFactory<T> implements InstanceFactory<T> {
 
     @Override
     public InstanceHandle<T> createInstance() throws InstantiationException {
-        return new ImmediateInstanceHandle<T>(instance);
+        return new ImmediateInstanceHandle<>(instance);
     }
 }

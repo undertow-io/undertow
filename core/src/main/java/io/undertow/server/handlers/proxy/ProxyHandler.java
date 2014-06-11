@@ -96,7 +96,7 @@ public final class ProxyHandler implements HttpHandler {
     /**
      * Map of additional headers to add to the request.
      */
-    private final Map<HttpString, ExchangeAttribute> requestHeaders = new CopyOnWriteMap<HttpString, ExchangeAttribute>();
+    private final Map<HttpString, ExchangeAttribute> requestHeaders = new CopyOnWriteMap<>();
 
     private final HttpHandler next;
 

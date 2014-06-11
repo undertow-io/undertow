@@ -53,7 +53,7 @@ public final class UndertowClient {
 
     private UndertowClient(final ClassLoader classLoader) {
         ServiceLoader<ClientProvider> providers = ServiceLoader.load(ClientProvider.class, classLoader);
-        final Map<String, ClientProvider> map = new HashMap<String, ClientProvider>();
+        final Map<String, ClientProvider> map = new HashMap<>();
         for (ClientProvider provider : providers) {
             for (String scheme : provider.handlesSchemes()) {
                 map.put(scheme, provider);
@@ -76,7 +76,7 @@ public final class UndertowClient {
 
     public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
-        final FutureResult<ClientConnection> result = new FutureResult<ClientConnection>();
+        final FutureResult<ClientConnection> result = new FutureResult<>();
         provider.connect(new ClientCallback<ClientConnection>() {
             @Override
             public void completed(ClientConnection r) {
@@ -106,7 +106,7 @@ public final class UndertowClient {
 
     public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
-        final FutureResult<ClientConnection> result = new FutureResult<ClientConnection>();
+        final FutureResult<ClientConnection> result = new FutureResult<>();
         provider.connect(new ClientCallback<ClientConnection>() {
             @Override
             public void completed(ClientConnection r) {

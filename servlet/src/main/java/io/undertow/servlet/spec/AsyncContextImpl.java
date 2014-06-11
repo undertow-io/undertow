@@ -71,7 +71,7 @@ public class AsyncContextImpl implements AsyncContext {
 
     public static final AttachmentKey<Boolean> ASYNC_SUPPORTED = AttachmentKey.create(Boolean.class);
 
-    private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<BoundAsyncListener>();
+    private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<>();
 
     private final HttpServerExchange exchange;
     private final ServletRequest servletRequest;
@@ -92,7 +92,7 @@ public class AsyncContextImpl implements AsyncContext {
     private boolean initialRequestDone;
     private Thread initiatingThread;
 
-    private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<Runnable>();
+    private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
     private boolean processingAsyncTask = false;
     private boolean complete = false;
 
@@ -227,7 +227,7 @@ public class AsyncContextImpl implements AsyncContext {
         String newRequestUri = context.getContextPath() + newServletPath;
 
         //todo: a more efficient impl
-        Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
+        Map<String, Deque<String>> newQueryParameters = new HashMap<>();
         for (String part : newQueryString.split("&")) {
             String name = part;
             String value = "";
@@ -238,7 +238,7 @@ public class AsyncContextImpl implements AsyncContext {
             }
             Deque<String> queue = newQueryParameters.get(name);
             if (queue == null) {
-                newQueryParameters.put(name, queue = new ArrayDeque<String>(1));
+                newQueryParameters.put(name, queue = new ArrayDeque<>(1));
             }
             queue.add(value);
         }

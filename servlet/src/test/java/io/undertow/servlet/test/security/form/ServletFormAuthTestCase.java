@@ -133,7 +133,7 @@ public class ServletFormAuthTestCase {
             Assert.assertEquals("Login Page", response);
 
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
-            final List<NameValuePair> data = new ArrayList<NameValuePair>();
+            final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
 
@@ -171,7 +171,7 @@ public class ServletFormAuthTestCase {
             Assert.assertEquals("Login Page", response);
 
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
-            final List<NameValuePair> data = new ArrayList<NameValuePair>();
+            final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
 
@@ -210,7 +210,7 @@ public class ServletFormAuthTestCase {
             Assert.assertEquals("Login Page", response);
 
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
-            final List<NameValuePair> data = new ArrayList<NameValuePair>();
+            final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
 

@@ -40,7 +40,7 @@ class ServletPathMatchesData {
     public ServletPathMatchesData(final Map<String, ServletChain> exactPathMatches, final Map<String, PathMatch> prefixMatches, final Map<String, ServletChain> nameMatches) {
         this.prefixMatches = prefixMatches;
         this.nameMatches = nameMatches;
-        Map<String, ServletPathMatch> newExactPathMatches = new HashMap<String, ServletPathMatch>();
+        Map<String, ServletPathMatch> newExactPathMatches = new HashMap<>();
         for (Map.Entry<String, ServletChain> entry : exactPathMatches.entrySet()) {
             newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), false));
         }
@@ -110,11 +110,11 @@ class ServletPathMatchesData {
 
     public static final class Builder {
 
-        private final Map<String, ServletChain> exactPathMatches = new HashMap<String, ServletChain>();
+        private final Map<String, ServletChain> exactPathMatches = new HashMap<>();
 
-        private final Map<String, PathMatch> prefixMatches = new HashMap<String, PathMatch>();
+        private final Map<String, PathMatch> prefixMatches = new HashMap<>();
 
-        private final Map<String, ServletChain> nameMatches = new HashMap<String, ServletChain>();
+        private final Map<String, ServletChain> nameMatches = new HashMap<>();
 
         public void addExactMatch(final String exactMatch, final ServletChain match) {
             exactPathMatches.put(exactMatch, match);
@@ -150,7 +150,7 @@ class ServletPathMatchesData {
 
     private static class PathMatch {
 
-        private final Map<String, ServletChain> extensionMatches = new HashMap<String, ServletChain>();
+        private final Map<String, ServletChain> extensionMatches = new HashMap<>();
         private volatile ServletChain defaultHandler;
         private volatile boolean requireWelcomeFileMatch;
 

@@ -38,13 +38,13 @@ public class DisallowedMethodsHandler implements HttpHandler {
     private final HttpHandler next;
 
     public DisallowedMethodsHandler(final HttpHandler next, final Set<HttpString> disallowedMethods) {
-        this.disallowedMethods = new HashSet<HttpString>(disallowedMethods);
+        this.disallowedMethods = new HashSet<>(disallowedMethods);
         this.next = next;
     }
 
 
     public DisallowedMethodsHandler(final HttpHandler next, final HttpString... disallowedMethods) {
-        this.disallowedMethods = new HashSet<HttpString>(Arrays.asList(disallowedMethods));
+        this.disallowedMethods = new HashSet<>(Arrays.asList(disallowedMethods));
         this.next = next;
     }
 

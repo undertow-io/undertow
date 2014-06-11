@@ -36,13 +36,13 @@ public class AuthenticationRequiredPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
+            final Map<String, Class<?>> params = new HashMap<>();
             return params;
         }
 
         @Override
         public Set<String> requiredParameters() {
-            final Set<String> params = new HashSet<String>();
+            final Set<String> params = new HashSet<>();
             return params;
         }
 

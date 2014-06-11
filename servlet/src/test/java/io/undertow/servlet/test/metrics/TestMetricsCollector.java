@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class TestMetricsCollector implements MetricsCollector {
 
-    private final ConcurrentHashMap<String,MetricsHandler> metrics = new ConcurrentHashMap<String, MetricsHandler>();
+    private final ConcurrentHashMap<String,MetricsHandler> metrics = new ConcurrentHashMap<>();
 
     @Override
     public void registerMetric(String name, MetricsHandler handler) {

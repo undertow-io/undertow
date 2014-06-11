@@ -69,7 +69,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
 
 
     public Map<String, String> createHeaders() {
-        Map<String, String> headers = new HashMap<String, String>();
+        Map<String, String> headers = new HashMap<>();
         headers.put(Headers.UPGRADE_STRING, "websocket");
         headers.put(Headers.CONNECTION_STRING, "upgrade");
         String key = createSecKey();

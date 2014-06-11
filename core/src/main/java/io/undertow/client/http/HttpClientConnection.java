@@ -88,7 +88,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         }
     };
 
-    private final Deque<HttpClientExchange> pendingQueue = new ArrayDeque<HttpClientExchange>();
+    private final Deque<HttpClientExchange> pendingQueue = new ArrayDeque<>();
     private HttpClientExchange currentRequest;
     private HttpResponseBuilder pendingResponse;
 
@@ -108,7 +108,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
     private int state;
 
-    private final ChannelListener.SimpleSetter<HttpClientConnection> closeSetter = new ChannelListener.SimpleSetter<HttpClientConnection>();
+    private final ChannelListener.SimpleSetter<HttpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
 
     HttpClientConnection(final StreamConnection connection, final OptionMap options, final Pool<ByteBuffer> bufferPool) {
         this.options = options;

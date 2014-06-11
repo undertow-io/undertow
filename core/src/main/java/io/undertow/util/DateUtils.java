@@ -42,7 +42,7 @@ public class DateUtils {
 
     private static final String RFC1123_PATTERN = "EEE, dd MMM yyyy HH:mm:ss z";
 
-    private static final AtomicReference<String> cachedDateString = new AtomicReference<String>();
+    private static final AtomicReference<String> cachedDateString = new AtomicReference<>();
 
     /**
      * Thread local cache of this date format. This is technically a small memory leak, however

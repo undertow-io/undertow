@@ -121,7 +121,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
 
     public ChannelListener.Setter<? extends StreamSourceChannel> getReadSetter() {
         if (readSetter == null) {
-            readSetter = new ChannelListener.SimpleSetter<DetachableStreamSourceChannel>();
+            readSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
                 delegate.setReadListener(ChannelListeners.delegatingChannelListener(this, readSetter));
             }
@@ -170,7 +170,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
 
     public ChannelListener.Setter<? extends StreamSourceChannel> getCloseSetter() {
         if (closeSetter == null) {
-            closeSetter = new ChannelListener.SimpleSetter<DetachableStreamSourceChannel>();
+            closeSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
                 delegate.setCloseListener(ChannelListeners.delegatingChannelListener(this, closeSetter));
             }

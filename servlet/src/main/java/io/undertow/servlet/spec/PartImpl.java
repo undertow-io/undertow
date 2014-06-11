@@ -125,7 +125,7 @@ public class PartImpl implements Part {
 
     @Override
     public Collection<String> getHeaderNames() {
-        final Set<String> ret = new HashSet<String>();
+        final Set<String> ret = new HashSet<>();
         for (HttpString i : formValue.getHeaders().getHeaderNames()) {
             ret.add(i.toString());
         }

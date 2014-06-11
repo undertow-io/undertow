@@ -81,7 +81,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         }
     };
 
-    private final Deque<AjpClientExchange> pendingQueue = new ArrayDeque<AjpClientExchange>();
+    private final Deque<AjpClientExchange> pendingQueue = new ArrayDeque<>();
     private AjpClientExchange currentRequest;
     private AjpResponseBuilder pendingResponse;
 
@@ -99,7 +99,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     private int state;
 
-    private final ChannelListener.SimpleSetter<AjpClientConnection> closeSetter = new ChannelListener.SimpleSetter<AjpClientConnection>();
+    private final ChannelListener.SimpleSetter<AjpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
     private final ClientReadListener clientReadListener = new ClientReadListener();
 
     AjpClientConnection(final StreamConnection connection, final OptionMap options, final Pool<ByteBuffer> bufferPool) {

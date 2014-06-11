@@ -20,7 +20,7 @@ public class PathMatcherTestCase {
     @Test
     public void testSimplePrefixCase() {
 
-        PathMatcher<String> pathMatcher = new PathMatcher<String>();
+        PathMatcher<String> pathMatcher = new PathMatcher<>();
 
         pathMatcher.addPrefixPath("prefix", "response");
         Assert.assertEquals("response", pathMatcher.getPrefixPath("prefix"));
@@ -55,7 +55,7 @@ public class PathMatcherTestCase {
     @Test
     public void testSimpleMatchCase() {
 
-        PathMatcher<String> pathMatcher = new PathMatcher<String>();
+        PathMatcher<String> pathMatcher = new PathMatcher<>();
 
         pathMatcher.addPrefixPath("prefix", "response");
         Assert.assertEquals("response", pathMatcher.match("/prefix").getValue());
@@ -85,7 +85,7 @@ public class PathMatcherTestCase {
     @Test
     public void testSimpleDefaultCase() {
 
-        PathMatcher<String> pathMatcher = new PathMatcher<String>();
+        PathMatcher<String> pathMatcher = new PathMatcher<>();
 
         pathMatcher.addPrefixPath("/", "default");
         Assert.assertEquals("default", pathMatcher.getPrefixPath("/"));
@@ -106,7 +106,7 @@ public class PathMatcherTestCase {
     @Test
     public void testDefaultFallthrough() {
 
-        PathMatcher<String> pathMatcher = new PathMatcher<String>("default");
+        PathMatcher<String> pathMatcher = new PathMatcher<>("default");
 
         // check defaults
         Assert.assertEquals("default", pathMatcher.getPrefixPath("/"));

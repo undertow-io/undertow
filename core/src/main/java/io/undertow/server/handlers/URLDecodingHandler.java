@@ -58,9 +58,9 @@ public class URLDecodingHandler implements HttpHandler {
             exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, decodeSlash, sb));
             exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, decodeSlash, sb));
             if (!exchange.getQueryString().isEmpty()) {
-                final TreeMap<String, Deque<String>> newParams = new TreeMap<String, Deque<String>>();
+                final TreeMap<String, Deque<String>> newParams = new TreeMap<>();
                 for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
-                    final Deque<String> newVales = new ArrayDeque<String>(param.getValue().size());
+                    final Deque<String> newVales = new ArrayDeque<>(param.getValue().size());
                     for (String val : param.getValue()) {
                         newVales.add(URLUtils.decode(val, charset, true, sb));
                     }

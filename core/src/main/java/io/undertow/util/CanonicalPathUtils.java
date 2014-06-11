@@ -70,7 +70,7 @@ public class CanonicalPathUtils {
         int state = initialState;
         int eatCount = 0;
         int tokenEnd = path.length();
-        final List<String> parts = new ArrayList<String>();
+        final List<String> parts = new ArrayList<>();
         for (int i = lastDot - 1; i >= 0; --i) {
             final char c = path.charAt(i);
             switch (state) {

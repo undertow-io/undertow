@@ -39,7 +39,7 @@ import io.undertow.util.Headers;
 public class OriginHandler implements HttpHandler {
 
     private volatile HttpHandler originFailedHandler = ResponseCodeHandler.HANDLE_403;
-    private volatile Set<String> allowedOrigins = new HashSet<String>();
+    private volatile Set<String> allowedOrigins = new HashSet<>();
     private volatile boolean requireAllOrigins = true;
     private volatile boolean requireOriginHeader = true;
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
@@ -86,21 +86,21 @@ public class OriginHandler implements HttpHandler {
     }
 
     public synchronized OriginHandler addAllowedOrigin(final String origin) {
-        final Set<String> allowedOrigins = new HashSet<String>(this.allowedOrigins);
+        final Set<String> allowedOrigins = new HashSet<>(this.allowedOrigins);
         allowedOrigins.add(origin);
         this.allowedOrigins = Collections.unmodifiableSet(allowedOrigins);
         return this;
     }
 
     public synchronized OriginHandler addAllowedOrigins(final Collection<String> origins) {
-        final Set<String> allowedOrigins = new HashSet<String>(this.allowedOrigins);
+        final Set<String> allowedOrigins = new HashSet<>(this.allowedOrigins);
         allowedOrigins.addAll(origins);
         this.allowedOrigins = Collections.unmodifiableSet(allowedOrigins);
         return this;
     }
 
     public synchronized OriginHandler addAllowedOrigins(final String... origins) {
-        final Set<String> allowedOrigins = new HashSet<String>(this.allowedOrigins);
+        final Set<String> allowedOrigins = new HashSet<>(this.allowedOrigins);
         allowedOrigins.addAll(Arrays.asList(origins));
         this.allowedOrigins = Collections.unmodifiableSet(allowedOrigins);
         return this;

@@ -75,15 +75,15 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     private final ClassIntrospecter classIntrospecter;
 
-    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new HashMap<Class<?>, ConfiguredClientEndpoint>();
+    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new HashMap<>();
 
-    private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<ConfiguredServerEndpoint>();
+    private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<>();
 
     /**
      * set of all deployed server endpoint paths. Due to the comparison function we can detect
      * overlaps
      */
-    private final TreeSet<PathTemplate> seenPaths = new TreeSet<PathTemplate>();
+    private final TreeSet<PathTemplate> seenPaths = new TreeSet<>();
 
     private final XnioWorker xnioWorker;
     private final Pool<ByteBuffer> bufferPool;
@@ -110,7 +110,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         this.xnioWorker = xnioWorker;
         this.threadSetupAction = threadSetupAction;
         this.dispatchToWorker = dispatchToWorker;
-        List<WebsocketClientSslProvider> clientSslProviders = new ArrayList<WebsocketClientSslProvider>();
+        List<WebsocketClientSslProvider> clientSslProviders = new ArrayList<>();
         for (WebsocketClientSslProvider provider : ServiceLoader.load(WebsocketClientSslProvider.class, classLoader)) {
             clientSslProviders.add(provider);
         }
@@ -184,8 +184,8 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
-        final List<Extension> extensions = new ArrayList<Extension>();
-        final Map<String, Extension> extMap = new HashMap<String, Extension>();
+        final List<Extension> extensions = new ArrayList<>();
+        final Map<String, Extension> extMap = new HashMap<>();
         for (Extension ext : cec.getExtensions()) {
             extMap.put(ext.getName(), ext);
         }
@@ -198,7 +198,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
 
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);
+        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);
         endpointInstance.onOpen(undertowSession, cec);
         channel.resumeReceives();
 
@@ -227,8 +227,8 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
-        final List<Extension> extensions = new ArrayList<Extension>();
-        final Map<String, Extension> extMap = new HashMap<String, Extension>();
+        final List<Extension> extensions = new ArrayList<>();
+        final Map<String, Extension> extMap = new HashMap<>();
         for (Extension ext : cec.getConfig().getExtensions()) {
             extMap.put(ext.getName(), ext);
         }
@@ -240,7 +240,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             extensions.add(ExtensionImpl.create(e));
         }
 
-        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);
+        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);
         endpointInstance.onOpen(undertowSession, cec.getConfig());
         channel.resumeReceives();
 
@@ -491,9 +491,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
     private static List<WebSocketExtension> toExtensionList(final List<Extension> extensions) {
-        List<WebSocketExtension> ret = new ArrayList<WebSocketExtension>();
+        List<WebSocketExtension> ret = new ArrayList<>();
         for (Extension e : extensions) {
-            final List<WebSocketExtension.Parameter> parameters = new ArrayList<WebSocketExtension.Parameter>();
+            final List<WebSocketExtension.Parameter> parameters = new ArrayList<>();
             for (Extension.Parameter p : e.getParameters()) {
                 parameters.add(new WebSocketExtension.Parameter(p.getName(), p.getValue()));
             }
@@ -516,9 +516,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
             if (configurator != null) {
-                final Map<String, List<String>> newHeaders = new HashMap<String, List<String>>();
+                final Map<String, List<String>> newHeaders = new HashMap<>();
                 for (Map.Entry<String, String> entry : headers.entrySet()) {
-                    ArrayList<String> arrayList = new ArrayList<String>();
+                    ArrayList<String> arrayList = new ArrayList<>();
                     arrayList.add(entry.getValue());
                     newHeaders.put(entry.getKey(), arrayList);
                 }
@@ -535,9 +535,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         public void beforeRequest(Map<String, String> headers) {
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
             if (configurator != null) {
-                final Map<String, List<String>> newHeaders = new HashMap<String, List<String>>();
+                final Map<String, List<String>> newHeaders = new HashMap<>();
                 for (Map.Entry<String, String> entry : headers.entrySet()) {
-                    ArrayList<String> arrayList = new ArrayList<String>();
+                    ArrayList<String> arrayList = new ArrayList<>();
                     arrayList.add(entry.getValue());
                     newHeaders.put(entry.getKey(), arrayList);
                 }

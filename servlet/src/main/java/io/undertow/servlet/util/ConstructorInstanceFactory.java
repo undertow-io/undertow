@@ -40,7 +40,7 @@ public class ConstructorInstanceFactory<T> implements InstanceFactory<T> {
     public InstanceHandle<T> createInstance() throws InstantiationException {
         try {
             final T instance = constructor.newInstance();
-            return new ImmediateInstanceHandle<T>(instance);
+            return new ImmediateInstanceHandle<>(instance);
         } catch (IllegalAccessException e) {
             InstantiationException ite = new InstantiationException();
             ite.initCause(e);

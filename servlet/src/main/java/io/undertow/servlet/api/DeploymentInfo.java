@@ -94,52 +94,52 @@ public class DeploymentInfo implements Cloneable {
     private SessionConfigWrapper sessionConfigWrapper = null;
     private boolean eagerFilterInit = false;
     private boolean disableCachingForSecuredPages = true;
-    private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
-    private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
-    private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
-    private final List<FilterMappingInfo> filterUrlMappings = new ArrayList<FilterMappingInfo>();
-    private final List<ListenerInfo> listeners = new ArrayList<ListenerInfo>();
-    private final List<ServletContainerInitializerInfo> servletContainerInitializers = new ArrayList<ServletContainerInitializerInfo>();
-    private final List<ThreadSetupAction> threadSetupActions = new ArrayList<ThreadSetupAction>();
-    private final Map<String, String> initParameters = new HashMap<String, String>();
-    private final Map<String, Object> servletContextAttributes = new HashMap<String, Object>();
-    private final Map<String, String> localeCharsetMapping = new HashMap<String, String>();
-    private final List<String> welcomePages = new ArrayList<String>();
-    private final List<ErrorPage> errorPages = new ArrayList<ErrorPage>();
-    private final List<MimeMapping> mimeMappings = new ArrayList<MimeMapping>();
-    private final List<SecurityConstraint> securityConstraints = new ArrayList<SecurityConstraint>();
-    private final Set<String> securityRoles = new HashSet<String>();
-    private final List<NotificationReceiver> notificationReceivers = new ArrayList<NotificationReceiver>();
-    private final Map<String, AuthenticationMechanismFactory> authenticationMechanisms = new HashMap<String, AuthenticationMechanismFactory>();
-    private final List<LifecycleInterceptor> lifecycleInterceptors = new ArrayList<LifecycleInterceptor>();
+    private final Map<String, ServletInfo> servlets = new HashMap<>();
+    private final Map<String, FilterInfo> filters = new HashMap<>();
+    private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<>();
+    private final List<FilterMappingInfo> filterUrlMappings = new ArrayList<>();
+    private final List<ListenerInfo> listeners = new ArrayList<>();
+    private final List<ServletContainerInitializerInfo> servletContainerInitializers = new ArrayList<>();
+    private final List<ThreadSetupAction> threadSetupActions = new ArrayList<>();
+    private final Map<String, String> initParameters = new HashMap<>();
+    private final Map<String, Object> servletContextAttributes = new HashMap<>();
+    private final Map<String, String> localeCharsetMapping = new HashMap<>();
+    private final List<String> welcomePages = new ArrayList<>();
+    private final List<ErrorPage> errorPages = new ArrayList<>();
+    private final List<MimeMapping> mimeMappings = new ArrayList<>();
+    private final List<SecurityConstraint> securityConstraints = new ArrayList<>();
+    private final Set<String> securityRoles = new HashSet<>();
+    private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
+    private final Map<String, AuthenticationMechanismFactory> authenticationMechanisms = new HashMap<>();
+    private final List<LifecycleInterceptor> lifecycleInterceptors = new ArrayList<>();
 
     /**
      * additional servlet extensions
      */
-    private final List<ServletExtension> servletExtensions = new ArrayList<ServletExtension>();
+    private final List<ServletExtension> servletExtensions = new ArrayList<>();
 
     /**
      * map of additional roles that should be applied to the given principal.
      */
-    private final Map<String, Set<String>> principalVersusRolesMap = new HashMap<String, Set<String>>();
+    private final Map<String, Set<String>> principalVersusRolesMap = new HashMap<>();
 
     /**
      * Wrappers that are applied before the servlet initial handler, and before any servlet related object have been
      * created. If a wrapper wants to bypass servlet entirely it should register itself here.
      */
-    private final List<HandlerWrapper> initialHandlerChainWrappers = new ArrayList<HandlerWrapper>();
+    private final List<HandlerWrapper> initialHandlerChainWrappers = new ArrayList<>();
 
     /**
      * Handler chain wrappers that are applied outside all other handlers, including security but after the initial
      * servlet handler.
      */
-    private final List<HandlerWrapper> outerHandlerChainWrappers = new ArrayList<HandlerWrapper>();
+    private final List<HandlerWrapper> outerHandlerChainWrappers = new ArrayList<>();
 
     /**
      * Handler chain wrappers that are applied just before the servlet request is dispatched. At this point the security
      * handlers have run, and any security information is attached to the request.
      */
-    private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<HandlerWrapper>();
+    private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<>();
 
 
     public void validate() {
@@ -352,7 +352,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<FilterMappingInfo> getFilterMappings() {
-        final ArrayList<FilterMappingInfo> ret = new ArrayList<FilterMappingInfo>(filterUrlMappings);
+        final ArrayList<FilterMappingInfo> ret = new ArrayList<>(filterUrlMappings);
         ret.addAll(filterServletNameMappings);
         return Collections.unmodifiableList(ret);
     }
@@ -819,7 +819,7 @@ public class DeploymentInfo implements Cloneable {
     public DeploymentInfo addPrincipalVsRoleMapping(final String principal, final String mapping) {
         Set<String> set = principalVersusRolesMap.get(principal);
         if (set == null) {
-            principalVersusRolesMap.put(principal, set = new HashSet<String>());
+            principalVersusRolesMap.put(principal, set = new HashSet<>());
         }
         set.add(mapping);
         return this;
@@ -828,7 +828,7 @@ public class DeploymentInfo implements Cloneable {
     public DeploymentInfo addPrincipalVsRoleMappings(final String principal, final String... mappings) {
         Set<String> set = principalVersusRolesMap.get(principal);
         if (set == null) {
-            principalVersusRolesMap.put(principal, set = new HashSet<String>());
+            principalVersusRolesMap.put(principal, set = new HashSet<>());
         }
         set.addAll(Arrays.asList(mappings));
         return this;
@@ -837,7 +837,7 @@ public class DeploymentInfo implements Cloneable {
     public DeploymentInfo addPrincipalVsRoleMappings(final String principal, final Collection<String> mappings) {
         Set<String> set = principalVersusRolesMap.get(principal);
         if (set == null) {
-            principalVersusRolesMap.put(principal, set = new HashSet<String>());
+            principalVersusRolesMap.put(principal, set = new HashSet<>());
         }
         set.addAll(mappings);
         return this;

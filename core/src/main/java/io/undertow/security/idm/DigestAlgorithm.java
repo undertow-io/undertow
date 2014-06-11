@@ -37,7 +37,7 @@ public enum DigestAlgorithm {
     static {
         DigestAlgorithm[] algorithms = DigestAlgorithm.values();
 
-        Map<String, DigestAlgorithm> byToken = new HashMap<String, DigestAlgorithm>(algorithms.length);
+        Map<String, DigestAlgorithm> byToken = new HashMap<>(algorithms.length);
         for (DigestAlgorithm current : algorithms) {
             byToken.put(current.token, current);
         }

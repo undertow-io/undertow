@@ -104,7 +104,7 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
         if (existing != null) {
             UndertowLogger.REQUEST_LOGGER.debug("Resuming existing session, not doing NPN negotiation");
             if(existing.equals(SPDY_3_1) || existing.equals(SPDY_3)) {
-                SpdyChannel sc = new SpdyChannel(channel, bufferPool, new ImmediatePooled<ByteBuffer>(ByteBuffer.wrap(new byte[0])), heapBufferPool);
+                SpdyChannel sc = new SpdyChannel(channel, bufferPool, new ImmediatePooled<>(ByteBuffer.wrap(new byte[0])), heapBufferPool);
                 sc.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize));
                 sc.resumeReceives();
             } else {

@@ -60,6 +60,6 @@ public class ServletConfigImpl implements ServletConfig {
 
     @Override
     public Enumeration<String> getInitParameterNames() {
-        return new IteratorEnumeration<String>(servletInfo.getInitParams().keySet().iterator());
+        return new IteratorEnumeration<>(servletInfo.getInitParams().keySet().iterator());
     }
 }

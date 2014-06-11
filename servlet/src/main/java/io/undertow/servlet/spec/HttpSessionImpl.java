@@ -132,11 +132,11 @@ public class HttpSessionImpl implements HttpSession {
     @Override
     public Enumeration<String> getAttributeNames() {
         Set<String> attributeNames = getFilteredAttributeNames();
-        return new IteratorEnumeration<String>(attributeNames.iterator());
+        return new IteratorEnumeration<>(attributeNames.iterator());
     }
 
     private Set<String> getFilteredAttributeNames() {
-        Set<String> attributeNames = new HashSet<String>(session.getAttributeNames());
+        Set<String> attributeNames = new HashSet<>(session.getAttributeNames());
         Iterator<String> it = attributeNames.iterator();
         while (it.hasNext()) {
             if(it.next().startsWith(IO_UNDERTOW)) {

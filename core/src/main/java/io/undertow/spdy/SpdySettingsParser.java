@@ -33,7 +33,7 @@ class SpdySettingsParser extends PushBackParser {
 
     private int count = 0;
 
-    private final List<SpdySetting> settings = new ArrayList<SpdySetting>();
+    private final List<SpdySetting> settings = new ArrayList<>();
 
     public SpdySettingsParser(Pool<ByteBuffer> bufferPool, int frameLength) {
         super(bufferPool, frameLength);

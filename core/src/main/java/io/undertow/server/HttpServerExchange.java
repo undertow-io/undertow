@@ -959,18 +959,18 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Deque<String>> getQueryParameters() {
         if (queryParameters == null) {
-            queryParameters = new TreeMap<String, Deque<String>>();
+            queryParameters = new TreeMap<>();
         }
         return queryParameters;
     }
 
     public HttpServerExchange addQueryParam(final String name, final String param) {
         if (queryParameters == null) {
-            queryParameters = new TreeMap<String, Deque<String>>();
+            queryParameters = new TreeMap<>();
         }
         Deque<String> list = queryParameters.get(name);
         if (list == null) {
-            queryParameters.put(name, list = new ArrayDeque<String>(2));
+            queryParameters.put(name, list = new ArrayDeque<>(2));
         }
         list.add(param);
         return this;
@@ -984,18 +984,18 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Deque<String>> getPathParameters() {
         if (pathParameters == null) {
-            pathParameters = new TreeMap<String, Deque<String>>();
+            pathParameters = new TreeMap<>();
         }
         return pathParameters;
     }
 
     public HttpServerExchange addPathParam(final String name, final String param) {
         if (pathParameters == null) {
-            pathParameters = new TreeMap<String, Deque<String>>();
+            pathParameters = new TreeMap<>();
         }
         Deque<String> list = pathParameters.get(name);
         if (list == null) {
-            pathParameters.put(name, list = new ArrayDeque<String>(2));
+            pathParameters.put(name, list = new ArrayDeque<>(2));
         }
         list.add(param);
         return this;
@@ -1021,7 +1021,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public HttpServerExchange setResponseCookie(final Cookie cookie) {
         if (responseCookies == null) {
-            responseCookies = new TreeMap<String, Cookie>(); //hashmap is slow to allocate in JDK7
+            responseCookies = new TreeMap<>(); //hashmap is slow to allocate in JDK7
         }
         responseCookies.put(cookie.getName(), cookie);
         return this;
@@ -1032,7 +1032,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Cookie> getResponseCookies() {
         if (responseCookies == null) {
-            responseCookies = new TreeMap<String, Cookie>();
+            responseCookies = new TreeMap<>();
         }
         return responseCookies;
     }
@@ -1072,7 +1072,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
         if (wrappers != null) {
             this.requestWrappers = null;
-            final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<StreamSourceConduit>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
+            final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
             sourceChannel.setConduit(factory.create());
         }
         return requestChannel = new ReadDispatchChannel(sourceChannel);

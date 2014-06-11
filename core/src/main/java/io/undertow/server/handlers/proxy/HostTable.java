@@ -37,8 +37,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 public class HostTable<H> {
 
-    private final Map<H, Set<Target>> hosts = new CopyOnWriteMap<H, Set<Target>>();
-    private final Map<String, PathMatcher<Set<H>>> targets = new CopyOnWriteMap<String, PathMatcher<Set<H>>>();
+    private final Map<H, Set<Target>> hosts = new CopyOnWriteMap<>();
+    private final Map<String, PathMatcher<Set<H>>> targets = new CopyOnWriteMap<>();
 
     public synchronized HostTable addHost(H host) {
         if(hosts.containsKey(host)) {
@@ -64,12 +64,12 @@ public class HostTable<H> {
         hostData.add(new Target(virtualHost, contextPath));
         PathMatcher<Set<H>> paths = targets.get(virtualHost);
         if(paths == null) {
-            paths = new PathMatcher<Set<H>>();
+            paths = new PathMatcher<>();
             targets.put(virtualHost, paths);
         }
         Set<H> hostSet = paths.getPrefixPath(contextPath);
         if(hostSet == null) {
-            hostSet = new CopyOnWriteArraySet<H>();
+            hostSet = new CopyOnWriteArraySet<>();
             paths.addPrefixPath(contextPath, hostSet);
         }
         hostSet.add(host);

@@ -43,8 +43,8 @@ public class PathMatcher<T> {
     private static final String STRING_PATH_SEPARATOR = "/";
 
     private volatile T defaultHandler;
-    private final ConcurrentMap<String, T> paths = new CopyOnWriteMap<String, T>();
-    private final ConcurrentMap<String, T> exactPathMatches = new CopyOnWriteMap<String, T>();
+    private final ConcurrentMap<String, T> paths = new CopyOnWriteMap<>();
+    private final ConcurrentMap<String, T> exactPathMatches = new CopyOnWriteMap<>();
 
     /**
      * lengths of all registered paths
@@ -67,7 +67,7 @@ public class PathMatcher<T> {
         if (!exactPathMatches.isEmpty()) {
             T match = getExactPath(path);
             if (match != null) {
-                return new PathMatch<T>("", match);
+                return new PathMatch<>("", match);
             }
         }
 
@@ -78,7 +78,7 @@ public class PathMatcher<T> {
             if (pathLength == length) {
                 T next = paths.get(path);
                 if (next != null) {
-                    return new PathMatch<T>(path.substring(pathLength), next);
+                    return new PathMatch<>(path.substring(pathLength), next);
                 }
             } else if (pathLength < length) {
                 char c = path.charAt(pathLength);
@@ -86,12 +86,12 @@ public class PathMatcher<T> {
                     String part = path.substring(0, pathLength);
                     T next = paths.get(part);
                     if (next != null) {
-                        return new PathMatch<T>(path.substring(pathLength), next);
+                        return new PathMatch<>(path.substring(pathLength), next);
                     }
                 }
             }
         }
-        return new PathMatch<T>(path, defaultHandler);
+        return new PathMatch<>(path, defaultHandler);
     }
 
     /**
@@ -151,7 +151,7 @@ public class PathMatcher<T> {
     }
 
     private void buildLengths() {
-        final Set<Integer> lengths = new TreeSet<Integer>(new Comparator<Integer>() {
+        final Set<Integer> lengths = new TreeSet<>(new Comparator<Integer>() {
             @Override
             public int compare(Integer o1, Integer o2) {
                 return -o1.compareTo(o2);

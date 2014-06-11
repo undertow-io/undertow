@@ -48,7 +48,7 @@ import static org.xnio.Bits.anyAreSet;
  */
 public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
-    private final Deque<Frame> frameQueue = new ArrayDeque<Frame>();
+    private final Deque<Frame> frameQueue = new ArrayDeque<>();
     /**
      * The total amount of data that has been queued to be written out
      */

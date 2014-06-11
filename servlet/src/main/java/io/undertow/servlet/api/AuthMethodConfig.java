@@ -31,12 +31,12 @@ public class AuthMethodConfig implements Cloneable {
 
     public AuthMethodConfig(String name, Map<String, String> properties) {
         this.name = name;
-        this.properties = new HashMap<String, String>(properties);
+        this.properties = new HashMap<>(properties);
     }
 
     public AuthMethodConfig(String name) {
         this.name = name;
-        this.properties = new HashMap<String, String>();
+        this.properties = new HashMap<>();
     }
 
     public String getName() {

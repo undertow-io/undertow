@@ -87,7 +87,7 @@ public class AnnotatedEndpoint extends Endpoint {
         s.setReceiveListener(new AnnotatedEndpointFrameHandler((UndertowSession) session, partialText, partialBinary));
 
         if (webSocketOpen != null) {
-            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+            final Map<Class<?>, Object> params = new HashMap<>();
             params.put(Session.class, session);
             params.put(EndpointConfig.class, endpointConfiguration);
             params.put(Map.class, session.getPathParameters());
@@ -112,7 +112,7 @@ public class AnnotatedEndpoint extends Endpoint {
     @Override
     public void onClose(final Session session, final CloseReason closeReason) {
         if (webSocketClose != null) {
-            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+            final Map<Class<?>, Object> params = new HashMap<>();
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             params.put(CloseReason.class, closeReason);
@@ -124,7 +124,7 @@ public class AnnotatedEndpoint extends Endpoint {
     public void onError(final Session session, final Throwable thr) {
         try {
             if (webSocketError != null) {
-                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+                final Map<Class<?>, Object> params = new HashMap<>();
                 params.put(Session.class, session);
                 params.put(Throwable.class, thr);
                 params.put(Map.class, session.getPathParameters());
@@ -201,7 +201,7 @@ public class AnnotatedEndpoint extends Endpoint {
             try {
                 if (webSocketClose != null) {
                     try {
-                        final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+                        final Map<Class<?>, Object> params = new HashMap<>();
                         params.put(Session.class, session);
                         params.put(Map.class, session.getPathParameters());
                         params.put(CloseReason.class, new CloseReason(CloseReason.CloseCodes.getCloseCode(cm.getCode()), cm.getReason()));
@@ -230,7 +230,7 @@ public class AnnotatedEndpoint extends Endpoint {
             Pooled<ByteBuffer[]> pooled = bufferedBinaryMessage.getData();
             try {
                 PongMessage message = DefaultPongMessage.create(WebSockets.mergeBuffers(pooled.getResource()));
-                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+                final Map<Class<?>, Object> params = new HashMap<>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 params.put(PongMessage.class, message);
@@ -312,7 +312,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 messageObject = data;
             }
 
-            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+            final Map<Class<?>, Object> params = new HashMap<>();
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             params.put(textMessage.getMessageType(), messageObject);
@@ -397,7 +397,7 @@ public class AnnotatedEndpoint extends Endpoint {
             }
             final Pooled<ByteBuffer[]> pooled = message.getData();
             try {
-                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+                final Map<Class<?>, Object> params = new HashMap<>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 if (binaryMessage.isDecoderRequired()) {

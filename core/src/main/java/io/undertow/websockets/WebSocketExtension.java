@@ -32,7 +32,7 @@ public class WebSocketExtension {
 
     public WebSocketExtension(String name, List<Parameter> parameters) {
         this.name = name;
-        this.parameters = Collections.unmodifiableList(new ArrayList<Parameter>(parameters));
+        this.parameters = Collections.unmodifiableList(new ArrayList<>(parameters));
     }
 
     public String getName() {
@@ -77,13 +77,13 @@ public class WebSocketExtension {
     }
 
     public static List<WebSocketExtension> parse(final String extensionHeader) {
-        List<WebSocketExtension> extensions = new ArrayList<WebSocketExtension>();
+        List<WebSocketExtension> extensions = new ArrayList<>();
         //TODO: more efficient parsing algorithm
         String[] parts = extensionHeader.split(",");
         for (String part : parts) {
             String[] items = part.split(";");
             if (items.length > 0) {
-                final List<Parameter> params = new ArrayList<Parameter>(items.length - 1);
+                final List<Parameter> params = new ArrayList<>(items.length - 1);
                 String name = items[0];
                 for (int i = 1; i < items.length; ++i) {
                     String[] param = items[i].split("=");

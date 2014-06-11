@@ -35,7 +35,7 @@ import io.undertow.util.Headers;
 public class NameVirtualHostHandler implements HttpHandler {
 
     private volatile HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
-    private final Map<String, HttpHandler> hosts = new CopyOnWriteMap<String, HttpHandler>();
+    private final Map<String, HttpHandler> hosts = new CopyOnWriteMap<>();
 
 
     @Override

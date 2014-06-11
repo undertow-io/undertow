@@ -33,6 +33,6 @@ public class DefaultClassIntrospector implements ClassIntrospecter {
 
     @Override
     public <T> InstanceFactory<T> createInstanceFactory(final Class<T> clazz) throws NoSuchMethodException {
-        return new ConstructorInstanceFactory<T>(clazz.getDeclaredConstructor());
+        return new ConstructorInstanceFactory<>(clazz.getDeclaredConstructor());
     }
 }

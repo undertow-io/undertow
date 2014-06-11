@@ -57,12 +57,12 @@ import static org.xnio.Bits.anyAreSet;
  */
 public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedChannel<C, R, S>, R extends AbstractFramedStreamSourceChannel<C, R, S>, S extends AbstractFramedStreamSinkChannel<C, R, S>> implements StreamSinkChannel {
 
-    private static final Pooled<ByteBuffer> EMPTY_BYTE_BUFFER = new ImmediatePooled<ByteBuffer>(ByteBuffer.allocateDirect(0));
+    private static final Pooled<ByteBuffer> EMPTY_BYTE_BUFFER = new ImmediatePooled<>(ByteBuffer.allocateDirect(0));
 
     private final Pooled<ByteBuffer> buffer;
     private final C channel;
-    private final ChannelListener.SimpleSetter<S> writeSetter = new ChannelListener.SimpleSetter<S>();
-    private final ChannelListener.SimpleSetter<S> closeSetter = new ChannelListener.SimpleSetter<S>();
+    private final ChannelListener.SimpleSetter<S> writeSetter = new ChannelListener.SimpleSetter<>();
+    private final ChannelListener.SimpleSetter<S> closeSetter = new ChannelListener.SimpleSetter<>();
 
     private final Object lock = new Object();
 

@@ -174,7 +174,7 @@ public class JDBCLogDatabaseTestCase {
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
-            final List<Future<?>> futures = new ArrayList<Future<?>>();
+            final List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < NUM_THREADS; ++i) {
                 final int threadNo = i;
                 futures.add(executor.submit(new Runnable() {

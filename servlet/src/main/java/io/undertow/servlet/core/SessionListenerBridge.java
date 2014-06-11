@@ -66,7 +66,7 @@ public class SessionListenerBridge implements SessionListener {
             applicationListeners.sessionDestroyed(httpSession);
             //we make a defensive copy here, as there is no guarantee that the underlying session map
             //is a concurrent map, and as a result a concurrent modification exception may be thrown
-            HashSet<String> names = new HashSet<String>(session.getAttributeNames());
+            HashSet<String> names = new HashSet<>(session.getAttributeNames());
             for(String attribute : names) {
                 session.removeAttribute(attribute);
             }

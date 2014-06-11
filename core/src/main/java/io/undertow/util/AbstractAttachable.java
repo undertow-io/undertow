@@ -75,7 +75,7 @@ public abstract class AbstractAttachable implements Attachable {
     }
 
     protected Map<AttachmentKey<?>, Object> createAttachmentMap() {
-        return new IdentityHashMap<AttachmentKey<?>, Object>(5);
+        return new IdentityHashMap<>(5);
     }
 
     /**
@@ -101,7 +101,7 @@ public abstract class AbstractAttachable implements Attachable {
             final Map<AttachmentKey<?>, Object> attachments = this.attachments;
             final AttachmentList<T> list = key.cast(attachments.get(key));
             if (list == null) {
-                final AttachmentList<T> newList = new AttachmentList<T>(((ListAttachmentKey<T>) key).getValueClass());
+                final AttachmentList<T> newList = new AttachmentList<>(((ListAttachmentKey<T>) key).getValueClass());
                 attachments.put(key, newList);
                 newList.add(value);
             } else {

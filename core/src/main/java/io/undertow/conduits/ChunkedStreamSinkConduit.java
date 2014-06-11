@@ -346,7 +346,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         ByteBuffer data = ByteBuffer.allocate(lastChunkBuffer.remaining());
         data.put(lastChunkBuffer);
         data.flip();
-        this.lastChunkBuffer = new ImmediatePooled<ByteBuffer>(data);
+        this.lastChunkBuffer = new ImmediatePooled<>(data);
 
         lastChunkBufferPooled.free();
     }

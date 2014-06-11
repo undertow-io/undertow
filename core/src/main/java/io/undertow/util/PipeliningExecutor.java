@@ -33,7 +33,7 @@ public class PipeliningExecutor implements Executor {
 
     private final Executor executor;
 
-    private static final ThreadLocal<LinkedList<Runnable>> THREAD_QUEUE = new ThreadLocal<LinkedList<Runnable>>();
+    private static final ThreadLocal<LinkedList<Runnable>> THREAD_QUEUE = new ThreadLocal<>();
 
     public PipeliningExecutor(Executor executor) {
         this.executor = executor;
@@ -50,7 +50,7 @@ public class PipeliningExecutor implements Executor {
                 public void run() {
                     LinkedList<Runnable> queue = THREAD_QUEUE.get();
                     if (queue == null) {
-                        THREAD_QUEUE.set(queue = new LinkedList<Runnable>());
+                        THREAD_QUEUE.set(queue = new LinkedList<>());
                     }
                     try {
                         command.run();

@@ -79,7 +79,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      */
     public WebSocketProtocolHandshakeHandler(final WebSocketConnectionCallback callback, final HttpHandler next) {
         this.callback = callback;
-        Set<Handshake> handshakes = new HashSet<Handshake>();
+        Set<Handshake> handshakes = new HashSet<>();
         handshakes.add(new Hybi13Handshake());
         handshakes.add(new Hybi08Handshake());
         handshakes.add(new Hybi07Handshake());
@@ -108,7 +108,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      */
     public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final WebSocketConnectionCallback callback, final HttpHandler next) {
         this.callback = callback;
-        this.handshakes = new HashSet<Handshake>(handshakes);
+        this.handshakes = new HashSet<>(handshakes);
         this.next = next;
         this.upgradeListener = null;
     }
@@ -131,7 +131,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      */
     public WebSocketProtocolHandshakeHandler(final HttpUpgradeListener callback, final HttpHandler next) {
         this.callback = null;
-        Set<Handshake> handshakes = new HashSet<Handshake>();
+        Set<Handshake> handshakes = new HashSet<>();
         handshakes.add(new Hybi13Handshake());
         handshakes.add(new Hybi08Handshake());
         handshakes.add(new Hybi07Handshake());
@@ -161,7 +161,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      */
     public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final HttpUpgradeListener callback, final HttpHandler next) {
         this.callback = null;
-        this.handshakes = new HashSet<Handshake>(handshakes);
+        this.handshakes = new HashSet<>(handshakes);
         this.next = next;
         this.upgradeListener = callback;
     }

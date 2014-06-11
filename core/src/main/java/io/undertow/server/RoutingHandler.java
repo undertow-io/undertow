@@ -36,7 +36,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class RoutingHandler implements HttpHandler {
 
-    private final Map<HttpString, PathTemplateMatcher<RoutingMatch>> matches = new CopyOnWriteMap<HttpString, PathTemplateMatcher<RoutingMatch>>();
+    private final Map<HttpString, PathTemplateMatcher<RoutingMatch>> matches = new CopyOnWriteMap<>();
 
     private volatile HttpHandler fallbackHandler = ResponseCodeHandler.HANDLE_404;
     private volatile HttpHandler invalidMethodHandler = ResponseCodeHandler.HANDLE_405;
@@ -94,7 +94,7 @@ public class RoutingHandler implements HttpHandler {
     public synchronized RoutingHandler add(HttpString method, String template, HttpHandler handler) {
         PathTemplateMatcher<RoutingMatch> matcher = matches.get(method);
         if (matcher == null) {
-            matches.put(method, matcher = new PathTemplateMatcher<RoutingMatch>());
+            matches.put(method, matcher = new PathTemplateMatcher<>());
         }
         RoutingMatch res = matcher.get(template);
         if (res == null) {
@@ -111,7 +111,7 @@ public class RoutingHandler implements HttpHandler {
     public synchronized RoutingHandler add(HttpString method, String template, Predicate predicate, HttpHandler handler) {
         PathTemplateMatcher<RoutingMatch> matcher = matches.get(method);
         if (matcher == null) {
-            matches.put(method, matcher = new PathTemplateMatcher<RoutingMatch>());
+            matches.put(method, matcher = new PathTemplateMatcher<>());
         }
         RoutingMatch res = matcher.get(template);
         if (res == null) {
@@ -131,7 +131,7 @@ public class RoutingHandler implements HttpHandler {
 
     private static class RoutingMatch {
 
-        final List<HandlerHolder> predicatedHandlers = new CopyOnWriteArrayList<HandlerHolder>();
+        final List<HandlerHolder> predicatedHandlers = new CopyOnWriteArrayList<>();
         volatile HttpHandler defaultHandler;
 
     }

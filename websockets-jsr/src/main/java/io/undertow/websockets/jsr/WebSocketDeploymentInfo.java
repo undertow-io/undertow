@@ -38,9 +38,9 @@ public class WebSocketDeploymentInfo {
     private XnioWorker worker;
     private Pool<ByteBuffer> buffers;
     private boolean dispatchToWorkerThread = false;
-    private final List<Class<?>> annotatedEndpoints = new ArrayList<Class<?>>();
-    private final List<ServerEndpointConfig> programaticEndpoints = new ArrayList<ServerEndpointConfig>();
-    private final List<ContainerReadyListener> containerReadyListeners = new ArrayList<ContainerReadyListener>();
+    private final List<Class<?>> annotatedEndpoints = new ArrayList<>();
+    private final List<ServerEndpointConfig> programaticEndpoints = new ArrayList<>();
+    private final List<ContainerReadyListener> containerReadyListeners = new ArrayList<>();
 
     public XnioWorker getWorker() {
         return worker;

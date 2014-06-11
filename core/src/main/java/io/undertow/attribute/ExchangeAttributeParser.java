@@ -43,7 +43,7 @@ public class ExchangeAttributeParser {
     ExchangeAttributeParser(final ClassLoader classLoader, List<ExchangeAttributeWrapper> wrappers) {
         this.wrappers = wrappers;
         ServiceLoader<ExchangeAttributeBuilder> loader = ServiceLoader.load(ExchangeAttributeBuilder.class, classLoader);
-        final List<ExchangeAttributeBuilder> builders = new ArrayList<ExchangeAttributeBuilder>();
+        final List<ExchangeAttributeBuilder> builders = new ArrayList<>();
         for (ExchangeAttributeBuilder instance : loader) {
             builders.add(instance);
         }
@@ -64,7 +64,7 @@ public class ExchangeAttributeParser {
      * @return
      */
     public ExchangeAttribute parse(final String valueString) {
-        final List<ExchangeAttribute> attributes = new ArrayList<ExchangeAttribute>();
+        final List<ExchangeAttribute> attributes = new ArrayList<>();
         int pos = 0;
         int state = 0; //0 = literal, 1 = %, 2 = %{, 3 = $, 4 = ${
         for (int i = 0; i < valueString.length(); ++i) {

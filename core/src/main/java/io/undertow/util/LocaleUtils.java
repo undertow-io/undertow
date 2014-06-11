@@ -50,7 +50,7 @@ public class LocaleUtils {
         if (acceptLanguage == null || acceptLanguage.isEmpty()) {
             return Collections.singletonList(Locale.getDefault());
         }
-        final List<Locale> ret = new ArrayList<Locale>();
+        final List<Locale> ret = new ArrayList<>();
         final List<List<QValueParser.QValueResult>> parsedResults = QValueParser.parse(acceptLanguage);
         for (List<QValueParser.QValueResult> qvalueResult : parsedResults) {
             for (QValueParser.QValueResult res : qvalueResult) {

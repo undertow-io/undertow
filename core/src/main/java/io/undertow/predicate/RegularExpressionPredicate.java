@@ -85,7 +85,7 @@ public class RegularExpressionPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
+            final Map<String, Class<?>> params = new HashMap<>();
             params.put("pattern", String.class);
             params.put("value", ExchangeAttribute.class);
             params.put("full-match", Boolean.class);
@@ -94,7 +94,7 @@ public class RegularExpressionPredicate implements Predicate {
 
         @Override
         public Set<String> requiredParameters() {
-            final Set<String> params = new HashSet<String>();
+            final Set<String> params = new HashSet<>();
             params.add("pattern");
             return params;
         }

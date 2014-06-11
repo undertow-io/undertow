@@ -129,7 +129,7 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
     private static final long FLAG_FINAL_CHUNK_GENERATED = 1L << 59L;
 
     static {
-        final Map<HttpString, Integer> headers = new HashMap<HttpString, Integer>();
+        final Map<HttpString, Integer> headers = new HashMap<>();
         headers.put(Headers.ACCEPT, 0xA001);
         headers.put(Headers.ACCEPT_CHARSET, 0xA002);
         headers.put(Headers.ACCEPT_ENCODING, 0xA003);
@@ -147,7 +147,7 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
 
         HEADER_MAP = Collections.unmodifiableMap(headers);
 
-        final Map<HttpString, Integer> methods = new HashMap<HttpString, Integer>();
+        final Map<HttpString, Integer> methods = new HashMap<>();
         methods.put(OPTIONS, 1);
         methods.put(GET, 2);
         methods.put(HEAD, 3);

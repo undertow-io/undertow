@@ -47,7 +47,7 @@ class SpdyGoAwayStreamSinkChannel extends SpdyControlFrameStreamSinkChannel {
         SpdyProtocolUtils.putInt(buf, lastGoodStreamId);
         SpdyProtocolUtils.putInt(buf, status);
         buf.flip();
-        return new SendFrameHeader( new ImmediatePooled<ByteBuffer>(buf));
+        return new SendFrameHeader( new ImmediatePooled<>(buf));
     }
 
     @Override

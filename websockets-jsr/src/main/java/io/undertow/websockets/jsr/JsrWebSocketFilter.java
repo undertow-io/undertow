@@ -65,7 +65,7 @@ public class JsrWebSocketFilter implements Filter {
     private Set<WebSocketChannel> peerConnections;
 
     protected WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config) {
-        List<Handshake> handshakes = new ArrayList<Handshake>();
+        List<Handshake> handshakes = new ArrayList<>();
         handshakes.add(new JsrHybi13Handshake(config));
         handshakes.add(new JsrHybi08Handshake(config));
         handshakes.add(new JsrHybi07Handshake(config));
@@ -77,7 +77,7 @@ public class JsrWebSocketFilter implements Filter {
         peerConnections = Collections.newSetFromMap(new ConcurrentHashMap<WebSocketChannel, Boolean>());
         ServerWebSocketContainer container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
         container.deploymentComplete();
-        pathTemplateMatcher = new PathTemplateMatcher<WebSocketHandshakeHolder>();
+        pathTemplateMatcher = new PathTemplateMatcher<>();
         for (ConfiguredServerEndpoint endpoint : container.getConfiguredServerEndpoints()) {
             pathTemplateMatcher.add(endpoint.getPathTemplate(), handshakes(endpoint));
         }

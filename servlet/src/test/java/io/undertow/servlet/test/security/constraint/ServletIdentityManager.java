@@ -42,13 +42,13 @@ import java.util.Set;
 public class ServletIdentityManager implements IdentityManager {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
-    private final Map<String, UserAccount> users = new HashMap<String, UserAccount>();
+    private final Map<String, UserAccount> users = new HashMap<>();
 
     public void addUser(final String name, final String password, final String... roles) {
         UserAccount user = new UserAccount();
         user.name = name;
         user.password = password.toCharArray();
-        user.roles = new HashSet<String>(Arrays.asList(roles));
+        user.roles = new HashSet<>(Arrays.asList(roles));
         users.put(name, user);
     }
 

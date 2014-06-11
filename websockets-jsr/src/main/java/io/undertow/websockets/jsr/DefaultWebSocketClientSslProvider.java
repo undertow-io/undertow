@@ -43,7 +43,7 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
 
     public static final String SSL_CONTEXT = "io.undertow.websocket.SSL_CONTEXT";
 
-    private static final ThreadLocal<SSLContext> LOCAL_SSL_CONTEXT = new ThreadLocal<SSLContext>();
+    private static final ThreadLocal<SSLContext> LOCAL_SSL_CONTEXT = new ThreadLocal<>();
 
     @Override
     public XnioSsl getSsl(XnioWorker worker, Class<?> annotatedEndpoint, URI uri) {

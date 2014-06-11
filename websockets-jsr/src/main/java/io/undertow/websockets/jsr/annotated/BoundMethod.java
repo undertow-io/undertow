@@ -38,8 +38,8 @@ import io.undertow.websockets.jsr.JsrWebSocketMessages;
 final class BoundMethod {
 
     private final Method method;
-    private final List<BoundParameter> parameters = new ArrayList<BoundParameter>();
-    private final Set<Class> paramTypes = new HashSet<Class>();
+    private final List<BoundParameter> parameters = new ArrayList<>();
+    private final Set<Class> paramTypes = new HashSet<>();
     private final Class<?> messageType;
     private final boolean decoderRequired;
     private final long maxMessageSize;
@@ -49,7 +49,7 @@ final class BoundMethod {
         this.messageType = messageType;
         this.decoderRequired = decoderRequired;
         this.maxMessageSize = maxMessageSize;
-        final Set<Integer> allParams = new HashSet<Integer>();
+        final Set<Integer> allParams = new HashSet<>();
         for (int i = 0; i < method.getParameterTypes().length; ++i) {
             allParams.add(i);
             paramTypes.add(method.getParameterTypes()[i]);

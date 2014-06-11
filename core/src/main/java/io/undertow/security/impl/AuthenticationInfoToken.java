@@ -41,13 +41,13 @@ public enum AuthenticationInfoToken implements HeaderToken {
     private static final HeaderTokenParser<AuthenticationInfoToken> TOKEN_PARSER;
 
     static {
-        Map<String, AuthenticationInfoToken> expected = new LinkedHashMap<String, AuthenticationInfoToken>(
+        Map<String, AuthenticationInfoToken> expected = new LinkedHashMap<>(
                 AuthenticationInfoToken.values().length);
         for (AuthenticationInfoToken current : AuthenticationInfoToken.values()) {
             expected.put(current.getName(), current);
         }
 
-        TOKEN_PARSER = new HeaderTokenParser<AuthenticationInfoToken>(Collections.unmodifiableMap(expected));
+        TOKEN_PARSER = new HeaderTokenParser<>(Collections.unmodifiableMap(expected));
     }
 
     private final String name;

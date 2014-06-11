@@ -69,13 +69,13 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
         DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
 
         //this is not super efficient, but it does not really matter
-        final Set<String> urlPatterns = new HashSet<String>();
+        final Set<String> urlPatterns = new HashSet<>();
         for (SecurityConstraint sc : deploymentInfo.getSecurityConstraints()) {
             for (WebResourceCollection webResources : sc.getWebResourceCollections()) {
                 urlPatterns.addAll(webResources.getUrlPatterns());
             }
         }
-        final Set<String> ret = new HashSet<String>();
+        final Set<String> ret = new HashSet<>();
         for (String url : servletInfo.getMappings()) {
             if (urlPatterns.contains(url)) {
                 ret.add(url);
@@ -126,8 +126,8 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
     @Override
     public Set<String> addMapping(final String... urlPatterns) {
         DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
-        final Set<String> ret = new HashSet<String>();
-        final Set<String> existing = new HashSet<String>();
+        final Set<String> ret = new HashSet<>();
+        final Set<String> existing = new HashSet<>();
         for (ServletInfo s : deploymentInfo.getServlets().values()) {
             if (!s.getName().equals(servletInfo.getName())) {
                 existing.addAll(s.getMappings());
@@ -187,7 +187,7 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
 
     @Override
     public Set<String> setInitParameters(final Map<String, String> initParameters) {
-        final Set<String> ret = new HashSet<String>();
+        final Set<String> ret = new HashSet<>();
         for (Map.Entry<String, String> entry : initParameters.entrySet()) {
             if (!setInitParameter(entry.getKey(), entry.getValue())) {
                 ret.add(entry.getKey());

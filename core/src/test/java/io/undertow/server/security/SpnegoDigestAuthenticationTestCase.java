@@ -41,7 +41,7 @@ public class SpnegoDigestAuthenticationTestCase extends SpnegoAuthenticationTest
 
     @Override
     protected List<AuthenticationMechanism> getTestMechanisms() {
-        ArrayList<AuthenticationMechanism> mechanisms = new ArrayList<AuthenticationMechanism>(super.getTestMechanisms());
+        ArrayList<AuthenticationMechanism> mechanisms = new ArrayList<>(super.getTestMechanisms());
         mechanisms.add(DigestAuthenticationAuthTestCase.getTestMechanism());
 
         return mechanisms;

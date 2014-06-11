@@ -191,9 +191,9 @@ public class Cookies {
     public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
 
         if (cookies == null) {
-            return new TreeMap<String, Cookie>();
+            return new TreeMap<>();
         }
-        final Map<String, Cookie> parsedCookies = new TreeMap<String, Cookie>();
+        final Map<String, Cookie> parsedCookies = new TreeMap<>();
 
         for (String cookie : cookies) {
             parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue);
@@ -206,8 +206,8 @@ public class Cookies {
         String name = null;
         int start = 0;
         int cookieCount = parsedCookies.size();
-        final Map<String, String> cookies = new HashMap<String, String>();
-        final Map<String, String> additional = new HashMap<String, String>();
+        final Map<String, String> cookies = new HashMap<>();
+        final Map<String, String> additional = new HashMap<>();
         for (int i = 0; i < cookie.length(); ++i) {
             char c = cookie.charAt(i);
             switch (state) {

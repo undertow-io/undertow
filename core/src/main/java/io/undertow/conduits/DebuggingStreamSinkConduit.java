@@ -41,7 +41,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class DebuggingStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
-    private static final List<byte[]> data = new CopyOnWriteArrayList<byte[]>();
+    private static final List<byte[]> data = new CopyOnWriteArrayList<>();
 
     /**
      * Construct a new instance.

@@ -83,7 +83,7 @@ public class FormParserFactory {
 
     public static class Builder {
 
-        private List<ParserDefinition> parsers = new ArrayList<ParserDefinition>();
+        private List<ParserDefinition> parsers = new ArrayList<>();
 
         public Builder addParser(final ParserDefinition definition) {
             parsers.add(definition);

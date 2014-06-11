@@ -92,7 +92,7 @@ public class SpdyClientProvider implements ClientProvider {
 
     @Override
     public Set<String> handlesSchemes() {
-        return new HashSet<String>(Arrays.asList(new String[]{"spdy"}));
+        return new HashSet<>(Arrays.asList(new String[]{"spdy"}));
     }
 
     @Override
@@ -210,7 +210,7 @@ public class SpdyClientProvider implements ClientProvider {
                                 int read = channel.read(buf);
                                 if (read > 0) {
                                     PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
-                                    pb.pushBack(new ImmediatePooled<ByteBuffer>(buf));
+                                    pb.pushBack(new ImmediatePooled<>(buf));
                                     connection.getSourceChannel().setConduit(pb);
                                 }
                                 if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {

@@ -129,7 +129,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         private final HttpServerExchange exchange;
         private final FormData data;
         private final String boundary;
-        private final List<File> createdFiles = new ArrayList<File>();
+        private final List<File> createdFiles = new ArrayList<>();
         private final long maxIndividualFileSize;
         private String defaultEncoding;
 
@@ -290,7 +290,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         @Override
         public void close() throws IOException {
             //we have to dispatch this, as it may result in file IO
-            final List<File> files = new ArrayList<File>(getCreatedFiles());
+            final List<File> files = new ArrayList<>(getCreatedFiles());
             exchange.getConnection().getWorker().execute(new Runnable() {
                 @Override
                 public void run() {

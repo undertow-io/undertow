@@ -48,8 +48,8 @@ import static org.xnio.Bits.anyAreSet;
  */
 public final class GatedStreamSinkChannel implements StreamSinkChannel {
     private final StreamSinkChannel delegate;
-    private final ChannelListener.SimpleSetter<GatedStreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<GatedStreamSinkChannel>();
-    private final ChannelListener.SimpleSetter<GatedStreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<GatedStreamSinkChannel>();
+    private final ChannelListener.SimpleSetter<GatedStreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<>();
+    private final ChannelListener.SimpleSetter<GatedStreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<>();
 
     /**
      * Construct a new instance.

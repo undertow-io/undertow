@@ -64,7 +64,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
     private static final Map<HttpString, Integer> HEADER_MAP;
 
     static {
-        final Map<HttpString, Integer> headers = new HashMap<HttpString, Integer>();
+        final Map<HttpString, Integer> headers = new HashMap<>();
         headers.put(Headers.CONTENT_TYPE, 0xA001);
         headers.put(Headers.CONTENT_LANGUAGE, 0xA002);
         headers.put(Headers.CONTENT_LENGTH, 0xA003);

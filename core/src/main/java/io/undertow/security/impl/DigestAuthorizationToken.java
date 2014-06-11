@@ -48,13 +48,13 @@ public enum DigestAuthorizationToken implements HeaderToken {
     private static final HeaderTokenParser<DigestAuthorizationToken> TOKEN_PARSER;
 
     static {
-        Map<String, DigestAuthorizationToken> expected = new LinkedHashMap<String, DigestAuthorizationToken>(
+        Map<String, DigestAuthorizationToken> expected = new LinkedHashMap<>(
                 DigestAuthorizationToken.values().length);
         for (DigestAuthorizationToken current : DigestAuthorizationToken.values()) {
             expected.put(current.getName(), current);
         }
 
-        TOKEN_PARSER = new HeaderTokenParser<DigestAuthorizationToken>(Collections.unmodifiableMap(expected));
+        TOKEN_PARSER = new HeaderTokenParser<>(Collections.unmodifiableMap(expected));
     }
 
     private final String name;

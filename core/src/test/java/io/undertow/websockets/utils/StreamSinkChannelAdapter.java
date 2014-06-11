@@ -41,8 +41,8 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public class StreamSinkChannelAdapter implements StreamSinkChannel {
 
-    private final ChannelListener.SimpleSetter<? extends StreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<StreamSinkChannel>();
-    private final ChannelListener.SimpleSetter<? extends StreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<StreamSinkChannel>();
+    private final ChannelListener.SimpleSetter<? extends StreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<>();
+    private final ChannelListener.SimpleSetter<? extends StreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<>();
 
     private final WritableByteChannel channel;
 

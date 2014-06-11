@@ -29,7 +29,7 @@ import java.util.Set;
  */
 public class SecurityConstraint extends SecurityInfo<SecurityConstraint> {
 
-    private final Set<WebResourceCollection> webResourceCollections = new HashSet<WebResourceCollection>();
+    private final Set<WebResourceCollection> webResourceCollections = new HashSet<>();
 
     public Set<WebResourceCollection> getWebResourceCollections() {
         return Collections.unmodifiableSet(webResourceCollections);

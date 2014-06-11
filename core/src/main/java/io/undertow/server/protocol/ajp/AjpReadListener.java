@@ -72,7 +72,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         this.parser = parser;
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
-        this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel>(connection.getChannel().getSinkChannel());
+        this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<>(connection.getChannel().getSinkChannel());
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
     }
 

@@ -65,7 +65,7 @@ class AjpRequestParseState extends AbstractAjpParseState {
     String currentAttribute;
 
     //TODO: can there be more than one attribute?
-    Map<String, String> attributes = new HashMap<String, String>();
+    Map<String, String> attributes = new HashMap<>();
 
     String remoteAddress;
     int serverPort = 80;

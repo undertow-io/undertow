@@ -137,7 +137,7 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
     @Override
     public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
         if (writeSetter == null) {
-            writeSetter = new ChannelListener.SimpleSetter<DetachableStreamSinkChannel>();
+            writeSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
                 delegate.setWriteListener(ChannelListeners.delegatingChannelListener(this, writeSetter));
             }
@@ -148,7 +148,7 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
     @Override
     public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
         if (closeSetter == null) {
-            closeSetter = new ChannelListener.SimpleSetter<DetachableStreamSinkChannel>();
+            closeSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
                 delegate.setCloseListener(ChannelListeners.delegatingChannelListener(this, closeSetter));
             }

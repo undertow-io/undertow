@@ -229,13 +229,13 @@ public class FilterPathMappingTestCase {
 
     private void requireHeaders(final HttpResponse result, final String... headers) {
         final Header[] resultHeaders = result.getAllHeaders();
-        final List<Header> realResultHeaders = new ArrayList<Header>();
+        final List<Header> realResultHeaders = new ArrayList<>();
         for (Header header : resultHeaders) {
             if (header.getName().startsWith("filter")) {
                 realResultHeaders.add(header);
             }
         }
-        final Set<String> found = new HashSet<String>(Arrays.asList(headers));
+        final Set<String> found = new HashSet<>(Arrays.asList(headers));
         for (Header header : realResultHeaders) {
             if (!found.remove(header.getValue())) {
                 Assert.fail("Found unexpected header " + header.getValue());

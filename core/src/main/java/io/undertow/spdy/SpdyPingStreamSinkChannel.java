@@ -43,7 +43,7 @@ class SpdyPingStreamSinkChannel extends SpdyControlFrameStreamSinkChannel {
         SpdyProtocolUtils.putInt(buf, firstInt);
         SpdyProtocolUtils.putInt(buf, 4); //we back fill the length
         SpdyProtocolUtils.putInt(buf, id);
-        return new SendFrameHeader(new ImmediatePooled<ByteBuffer>(buf));
+        return new SendFrameHeader(new ImmediatePooled<>(buf));
     }
 
 }

@@ -25,7 +25,7 @@ import java.util.List;
  * @author Stuart Douglas
  */
 public class LoginConfig implements Cloneable {
-    private final LinkedList<AuthMethodConfig> authMethods = new LinkedList<AuthMethodConfig>();
+    private final LinkedList<AuthMethodConfig> authMethods = new LinkedList<>();
     private final String realmName;
     private final String loginPage;
     private final String errorPage;

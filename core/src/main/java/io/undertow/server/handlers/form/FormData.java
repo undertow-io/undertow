@@ -35,7 +35,7 @@ import io.undertow.util.HeaderMap;
  */
 public final class FormData implements Iterable<String> {
 
-    private final Map<String, Deque<FormValue>> values = new LinkedHashMap<String, Deque<FormValue>>();
+    private final Map<String, Deque<FormValue>> values = new LinkedHashMap<>();
 
     private final int maxValues;
     private int valueCount = 0;
@@ -70,7 +70,7 @@ public final class FormData implements Iterable<String> {
     public void add(String name, String value, final HeaderMap headers) {
         Deque<FormValue> values = this.values.get(name);
         if (values == null) {
-            this.values.put(name, values = new ArrayDeque<FormValue>(1));
+            this.values.put(name, values = new ArrayDeque<>(1));
         }
         values.add(new FormValueImpl(value, headers));
         if (++valueCount > maxValues) {
@@ -81,7 +81,7 @@ public final class FormData implements Iterable<String> {
     public void add(String name, File value, String fileName, final HeaderMap headers) {
         Deque<FormValue> values = this.values.get(name);
         if (values == null) {
-            this.values.put(name, values = new ArrayDeque<FormValue>(1));
+            this.values.put(name, values = new ArrayDeque<>(1));
         }
         values.add(new FormValueImpl(value, fileName, headers));
         if (values.size() > maxValues) {
@@ -93,7 +93,7 @@ public final class FormData implements Iterable<String> {
     }
 
     public void put(String name, String value, final HeaderMap headers) {
-        Deque<FormValue> values = new ArrayDeque<FormValue>(1);
+        Deque<FormValue> values = new ArrayDeque<>(1);
         Deque<FormValue> old = this.values.put(name, values);
         if (old != null) {
             valueCount -= old.size();

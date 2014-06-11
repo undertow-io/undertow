@@ -49,7 +49,7 @@ public class HttpClientProvider implements ClientProvider {
 
     @Override
     public Set<String> handlesSchemes() {
-        return new HashSet<String>(Arrays.asList(new String[]{"http", "https"}));
+        return new HashSet<>(Arrays.asList(new String[]{"http", "https"}));
     }
 
     @Override

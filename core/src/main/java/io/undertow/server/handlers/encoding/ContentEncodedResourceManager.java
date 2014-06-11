@@ -58,7 +58,7 @@ public class ContentEncodedResourceManager {
     private final int maxResourceSize;
     private final Predicate encodingAllowed;
 
-    private final ConcurrentMap<LockKey, Object> fileLocks = new ConcurrentHashMap<LockKey, Object>();
+    private final ConcurrentMap<LockKey, Object> fileLocks = new ConcurrentHashMap<>();
 
     public ContentEncodedResourceManager(File encodedResourcesRoot, CachingResourceManager encodedResourceManager, ContentEncodingRepository contentEncodingRepository, int minResourceSize, int maxResourceSize, Predicate encodingAllowed) {
         this.encodedResourcesRoot = encodedResourcesRoot;

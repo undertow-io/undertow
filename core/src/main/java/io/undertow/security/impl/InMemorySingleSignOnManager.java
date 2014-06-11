@@ -37,7 +37,7 @@ public class InMemorySingleSignOnManager implements SingleSignOnManager {
 
     private static final SecureRandomSessionIdGenerator SECURE_RANDOM_SESSION_ID_GENERATOR = new SecureRandomSessionIdGenerator();
 
-    private final Map<String, SingleSignOn> ssoEntries = new ConcurrentHashMap<String, SingleSignOn>();
+    private final Map<String, SingleSignOn> ssoEntries = new ConcurrentHashMap<>();
 
     @Override
     public SingleSignOn findSingleSignOn(String ssoId) {
@@ -61,7 +61,7 @@ public class InMemorySingleSignOnManager implements SingleSignOnManager {
         private final String id;
         private final Account account;
         private final String mechanismName;
-        private final Map<SessionManager, Session> sessions = new CopyOnWriteMap<SessionManager, Session>();
+        private final Map<SessionManager, Session> sessions = new CopyOnWriteMap<>();
 
         SimpleSingleSignOnEntry(String id, Account account, String mechanismName) {
             this.id = id;

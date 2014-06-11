@@ -96,7 +96,7 @@ public final class UndertowSession implements Session {
         this.frameHandler = new FrameHandler(this, this.endpoint.getInstance());
         webSocketChannel.getReceiveSetter().set(frameHandler);
         this.sessionId = new SecureRandomSessionIdGenerator().createSessionId();
-        this.attrs = Collections.synchronizedMap(new HashMap<String, Object>(config.getUserProperties()));
+        this.attrs = Collections.synchronizedMap(new HashMap<>(config.getUserProperties()));
         this.extensions = extensions;
         this.subProtocol = subProtocol;
     }
@@ -264,7 +264,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public Set<Session> getOpenSessions() {
-        return new HashSet<Session>(openSessions);
+        return new HashSet<>(openSessions);
     }
 
     @Override

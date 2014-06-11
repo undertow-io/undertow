@@ -36,7 +36,7 @@ import java.util.List;
 public class BufferedBinaryMessage {
 
     private final boolean bufferFullMessage;
-    private List<Pooled<ByteBuffer>> data = new ArrayList<Pooled<ByteBuffer>>(1);
+    private List<Pooled<ByteBuffer>> data = new ArrayList<>(1);
     private Pooled<ByteBuffer> current;
     private final long maxMessageSize;
     private long currentSize;
@@ -167,7 +167,7 @@ public class BufferedBinaryMessage {
 
     public Pooled<ByteBuffer[]> getData() {
         if (current == null) {
-            return new ImmediatePooled<ByteBuffer[]>(new ByteBuffer[0]);
+            return new ImmediatePooled<>(new ByteBuffer[0]);
         }
         if (data.isEmpty()) {
             final Pooled<ByteBuffer> current = this.current;
@@ -184,7 +184,7 @@ public class BufferedBinaryMessage {
             ret[i] = data.get(i).getResource();
         }
         List<Pooled<ByteBuffer>> data = this.data;
-        this.data = new ArrayList<Pooled<ByteBuffer>>();
+        this.data = new ArrayList<>();
 
         return new PooledByteBufferArray(data, ret);
     }

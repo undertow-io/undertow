@@ -78,7 +78,7 @@ public class ProxyConnectionPool implements Closeable {
      */
     private volatile boolean closed;
 
-    private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<XnioIoThread, HostThreadData>();
+    private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<>();
 
     public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, UndertowClient client, OptionMap options) {
         this(connectionPoolManager, uri, null, client, options);
@@ -343,8 +343,8 @@ public class ProxyConnectionPool implements Closeable {
 
     private static final class HostThreadData {
         int connections = 0;
-        final Deque<ClientConnection> availableConnections = new ArrayDeque<ClientConnection>();
-        final Deque<CallbackHolder> awaitingConnections = new ArrayDeque<CallbackHolder>();
+        final Deque<ClientConnection> availableConnections = new ArrayDeque<>();
+        final Deque<CallbackHolder> awaitingConnections = new ArrayDeque<>();
 
     }
 

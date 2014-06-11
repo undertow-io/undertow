@@ -95,7 +95,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         this.bufferWrapper = bufferWrapper;
         this.finishListener = finishListener;
         this.remainingAllowed = Long.MIN_VALUE;
-        this.chunkReader = new ChunkReader<ChunkedStreamSourceConduit>(attachable, HttpAttachments.REQUEST_TRAILERS, finishListener, this);
+        this.chunkReader = new ChunkReader<>(attachable, HttpAttachments.REQUEST_TRAILERS, finishListener, this);
         this.exchange = exchange;
     }
 

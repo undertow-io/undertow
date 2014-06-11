@@ -388,7 +388,7 @@ public class MCMPHandler implements HttpHandler {
     private void processDomainCmd(HttpServerExchange exchange, String domain, Status status) throws Exception {
         for (Node nodeConfig : container.getNodes()) {
             if (nodeConfig.getNodeConfig().getDomain().equals(domain)) {
-                Map<String, String[]> params = new HashMap<String, String[]>();
+                Map<String, String[]> params = new HashMap<>();
                 String[] values = new String[1];
                 values[0] = nodeConfig.getJvmRoute();
                 params.put("JVMRoute", values);
@@ -398,7 +398,7 @@ public class MCMPHandler implements HttpHandler {
     }
 
     private Map<String, String[]> buildMap(Map<String, Deque<String>> params) {
-        Map<String, String[]> sparams = new HashMap<String, String[]>();
+        Map<String, String[]> sparams = new HashMap<>();
         for (String key : params.keySet()) {
             // In fact we only have one
             String[] values = new String[1];
@@ -622,7 +622,7 @@ public class MCMPHandler implements HttpHandler {
     }
 
     private Map<String, String[]> readPostParameters(HttpServerExchange exchange) throws IOException {
-        final Map<String, String[]> ret = new HashMap<String, String[]>();
+        final Map<String, String[]> ret = new HashMap<>();
         FormDataParser parser = FormParserFactory.builder(false).addParser(new FormEncodedDataDefinition().setForceCreation(true)).build().createParser(exchange);
 
         FormData formData = parser.parseBlocking();

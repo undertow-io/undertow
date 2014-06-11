@@ -193,16 +193,16 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (headers == null) {
             return EmptyEnumeration.instance();
         }
-        return new IteratorEnumeration<String>(headers.iterator());
+        return new IteratorEnumeration<>(headers.iterator());
     }
 
     @Override
     public Enumeration<String> getHeaderNames() {
-        final Set<String> headers = new HashSet<String>();
+        final Set<String> headers = new HashSet<>();
         for (final HttpString i : exchange.getRequestHeaders().getHeaderNames()) {
             headers.add(i.toString());
         }
-        return new IteratorEnumeration<String>(headers.iterator());
+        return new IteratorEnumeration<>(headers.iterator());
     }
 
     @Override
@@ -465,7 +465,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         try {
             InstanceFactory<T> factory = servletContext.getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(handlerClass);
             final InstanceHandle<T> instance = factory.createInstance();
-            exchange.upgradeChannel(new ServletUpgradeListener<T>(instance, servletContext.getDeployment().getThreadSetupAction(), exchange));
+            exchange.upgradeChannel(new ServletUpgradeListener<>(instance, servletContext.getDeployment().getThreadSetupAction(), exchange));
             return instance.getInstance();
         } catch (InstantiationException e) {
             throw new RuntimeException(e);
@@ -478,7 +478,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         final ServletRequestContext requestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 
         if (parts == null) {
-            final List<Part> parts = new ArrayList<Part>();
+            final List<Part> parts = new ArrayList<>();
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
 
@@ -510,7 +510,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (attributes == null) {
             return EmptyEnumeration.instance();
         }
-        return new IteratorEnumeration<String>(attributes.keySet().iterator());
+        return new IteratorEnumeration<>(attributes.keySet().iterator());
     }
 
     @Override
@@ -616,7 +616,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (queryParameters == null) {
             queryParameters = exchange.getQueryParameters();
         }
-        final Set<String> parameterNames = new HashSet<String>(queryParameters.keySet());
+        final Set<String> parameterNames = new HashSet<>(queryParameters.keySet());
         if (exchange.getRequestMethod().equals(Methods.POST)) {
             final FormData parsedFormData = parseFormData();
             if (parsedFormData != null) {
@@ -632,7 +632,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 }
             }
         }
-        return new IteratorEnumeration<String>(parameterNames.iterator());
+        return new IteratorEnumeration<>(parameterNames.iterator());
     }
 
     @Override
@@ -640,7 +640,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (queryParameters == null) {
             queryParameters = exchange.getQueryParameters();
         }
-        final List<String> ret = new ArrayList<String>();
+        final List<String> ret = new ArrayList<>();
         Deque<String> params = queryParameters.get(name);
         if (params != null) {
             for (String param : params) {
@@ -671,9 +671,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (queryParameters == null) {
             queryParameters = exchange.getQueryParameters();
         }
-        final Map<String, ArrayList<String>> arrayMap = new HashMap<String, ArrayList<String>>();
+        final Map<String, ArrayList<String>> arrayMap = new HashMap<>();
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
-            arrayMap.put(entry.getKey(), new ArrayList<String>(entry.getValue()));
+            arrayMap.put(entry.getKey(), new ArrayList<>(entry.getValue()));
         }
         if (exchange.getRequestMethod().equals(Methods.POST)) {
 
@@ -691,7 +691,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                             }
                         }
                     } else {
-                        final ArrayList<String> values = new ArrayList<String>();
+                        final ArrayList<String> values = new ArrayList<>();
                         int i = 0;
                         for (final FormData.FormValue v : val) {
                             if(!v.isFile()) {
@@ -703,7 +703,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 }
             }
         }
-        final Map<String, String[]> ret = new HashMap<String, String[]>();
+        final Map<String, String[]> ret = new HashMap<>();
         for(Map.Entry<String, ArrayList<String>> entry : arrayMap.entrySet()) {
             ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
         }
@@ -807,7 +807,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public void setAttribute(final String name, final Object object) {
         if (attributes == null) {
-            attributes = new HashMap<String, Object>();
+            attributes = new HashMap<>();
         }
         Object existing = attributes.put(name, object);
         if (existing != null) {
@@ -835,7 +835,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public Enumeration<Locale> getLocales() {
         final List<String> acceptLanguage = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
         List<Locale> ret = LocaleUtils.getLocalesFromHeader(acceptLanguage);
-        return new IteratorEnumeration<Locale>(ret.iterator());
+        return new IteratorEnumeration<>(ret.iterator());
     }
 
     @Override
