@@ -647,6 +647,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return proxy;
     }
 
+    public static boolean isSpdy() {
+        return spdy;
+    }
+
     /**
      * The root handler is tied to the connection, and AJP can re-use connections for different tests, so we
      * use a delegating handler to chance the next handler after the root.

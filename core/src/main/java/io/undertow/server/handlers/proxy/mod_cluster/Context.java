@@ -9,197 +9,180 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-/**
- * {@code Context}
- *
- * Created on Jun 12, 2012 at 4:24:58 PM
- *
- * @author <a href="mailto:nbenothm@redhat.com">Nabil Benothman</a>
- */
-public class Context {
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
 
-    /**
-     * {@code Status}
-     * <p>
-     * This class represents the status of the context, node etc.
-     * </p>
-     *
-     * @author Jean-Frederic Clere
-     */
-    public enum Status {
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+/**
+ *
+ * @author Emanuel Muckenhuber
+ */
+class Context {
+
+    private static final AtomicInteger idGen = new AtomicInteger();
+
+    static enum Status {
+
         ENABLED,
         DISABLED,
         STOPPED,
-        REMOVED;
+        ;
+
     }
 
-     /**
-     * Status of the application: ENABLED, DISABLED or STOPPED.
-     */
-    private volatile Status status;
-    /**
-     * The context path. (String) URL to be mapped.
-     */
+    private final int id;
+    private final Node node;
     private final String path;
+    private final Node.VHostMapping vhost;
 
-    /**
-     * The corresponding node identification.
-     */
-    private final String jvmRoute;
+    private static final int STOPPED = (1 << 31);
+    private static final int DISABLED = (1 << 30);
+    private static final int REQUEST_MASK = ((1 << 30) - 1);
 
-    /**
-     * The virtualhost id.
-     */
-    private final long hostid;
+    private volatile int state = STOPPED;
+    private static final AtomicIntegerFieldUpdater<Context> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(Context.class, "state");
 
-    /**
-     * The number of active requests
-     */
-    private final long nbRequests;
-
-    Context(ContextBuilder b) {
-        status = b.status;
-        path = b.path;
-        jvmRoute = b.jvmRoute;
-        hostid = b.hostid;
-        nbRequests = b.nbRequests;
+    Context(final String path, final Node.VHostMapping vHost, final Node node) {
+        id = idGen.incrementAndGet();
+        this.path = path;
+        this.node = node;
+        this.vhost = vHost;
     }
 
-    /**
-     * @return true if this context is enabled
-     */
-    public boolean isEnabled() {
-        return this.status == Status.ENABLED;
+    public int getId() {
+        return id;
     }
 
-    /**
-     * @return true if this context is disabled
-     */
-    public boolean isDisabled() {
-        return this.status == Status.DISABLED;
+    public String getJVMRoute() {
+        return node.getJvmRoute();
     }
 
-    /**
-     * @return true if this context is stopped
-     */
-    public boolean isStopped() {
-        return this.status == Status.STOPPED;
-    }
-    /**
-     * Getter for status
-     *
-     * @return the status of the context
-     */
-    public Status getStatus() {
-        return this.status;
-    }
-
-    /**
-     * Setter for the status
-     *
-     * @param status
-     *            the status to set
-     */
-    public void setStatus(Status status) {
-        this.status = status;
-    }
-
-    /*
-     * (non-Javadoc)
-     *
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString() {
-        return "Context[Path: " + this.path + ", Status: " + this.status + ", Node: " + this.jvmRoute + ", Host: " + this.hostid +  "]";
-    }
-
-    /**
-     * Getter for path
-     *
-     * @return the path
-     */
     public String getPath() {
-        return this.path;
+        return path;
     }
 
-    public String getJvmRoute() {
-        return jvmRoute;
+    public List<String> getVirtualHosts() {
+        return vhost.getAliases();
     }
 
-    public long getHostid() {
-        return hostid;
+    public int getActiveRequests() {
+        return state & REQUEST_MASK;
     }
 
-    public long getNbRequests() {
-        return nbRequests;
+    public Status getStatus() {
+        final int state = this.state;
+        if ((state & STOPPED) == STOPPED) {
+            return Status.STOPPED;
+        } else if ((state & DISABLED) == DISABLED) {
+            return Status.DISABLED;
+        }
+        return Status.ENABLED;
     }
 
-    public static ContextBuilder builder() {
-        return new ContextBuilder();
+    public boolean isEnabled() {
+        return allAreClear(state, DISABLED | STOPPED);
     }
 
-    public static final class ContextBuilder {
+    public boolean isStopped() {
+        return allAreSet(state, STOPPED);
+    }
 
-        ContextBuilder() {
+    public boolean isDisabled() {
+        return allAreSet(state, DISABLED);
+    }
 
+    Node getNode() {
+        return node;
+    }
+
+    Node.VHostMapping getVhost() {
+        return vhost;
+    }
+
+    boolean checkAvailable(boolean existingSession) {
+        if (node.checkAvailable(existingSession)) {
+            return existingSession ? !isStopped() : isEnabled();
         }
-        private Status status;
-        private String path;
-        private String jvmRoute;
-        private long hostid;
-        private long nbRequests;
+        return false;
+    }
 
-        public void setStatus(Status status) {
-            this.status = status;
-        }
-
-        public void setPath(String path) {
-            this.path = path;
-        }
-
-        public void setJvmRoute(String jvmRoute) {
-            this.jvmRoute = jvmRoute;
-        }
-
-        public void setHostid(long hostid) {
-            this.hostid = hostid;
-        }
-
-        public void setNbRequests(long nbRequests) {
-            this.nbRequests = nbRequests;
-        }
-
-        public Status getStatus() {
-            return status;
-        }
-
-        public String getPath() {
-            return path;
-        }
-
-        public String getJvmRoute() {
-            return jvmRoute;
-        }
-
-        public long getHostid() {
-            return hostid;
-        }
-
-        public long getNbRequests() {
-            return nbRequests;
-        }
-
-        public Context build() {
-            return new Context(this);
+    void enable() {
+        int oldState, newState;
+        for (;;) {
+            oldState = this.state;
+            newState = oldState & ~(STOPPED | DISABLED);
+            if (stateUpdater.compareAndSet(this, oldState, newState)) {
+                return;
+            }
         }
     }
+
+    void disable() {
+        int oldState, newState;
+        for (;;) {
+            oldState = this.state;
+            newState = oldState | DISABLED;
+            if (stateUpdater.compareAndSet(this, oldState, newState)) {
+                return;
+            }
+        }
+    }
+
+    void stop() {
+        int oldState, newState;
+        for (;;) {
+            oldState = this.state;
+            newState = oldState | STOPPED;
+            if (stateUpdater.compareAndSet(this, oldState, newState)) {
+                return;
+            }
+        }
+    }
+
+    boolean addRequest(boolean existingSession) {
+        int oldState, newState;
+        for (;;) {
+            oldState = this.state;
+            if ((oldState & STOPPED) != 0) {
+                return false;
+            }
+//            if (!existingSession && (oldState & DISABLED) != 0) {
+//                return false;
+//            }
+            newState = oldState + 1;
+            if ((newState & REQUEST_MASK) == REQUEST_MASK) {
+                return false;
+            }
+            if (stateUpdater.compareAndSet(this, oldState, newState)) {
+                return true;
+            }
+        }
+    }
+
+    void requestDone() {
+        int oldState, newState;
+        for (;;) {
+            oldState = this.state;
+            if ((oldState & REQUEST_MASK) == 0) {
+                return;
+            }
+            newState = oldState - 1;
+            if (stateUpdater.compareAndSet(this, oldState, newState)) {
+                return;
+            }
+        }
+    }
+
 }

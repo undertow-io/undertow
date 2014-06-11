@@ -9,14 +9,18 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.server.handlers.proxy.mod_cluster;
+
+import static org.xnio.IoUtils.safeClose;
+
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.client.ClientConnection;
 import io.undertow.server.HttpServerExchange;
@@ -27,11 +31,7 @@ import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.util.AttachmentKey;
 
-import java.util.concurrent.TimeUnit;
-
-import static org.xnio.IoUtils.safeClose;
-
-public class ModClusterLoadBalancingProxyClient implements ProxyClient {
+class ModClusterProxyClient implements ProxyClient {
 
     /**
      * The attachment key that is used to attach the proxy connection to the exchange.
@@ -41,26 +41,22 @@ public class ModClusterLoadBalancingProxyClient implements ProxyClient {
     private final AttachmentKey<ExclusiveConnectionHolder> exclusiveConnectionKey = AttachmentKey
             .create(ExclusiveConnectionHolder.class);
 
-    private static final ProxyTarget PROXY_TARGET = new ProxyTarget() {
-    };
     private final ExclusivityChecker exclusivityChecker;
+    private final ModClusterContainer container;
 
-    private final ModClusterContainer modClusterContainer;
-
-    public ModClusterLoadBalancingProxyClient(ExclusivityChecker exclusivityChecker, ModClusterContainer modClusterContainer) {
+    protected ModClusterProxyClient(ExclusivityChecker exclusivityChecker, ModClusterContainer container) {
         this.exclusivityChecker = exclusivityChecker;
-        this.modClusterContainer = modClusterContainer;
+        this.container = container;
     }
 
     @Override
     public ProxyTarget findTarget(HttpServerExchange exchange) {
-        // TODO we probably needs a logic like in httpd (trans).
-        return PROXY_TARGET;
+        return container.findTarget(exchange);
     }
 
     @Override
-    public void getConnection(ProxyTarget target, HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback,
-            long timeout, TimeUnit timeUnit) {
+    public void getConnection(final ProxyTarget target, final HttpServerExchange exchange,
+                              final ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit) {
         final ExclusiveConnectionHolder holder = exchange.getConnection().getAttachment(exclusiveConnectionKey);
         if (holder != null && holder.connection.getConnection().isOpen()) {
             // Something has already caused an exclusive connection to be
@@ -68,16 +64,21 @@ public class ModClusterLoadBalancingProxyClient implements ProxyClient {
             callback.completed(exchange, holder.connection);
             return;
         }
+        if (! (target instanceof ModClusterProxyTarget)) {
+            callback.failed(exchange);
+        }
 
-        final Node nodeConfig = modClusterContainer.findNode(exchange);
-        if (nodeConfig == null) {
+        // Resolve the node
+        final ModClusterProxyTarget proxyTarget = (ModClusterProxyTarget) target;
+        final Node node = proxyTarget.findNode(exchange);
+        if (node == null) {
             callback.failed(exchange);
         } else {
             if (holder != null || (exclusivityChecker != null && exclusivityChecker.isExclusivityRequired(exchange))) {
                 // If we have a holder, even if the connection was closed we now
                 // exclusivity was already requested so our client
                 // may be assuming it still exists.
-                nodeConfig.getConnectionPool().connect(target, exchange, new ProxyCallback<ProxyConnection>() {
+                node.getConnectionPool().connect(target, exchange, new ProxyCallback<ProxyConnection>() {
 
                     @Override
                     public void failed(HttpServerExchange exchange) {
@@ -108,7 +109,7 @@ public class ModClusterLoadBalancingProxyClient implements ProxyClient {
                     }
                 }, timeout, timeUnit, true);
             } else {
-                nodeConfig.getConnectionPool().connect(target, exchange, callback, timeout, timeUnit, false);
+                node.getConnectionPool().connect(target, exchange, callback, timeout, timeUnit, false);
             }
         }
     }

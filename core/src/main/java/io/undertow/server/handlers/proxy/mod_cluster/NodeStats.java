@@ -15,47 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import java.io.Serializable;
-
 /**
- * {@code SessionId}
- *
- * @author Jean-Frederic Clere
+ * @author Emanuel Muckenhuber
  */
-public class SessionId implements Serializable {
+class NodeStats {
 
-    /**
-     * SessionId
-     */
-    private final String sessionId;
-
-    /**
-     * JVMRoute
-     */
-    private final String jmvRoute;
-
-    /**
-      * Date last updated.
-      */
-    private volatile long updateTime;
-
-    public SessionId(String sessionId, String jmvRoute) {
-        this.sessionId = sessionId;
-        this.jmvRoute = jmvRoute;
+    int getRead() {
+        return -1;
     }
 
-    public String getSessionId() {
-        return sessionId;
+    int getTransferred() {
+        return -1;
     }
 
-    public String getJmvRoute() {
-        return jmvRoute;
-    }
-
-    public long getUpdateTime() {
-        return updateTime;
+    int getOpenConnections() {
+        return -1;
     }
 
 }
