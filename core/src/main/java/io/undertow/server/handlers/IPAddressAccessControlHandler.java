@@ -72,15 +72,22 @@ public class IPAddressAccessControlHandler implements HttpHandler {
 
     private volatile HttpHandler next;
     private volatile boolean defaultAllow = false;
+    private final int denyResponseCode;
     private final List<PeerMatch> ipv6acl = new CopyOnWriteArrayList<PeerMatch>();
     private final List<PeerMatch> ipv4acl = new CopyOnWriteArrayList<PeerMatch>();
 
     public IPAddressAccessControlHandler(final HttpHandler next) {
+        this(next, StatusCodes.FORBIDDEN);
+    }
+
+    public IPAddressAccessControlHandler(final HttpHandler next, final int denyResponseCode) {
         this.next = next;
+        this.denyResponseCode = denyResponseCode;
     }
 
     public IPAddressAccessControlHandler() {
         this.next = ResponseCodeHandler.HANDLE_404;
+        this.denyResponseCode = StatusCodes.FORBIDDEN;
     }
 
     @Override
@@ -89,7 +96,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         if (isAllowed(peer.getAddress())) {
             next.handleRequest(exchange);
         } else {
-            exchange.setResponseCode(StatusCodes.FORBIDDEN);
+            exchange.setResponseCode(denyResponseCode);
             exchange.endExchange();
         }
     }
@@ -109,6 +116,11 @@ public class IPAddressAccessControlHandler implements HttpHandler {
             }
         }
         return defaultAllow;
+    }
+
+
+    public int getDenyResponseCode() {
+        return denyResponseCode;
     }
 
     public boolean isDefaultAllow() {
