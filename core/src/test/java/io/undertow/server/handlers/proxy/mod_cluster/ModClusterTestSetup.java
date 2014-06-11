@@ -9,27 +9,30 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.examples.reverseproxy;
+package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.util.concurrent.TimeUnit;
+
+import io.undertow.Handlers;
 import io.undertow.Undertow;
-import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.proxy.mod_cluster.MCMPConfig;
-import io.undertow.server.handlers.proxy.mod_cluster.ModCluster;
+import io.undertow.server.handlers.ResponseCodeHandler;
 
 /**
- * @author Jean-Frederic Clere
+ * Server setup to the run the mod_cluster tests
+ *
+ * -ea -Djava.util.logging.manager=org.jboss.logmanager.LogManager -Dtest.level=DEBUG -Djava.net.preferIPv4Stack=true
+ *
+ * @author Emanuel Muckenhuber
  */
-
-@UndertowExample("ModCluster Proxy Server")
-public class ModClusterProxyServer {
+public class ModClusterTestSetup {
 
     /* the address and port to receive the MCMP elements */
     static String chost = System.getProperty("io.undertow.examples.proxy.CADDRESS", "localhost");
@@ -42,7 +45,10 @@ public class ModClusterProxyServer {
     public static void main(final String[] args) {
         final Undertow server;
 
-        final ModCluster modCluster = ModCluster.builder().build();
+        final ModCluster modCluster = ModCluster.builder()
+                .setHealthCheckInterval(TimeUnit.SECONDS.toMillis(3))
+                .setRemoveBrokenNodes(TimeUnit.SECONDS.toMillis(30))
+                .build();
         try {
             if (chost == null) {
                 // We are going to guess it.
@@ -54,25 +60,41 @@ public class ModClusterProxyServer {
 
             // Create the proxy and mgmt handler
             final HttpHandler proxy = modCluster.getProxyHandler();
-            final MCMPConfig config = MCMPConfig.webBuilder()
+            final MCMPConfig config = MCMPConfig.builder()
                     .setManagementHost(chost)
                     .setManagementPort(cport)
                     .enableAdvertise()
+                    .setSecurityKey("secret")
                     .getParent()
                     .build();
 
+            final MCMPConfig webConfig = MCMPConfig.webBuilder()
+                    .setManagementHost(chost)
+                    .setManagementPort(cport)
+                    .build();
+
             final HttpHandler mcmp = config.create(modCluster, proxy);
+            final HttpHandler web = webConfig.create(modCluster, ResponseCodeHandler.HANDLE_404);
 
             server = Undertow.builder()
                     .addHttpListener(cport, chost)
                     .addHttpListener(pport, phost)
-                    .setHandler(mcmp)
+                    .setHandler(Handlers.path(mcmp).addPrefixPath("/mod_cluster_manager", web))
                     .build();
             server.start();
 
             // Start advertising the mcmp handler
             modCluster.advertise(config);
 
+            final Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    modCluster.stop();
+                    server.stop();
+
+                }
+            };
+            Runtime.getRuntime().addShutdownHook(new Thread(r));
         } catch (Exception e) {
             e.printStackTrace();
         }

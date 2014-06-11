@@ -9,32 +9,44 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 /**
- * {@code Node} Created on Jun 11, 2012 at 11:10:06 AM
+ * The node configuration.
  *
  * @author <a href="mailto:nbenothm@redhat.com">Nabil Benothman</a>
+ * @author Emanuel Muckenhuber
  */
 public class NodeConfig {
 
-
-    private final String hostname;
-    private final int port;
-    private final String type;
-
-
-    private final long id;
-    private final String balancer;
-    private final String domain;
-
+    /**
+     * The JVM Route.
+     */
     private final String jvmRoute;
+
+    /**
+     * The connection URI.
+     */
+    private final URI connectionURI;
+
+    /**
+     * The balancer configuration to use.
+     */
+    private final String balancer;
+
+    /**
+     * The failover domain.
+     */
+    private final String domain;
 
     /**
      * Tell how to flush the packets. On: Send immediately, Auto wait for flushwait time before sending, Off don't flush.
@@ -46,30 +58,31 @@ public class NodeConfig {
      * Time to wait before flushing. Value in milliseconds. Default: 10
      */
     private final int flushwait;
+
     /**
      * Time to wait for a pong answer to a ping. 0 means we don't try to ping before sending. Value in seconds Default: 10
      * (10_000 in milliseconds)
      */
     private final int ping;
+
     /**
      * soft max inactive connection over that limit after ttl are closed. Default depends on the mpm configuration (See below
      * for more information)
      */
     private final int smax;
+
     /**
      * max time in seconds to life for connection above smax. Default 60 seconds (60_000 in milliseconds).
      */
     private final int ttl;
+
     /**
      * Max time the proxy will wait for the backend connection. Default 0 no timeout value in seconds.
      */
     private final int timeout;
 
-    NodeConfig(NodeBuilder b) {
-        hostname = b.hostname;
-        port = b.port;
-        type = b.type;
-        id = b.id;
+    NodeConfig(NodeBuilder b, final URI connectionURI) {
+        this.connectionURI = connectionURI;
         balancer = b.balancer;
         domain = b.domain;
         jvmRoute = b.jvmRoute;
@@ -81,25 +94,13 @@ public class NodeConfig {
         timeout = b.timeout;
     }
 
-    public String getHostname() {
-        return hostname;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public String getType() {
-        return type;
-    }
-
     /**
-     * Getter for id
+     * Get the connection URI.
      *
-     * @return the id
+     * @return the connection URI
      */
-    public long getId() {
-        return this.id;
+    public URI getConnectionURI() {
+        return connectionURI;
     }
 
     /**
@@ -183,132 +184,89 @@ public class NodeConfig {
 
     public static class NodeBuilder {
 
+        private String jvmRoute;
+        private String balancer = "mycluster";
+        private String domain = null;
+
+        private String type = "http";
         private String hostname;
         private int port;
-        private String type;
-        private long id;
-        private String balancer = "mycluster";
-        private String domain = "";
 
-        private String jvmRoute;
         private boolean flushPackets = false;
         private int flushwait = 10;
         private int ping = 10000;
         private int smax;
         private int ttl = 60000;
         private int timeout = 0;
-        private int elected;
-        private NodeStatus status = NodeStatus.NODE_UP;
-        private int oldelected;
-        private long read;
-        private long transfered;
-        private int connected;
-        private int load;
 
         NodeBuilder() {
+            //
         }
 
-        public void setHostname(String hostname) {
+        public NodeBuilder setHostname(String hostname) {
             this.hostname = hostname;
+            return this;
         }
 
-        public void setPort(int port) {
+        public NodeBuilder setPort(int port) {
             this.port = port;
+            return this;
         }
 
-        public void setType(String type) {
+        public NodeBuilder setType(String type) {
             this.type = type;
+            return this;
         }
 
-        public void setId(long id) {
-            this.id = id;
-        }
-
-        public void setStatus(NodeStatus status) {
-            this.status = status;
-        }
-
-        public void setBalancer(String balancer) {
+        public NodeBuilder setBalancer(String balancer) {
             this.balancer = balancer;
+            return this;
         }
 
-        public void setDomain(String domain) {
+        public NodeBuilder setDomain(String domain) {
             this.domain = domain;
+            return this;
         }
 
-        public void setJvmRoute(String jvmRoute) {
+        public NodeBuilder setJvmRoute(String jvmRoute) {
             this.jvmRoute = jvmRoute;
+            return this;
         }
 
-        public void setFlushPackets(boolean flushPackets) {
+        public NodeBuilder setFlushPackets(boolean flushPackets) {
             this.flushPackets = flushPackets;
+            return this;
         }
 
-        public void setFlushwait(int flushwait) {
+        public NodeBuilder setFlushwait(int flushwait) {
             this.flushwait = flushwait;
+            return this;
         }
 
-        public void setPing(int ping) {
+        public NodeBuilder setPing(int ping) {
             this.ping = ping;
+            return this;
         }
 
-        public void setSmax(int smax) {
+        public NodeBuilder setSmax(int smax) {
             this.smax = smax;
+            return this;
         }
 
-        public void setTtl(int ttl) {
+        public NodeBuilder setTtl(int ttl) {
             this.ttl = ttl;
+            return this;
         }
 
-        public void setTimeout(int timeout) {
+        public NodeBuilder setTimeout(int timeout) {
             this.timeout = timeout;
+            return this;
         }
 
-        public void setElected(int elected) {
-            this.elected = elected;
-        }
-
-        public void setOldelected(int oldelected) {
-            this.oldelected = oldelected;
-        }
-
-        public void setRead(long read) {
-            this.read = read;
-        }
-
-        public void setTransfered(long transfered) {
-            this.transfered = transfered;
-        }
-
-        public void setConnected(int connected) {
-            this.connected = connected;
-        }
-
-        public void setLoad(int load) {
-            this.load = load;
-        }
-
-        public NodeConfig build() {
-            return new NodeConfig(this);
+        public NodeConfig build() throws URISyntaxException {
+            final URI uri = new URI(type, null, hostname, port, "/", "", "");
+            return new NodeConfig(this, uri);
         }
     }
 
-
-    /**
-     * {@code NodeStatus}
-     */
-    public enum NodeStatus {
-        /**
-         * The node is up
-         */
-        NODE_UP,
-        /**
-         * The node is down
-         */
-        NODE_DOWN,
-        /**
-         * The node is paused
-         */
-        NODE_PAUSED;
-    }
 }
