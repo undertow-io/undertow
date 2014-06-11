@@ -50,6 +50,7 @@ public class MimeMappings {
         defaultMappings.put("rtx", "text/richtext");
         defaultMappings.put("tsv", "text/tab-separated-values");
         defaultMappings.put("etx", "text/x-setext");
+        defaultMappings.put("json", "application/json");
         defaultMappings.put("ps", "application/x-postscript");
         defaultMappings.put("class", "application/java");
         defaultMappings.put("csh", "application/x-csh");
