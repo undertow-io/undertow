@@ -21,6 +21,7 @@ package io.undertow.server.handlers;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -110,5 +111,17 @@ public class IPAddressAccessControlHandlerUnitTestCase {
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("fe45:0000:0000:0000:0000:0aaa:ffff:01f4")));
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("fe45:0000:0000:0000:0000:0aaa:ffff:01f5")));
         Assert.assertFalse(handler.isAllowed(InetAddress.getByName("fe45:0000:0000:0000:0000:0aaa:ffff:01f6")));
+    }
+
+    @Test
+    public void testDefaultDenyResponseCode() {
+      IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler();
+      Assert.assertEquals(StatusCodes.FORBIDDEN, handler.getDenyResponseCode());
+    }
+
+    @Test
+    public void testDenyResponseCode() {
+      IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler(null, StatusCodes.NOT_FOUND);
+      Assert.assertEquals(StatusCodes.NOT_FOUND, handler.getDenyResponseCode());
     }
 }
