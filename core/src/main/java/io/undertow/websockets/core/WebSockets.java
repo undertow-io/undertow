@@ -48,6 +48,18 @@ public class WebSockets {
         sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel, callback);
     }
 
+
+    /**
+     * Sends a complete text message, invoking the callback when complete
+     *
+     * @param message
+     * @param wsChannel
+     * @param callback
+     */
+    public static void sendText(final ByteBuffer message, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
+        sendInternal(new ByteBuffer[]{message}, WebSocketFrameType.TEXT, wsChannel, callback);
+    }
+
     /**
      * Sends a complete text message, invoking the callback when complete
      *
@@ -57,6 +69,16 @@ public class WebSockets {
     public static void sendTextBlocking(final String message, final WebSocketChannel wsChannel) throws IOException {
         final ByteBuffer data = ByteBuffer.wrap(message.getBytes(utf8));
         sendBlockingInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel);
+    }
+
+    /**
+     * Sends a complete text message, invoking the callback when complete
+     *
+     * @param message
+     * @param wsChannel
+     */
+    public static void sendTextBlocking(final ByteBuffer message, final WebSocketChannel wsChannel) throws IOException {
+        sendBlockingInternal(new ByteBuffer[]{message}, WebSocketFrameType.TEXT, wsChannel);
     }
 
     /**
