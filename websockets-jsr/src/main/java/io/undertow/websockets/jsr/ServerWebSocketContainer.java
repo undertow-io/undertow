@@ -91,7 +91,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final boolean dispatchToWorker;
 
     private volatile long defaultAsyncSendTimeout;
-    private volatile long maxSessionIdleTimeout;
+    private volatile long defaultMaxSessionIdleTimeout;
     private volatile int defaultMaxBinaryMessageBufferSize;
     private volatile int defaultMaxTextMessageBufferSize;
     private volatile boolean deploymentComplete = false;
@@ -249,12 +249,12 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public long getDefaultMaxSessionIdleTimeout() {
-        return maxSessionIdleTimeout;
+        return defaultMaxSessionIdleTimeout;
     }
 
     @Override
     public void setDefaultMaxSessionIdleTimeout(final long timeout) {
-        this.maxSessionIdleTimeout = timeout;
+        this.defaultMaxSessionIdleTimeout = timeout;
     }
 
     @Override

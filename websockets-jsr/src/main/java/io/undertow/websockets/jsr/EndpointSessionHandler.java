@@ -78,7 +78,7 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
             config.getOpenSessions().add(session);
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
-            //session.setTimeout(getContainer().getMaxSessionIdleTimeout());
+            session.setMaxIdleTimeout(getContainer().getDefaultMaxSessionIdleTimeout());
             session.getAsyncRemote().setSendTimeout(getContainer().getDefaultAsyncSendTimeout());
             try {
                 instance.getInstance().onOpen(session, config.getEndpointConfiguration());
