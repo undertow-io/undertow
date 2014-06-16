@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core;
 
+import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import org.xnio.ChannelExceptionHandler;
@@ -94,6 +95,16 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
                 WebSocketChannel.this.peerConnections.remove(WebSocketChannel.this);
             }
         });
+    }
+
+    @Override
+    protected IdleTimeoutConduit createIdleTimeoutChannel(final StreamConnection connectedStreamChannel) {
+        return new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit()) {
+            @Override
+            protected void doClose() {
+                WebSockets.sendClose(CloseMessage.GOING_AWAY, null, WebSocketChannel.this, null);
+            }
+        };
     }
 
     @Override

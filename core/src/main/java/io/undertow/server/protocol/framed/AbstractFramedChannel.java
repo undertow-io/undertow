@@ -119,7 +119,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         if (readData != null) {
             this.readData = new ReferenceCountedPooled<>(readData, 1);
         }
-        IdleTimeoutConduit idle = new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit());
+        IdleTimeoutConduit idle = createIdleTimeoutChannel(connectedStreamChannel);
         connectedStreamChannel.getSourceChannel().setConduit(idle);
         connectedStreamChannel.getSinkChannel().setConduit(idle);
         this.idleTimeoutConduit = idle;
@@ -134,6 +134,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         channel.getSourceChannel().getReadSetter().set(new FrameReadListener());
         connectedStreamChannel.getSinkChannel().getWriteSetter().set(new FrameWriteListener());
         connectedStreamChannel.getSinkChannel().getCloseSetter().set(new FrameCloseListener());
+    }
+
+    protected IdleTimeoutConduit createIdleTimeoutChannel(StreamConnection connectedStreamChannel) {
+        return new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit());
     }
 
     /**

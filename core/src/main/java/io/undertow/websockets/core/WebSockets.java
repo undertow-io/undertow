@@ -234,6 +234,26 @@ public class WebSockets {
     /**
      * Sends a complete close message, invoking the callback when complete
      *
+     * @param code The close code
+     * @param wsChannel
+     * @param callback
+     */
+    public static void sendClose(final int code, String reason, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
+        sendClose(new CloseMessage(code, reason).toByteBuffer(), wsChannel, callback);
+    }
+
+    /**
+     * Sends a complete close message, invoking the callback when complete
+     *
+     * @param code
+     * @param wsChannel
+     */
+    public static void sendCloseBlocking(final int code, String reason, final WebSocketChannel wsChannel) throws IOException {
+        sendCloseBlocking(new CloseMessage(code, reason).toByteBuffer(), wsChannel);
+    }
+    /**
+     * Sends a complete close message, invoking the callback when complete
+     *
      * @param data
      * @param wsChannel
      */

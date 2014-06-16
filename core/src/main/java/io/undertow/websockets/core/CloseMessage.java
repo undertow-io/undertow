@@ -58,7 +58,7 @@ public class CloseMessage {
 
     public CloseMessage(int code, String reason) {
         this.code = code;
-        this.reason = reason;
+        this.reason = reason == null ? "" : reason;
     }
 
     public CloseMessage(final ByteBuffer[] buffers) {

@@ -34,10 +34,12 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.FutureResult;
 
+import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 import java.net.URI;
@@ -70,6 +72,7 @@ public class AnnotatedEndpointTest {
                                 .addEndpoint(AnnotatedClientEndpointWithConfigurator.class)
                                 .addEndpoint(IncrementEndpoint.class)
                                 .addEndpoint(EncodingEndpoint.class)
+                                .addEndpoint(TimeoutEndpoint.class)
                                 .addEndpoint(RequestUriEndpoint.class)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override
@@ -93,7 +96,7 @@ public class AnnotatedEndpointTest {
         deployment = null;
     }
 
-    @org.junit.Test
+    @Test
     public void testStringOnMessage() throws Exception {
         final byte[] payload = "hello".getBytes();
         final FutureResult latch = new FutureResult();
@@ -105,7 +108,7 @@ public class AnnotatedEndpointTest {
         client.destroy();
     }
 
-    @org.junit.Test
+    @Test
     public void testAnnotatedClientEndpoint() throws Exception {
         AnnotatedClientEndpoint.reset();
         Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
@@ -116,7 +119,7 @@ public class AnnotatedEndpointTest {
         Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
     }
 
-    @org.junit.Test
+    @Test
     public void testCloseReason() throws Exception {
         MessageEndpoint.reset();
 
@@ -132,21 +135,21 @@ public class AnnotatedEndpointTest {
 
     }
 
-    @org.junit.Test
+    @Test
     public void testAnnotatedClientEndpointWithConfigurator() throws Exception {
 
 
         Session session = deployment.connectToServer(AnnotatedClientEndpointWithConfigurator.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
 
         Assert.assertEquals("hi Bob (protocol=configured-proto)", AnnotatedClientEndpointWithConfigurator.message());
-        Assert.assertEquals("foo, bar, configured-proto",ClientConfigurator.sentSubProtocol);
+        Assert.assertEquals("foo, bar, configured-proto", ClientConfigurator.sentSubProtocol);
         Assert.assertEquals("configured-proto", ClientConfigurator.receivedSubProtocol());
 
         session.close();
         Assert.assertEquals("CLOSED", AnnotatedClientEndpointWithConfigurator.message());
     }
 
-    @org.junit.Test
+    @Test
     public void testImplicitIntegerConversion() throws Exception {
         final byte[] payload = "12".getBytes();
         final FutureResult latch = new FutureResult();
@@ -159,7 +162,7 @@ public class AnnotatedEndpointTest {
     }
 
 
-    @org.junit.Test
+    @Test
     public void testEncodingAndDecoding() throws Exception {
         final byte[] payload = "hello".getBytes();
         final FutureResult latch = new FutureResult();
@@ -171,7 +174,7 @@ public class AnnotatedEndpointTest {
         client.destroy();
     }
 
-    @org.junit.Test
+    @Test
     public void testRequestUri() throws Exception {
         final byte[] payload = "hello".getBytes();
         final FutureResult latch = new FutureResult();
@@ -182,4 +185,16 @@ public class AnnotatedEndpointTest {
         latch.getIoFuture().get();
         client.destroy();
     }
+
+    @Test
+    public void testTimeoutCloseReason() throws Exception {
+        TimeoutEndpoint.reset();
+
+        Session session = deployment.connectToServer(DoNothingEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/timeout"));
+
+        Assert.assertEquals(CloseReason.CloseCodes.GOING_AWAY, TimeoutEndpoint.getReason().getCloseCode());
+    }
+
+    @ClientEndpoint
+    public static class DoNothingEndpoint {}
 }

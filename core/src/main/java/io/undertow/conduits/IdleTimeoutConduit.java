@@ -46,6 +46,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     private volatile XnioExecutor.Key handle;
     private volatile long idleTimeout;
     private volatile long expireTime = -1;
+    private volatile boolean timedOut = true;
 
     private final StreamSinkConduit sink;
     private final StreamSourceConduit source;
@@ -68,8 +69,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
             }
 
             UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity");
-            safeClose(sink);
-            safeClose(source);
+            timedOut = true;
+            doClose();
             if (sink.isWriteResumed()) {
                 if(writeReadyHandler != null) {
                     writeReadyHandler.writeReady();
@@ -83,12 +84,20 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
         }
     };
 
+    protected void doClose() {
+        safeClose(sink);
+        safeClose(source);
+    }
+
     public IdleTimeoutConduit(StreamSinkConduit sink, StreamSourceConduit source) {
         this.sink = sink;
         this.source = source;
     }
 
     private void handleIdleTimeout() throws ClosedChannelException {
+        if(timedOut) {
+            return;
+        }
         long idleTimeout = this.idleTimeout;
         if(idleTimeout <= 0) {
             return;
@@ -96,8 +105,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
         long currentTime = System.currentTimeMillis();
         long expireTimeVar = expireTime;
         if(expireTimeVar != -1 && currentTime > expireTimeVar) {
-            safeClose(sink);
-            safeClose(source);
+            timedOut = true;
+            doClose();
             throw new ClosedChannelException();
         }
         expireTime = currentTime + idleTimeout;
