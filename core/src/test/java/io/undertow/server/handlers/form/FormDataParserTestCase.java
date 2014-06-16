@@ -115,7 +115,9 @@ public class FormDataParserTestCase {
     @Test
     public void testFormDataParsing() throws Exception {
         runTest(new BasicNameValuePair("name", "A Value"));
+        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single value", null));
         runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
+        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single value", null) , new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
 
     }
 
@@ -142,7 +144,7 @@ public class FormDataParserTestCase {
 
     private void checkResult(final List<NameValuePair> data, final HttpResponse result) {
         for (NameValuePair vp : data) {
-            Assert.assertEquals(vp.getValue(), result.getHeaders(vp.getName())[0].getValue());
+            Assert.assertEquals(vp.getValue() == null ? "" : vp.getValue(), result.getHeaders(vp.getName())[0].getValue());
         }
     }
 

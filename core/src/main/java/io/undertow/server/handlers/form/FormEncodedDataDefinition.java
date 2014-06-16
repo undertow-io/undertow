@@ -140,6 +140,10 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                         name = builder.toString();
                                         builder.setLength(0);
                                         state = 2;
+                                    } else if (n == '&') {
+                                        data.add(builder.toString(), "");
+                                        builder.setLength(0);
+                                        state = 0;
                                     } else if (n == '%' || n == '+') {
                                         state = 1;
                                         builder.append((char) n);
@@ -153,6 +157,10 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                         name = URLDecoder.decode(builder.toString(), charset);
                                         builder.setLength(0);
                                         state = 2;
+                                    } else if (n == '&') {
+                                        data.add(URLDecoder.decode(builder.toString(), charset), "");
+                                        builder.setLength(0);
+                                        state = 0;
                                     } else {
                                         builder.append((char) n);
                                     }
@@ -190,6 +198,12 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                         data.add(name, builder.toString());
                     } else if (state == 3) {
                         data.add(name, URLDecoder.decode(builder.toString(), charset));
+                    } else if(builder.length() > 0) {
+                        if(state == 1) {
+                            data.add(URLDecoder.decode(builder.toString(), charset), "");
+                        } else {
+                            data.add(builder.toString(), "");
+                        }
                     }
                     state = 4;
                     exchange.putAttachment(FORM_DATA, data);
