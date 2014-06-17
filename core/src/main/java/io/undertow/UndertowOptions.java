@@ -51,8 +51,12 @@ public class UndertowOptions {
 
     /**
      * The idle timeout in milliseconds after which the channel will be closed.
+     *
+     * If the underlying channel already has a read or write timeout set the smaller of the two values will be used
+     * for read/write timeouts.
+     *
      */
-    public static final Option<Long> IDLE_TIMEOUT = Option.simple(UndertowOptions.class, "IDLE_TIMEOUT", Long.class);
+    public static final Option<Integer> IDLE_TIMEOUT = Option.simple(UndertowOptions.class, "IDLE_TIMEOUT", Integer.class);
 
     /**
      * The maximum number of parameters that will be parsed. This is used to protect against hash vulnerabilities.

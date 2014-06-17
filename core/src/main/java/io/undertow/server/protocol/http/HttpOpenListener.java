@@ -20,6 +20,7 @@ package io.undertow.server.protocol.http;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.server.HttpHandler;
@@ -70,11 +71,22 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         //set read and write timeouts
         try {
             Integer readTimeout = channel.getOption(Options.READ_TIMEOUT);
+            Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
+            if((readTimeout == null || readTimeout <= 0) && idleTimeout != null) {
+                readTimeout = idleTimeout;
+            } else if(readTimeout != null && idleTimeout != null && idleTimeout > 0) {
+                readTimeout = Math.min(readTimeout, idleTimeout);
+            }
             if (readTimeout != null && readTimeout > 0) {
                 channel.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(channel.getSourceChannel().getConduit(), channel));
             }
             Integer writeTimeout = channel.getOption(Options.WRITE_TIMEOUT);
-            if (writeTimeout != 0 && writeTimeout > 0) {
+            if((writeTimeout == null || writeTimeout <= 0) && idleTimeout != null) {
+                writeTimeout = idleTimeout;
+            } else if(writeTimeout != null && idleTimeout != null && idleTimeout > 0) {
+                writeTimeout = Math.min(writeTimeout, idleTimeout);
+            }
+            if (writeTimeout != null && writeTimeout > 0) {
                 channel.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(channel.getSinkChannel().getConduit(), channel));
             }
         } catch (IOException e) {

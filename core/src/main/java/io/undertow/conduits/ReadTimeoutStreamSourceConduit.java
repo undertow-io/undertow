@@ -30,6 +30,7 @@ import org.xnio.conduits.StreamSourceConduit;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
@@ -43,12 +44,23 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
 
     private XnioExecutor.Key handle;
     private final StreamConnection connection;
+    private volatile long expireTime = -1;
 
     private static final int FUZZ_FACTOR = 50; //we add 50ms to the timeout to make sure the underlying channel has actually timed out
 
     private final Runnable timeoutCommand = new Runnable() {
         @Override
         public void run() {
+            handle = null;
+            if(expireTime == -1) {
+                return;
+            }
+            long current = System.currentTimeMillis();
+            if(current  < expireTime) {
+                //timeout has been bumped, re-schedule
+                handle = connection.getIoThread().executeAfter(timeoutCommand, (expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+                return;
+            }
             UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity");
             IoUtils.safeClose(connection);
             if (connection.getSourceChannel().isReadResumed()) {
@@ -66,13 +78,26 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
     }
 
     private void handleReadTimeout(final long ret) throws IOException {
-        Integer readTimeout = connection.getOption(Options.READ_TIMEOUT);
-        if (readTimeout != null && readTimeout > 0) {
-            if (ret == 0 && handle == null) {
-                handle = super.getReadThread().executeAfter(timeoutCommand, readTimeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
-            } else if (ret > 0 && handle != null) {
-                handle.remove();
-            }
+        if(!connection.isOpen()) {
+            return;
+        }
+        if(ret == 0 && handle != null) {
+            return;
+        }
+        long idleTimeout = connection.getSourceChannel().getOption(Options.READ_TIMEOUT);
+        if(idleTimeout <= 0) {
+            return;
+        }
+        long currentTime = System.currentTimeMillis();
+        long expireTimeVar = expireTime;
+        if(expireTimeVar != -1 && currentTime > expireTimeVar) {
+            IoUtils.safeClose(connection);
+            throw new ClosedChannelException();
+        }
+        expireTime = currentTime + idleTimeout;
+        XnioExecutor.Key key = handle;
+        if (key == null) {
+            handle = connection.getIoThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
         }
     }
 

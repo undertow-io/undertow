@@ -20,12 +20,18 @@ package io.undertow.server.protocol.ajp;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
+import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
+import org.xnio.Options;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static io.undertow.UndertowOptions.DECODE_URL;
@@ -62,6 +68,32 @@ public class AjpOpenListener implements OpenListener {
     public void handleEvent(final StreamConnection channel) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
+        }
+
+        //set read and write timeouts
+        try {
+            Integer readTimeout = channel.getOption(Options.READ_TIMEOUT);
+            Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
+            if((readTimeout == null || readTimeout <= 0) && idleTimeout != null) {
+                readTimeout = idleTimeout;
+            } else if(readTimeout != null && idleTimeout != null && idleTimeout > 0) {
+                readTimeout = Math.min(readTimeout, idleTimeout);
+            }
+            if (readTimeout != null && readTimeout > 0) {
+                channel.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(channel.getSourceChannel().getConduit(), channel));
+            }
+            Integer writeTimeout = channel.getOption(Options.WRITE_TIMEOUT);
+            if((writeTimeout == null || writeTimeout <= 0) && idleTimeout != null) {
+                writeTimeout = idleTimeout;
+            } else if(writeTimeout != null && idleTimeout != null && idleTimeout > 0) {
+                writeTimeout = Math.min(writeTimeout, idleTimeout);
+            }
+            if (writeTimeout != null && writeTimeout > 0) {
+                channel.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(channel.getSinkChannel().getConduit(), channel));
+            }
+        } catch (IOException e) {
+            IoUtils.safeClose(channel);
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         }
 
         AjpServerConnection connection = new AjpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
