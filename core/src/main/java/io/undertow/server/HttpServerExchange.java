@@ -1252,7 +1252,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     public HttpServerExchange addResponseWrapper(final ConduitWrapper<StreamSinkConduit> wrapper) {
         ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
         if (responseChannel != null) {
-            throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
+            throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
         }
         if(wrappers == null) {
             this.responseWrappers = wrappers = new ConduitWrapper[2];
