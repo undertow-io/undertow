@@ -100,7 +100,6 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
             }
             try {
                 ByteBuffer newBuf = ByteBuffer.allocate(length);
-
                 for (int i = 0; i < allHeaderBuffers.length; ++i) {
                     newBuf.put(allHeaderBuffers[i].getResource());
                 }

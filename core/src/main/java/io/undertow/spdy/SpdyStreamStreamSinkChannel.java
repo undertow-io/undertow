@@ -96,6 +96,9 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
                     throw UndertowMessages.MESSAGES.headersTooLargeToFitInHeapBuffer();
                 } else if (totalSize > inputBuffer.remaining()) {
                     allHeaderBuffers = doDeflate(inputBuffer, outputBuffer, currentPooled, allHeaderBuffers);
+                    if(allHeaderBuffers != null) {
+                        currentPooled = allHeaderBuffers[allHeaderBuffers.length - 1];
+                    }
                     inputBuffer.clear();
                     outputBuffer.clear();
                 }
@@ -119,9 +122,6 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
             }
 
             allHeaderBuffers = doDeflate(inputBuffer, outputBuffer, currentPooled, allHeaderBuffers);
-            if (allHeaderBuffers != null) {
-                currentPooled = allHeaderBuffers[allHeaderBuffers.length - 1];
-            }
 
             int totalLength;
             if (allHeaderBuffers != null) {
@@ -208,7 +208,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
                     }
                 } while (remaining > 0);
             }
-        } while (deflated == outputBuffer.remaining());
+        } while (!deflater.needsInput());
         return allHeaderBuffers;
     }
 

@@ -48,6 +48,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
     private HttpString currentHeader;
     private ByteArrayOutputStream partialValue;
     private int remainingData;
+    private boolean beforeHeadersHandled = false;
 
 
     public SpdyHeaderBlockParser(Pool<ByteBuffer> bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
@@ -58,9 +59,11 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
 
     @Override
     protected void handleData(ByteBuffer resource) throws IOException {
-        if (!handleBeforeHeader(resource)) {
-            return;
-        }
+        if(!beforeHeadersHandled) {
+            if (!handleBeforeHeader(resource)) {
+                return;
+            }
+        } beforeHeadersHandled = true;
         Pooled<ByteBuffer> outPooled = channel.getHeapBufferPool().allocate();
         Pooled<ByteBuffer> inPooled = channel.getHeapBufferPool().allocate();
         try {
