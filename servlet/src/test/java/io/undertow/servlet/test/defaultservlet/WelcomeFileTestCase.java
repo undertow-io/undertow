@@ -69,7 +69,8 @@ public class WelcomeFileTestCase {
                         .addMapping("/foo/servletPath/*"))
 
                 .addFilter(new FilterInfo("Filter", NoOpFilter.class))
-                .addFilterUrlMapping("Filter", "/*", DispatcherType.REQUEST);
+                .addFilterUrlMapping("Filter", "/*", DispatcherType.REQUEST)
+                .addFilterUrlMapping("Filter", "/", DispatcherType.REQUEST);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

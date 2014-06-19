@@ -42,7 +42,7 @@ class ServletPathMatchesData {
         this.nameMatches = nameMatches;
         Map<String, ServletPathMatch> newExactPathMatches = new HashMap<>();
         for (Map.Entry<String, ServletChain> entry : exactPathMatches.entrySet()) {
-            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), false));
+            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), entry.getValue().isDefaultServletMapping()));
         }
         this.exactPathMatches = newExactPathMatches;
 
