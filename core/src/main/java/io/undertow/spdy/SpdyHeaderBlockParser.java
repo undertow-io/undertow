@@ -174,7 +174,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                 } else {
                     remainingData = valueLength - data.remaining();
                     int start = data.arrayOffset() + data.position();
-                    int end = start + valueLength;
+                    int end = start + data.remaining();
                     byte[] array = data.array();
                     for (int i = start; i < end; ++i) {
                         if (array[i] == 0) {

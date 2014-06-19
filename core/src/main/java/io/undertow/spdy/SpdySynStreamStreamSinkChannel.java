@@ -20,8 +20,8 @@ package io.undertow.spdy;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
+import io.undertow.util.ImmediatePooled;
 import org.xnio.Pooled;
 
 import java.nio.ByteBuffer;
@@ -49,83 +49,74 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
         if (fcWindow == 0 && getBuffer().hasRemaining()) {
             return new SendFrameHeader(getBuffer().remaining(), null);
         }
-        Pooled<ByteBuffer> header = getChannel().getBufferPool().allocate();
-        ByteBuffer buffer = header.getResource();
+        Pooled<ByteBuffer> firstHeaderBuffer = getChannel().getBufferPool().allocate();
+        Pooled<ByteBuffer>[] allHeaderBuffers = null;
+        ByteBuffer firstBuffer = firstHeaderBuffer.getResource();
         if (first) {
-            Pooled<ByteBuffer> outPooled = getChannel().getHeapBufferPool().allocate();
-            Pooled<ByteBuffer> inPooled = getChannel().getHeapBufferPool().allocate();
-            try {
-                ByteBuffer inputBuffer = inPooled.getResource();
-                ByteBuffer outputBuffer = outPooled.getResource();
+
+            first = false;
+            int firstInt = SpdyChannel.CONTROL_FRAME | (getChannel().getSpdyVersion() << 16) | 1;
+            SpdyProtocolUtils.putInt(firstBuffer, firstInt);
+            SpdyProtocolUtils.putInt(firstBuffer, 0); //we back fill the length
+            HeaderMap headers = this.headers;
+
+            SpdyProtocolUtils.putInt(firstBuffer, getStreamId());
+            SpdyProtocolUtils.putInt(firstBuffer, 0);
+            firstBuffer.put((byte) 0);
+            firstBuffer.put((byte) 0);
 
 
-                first = false;
-                int firstInt = SpdyChannel.CONTROL_FRAME | (getChannel().getSpdyVersion() << 16) | 1;
-                SpdyProtocolUtils.putInt(buffer, firstInt);
-                SpdyProtocolUtils.putInt(buffer, 0); //we back fill the length
-                HeaderMap headers = this.headers;
+            headers.remove(Headers.CONNECTION); //todo: should this be here?
+            headers.remove(Headers.KEEP_ALIVE);
+            headers.remove(Headers.TRANSFER_ENCODING);
 
-                SpdyProtocolUtils.putInt(buffer, getStreamId());
-                SpdyProtocolUtils.putInt(buffer, 0);
-                buffer.put((byte) 0);
-                buffer.put((byte) 0);
-
-
-                headers.remove(Headers.CONNECTION); //todo: should this be here?
-                headers.remove(Headers.KEEP_ALIVE);
-                headers.remove(Headers.TRANSFER_ENCODING);
-
-                SpdyProtocolUtils.putInt(inputBuffer, headers.size());
-
-                long fiCookie = headers.fastIterateNonEmpty();
-                while (fiCookie != -1) {
-                    HeaderValues headerValues = headers.fiCurrent(fiCookie);
-                    //TODO: for now it just fails if there are too many headers
-                    SpdyProtocolUtils.putInt(inputBuffer, headerValues.getHeaderName().length());
-                    for (int i = 0; i < headerValues.getHeaderName().length(); ++i) {
-                        inputBuffer.put((byte) (Character.toLowerCase((char) headerValues.getHeaderName().byteAt(i))));
-                    }
-                    int pos = inputBuffer.position();
-                    SpdyProtocolUtils.putInt(inputBuffer, 0); //size, back fill
-
-                    int size = headerValues.size() - 1; //null between the characters
-
-                    for (int i = 0; i < headerValues.size(); ++i) {
-                        String val = headerValues.get(i);
-                        size += val.length();
-                        for (int j = 0; j < val.length(); ++j) {
-                            inputBuffer.put((byte) val.charAt(j));
-                        }
-                        if (i != headerValues.size() - 1) {
-                            inputBuffer.put((byte) 0);
-                        }
-                    }
-                    SpdyProtocolUtils.putInt(inputBuffer, size, pos);
-                    fiCookie = headers.fiNext(fiCookie);
-                }
-
-                deflater.setInput(inputBuffer.array(), inputBuffer.arrayOffset(), inputBuffer.position());
-
-                int deflated;
-                do {
-                    deflated = deflater.deflate(outputBuffer.array(), outputBuffer.arrayOffset(), outputBuffer.remaining(), Deflater.SYNC_FLUSH);
-                    buffer.put(outputBuffer.array(), outputBuffer.arrayOffset(), deflated);
-                } while (deflated == outputBuffer.remaining());
-                SpdyProtocolUtils.putInt(buffer, ((isWritesShutdown() && !getBuffer().hasRemaining() ? SpdyChannel.FLAG_FIN : 0) << 24) | (buffer.position() - 8), 4);
-
-            } finally {
-                inPooled.free();
-                outPooled.free();
-            }
+            allHeaderBuffers = createHeaderBlock(firstHeaderBuffer, allHeaderBuffers, firstBuffer, headers);
         }
+        Pooled<ByteBuffer> currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
+        ByteBuffer currentBuffer = currentPooled.getResource();
         int remainingInBuffer = 0;
         if (getBuffer().remaining() > 0) {
             remainingInBuffer = getBuffer().remaining() - fcWindow;
             getBuffer().limit(getBuffer().position() + fcWindow);
-            SpdyProtocolUtils.putInt(buffer, getStreamId());
-            SpdyProtocolUtils.putInt(buffer, ((isWritesShutdown() ? SpdyChannel.FLAG_FIN : 0) << 24) + fcWindow);
+            if (currentBuffer.remaining() < 8) {
+                allHeaderBuffers = allocateAll(allHeaderBuffers, currentPooled);
+                currentPooled = allHeaderBuffers[allHeaderBuffers.length - 1];
+                currentBuffer = currentPooled.getResource();
+            }
+            SpdyProtocolUtils.putInt(currentBuffer, getStreamId());
+            SpdyProtocolUtils.putInt(currentBuffer, ((isWritesShutdown() ? SpdyChannel.FLAG_FIN : 0) << 24) + fcWindow);
         }
-        header.getResource().flip();
-        return new SendFrameHeader(remainingInBuffer, header);
+        if (allHeaderBuffers == null) {
+            //only one buffer required
+            currentBuffer.flip();
+            return new SendFrameHeader(remainingInBuffer, currentPooled);
+        } else {
+            //headers were too big to fit in one buffer
+            //for now we will just copy them into a big buffer
+            int length = 0;
+            for (int i = 0; i < allHeaderBuffers.length; ++i) {
+                length += allHeaderBuffers[i].getResource().position();
+                allHeaderBuffers[i].getResource().flip();
+            }
+            try {
+                ByteBuffer newBuf = ByteBuffer.allocate(length);
+
+                for (int i = 0; i < allHeaderBuffers.length; ++i) {
+                    newBuf.put(allHeaderBuffers[i].getResource());
+                }
+                newBuf.flip();
+                return new SendFrameHeader(remainingInBuffer, new ImmediatePooled<ByteBuffer>(newBuf));
+            } finally {
+                //the allocate can oome
+                for (int i = 0; i < allHeaderBuffers.length; ++i) {
+                    allHeaderBuffers[i].free();
+                }
+            }
+        }
+    }
+
+    @Override
+    protected Deflater getDeflater() {
+        return deflater;
     }
 }

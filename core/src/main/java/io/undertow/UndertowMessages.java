@@ -299,4 +299,7 @@ public interface UndertowMessages {
 
     @Message(id = 91, value = "Buffer has already been freed")
     IllegalStateException bufferAlreadyFreed();
+
+    @Message(id = 92, value = "A SPDY header was too large to fit in a response buffer, if you want to support larger headers please increase the buffer size")
+    IllegalStateException headersTooLargeToFitInHeapBuffer();
 }

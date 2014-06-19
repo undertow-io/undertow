@@ -1661,8 +1661,11 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void close() throws IOException {
-            IoUtils.safeClose(getInputStream());
-            IoUtils.safeClose(getOutputStream());
+            try {
+                getInputStream().close();
+            } finally {
+                getOutputStream().close();
+            }
         }
     }
 
