@@ -201,7 +201,7 @@ public class InMemorySessionManager implements SessionManager {
 
     @Override
     public String toString() {
-        return this.deploymentName.toString();
+        return this.deploymentName;
     }
 
     /**
