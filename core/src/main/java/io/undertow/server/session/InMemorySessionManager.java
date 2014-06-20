@@ -23,9 +23,6 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcurrentDirectDeque;
 
-import org.xnio.XnioExecutor;
-import org.xnio.XnioWorker;
-
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +30,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import org.xnio.XnioExecutor;
+import org.xnio.XnioWorker;
 
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.
@@ -252,7 +252,15 @@ public class InMemorySessionManager implements SessionManager {
         synchronized void bumpTimeout() {
             final int maxInactiveInterval = getMaxInactiveInterval();
             if (maxInactiveInterval > 0) {
-                expireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000);
+                long newExpireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000);
+                if(timerCancelKey != null && (newExpireTime < expireTime)) {
+                    // We have to re-schedule as the new maxInactiveInterval is lower than the old one
+                    if (!timerCancelKey.remove()) {
+                        return;
+                    }
+                    timerCancelKey = null;
+                }
+                expireTime = newExpireTime;
                 if(timerCancelKey == null) {
                     //+1 second, to make sure that the time has actually expired
                     //we don't re-schedule every time, as it is expensive
