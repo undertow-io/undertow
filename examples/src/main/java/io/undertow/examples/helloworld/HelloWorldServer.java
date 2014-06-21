@@ -32,7 +32,7 @@ public class HelloWorldServer {
 
     public static void main(final String[] args) {
         Undertow server = Undertow.builder()
-                .addListener(8080, "localhost")
+                .addHttpListener(8080, "localhost")
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {

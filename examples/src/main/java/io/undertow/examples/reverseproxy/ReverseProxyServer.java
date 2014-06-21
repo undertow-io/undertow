@@ -39,7 +39,7 @@ public class ReverseProxyServer {
     public static void main(final String[] args) {
         try {
             final Undertow server1 = Undertow.builder()
-                    .addListener(8081, "localhost")
+                    .addHttpListener(8081, "localhost")
                     .setHandler(new HttpHandler() {
                         @Override
                         public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -52,7 +52,7 @@ public class ReverseProxyServer {
             server1.start();
 
             final Undertow server2 = Undertow.builder()
-                    .addListener(8082, "localhost")
+                    .addHttpListener(8082, "localhost")
                     .setHandler(new HttpHandler() {
                         @Override
                         public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -64,7 +64,7 @@ public class ReverseProxyServer {
             server2.start();
 
             final Undertow server3 = Undertow.builder()
-                    .addListener(8083, "localhost")
+                    .addHttpListener(8083, "localhost")
                     .setHandler(new HttpHandler() {
                         @Override
                         public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -83,7 +83,7 @@ public class ReverseProxyServer {
                     .setConnectionsPerThread(20);
 
             Undertow reverseProxy = Undertow.builder()
-                    .addListener(8080, "localhost")
+                    .addHttpListener(8080, "localhost")
                     .setIoThreads(4)
                     .setHandler(new ProxyHandler(loadBalancer, 30000, ResponseCodeHandler.HANDLE_404))
                     .build();
