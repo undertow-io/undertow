@@ -63,7 +63,7 @@ public class ServletServer {
             PathHandler path = Handlers.path(Handlers.redirect(MYAPP))
                     .addPrefixPath(MYAPP, servletHandler);
             Undertow server = Undertow.builder()
-                    .addListener(8080, "localhost")
+                    .addHttpListener(8080, "localhost")
                     .setHandler(path)
                     .build();
             server.start();

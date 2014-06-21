@@ -61,7 +61,7 @@ public class BasicAuthServer {
         final IdentityManager identityManager = new MapIdentityManager(users);
 
         Undertow server = Undertow.builder()
-                .addListener(8080, "localhost")
+                .addHttpListener(8080, "localhost")
                 .setHandler(addSecurity(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
