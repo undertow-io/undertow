@@ -18,8 +18,6 @@
 
 package io.undertow.security.impl;
 
-import java.io.Closeable;
-
 import io.undertow.security.idm.Account;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
@@ -28,7 +26,7 @@ import io.undertow.server.session.SessionManager;
  * @author Stuart Douglas
  * @author Paul Ferraro
  */
-public interface SingleSignOn extends Iterable<Session>, Closeable {
+public interface SingleSignOn extends Iterable<Session>, AutoCloseable {
 
     /**
      * Returns the unique identifier for this SSO.
