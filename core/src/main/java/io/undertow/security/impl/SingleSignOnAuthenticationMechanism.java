@@ -169,7 +169,11 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                         if (reason == SessionDestroyedReason.INVALIDATED) {
                             for (Session associatedSession : sso) {
                                 associatedSession.invalidate(null);
+                                sso.remove(associatedSession);
                             }
+                        }
+                        // If there are no more associated sessions, remove the SSO altogether
+                        if (!sso.iterator().hasNext()) {
                             manager.removeSingleSignOn(ssoId);
                         }
                     } finally {
