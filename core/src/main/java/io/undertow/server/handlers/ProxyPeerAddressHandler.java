@@ -50,7 +50,7 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             if (index == -1) {
                 value = forwardedFor;
             } else {
-                value = forwardedFor.substring(0, index - 1);
+                value = forwardedFor.substring(0, index);
             }
             InetAddress address = InetAddress.getByName(value);
             //we have no way of knowing the port
