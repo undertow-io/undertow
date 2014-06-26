@@ -126,7 +126,7 @@ public class Connectors {
                 header.append(DateUtils.toOldCookieDateString(expires));
             } else if (cookie.getMaxAge() > 0) {
                 Date expires = new Date();
-                expires.setTime(expires.getTime() + cookie.getMaxAge() * 1000);
+                expires.setTime(expires.getTime() + cookie.getMaxAge() * 1000L);
                 header.append("; Expires=");
                 header.append(DateUtils.toOldCookieDateString(expires));
             }
