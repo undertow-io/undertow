@@ -44,7 +44,7 @@ public class FileHandlerIndexTestCase {
 
 
     @Test
-    public void testFileIsServed() throws IOException, URISyntaxException {
+    public void testWelcomeFile() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
         File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
         try {
@@ -68,4 +68,34 @@ public class FileHandlerIndexTestCase {
         }
     }
 
+    @Test
+    public void testDirectoryIndex() throws IOException, URISyntaxException {
+        TestHttpClient client = new TestHttpClient();
+        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        try {
+            DefaultServer.setRootHandler(new PathHandler()
+                            .addPrefixPath("/path", new ResourceHandler()
+                                    .setResourceManager(new FileResourceManager(rootPath, 10485760))
+                                    .setDirectoryListingEnabled(true)));
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Header[] headers = result.getHeaders("Content-Type");
+            Assert.assertEquals("text/html", headers[0].getValue());
+            Assert.assertTrue(response, response.contains("page.html"));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/.");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            headers = result.getHeaders("Content-Type");
+            Assert.assertEquals("text/html", headers[0].getValue());
+            Assert.assertTrue(response, response.contains("page.html"));
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }
