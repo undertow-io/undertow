@@ -71,11 +71,13 @@ public class SecurityPathMatches {
         PathSecurityInformation match = exactPathRoleInformation.get(path);
         if (match != null) {
             handleMatch(method, match, currentMatch);
+            return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
         }
 
         match = prefixPathRoleInformation.get(path);
         if (match != null) {
             handleMatch(method, match, currentMatch);
+            return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
         }
 
         int qsPos = -1;
@@ -88,6 +90,7 @@ public class SecurityPathMatches {
                 match = exactPathRoleInformation.get(part);
                 if (match != null) {
                     handleMatch(method, match, currentMatch);
+                    return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
                 }
                 qsPos = i;
                 extension = false;
@@ -97,6 +100,7 @@ public class SecurityPathMatches {
                 match = prefixPathRoleInformation.get(part);
                 if (match != null) {
                     handleMatch(method, match, currentMatch);
+                    return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
                 }
             } else if (c == '.') {
                 if (!extension) {
@@ -110,18 +114,16 @@ public class SecurityPathMatches {
                     match = extensionRoleInformation.get(ext);
                     if (match != null) {
                         handleMatch(method, match, currentMatch);
+                        return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
                     }
                 }
             }
         }
-
-
         return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
     }
 
     /**
      * merge all constraints, as per 13.8.1 Combining Constraints
-     * @param constraintSet
      */
     private SingleConstraintMatch mergeConstraints(final RuntimeMatch currentMatch) {
         if(currentMatch.uncovered && denyUncoveredHttpMethods) {

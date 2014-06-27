@@ -26,6 +26,7 @@ import java.util.List;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+
 import org.xnio.FileChangeCallback;
 import org.xnio.FileChangeEvent;
 import org.xnio.FileSystemWatcher;
@@ -91,8 +92,17 @@ public class FileResourceManager implements ResourceManager {
                 //security check for case insensitive file systems
                 //we make sure the case of the filename matches the case of the request
                 //TODO: we should be able to avoid this if we can tell a FS is case sensitive
-                if (file.getCanonicalFile().getName().equals(file.getName())) {
+                //this is only a check for case sensitivity, not for . and ../ which are allowed
+                String canonical = file.getCanonicalFile().getName();
+                if (canonical.equals(file.getName())) {
                     return new FileResource(file, this, path);
+                } else {
+                    //ok, so there may be a caase sensitivity issue here, or it could be caused
+                    //by a non-canonical representation, i.e. ../ or .
+                    //so we test to see if it is a case sensitvity issue
+                    if(!canonical.equalsIgnoreCase(file.getName())) {
+                        return new FileResource(file, this, path);
+                    }
                 }
             }
             return null;

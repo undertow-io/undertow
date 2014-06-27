@@ -75,7 +75,7 @@ public class SessionListenerBridge implements SessionListener {
                 handle.tearDown();
             }
             ServletRequestContext current = SecurityActions.currentServletRequestContext();
-            if (current != null) {
+            if (current != null && current.getSession().getSession() == session) {
                 current.setSession(null);
             }
         }

@@ -68,9 +68,9 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
     public AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange, SecurityContext securityContext) {
         Cookie cookie = exchange.getRequestCookies().get(cookieName);
         if (cookie != null) {
-            final SingleSignOn sso = this.manager.findSingleSignOn(cookie.getValue());
-            if (sso != null) {
-                try {
+            final String ssoId = cookie.getValue();
+            try (SingleSignOn sso = this.manager.findSingleSignOn(ssoId)) {
+                if (sso != null) {
                     Account verified = securityContext.getIdentityManager().verify(sso.getAccount());
                     if (verified == null) {
                         //we return not attempted here to allow other mechanisms to proceed as normal
@@ -83,21 +83,11 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                         @Override
                         public void handleNotification(SecurityNotification notification) {
                             if (notification.getEventType() == SecurityNotification.EventType.LOGGED_OUT) {
-                                try {
-                                    sso.remove(session);
-                                    for (Session associatedSession : sso) {
-                                        associatedSession.invalidate(null);
-                                    }
-                                    manager.removeSingleSignOn(sso.getId());
-                                } finally {
-                                    sso.close();
-                                }
+                                manager.removeSingleSignOn(ssoId);
                             }
                         }
                     });
                     return AuthenticationMechanismOutcome.AUTHENTICATED;
-                } finally {
-                    sso.close();
                 }
             }
             clearSsoCookie(exchange);
@@ -137,14 +127,10 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
             SecurityContext sc = exchange.getSecurityContext();
             Account account = sc.getAuthenticatedAccount();
             if (account != null) {
-                SingleSignOn sso = manager.createSingleSignOn(account, sc.getMechanismName());
-                try {
-
+                try (SingleSignOn sso = manager.createSingleSignOn(account, sc.getMechanismName())) {
                     Session session = getSession(exchange);
                     registerSessionIfRequired(sso, session);
                     exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
-                } finally {
-                    sso.close();
                 }
             }
             return factory.create();
@@ -162,18 +148,19 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         public void sessionDestroyed(Session session, HttpServerExchange exchange, SessionDestroyedReason reason) {
             String ssoId = (String) session.getAttribute(SSO_SESSION_ATTRIBUTE);
             if (ssoId != null) {
-                SingleSignOn sso = manager.findSingleSignOn(ssoId);
-                if (sso != null) {
-                    try {
+                try (SingleSignOn sso = manager.findSingleSignOn(ssoId)) {
+                    if (sso != null) {
                         sso.remove(session);
                         if (reason == SessionDestroyedReason.INVALIDATED) {
                             for (Session associatedSession : sso) {
                                 associatedSession.invalidate(null);
+                                sso.remove(associatedSession);
                             }
+                        }
+                        // If there are no more associated sessions, remove the SSO altogether
+                        if (!sso.iterator().hasNext()) {
                             manager.removeSingleSignOn(ssoId);
                         }
-                    } finally {
-                        sso.close();
                     }
                 }
             }

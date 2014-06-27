@@ -126,7 +126,7 @@ public class DefaultServlet extends HttpServlet {
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         final String path = getPath(req);
-        if (!isAllowed(path)) {
+        if (!isAllowed(path, req.getDispatcherType())) {
             resp.sendError(404);
             return;
         }
@@ -314,13 +314,16 @@ public class DefaultServlet extends HttpServlet {
 
     }
 
-    private boolean isAllowed(String path) {
+    private boolean isAllowed(String path, DispatcherType dispatcherType) {
         if (!path.isEmpty()) {
-            if (path.startsWith("/META-INF") ||
-                    path.startsWith("META-INF") ||
-                    path.startsWith("/WEB-INF") ||
-                    path.startsWith("WEB-INF")) {
-                return false;
+            if(dispatcherType == DispatcherType.REQUEST) {
+                //WFLY-3543 allow the dispatcher to access stuff in web-inf and meta inf
+                if (path.startsWith("/META-INF") ||
+                        path.startsWith("META-INF") ||
+                        path.startsWith("/WEB-INF") ||
+                        path.startsWith("WEB-INF")) {
+                    return false;
+                }
             }
         }
         int pos = path.lastIndexOf('/');
