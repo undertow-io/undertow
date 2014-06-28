@@ -22,10 +22,12 @@ import io.undertow.Handlers;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RoutingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Methods;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -45,6 +47,20 @@ public class RoutingHandlerTestCase {
 
     @BeforeClass
     public static void setup() {
+        RoutingHandler commonHandler = Handlers.routing()
+                    .add(Methods.GET, "/baz", new HttpHandler() {
+                        @Override
+                        public void handleRequest(HttpServerExchange exchange) throws Exception {
+                            exchange.getResponseSender().send("baz");
+                        }
+                    })
+                    .add(Methods.GET, "/baz/{foo}", new HttpHandler() {
+                        @Override
+                        public void handleRequest(HttpServerExchange exchange) throws Exception {
+                            exchange.getResponseSender().send("baz-path" + exchange.getQueryParameters().get("foo"));
+                        }
+                    });
+
         DefaultServer.setRootHandler(Handlers.routing()
                 .add(Methods.GET, "/foo", new HttpHandler() {
                     @Override
@@ -69,7 +85,8 @@ public class RoutingHandlerTestCase {
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("foo-path" + exchange.getQueryParameters().get("bar"));
                     }
-                }));
+                })
+                .addAll(commonHandler));
     }
 
 
@@ -109,6 +126,16 @@ public class RoutingHandlerTestCase {
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("foo-path[a]", HttpClientUtils.readResponse(result));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/baz");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("baz", HttpClientUtils.readResponse(result));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/baz/a");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("baz-path[a]", HttpClientUtils.readResponse(result));
 
         } finally {
             client.getConnectionManager().shutdown();
