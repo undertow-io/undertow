@@ -125,8 +125,18 @@ public class RoutingHandler implements HttpHandler {
         return fallbackHandler;
     }
 
-    public void setFallbackHandler(HttpHandler fallbackHandler) {
+    public RoutingHandler setFallbackHandler(HttpHandler fallbackHandler) {
         this.fallbackHandler = fallbackHandler;
+        return this;
+    }
+
+    public HttpHandler getInvalidMethodHandler() {
+        return invalidMethodHandler;
+    }
+
+    public RoutingHandler setInvalidMethodHandler(HttpHandler invalidMethodHandler) {
+        this.invalidMethodHandler = invalidMethodHandler;
+        return this;
     }
 
     private static class RoutingMatch {
