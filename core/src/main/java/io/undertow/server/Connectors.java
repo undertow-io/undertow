@@ -80,7 +80,9 @@ public class Connectors {
                 Pooled<ByteBuffer>[] bufs = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
                 if (bufs != null) {
                     for (Pooled<ByteBuffer> i : bufs) {
-                        i.free();
+                        if(i != null) {
+                            i.free();
+                        }
                     }
                 }
                 nextListener.proceed();

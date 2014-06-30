@@ -491,6 +491,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     private class SpdyControlMessageExceptionHandler implements ChannelExceptionHandler<SpdyStreamSinkChannel> {
         @Override
         public void handleException(SpdyStreamSinkChannel channel, IOException exception) {
+            IoUtils.safeClose(channel);
             handleBrokenSinkChannel(exception);
         }
     }

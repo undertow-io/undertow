@@ -313,6 +313,9 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
             if (channel == null) {
                 channel = exchange.getResponseChannel();
             }
+            if(channel == null) {
+                return;
+            }
             StreamSinkChannel channel = this.channel;
             channel.shutdownWrites();
             Channels.flushBlocking(channel);
