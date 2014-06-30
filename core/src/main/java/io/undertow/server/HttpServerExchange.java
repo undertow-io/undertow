@@ -498,6 +498,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         return this;
     }
 
+    /**
+     *
+     * @return The query string, without the leading ?
+     */
     public String getQueryString() {
         return queryString;
     }
