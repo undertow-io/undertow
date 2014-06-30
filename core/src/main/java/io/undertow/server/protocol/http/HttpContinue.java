@@ -51,7 +51,7 @@ public class HttpContinue {
      * @return <code>true</code> if the server needs to send a continue response
      */
     public static boolean requiresContinueResponse(final HttpServerExchange exchange) {
-        if (!exchange.isHttp11()) {
+        if (!exchange.isHttp11() || exchange.isResponseStarted()) {
             return false;
         }
         if (exchange.getConnection() instanceof HttpServerConnection) {
