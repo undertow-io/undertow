@@ -60,6 +60,9 @@ public class LocaleUtils {
                 }
             }
         }
+        if (ret.isEmpty()) {
+            ret.add(Locale.getDefault());
+        }
         return ret;
     }
 }
