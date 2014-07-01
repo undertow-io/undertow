@@ -75,6 +75,7 @@ import java.security.AccessController;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.Enumeration;
@@ -835,6 +836,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public Enumeration<Locale> getLocales() {
         final List<String> acceptLanguage = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
         List<Locale> ret = LocaleUtils.getLocalesFromHeader(acceptLanguage);
+        if(ret.isEmpty()) {
+            return new IteratorEnumeration<>(Collections.singletonList(Locale.getDefault()).iterator());
+        }
         return new IteratorEnumeration<>(ret.iterator());
     }
 
