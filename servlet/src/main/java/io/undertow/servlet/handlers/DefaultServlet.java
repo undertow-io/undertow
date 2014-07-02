@@ -245,9 +245,9 @@ public class DefaultServlet extends HttpServlet {
         //we are going to proceed. Set the appropriate headers
         final String contentType = deployment.getServletContext().getMimeType(resource.getName());
         if (contentType != null) {
-            resp.setHeader(Headers.CONTENT_TYPE_STRING, contentType);
+            resp.setContentType(contentType);
         } else {
-            resp.setHeader(Headers.CONTENT_TYPE_STRING, "application/octet-stream");
+            resp.setContentType("application/octet-stream");
         }
         if (lastModified != null) {
             resp.setHeader(Headers.LAST_MODIFIED_STRING, resource.getLastModifiedString());
