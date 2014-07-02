@@ -191,7 +191,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude || ignoredFlushPerformed) {
             return;
         }
-        exchange.getResponseHeaders().put(name, value);
+        if(name.equals(Headers.CONTENT_TYPE)) {
+            setContentType(value);
+        } else {
+            exchange.getResponseHeaders().put(name, value);
+        }
     }
 
     @Override
@@ -203,7 +207,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude || ignoredFlushPerformed) {
             return;
         }
-        exchange.getResponseHeaders().add(name, value);
+        if(name.equals(Headers.CONTENT_TYPE) && !exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
+            setContentType(value);
+        } else {
+            exchange.getResponseHeaders().add(name, value);
+        }
     }
 
     @Override
