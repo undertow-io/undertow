@@ -398,10 +398,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 throw UndertowServletMessages.MESSAGES.authenticationFailed();
             }
         } else {
-            // Not authenticated and response already sent.
-            HttpServletResponseImpl responseImpl = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalResponse();
-            responseImpl.closeStreamAndWriter();
-            return false;
+            if(exchange.isResponseStarted()) {
+                //the auth mechanism commited the response, so we return false
+                return false;
+            } else {
+                //as the response was not commited we throw an exception as per the javadoc
+                throw UndertowServletMessages.MESSAGES.authenticationFailed();
+            }
         }
     }
 
