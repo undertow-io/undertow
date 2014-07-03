@@ -532,8 +532,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                     }
                 }
             } finally {
-                framedChannel.notifyFrameReadComplete(this);
-
+                if(pendingFrameData.isEmpty()) {
+                    framedChannel.notifyFrameReadComplete(this);
+                }
             }
         }
     }
