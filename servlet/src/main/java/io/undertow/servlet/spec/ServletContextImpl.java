@@ -48,6 +48,7 @@ import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.CanonicalPathUtils;
 
 import javax.annotation.security.DeclareRoles;
 import javax.annotation.security.RunAs;
@@ -309,9 +310,10 @@ public class ServletContextImpl implements ServletContext {
         if (path == null) {
             return null;
         }
+        String canonicalPath = CanonicalPathUtils.canonicalize(path);
         Resource resource = null;
         try {
-            resource = deploymentInfo.getResourceManager().getResource(path);
+            resource = deploymentInfo.getResourceManager().getResource(canonicalPath);
         } catch (IOException e) {
             return null;
         }
