@@ -239,7 +239,7 @@ public class SpdyClientProvider implements ClientProvider {
     }
 
     private static SpdyClientConnection createSpdyChannel(StreamConnection connection, Pool<ByteBuffer> bufferPool) {
-        SpdyChannel spdyChannel = new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192));
+        SpdyChannel spdyChannel = new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192), true);
         return new SpdyClientConnection(spdyChannel);
     }
 

@@ -93,13 +93,14 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     private boolean thisGoneAway = false;
     private boolean peerGoneAway = false;
 
-    private int streamIdCounter = 1;
+    private int streamIdCounter;
     private int lastGoodStreamId;
 
-    public SpdyChannel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, Pool<ByteBuffer> heapBufferPool) {
+    public SpdyChannel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, Pool<ByteBuffer> heapBufferPool, boolean clientSide) {
         super(connectedStreamChannel, bufferPool, SpdyFramePriority.INSTANCE, data);
         this.heapBufferPool = heapBufferPool;
         this.deflater.setDictionary(SpdyProtocolUtils.SPDY_DICT);
+        streamIdCounter = clientSide ? 2 : 1;
     }
 
     @Override
@@ -197,7 +198,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     @Override
     protected void handleBrokenSourceChannel(Throwable e) {
         UndertowLogger.REQUEST_LOGGER.debugf(e, "Closing SPDY channel to %s due to broken read side", getPeerAddress());
-        IoUtils.safeClose(this);
+        sendGoAway(CLOSE_PROTOCOL_ERROR, new SpdyControlMessageExceptionHandler());
     }
 
     @Override
