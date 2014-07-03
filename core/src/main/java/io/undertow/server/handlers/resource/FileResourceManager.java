@@ -20,13 +20,16 @@ package io.undertow.server.handlers.resource;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.TreeSet;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-
 import org.xnio.FileChangeCallback;
 import org.xnio.FileChangeEvent;
 import org.xnio.FileSystemWatcher;
@@ -49,7 +52,35 @@ public class FileResourceManager implements ResourceManager {
      */
     private final long transferMinSize;
 
+    /**
+     * Check to validate caseSensitive issues for specific case-insensitive FS.
+     * @see io.undertow.server.handlers.resource.FileResourceManager#isFileSameCase(java.io.File)
+     */
+    private final boolean caseSensitive;
+
+    /**
+     * Check to allow follow symbolic links
+     */
+    private final boolean followLinks;
+
+    /**
+     * Used if followLinks == true. Set of paths valid to follow symbolic links
+     */
+    private final TreeSet<String> safePaths = new TreeSet<String>();
+
     public FileResourceManager(final File base, long transferMinSize) {
+        this(base, transferMinSize, true, false, null);
+    }
+
+    public FileResourceManager(final File base, long transferMinSize, boolean caseSensitive) {
+        this(base, transferMinSize, caseSensitive, false, null);
+    }
+
+    public FileResourceManager(final File base, long transferMinSize, boolean followLinks, final String... safePaths) {
+        this(base, transferMinSize, true, followLinks, safePaths);
+    }
+
+    public FileResourceManager(final File base, long transferMinSize, boolean caseSensitive, boolean followLinks, final String... safePaths) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
@@ -59,7 +90,19 @@ public class FileResourceManager implements ResourceManager {
         }
         this.base = basePath;
         this.transferMinSize = transferMinSize;
-
+        this.caseSensitive = caseSensitive;
+        this.followLinks = followLinks;
+        if (this.followLinks) {
+            if (safePaths == null) {
+                throw UndertowMessages.MESSAGES.argumentCannotBeNull("safePaths");
+            }
+            for (final String safePath : safePaths) {
+                if (safePath == null) {
+                    throw UndertowMessages.MESSAGES.argumentCannotBeNull("safePaths");
+                }
+            }
+            this.safePaths.addAll(Arrays.asList(safePaths));
+        }
     }
 
     public File getBase() {
@@ -89,20 +132,13 @@ public class FileResourceManager implements ResourceManager {
         try {
             File file = new File(base, path);
             if (file.exists()) {
-                //security check for case insensitive file systems
-                //we make sure the case of the filename matches the case of the request
-                //TODO: we should be able to avoid this if we can tell a FS is case sensitive
-                //this is only a check for case sensitivity, not for . and ../ which are allowed
-                String canonical = file.getCanonicalFile().getName();
-                if (canonical.equals(file.getName())) {
-                    return new FileResource(file, this, path);
-                } else {
-                    //ok, so there may be a caase sensitivity issue here, or it could be caused
-                    //by a non-canonical representation, i.e. ../ or .
-                    //so we test to see if it is a case sensitvity issue
-                    if(!canonical.equalsIgnoreCase(file.getName())) {
-                        return new FileResource(file, this, path);
+                boolean isSymlinkPath = isSymlinkPath(file);
+                if (isSymlinkPath) {
+                    if (this.followLinks && isSymlinkSafe(file)) {
+                        return getFileResource(file, path);
                     }
+                } else {
+                    return getFileResource(file, path);
                 }
             }
             return null;
@@ -156,6 +192,70 @@ public class FileResourceManager implements ResourceManager {
     public synchronized void close() throws IOException {
         if (fileSystemWatcher != null) {
             fileSystemWatcher.close();
+        }
+    }
+
+    /**
+     * Returns true is some element of path is a symlink.
+     */
+    private boolean isSymlinkPath(final File file) throws IOException {
+        Path path = file.toPath();
+        int nameCount = path.getNameCount();
+        File f = path.getRoot().toFile();
+        for (int i=0; i<nameCount; i++) {
+            f = new File(f, path.getName(i).toString());
+            if (Files.isSymbolicLink(f.toPath())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Security check for case insensitive file systems.
+     * We make sure the case of the filename matches the case of the request.
+     * This is only a check for case sensitivity, not for non canonical . and ../ which are allowed.
+     *
+     * For example:
+     * file.getName() == "page.jsp" && file.getCanonicalFile().getName() == "page.jsp" should return true
+     * file.getName() == "page.jsp" && file.getCanonicalFile().getName() == "page.JSP" should return false
+     * file.getName() == "./page.jsp" && file.getCanonicalFile().getName() == "page.jsp" should return true
+     */
+    private boolean isFileSameCase(final File file) throws IOException {
+        String canonicalName = file.getCanonicalFile().getName();
+        if (canonicalName.equals(file.getName())) {
+            return true;
+        } else {
+            return !canonicalName.equalsIgnoreCase(file.getName());
+        }
+    }
+
+    /**
+     * Security check for followSymlinks feature.
+     * Only follows those symbolink links defined in safePaths.
+     */
+    private boolean isSymlinkSafe(final File file) throws IOException {
+        String canonicalPath = file.getCanonicalPath();
+        for (String safePath : this.safePaths) {
+            if (safePath.length() > 0 && canonicalPath.length() >= safePath.length() && canonicalPath.startsWith(safePath)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Apply security check for case insensitive file systems.
+     */
+    private FileResource getFileResource(final File file, final String path) throws IOException {
+        if (this.caseSensitive) {
+            if (isFileSameCase(file)) {
+                return new FileResource(file, this, path);
+            } else {
+                return null;
+            }
+        } else {
+            return new FileResource(file, this, path);
         }
     }
 }
