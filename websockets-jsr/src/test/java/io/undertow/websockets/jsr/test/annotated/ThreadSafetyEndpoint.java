@@ -30,6 +30,9 @@ import javax.websocket.server.ServerEndpoint;
 @ServerEndpoint(value = "/threads")
 public class ThreadSafetyEndpoint {
 
+    public static volatile Session s;
+
+
     public static final int NUM_THREADS = 100;
     public static final int NUM_MESSAGES = 100;
 
@@ -45,6 +48,7 @@ public class ThreadSafetyEndpoint {
 
     @OnOpen
     public void onOpen(final Session session) {
+        s = session;
         for (int i = 0; i < NUM_THREADS; ++i) {
             final int tnum = i;
             Thread t = new Thread(new Runnable() {

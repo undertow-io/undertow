@@ -115,6 +115,21 @@ public class WebSocketFramePriority implements FramePriority<WebSocketChannel, S
     @Override
     public void frameAdded(StreamSinkFrameChannel addedFrame, List<StreamSinkFrameChannel> pendingFrames, Deque<StreamSinkFrameChannel> holdFrames) {
         if (addedFrame.isFinalFragment()) {
+            while (true) {
+                StreamSinkFrameChannel frame = strictOrderQueue.peek();
+                if(frame == null) {
+                    break;
+                }
+                if(holdFrames.contains(frame)) {
+                    if(insertFrame(frame, pendingFrames)) {
+                        holdFrames.remove(frame);
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
             while (!holdFrames.isEmpty()) {
                 StreamSinkFrameChannel frame = holdFrames.peek();
                 if (insertFrame(frame, pendingFrames)) {
