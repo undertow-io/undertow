@@ -43,6 +43,7 @@ import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 import java.net.URI;
+import java.util.Set;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -73,6 +74,7 @@ public class AnnotatedEndpointTest {
                                 .addEndpoint(IncrementEndpoint.class)
                                 .addEndpoint(EncodingEndpoint.class)
                                 .addEndpoint(TimeoutEndpoint.class)
+                                .addEndpoint(ThreadSafetyEndpoint.class)
                                 .addEndpoint(RequestUriEndpoint.class)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override
@@ -194,6 +196,34 @@ public class AnnotatedEndpointTest {
 
         Assert.assertEquals(CloseReason.CloseCodes.GOING_AWAY, TimeoutEndpoint.getReason().getCloseCode());
     }
+
+
+
+    @Test
+    public void testThreadSafety() throws Exception {
+        AnnotatedClientEndpoint.reset();
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
+
+        Assert.assertEquals("hi Bob (protocol=foo)", AnnotatedClientEndpoint.message());
+
+        session.close();
+        Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
+    }
+
+
+    @Test
+    public void testThreadSafeSend() throws Exception {
+        AnnotatedClientEndpoint.reset();
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/threads"));
+        Set<String> expected = ThreadSafetyEndpoint.expected();
+        long end = System.currentTimeMillis() + 10000;
+        while (!expected.isEmpty() && System.currentTimeMillis() < end) {
+            expected.remove(AnnotatedClientEndpoint.message());
+        }
+        session.close();
+        Assert.assertEquals(0, expected.size());
+    }
+
 
     @ClientEndpoint
     public static class DoNothingEndpoint {}
