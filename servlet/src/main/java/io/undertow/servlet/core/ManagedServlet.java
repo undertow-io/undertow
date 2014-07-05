@@ -55,8 +55,8 @@ public class ManagedServlet implements Lifecycle {
     private final InstanceStrategy instanceStrategy;
     private volatile boolean permanentlyUnavailable = false;
 
-    private final long maxRequestSize;
-    private final FormParserFactory formParserFactory;
+    private long maxRequestSize;
+    private FormParserFactory formParserFactory;
 
     public ManagedServlet(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
@@ -66,6 +66,10 @@ public class ManagedServlet implements Lifecycle {
         } else {
             instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
         }
+        setupMultipart(servletContext);
+    }
+
+    public void setupMultipart(ServletContextImpl servletContext) {
         FormEncodedDataDefinition formDataParser = new FormEncodedDataDefinition()
                 .setDefaultEncoding(servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding());
         if (servletInfo.getMultipartConfig() != null) {
@@ -76,7 +80,7 @@ public class ManagedServlet implements Lifecycle {
             } else {
                 maxRequestSize = -1;
             }
-            final  File tempDir;
+            final File tempDir;
             if(config.getLocation() == null || config.getLocation().isEmpty()) {
                 tempDir = servletContext.getDeployment().getDeploymentInfo().getTempDir();
             } else {
