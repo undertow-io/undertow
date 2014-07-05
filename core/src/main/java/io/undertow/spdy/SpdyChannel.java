@@ -66,9 +66,9 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     static final int HEADERS = 8;
     static final int WINDOW_UPDATE = 9;
 
-    static final int CLOSE_OK = 0;
-    static final int CLOSE_PROTOCOL_ERROR = 1;
-    static final int CLOSE_INTERNAL_ERROR = 2;
+    public static final int CLOSE_OK = 0;
+    public static final int CLOSE_PROTOCOL_ERROR = 1;
+    public static final int CLOSE_INTERNAL_ERROR = 2;
 
     static final int FLAG_FIN = 1;
     static final int FLAG_UNIDIRECTIONAL = 2;
