@@ -109,7 +109,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             return;
         }
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
-        if (info.getType() == ServletPathMatch.Type.REDIRECT) {
+        //https://issues.jboss.org/browse/WFLY-3439
+        //if the request is an upgrade request then we don't want to redirect
+        //as there is a good chance the web socket client won't understand the redirect
+        boolean isUpgradeRequest = exchange.getRequestHeaders().contains(Headers.UPGRADE);
+        if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
             exchange.setResponseCode(302);
