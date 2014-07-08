@@ -145,7 +145,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                     this.partialValue = null;
                 } else {
                     remainingData = remainingData - data.remaining();
-                    partialValue.write(data.array(), data.arrayOffset() + data.remaining(), data.remaining());
+                    partialValue.write(data.array(), data.arrayOffset() + data.position(), data.remaining());
                     data.clear();
                     return;
                 }
@@ -211,7 +211,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                 } else {
                     remainingData = remainingData - data.remaining();
                     partialValue = new ByteArrayOutputStream();
-                    partialValue.write(data.array(), data.arrayOffset() + data.remaining(), data.remaining());
+                    partialValue.write(data.array(), data.arrayOffset() + data.position(), data.remaining());
                     data.clear();
                     return;
                 }
