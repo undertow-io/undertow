@@ -27,6 +27,8 @@ import io.undertow.server.ServerConnection;
 import io.undertow.spdy.SpdyChannel;
 import io.undertow.spdy.SpdySynReplyStreamSinkChannel;
 import io.undertow.spdy.SpdySynStreamStreamSourceChannel;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
@@ -48,6 +50,7 @@ import org.xnio.conduits.StreamSourceConduit;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  * A server connection. There is one connection per request
@@ -222,5 +225,30 @@ public class SpdyServerConnection extends ServerConnection {
     @Override
     protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
         throw UndertowMessages.MESSAGES.upgradeNotSupported();
+    }
+
+    @Override
+    public <T> void addToAttachmentList(AttachmentKey<AttachmentList<T>> key, T value) {
+        channel.addToAttachmentList(key, value);
+    }
+
+    @Override
+    public <T> T removeAttachment(AttachmentKey<T> key) {
+        return channel.removeAttachment(key);
+    }
+
+    @Override
+    public <T> T putAttachment(AttachmentKey<T> key, T value) {
+        return channel.putAttachment(key, value);
+    }
+
+    @Override
+    public <T> List<T> getAttachmentList(AttachmentKey<? extends List<T>> key) {
+        return channel.getAttachmentList(key);
+    }
+
+    @Override
+    public <T> T getAttachment(AttachmentKey<T> key) {
+        return channel.getAttachment(key);
     }
 }

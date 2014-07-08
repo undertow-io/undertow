@@ -23,7 +23,11 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.util.Attachable;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
 import io.undertow.util.HeaderMap;
+
 import org.xnio.Bits;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListeners;
@@ -36,6 +40,8 @@ import org.xnio.ssl.SslConnection;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,7 +53,7 @@ import java.util.zip.Inflater;
  *
  * @author Stuart Douglas
  */
-public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSourceChannel, SpdyStreamSinkChannel> {
+public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSourceChannel, SpdyStreamSinkChannel> implements Attachable {
 
     static final int DEFAULT_INITIAL_WINDOW_SIZE = 64 * 1024 * 0124;
 
@@ -95,6 +101,8 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     private int streamIdCounter;
     private int lastGoodStreamId;
+
+    private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
     public SpdyChannel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, Pool<ByteBuffer> heapBufferPool, boolean clientSide) {
         super(connectedStreamChannel, bufferPool, SpdyFramePriority.INSTANCE, data);
@@ -356,6 +364,58 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     void removeStreamSink(int streamId) {
         outgoingStreams.remove(streamId);
+    }
+
+    @Override
+    public <T> T getAttachment(AttachmentKey<T> key) {
+        if (key == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("key");
+        }
+        return (T) attachments.get(key);
+    }
+
+    @Override
+    public <T> List<T> getAttachmentList(AttachmentKey<? extends List<T>> key) {
+        if (key == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("key");
+        }
+        Object o = attachments.get(key);
+        if(o == null) {
+            return Collections.emptyList();
+        }
+        return (List)o;
+    }
+
+    @Override
+    public <T> T putAttachment(AttachmentKey<T> key, T value) {
+        if (key == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("key");
+        }
+        return key.cast(attachments.put(key, key.cast(value)));
+    }
+
+    @Override
+    public <T> T removeAttachment(AttachmentKey<T> key) {
+        return key.cast(attachments.remove(key));
+    }
+
+    @Override
+    public <T> void addToAttachmentList(AttachmentKey<AttachmentList<T>> key, T value) {
+
+        if (key == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("key");
+        }
+        final Map<AttachmentKey<?>, Object> attachments = this.attachments;
+        synchronized (attachments) {
+            final List<T> list = key.cast(attachments.get(key));
+            if (list == null) {
+                final AttachmentList<T> newList = new AttachmentList<T>((Class<T>) Object.class);
+                attachments.put(key, newList);
+                newList.add(value);
+            } else {
+                list.add(value);
+            }
+        }
     }
 
 

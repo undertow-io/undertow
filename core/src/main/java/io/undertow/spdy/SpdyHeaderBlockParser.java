@@ -167,7 +167,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                     byte[] array = data.array();
                     for (int i = start; i < end; ++i) {
                         if (array[i] == 0) {
-                            headerMap.add(currentHeader, new String(array, start, i - start - 1, "UTF-8"));
+                            headerMap.add(currentHeader, new String(array, start, i - start, "UTF-8"));
                             start = i + 1;
                         }
                     }
