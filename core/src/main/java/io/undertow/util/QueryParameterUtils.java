@@ -18,10 +18,16 @@
 
 package io.undertow.util;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.xnio.OptionMap;
+
+import io.undertow.UndertowOptions;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * Methods for dealing with the query string
@@ -67,34 +73,48 @@ public class QueryParameterUtils {
      * @param newQueryString The query string
      * @return The map of key value parameters
      */
+    @Deprecated
     public static Map<String, Deque<String>> parseQueryString(final String newQueryString) {
+        return parseQueryString(newQueryString, null);
+    }
+
+    /**
+     * Parses a query string into a map
+     * @param newQueryString The query string
+     * @return The map of key value parameters
+     */
+    public static Map<String, Deque<String>> parseQueryString(final String newQueryString, final String encoding) {
         Map<String, Deque<String>> newQueryParameters = new LinkedHashMap<>();
         int startPos = 0;
         int equalPos = -1;
+        boolean needsDecode = false;
         for(int i = 0; i < newQueryString.length(); ++i) {
             char c = newQueryString.charAt(i);
             if(c == '=' && equalPos == -1) {
                 equalPos = i;
             } else if(c == '&') {
-                handleQueryParameter(newQueryString, newQueryParameters, startPos, equalPos, i);
+                handleQueryParameter(newQueryString, newQueryParameters, startPos, equalPos, i, encoding, needsDecode);
+                needsDecode = false;
                 startPos = i + 1;
                 equalPos = -1;
+            } else if(c == '%' && encoding != null) {
+                needsDecode = true;
             }
         }
         if(startPos != newQueryString.length()) {
-            handleQueryParameter(newQueryString, newQueryParameters, startPos, equalPos, newQueryString.length());
+            handleQueryParameter(newQueryString, newQueryParameters, startPos, equalPos, newQueryString.length(), encoding, needsDecode);
         }
         return newQueryParameters;
     }
 
-    private static void handleQueryParameter(String newQueryString, Map<String, Deque<String>> newQueryParameters, int startPos, int equalPos, int i) {
+    private static void handleQueryParameter(String newQueryString, Map<String, Deque<String>> newQueryParameters, int startPos, int equalPos, int i, final String encoding, boolean needsDecode) {
         String key;
         String value = "";
         if(equalPos == -1) {
-            key = newQueryString.substring(startPos, i);
+            key = decodeParam(newQueryString, startPos, i, encoding, needsDecode);
         } else {
-            key = newQueryString.substring(startPos, equalPos);
-            value = newQueryString.substring(equalPos + 1, i);
+            key = decodeParam(newQueryString, startPos, equalPos, encoding, needsDecode);
+            value = decodeParam(newQueryString, equalPos + 1, i, encoding, needsDecode);
         }
 
         Deque<String> queue = newQueryParameters.get(key);
@@ -106,10 +126,28 @@ public class QueryParameterUtils {
         }
     }
 
+    private static String decodeParam(String newQueryString, int startPos, int equalPos, String encoding, boolean needsDecode) {
+        String key;
+        if (needsDecode) {
+            try {
+                key = URLDecoder.decode(newQueryString.substring(startPos, equalPos), encoding);
+            } catch (UnsupportedEncodingException e) {
+                key = newQueryString.substring(startPos, equalPos);
+            }
+        } else {
+            key = newQueryString.substring(startPos, equalPos);
+        }
+        return key;
+    }
 
+    @Deprecated
     public static Map<String, Deque<String>> mergeQueryParametersWithNewQueryString(final Map<String, Deque<String>> queryParameters, final String newQueryString) {
+        return mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, "UTF-8");
+    }
 
-        Map<String, Deque<String>> newQueryParameters = parseQueryString(newQueryString);
+    public static Map<String, Deque<String>> mergeQueryParametersWithNewQueryString(final Map<String, Deque<String>> queryParameters, final String newQueryString, final String encoding) {
+
+        Map<String, Deque<String>> newQueryParameters = parseQueryString(newQueryString, encoding);
         //according to the spec the new query parameters have to 'take precedence'
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             if (!newQueryParameters.containsKey(entry.getKey())) {
@@ -119,5 +157,14 @@ public class QueryParameterUtils {
             }
         }
         return newQueryParameters;
+    }
+
+    public static String getQueryParamEncoding(HttpServerExchange exchange) {
+        String encoding = null;
+        OptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
+        if(undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
+            encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, "UTF-8");
+        }
+        return encoding;
     }
 }
