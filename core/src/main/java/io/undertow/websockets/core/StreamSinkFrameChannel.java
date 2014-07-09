@@ -51,9 +51,6 @@ public abstract class StreamSinkFrameChannel extends AbstractFramedStreamSinkCha
         if (!areExtensionsSupported() && rsv != 0) {
             throw WebSocketMessages.MESSAGES.extensionsNotSupported();
         }
-        if (isActivated()) {
-            throw WebSocketMessages.MESSAGES.writeInProgress();
-        }
         this.rsv = rsv;
     }
 

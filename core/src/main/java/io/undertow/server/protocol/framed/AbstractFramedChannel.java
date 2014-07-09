@@ -379,7 +379,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      *
      * @throws IOException
      */
-    protected synchronized void flushSenders() throws IOException {
+    protected synchronized void flushSenders() {
         int toSend = 0;
         while (!newFrames.isEmpty()) {
             S frame = newFrames.poll();
@@ -406,6 +406,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
         }
         if (toSend == 0) {
+            channel.getSinkChannel().suspendWrites();
             return;
         }
         ByteBuffer[] data = new ByteBuffer[toSend * 3];
@@ -424,42 +425,43 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             ++j;
         }
         long toWrite = Buffers.remaining(data);
-
-        long res;
-        do {
-            try {
+        try {
+            long res;
+            do {
                 res = channel.getSinkChannel().write(data);
                 toWrite -= res;
-            } catch (IOException e) {
-                safeClose(channel);
-                markWritesBroken(e);
-                throw e;
-            }
-        } while (res > 0 && toWrite > 0);
-        int max = toSend;
+            } while (res > 0 && toWrite > 0);
+            int max = toSend;
 
-        while (max > 0) {
-            S sinkChannel = pendingFrames.get(0);
-            Pooled<ByteBuffer> frameHeaderByteBuffer = sinkChannel.getFrameHeader().getByteBuffer();
-            if (frameHeaderByteBuffer != null && frameHeaderByteBuffer.getResource().hasRemaining()
-                    || sinkChannel.getBuffer().hasRemaining()
-                    || sinkChannel.getFrameFooter().hasRemaining()) {
-                break;
+            while (max > 0) {
+                S sinkChannel = pendingFrames.get(0);
+                Pooled<ByteBuffer> frameHeaderByteBuffer = sinkChannel.getFrameHeader().getByteBuffer();
+                if (frameHeaderByteBuffer != null && frameHeaderByteBuffer.getResource().hasRemaining()
+                        || sinkChannel.getBuffer().hasRemaining()
+                        || sinkChannel.getFrameFooter().hasRemaining()) {
+                    break;
+                }
+                sinkChannel.flushComplete();
+                pendingFrames.remove(sinkChannel);
+                max--;
             }
-            sinkChannel.flushComplete();
-            pendingFrames.remove(sinkChannel);
-            max--;
-        }
-        if (!pendingFrames.isEmpty()) {
-            pendingFrames.get(0).activated();
-        }
-        if (pendingFrames.isEmpty() && finalFrame) {
-            //all data has been sent. Close gracefully
-            channel.getSinkChannel().shutdownWrites();
-            if (!channel.getSinkChannel().flush()) {
-                channel.getSinkChannel().setWriteListener(ChannelListeners.flushingChannelListener(null, null));
+            if (!pendingFrames.isEmpty()) {
                 channel.getSinkChannel().resumeWrites();
+            } else {
+                channel.getSinkChannel().suspendWrites();
             }
+            if (pendingFrames.isEmpty() && finalFrame) {
+                //all data has been sent. Close gracefully
+                channel.getSinkChannel().shutdownWrites();
+                if (!channel.getSinkChannel().flush()) {
+                    channel.getSinkChannel().setWriteListener(ChannelListeners.flushingChannelListener(null, null));
+                    channel.getSinkChannel().resumeWrites();
+                }
+            }
+
+        } catch (IOException e) {
+            safeClose(channel);
+            markWritesBroken(e);
         }
     }
 
@@ -486,7 +488,16 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         }
         newFrames.add(channel);
         if (newFrames.peek() == channel) {
-            flushSenders();
+            if(channel.getIoThread() == Thread.currentThread()) {
+                flushSenders();
+            } else {
+                channel.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        flushSenders();
+                    }
+                });
+            }
         }
     }
 
@@ -674,33 +685,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 ChannelListeners.invokeChannelListener(channel.getIoThread(), channel, this);
             }
         }
-
-        private void invokeReadListener(StreamSourceChannel channel, R receiver) {
-            final ChannelListener listener = ((SimpleSetter) receiver.getReadSetter()).get();
-            if (listener != null) {
-                WebSocketLogger.REQUEST_LOGGER.debugf("Invoking read listener %s on %s", listener, receiver);
-                ChannelListeners.invokeChannelListener(receiver, listener);
-            } else {
-                WebSocketLogger.REQUEST_LOGGER.debugf("Suspending reads on channel %s due to no listener", receiver);
-                channel.suspendReads();
-            }
-        }
     }
 
     private class FrameWriteListener implements ChannelListener<StreamSinkChannel> {
         @Override
         public void handleEvent(final StreamSinkChannel channel) {
-            synchronized (AbstractFramedChannel.this) {
-                //first we invoke the write listeners
-                for (S sender : pendingFrames) {
-                    if (sender.isWriteResumed()) {
-                        ChannelListeners.invokeChannelListener(sender, sender.getWriteListener());
-                    }
-                }
-                if (pendingFrames.isEmpty()) {
-                    channel.suspendWrites();
-                }
-            }
+            flushSenders();
         }
     }
 
