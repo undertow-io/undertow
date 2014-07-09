@@ -183,11 +183,17 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setHeader(final String name, final String value) {
+        if(name == null) {
+            throw UndertowServletMessages.MESSAGES.headerNameWasNull();
+        }
         setHeader(new HttpString(name), value);
     }
 
 
     public void setHeader(final HttpString name, final String value) {
+        if(name == null) {
+            throw UndertowServletMessages.MESSAGES.headerNameWasNull();
+        }
         if (insideInclude || ignoredFlushPerformed) {
             return;
         }
@@ -200,10 +206,16 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void addHeader(final String name, final String value) {
+        if(name == null) {
+            throw UndertowServletMessages.MESSAGES.headerNameWasNull();
+        }
         addHeader(new HttpString(name), value);
     }
 
     public void addHeader(final HttpString name, final String value) {
+        if(name == null) {
+            throw UndertowServletMessages.MESSAGES.headerNameWasNull();
+        }
         if (insideInclude || ignoredFlushPerformed) {
             return;
         }
