@@ -406,6 +406,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(anyAreSet(state, STATE_FIRST_DATA_WRITTEN)) {
             channelForciblyClosed();
         }
+        //we need to wake up/invoke the write listener
+        if(isWriteResumed()) {
+            resumeWritesInternal();
+        }
+        wakeupWrites();
     }
 
     /**
@@ -488,6 +493,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected void handleFlushComplete() {
 
+    }
+
+    protected boolean isFirstDataWritten() {
+        return anyAreSet(state, STATE_FIRST_DATA_WRITTEN);
     }
 
     public void markBroken() {

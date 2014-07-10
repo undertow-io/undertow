@@ -24,6 +24,7 @@ import static org.xnio.Bits.anyAreSet;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -38,6 +39,8 @@ import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+
+import io.undertow.UndertowMessages;
 
 /**
  * Source channel, used to receive framed messages.
@@ -59,6 +62,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     private static final int STATE_CLOSED = 1 << 3;
     private static final int STATE_LAST_FRAME = 1 << 4;
     private static final int STATE_IN_LISTENER_LOOP = 1 << 5;
+    private static final int STATE_STREAM_BROKEN = 1 << 6;
 
 
     /**
@@ -283,6 +287,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * @param frameData  The frame data
      */
     void dataReady(FrameHeaderData headerData, Pooled<ByteBuffer> frameData) {
+        if(anyAreSet(state, STATE_STREAM_BROKEN)) {
+            frameData.free();
+            return;
+        }
         synchronized (lock) {
             boolean newData = pendingFrameData.isEmpty();
             this.pendingFrameData.add(new FrameData(headerData, frameData));
@@ -418,7 +426,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
     }
 
-    private void beforeRead() {
+    private void beforeRead() throws ClosedChannelException {
+        if (anyAreSet(state, STATE_STREAM_BROKEN)) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
         if (data == null) {
             synchronized (lock) {
                 FrameData pending = pendingFrameData.poll();
@@ -488,6 +499,20 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     protected int getReadFrameCount() {
         return readFrameCount;
+    }
+
+    /**
+     * Called when this stream is no longer valid. Reads from the stream will result
+     * in an exception.
+     */
+    protected void markStreamBroken() {
+        state |= STATE_STREAM_BROKEN;
+        if(isReadResumed()) {
+            resumeReadsInternal();
+        }
+        if (waiters > 0) {
+            lock.notifyAll();
+        }
     }
 
     private class FrameData {

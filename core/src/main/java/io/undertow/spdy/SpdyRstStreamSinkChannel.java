@@ -18,31 +18,34 @@
 
 package io.undertow.spdy;
 
+import java.nio.ByteBuffer;
+
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.ImmediatePooled;
-
-import java.nio.ByteBuffer;
 
 /**
  * @author Stuart Douglas
  */
-class SpdyPingStreamSinkChannel extends SpdyControlFrameStreamSinkChannel {
+class SpdyRstStreamSinkChannel extends SpdyControlFrameStreamSinkChannel {
 
-    private final int id;
+    private final int streamId;
+    private final int statusCode;
 
-    protected SpdyPingStreamSinkChannel(SpdyChannel channel, int id) {
+    protected SpdyRstStreamSinkChannel(SpdyChannel channel, int streamId, int statusCode) {
         super(channel);
-        this.id = id;
+        this.statusCode = statusCode;
+        this.streamId = streamId;
     }
 
     @Override
     protected SendFrameHeader createFrameHeader() {
-        ByteBuffer buf = ByteBuffer.allocate(12);
+        ByteBuffer buf = ByteBuffer.allocate(16);
 
-        int firstInt = SpdyChannel.CONTROL_FRAME | (getChannel().getSpdyVersion() << 16) | SpdyChannel.PING;
+        int firstInt = SpdyChannel.CONTROL_FRAME | (getChannel().getSpdyVersion() << 16) | SpdyChannel.RST_STREAM;
         SpdyProtocolUtils.putInt(buf, firstInt);
-        SpdyProtocolUtils.putInt(buf, 4); //we back fill the length
-        SpdyProtocolUtils.putInt(buf, id);
+        SpdyProtocolUtils.putInt(buf, 8);
+        SpdyProtocolUtils.putInt(buf, streamId);
+        SpdyProtocolUtils.putInt(buf, statusCode);
         return new SendFrameHeader(new ImmediatePooled<>(buf));
     }
 

@@ -40,6 +40,7 @@ import org.xnio.ssl.SslConnection;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -73,6 +74,17 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     static final int FLAG_FIN = 1;
     static final int FLAG_UNIDIRECTIONAL = 2;
     static final int CONTROL_FRAME = 1 << 31;
+
+    static final int RST_STATUS_PROTOCOL_ERROR = 1;
+    static final int RST_STATUS_INVALID_STREAM = 2;
+    static final int RST_STATUS_REFUSED_STREAM = 3;
+    static final int RST_STATUS_UNSUPPORTED_VERSION = 4;
+    static final int RST_STATUS_CANCEL = 5;
+    static final int RST_STATUS_INTERNAL_ERROR = 6;
+    static final int RST_STATUS_FLOW_CONTROL_ERROR = 7;
+    static final int RST_STATUS_STREAM_IN_USE = 8;
+    static final int RST_STATUS_STREAM_ALREADY_CLOSED = 9;
+    static final int RST_STATUS_FRAME_TOO_LARGE = 11;
 
     private final Inflater inflater = new Inflater(false);
     private final Deflater deflater = new Deflater(6);
@@ -108,7 +120,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         super(connectedStreamChannel, bufferPool, SpdyFramePriority.INSTANCE, data);
         this.heapBufferPool = heapBufferPool;
         this.deflater.setDictionary(SpdyProtocolUtils.SPDY_DICT);
-        streamIdCounter = clientSide ? 2 : 1;
+        streamIdCounter = clientSide ? 1 : 2;
     }
 
     @Override
@@ -366,6 +378,10 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         outgoingStreams.remove(streamId);
     }
 
+    public boolean isClient() {
+        return streamIdCounter % 2 == 1;
+    }
+
     @Override
     public <T> T getAttachment(AttachmentKey<T> key) {
         if (key == null) {
@@ -415,6 +431,32 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
             } else {
                 list.add(value);
             }
+        }
+    }
+
+    public void sendRstStream(int streamId, int statusCode) {
+        SpdyStreamSourceChannel incoming = incomingStreams.remove(streamId);
+        if(incoming != null) {
+            incoming.rstStream();
+        }
+        SpdyStreamStreamSinkChannel outgoing = outgoingStreams.remove(streamId);
+        if(outgoing != null) {
+            outgoing.rstStream();
+        }
+        try {
+            SpdyRstStreamSinkChannel channel = new SpdyRstStreamSinkChannel(this, streamId, statusCode);
+            channel.shutdownWrites();
+            if (!channel.flush()) {
+                channel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<SpdyStreamSinkChannel>() {
+                    @Override
+                    public void handleException(SpdyStreamSinkChannel channel, IOException exception) {
+                        markWritesBroken(exception);
+                    }
+                }));
+                channel.resumeWrites();
+            }
+        } catch (IOException e) {
+            markWritesBroken(e);
         }
     }
 

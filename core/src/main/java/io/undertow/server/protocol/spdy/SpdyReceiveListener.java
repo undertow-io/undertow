@@ -153,28 +153,30 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
             char c = encodedPath.charAt(i);
             if (c == '?') {
                 String part;
+                String encodedPart = encodedPath.substring(0, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPath.substring(0, i), charset, allowEncodedSlash, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, decodeBuffer);
                 } else {
-                    part = encodedPath.substring(0, i);
+                    part = encodedPart;
                 }
                 exchange.setRequestPath(part);
                 exchange.setRelativePath(part);
-                exchange.setRequestURI(part);
+                exchange.setRequestURI(encodedPart);
                 final String qs = encodedPath.substring(i + 1);
                 exchange.setQueryString(qs);
                 URLUtils.parseQueryString(qs, exchange, encoding, decode);
                 return;
             } else if(c == ';') {
                 String part;
+                String encodedPart = encodedPath.substring(0, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPath.substring(0, i), charset, allowEncodedSlash, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, decodeBuffer);
                 } else {
-                    part = encodedPath.substring(0, i);
+                    part = encodedPart;
                 }
                 exchange.setRequestPath(part);
                 exchange.setRelativePath(part);
-                exchange.setRequestURI(part);
+                exchange.setRequestURI(encodedPart);
                 for(int j = i; j < encodedPath.length(); ++j) {
                     if (encodedPath.charAt(j) == '?') {
                         String pathParams = encodedPath.substring(i + 1, j);
@@ -187,7 +189,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                 }
                 URLUtils.parsePathParms(encodedPath.substring(i + 1), exchange, encoding, decode);
                 return;
-            } else if(c == '%') {
+            } else if(c == '%' || c == '+') {
                 requiresDecode = true;
             }
         }
@@ -200,7 +202,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
         }
         exchange.setRequestPath(part);
         exchange.setRelativePath(part);
-        exchange.setRequestURI(part);
+        exchange.setRequestURI(encodedPath);
     }
 
 }

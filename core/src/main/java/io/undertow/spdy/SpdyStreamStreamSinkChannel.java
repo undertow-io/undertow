@@ -22,6 +22,8 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
+
+import org.xnio.IoUtils;
 import org.xnio.Pooled;
 
 import java.io.IOException;
@@ -34,6 +36,7 @@ import java.util.zip.Deflater;
 public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel {
 
     private final int streamId;
+    private volatile boolean reset = false;
 
     //flow control related items. Accessed under lock
     private int flowControlWindow;
@@ -62,12 +65,36 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
     }
 
     @Override
+    protected void channelForciblyClosed() throws IOException {
+        getChannel().removeStreamSink(getStreamId());
+        if(reset) {
+            return;
+        }
+        reset = true;
+        if (streamId % 2 == (getChannel().isClient() ? 1 : 0)) {
+            //we initiated the stream
+            //we only actually reset if we have sent something to the other endpoint
+            if(isFirstDataWritten()) {
+                getChannel().sendRstStream(streamId, SpdyChannel.RST_STATUS_CANCEL);
+            }
+        } else {
+            getChannel().sendRstStream(streamId, SpdyChannel.RST_STATUS_INTERNAL_ERROR);
+        }
+    }
+
+    @Override
     protected final SendFrameHeader createFrameHeader() {
         SendFrameHeader header = this.header;
         this.header = null;
         return header;
     }
 
+    @Override
+    protected void handleFlushComplete() {
+        if(isFinalFrameQueued()) {
+            getChannel().removeStreamSink(getStreamId());
+        }
+    }
 
     protected Pooled<ByteBuffer>[] createHeaderBlock(Pooled<ByteBuffer> firstHeaderBuffer, Pooled<ByteBuffer>[] allHeaderBuffers, ByteBuffer firstBuffer, HeaderMap headers) {
         Pooled<ByteBuffer> outPooled = getChannel().getHeapBufferPool().allocate();
@@ -226,5 +253,17 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
             ret[ret.length - 1] = getChannel().getBufferPool().allocate();
         }
         return ret;
+    }
+
+    /**
+     * Method that is invoked when the stream is reset.
+     */
+    void rstStream() {
+        if(reset) {
+            return;
+        }
+        reset = true;
+        IoUtils.safeClose(this);
+        getChannel().removeStreamSink(getStreamId());
     }
 }

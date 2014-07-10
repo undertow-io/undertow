@@ -133,8 +133,8 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
 
     @Override
     protected void handleFlushComplete() {
+        super.handleFlushComplete();
         if (isFinalFrameQueued()) {
-            getChannel().removeStreamSink(getStreamId());
             if (completionListener != null) {
                 ChannelListeners.invokeChannelListener(this, completionListener);
             }

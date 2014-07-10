@@ -122,7 +122,9 @@ public class ComplexSSLTestCase {
                 while ((res = exchange.getInputStream().read(buf)) > 0) {
                     out.write(buf, 0, res);
                 }
+                System.out.println("WRITE " + out.size());
                 exchange.getOutputStream().write(out.toByteArray());
+                System.out.println("DONE " + out.size());
             }
         });
 
