@@ -18,8 +18,6 @@
 
 package io.undertow.protocols.spdy;
 
-import org.xnio.Pool;
-
 import java.nio.ByteBuffer;
 
 /**
@@ -27,12 +25,12 @@ import java.nio.ByteBuffer;
  *
  * @author Stuart Douglas
  */
-class SpdyWindowUpdateParser extends PushBackParser {
+class SpdyWindowUpdateParser extends SpdyPushBackParser {
 
     private int deltaWindowSize;
 
-    public SpdyWindowUpdateParser(Pool<ByteBuffer> bufferPool, int frameLength) {
-        super(bufferPool, frameLength);
+    public SpdyWindowUpdateParser(int frameLength) {
+        super(frameLength);
     }
 
     @Override

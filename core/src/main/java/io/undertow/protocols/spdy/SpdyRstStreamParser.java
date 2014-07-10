@@ -27,12 +27,12 @@ import java.nio.ByteBuffer;
  *
  * @author Stuart Douglas
  */
-class SpdyRstStreamParser extends PushBackParser {
+class SpdyRstStreamParser extends SpdyPushBackParser {
 
     private int statusCode;
 
     public SpdyRstStreamParser(Pool<ByteBuffer> bufferPool, int frameLength) {
-        super(bufferPool, frameLength);
+        super(frameLength);
     }
 
     @Override

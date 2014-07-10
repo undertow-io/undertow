@@ -526,7 +526,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         int flags;
         int length;
 
-        PushBackParser parser = null;
+        SpdyPushBackParser parser = null;
 
         private static final int CONTROL_MASK = 1 << 7;
 
@@ -565,11 +565,11 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                         break;
                     }
                     case SETTINGS: {
-                        parser = new SpdySettingsParser(getBufferPool(), length);
+                        parser = new SpdySettingsParser(length);
                         break;
                     }
                     case WINDOW_UPDATE: {
-                        parser = new SpdyWindowUpdateParser(getBufferPool(), length);
+                        parser = new SpdyWindowUpdateParser(length);
                         break;
                     }
                     default: {

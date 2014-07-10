@@ -83,7 +83,7 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
             if (fcWindow > 0) {
                 //make sure we have room in the header buffer
                 if(currentBuffer.remaining() < 8) {
-                    allHeaderBuffers = createHeaderBlock(firstHeaderBuffer, allHeaderBuffers, firstBuffer, headers);
+                    allHeaderBuffers = allocateAll(allHeaderBuffers, currentPooled);
                     currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
                     currentBuffer = currentPooled.getResource();
                 }

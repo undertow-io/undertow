@@ -27,16 +27,12 @@ import java.nio.ByteBuffer;
  *
  * @author Stuart Douglas
  */
-class SpdyPingParser extends PushBackParser {
+class SpdyPingParser extends SpdyPushBackParser {
 
     private int id;
 
     public SpdyPingParser(Pool<ByteBuffer> bufferPool, int frameLength) {
-        super(bufferPool, frameLength);
-    }
-
-    @Override
-    protected void finished() {
+        super(frameLength);
     }
 
     @Override

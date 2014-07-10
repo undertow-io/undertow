@@ -63,6 +63,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     private HttpServerExchange exchange;
 
     private ByteBuffer[] writevBuffer;
+    private boolean done = false;
 
     private static final int STATE_BODY = 0; // Message body, normal pass-through operation
     private static final int STATE_START = 1; // No headers written yet
@@ -78,8 +79,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
     private static final int MASK_STATE = 0x0000000F;
     private static final int FLAG_SHUTDOWN = 0x00000010;
-
-    private boolean closed = false;
 
     HttpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool) {
         super(next);
@@ -116,6 +115,9 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
      * @throws IOException
      */
     private int processWrite(int state, final Object userData, int pos, int length) throws IOException {
+        if(done) {
+            throw new ClosedChannelException();
+        }
         assert state != STATE_BODY;
         if (state == STATE_BUF_FLUSH) {
             final ByteBuffer byteBuffer = pooledBuffer.getResource();
@@ -273,9 +275,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
      * Handles writing out the header data in the case where is is too big to fit into a buffer. This is a much slower code path.
      */
     private int processStatefulWrite(int state, final Object userData, int pos, int len) throws IOException {
-        if(closed) {
-            throw new ClosedChannelException();
-        }
         ByteBuffer buffer = pooledBuffer.getResource();
         long fiCookie = this.fiCookie;
         int valueIdx = this.valueIdx;
@@ -682,7 +681,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     void freeBuffers() {
-        closed = true;
+        done = true;
         if(pooledBuffer != null) {
             bufferDone();
         }

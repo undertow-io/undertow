@@ -18,8 +18,6 @@
 
 package io.undertow.protocols.spdy;
 
-import org.xnio.Pool;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -28,16 +26,14 @@ import java.nio.ByteBuffer;
  *
  * @author Stuart Douglas
  */
-public abstract class PushBackParser {
+public abstract class SpdyPushBackParser {
 
-    private final Pool<ByteBuffer> bufferPool;
     private byte[] pushedBackData;
     private boolean finished;
     protected int streamId = -1;
     private int remainingData;
 
-    public PushBackParser(Pool<ByteBuffer> bufferPool, int frameLength) {
-        this.bufferPool = bufferPool;
+    public SpdyPushBackParser(int frameLength) {
         this.remainingData = frameLength;
     }
 

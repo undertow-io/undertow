@@ -317,4 +317,25 @@ public interface UndertowMessages {
 
     @Message(id = 97, value = "AJP request already in progress")
     IllegalStateException ajpRequestAlreadyInProgress();
+
+    @Message(id = 98, value = "HTTP ping data must be 8 bytes in length")
+    IllegalArgumentException httpPingDataMustBeLength8();
+
+    @Message(id = 99, value = "Received a ping of size other than 8")
+    String invalidPingSize();
+
+    @Message(id = 100, value = "stream id must be zero for frame type %s")
+    String streamIdMustBeZeroForFrameType(int frameType);
+
+    @Message(id = 101, value = "stream id must not be zero for frame type %s")
+    String streamIdMustNotBeZeroForFrameType(int frameType);
+
+    @Message(id = 102, value = "RST_STREAM received for idle stream")
+    String rstStreamReceivedForIdleStream();
+
+    @Message(id = 103, value = "Http2 stream was reset")
+    IOException http2StreamWasReset();
+
+    @Message(id = 104, value = "Incorrect HTTP2 preface")
+    IOException incorrectHttp2Preface();
 }

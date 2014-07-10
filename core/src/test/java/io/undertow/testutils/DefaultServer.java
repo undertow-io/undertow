@@ -30,6 +30,7 @@ import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
+import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.server.protocol.spdy.SpdyOpenListener;
 import io.undertow.server.protocol.spdy.SpdyPlainOpenListener;
 import io.undertow.util.Headers;
@@ -119,6 +120,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
     private static final boolean spdy = Boolean.getBoolean("test.spdy");
+    private static final boolean http2 = Boolean.getBoolean("test.http2");
     private static final boolean spdyPlain = Boolean.getBoolean("test.spdy-plain");
     private static final boolean https = Boolean.getBoolean("test.https");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
@@ -312,6 +314,25 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
 
+                } else if (http2) {
+                    openListener = new Http2OpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
+                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+
+                    SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
+                    SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
+                    XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, serverContext);
+                    server = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
+                    server.resumeAccepts();
+
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
+                    proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("http2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 120000, HANDLE_404);
+                    setupProxyHandlerForSSL(proxyHandler);
+                    proxyOpenListener.setRootHandler(proxyHandler);
+                    proxyServer.resumeAccepts();
+
+
                 } else if (spdyPlain) {
                     openListener = new SpdyPlainOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
@@ -431,7 +452,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        if(spdy || spdyPlain) {
+        if(spdy || spdyPlain || http2) {
             SpdyIgnore spdyIgnore = method.getAnnotation(SpdyIgnore.class);
             if(spdyIgnore == null) {
                 spdyIgnore = method.getMethod().getDeclaringClass().getAnnotation(SpdyIgnore.class);
@@ -492,7 +513,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 sb.append("{spdy-plain}");
             }
             if(https) {
-                sb.append("{ssl}");
+                sb.append("{https}");
+            }
+            if(http2) {
+                sb.append("{http2}");
             }
             return sb.toString();
         }

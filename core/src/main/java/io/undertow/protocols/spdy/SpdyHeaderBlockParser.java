@@ -34,7 +34,7 @@ import java.util.zip.Inflater;
  *
  * @author Stuart Douglas
  */
-abstract class SpdyHeaderBlockParser extends PushBackParser {
+abstract class SpdyHeaderBlockParser extends SpdyPushBackParser {
 
     private final SpdyChannel channel;
 
@@ -53,7 +53,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
 
 
     public SpdyHeaderBlockParser(Pool<ByteBuffer> bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
-        super(bufferPool, frameLength);
+        super(frameLength);
         this.channel = channel;
         this.inflater = inflater;
     }

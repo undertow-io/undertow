@@ -48,11 +48,6 @@ public class SpdyStreamSourceChannel extends AbstractFramedStreamSourceChannel<S
         }
     }
 
-    @Override
-    protected SpdyChannel getFramedChannel() {
-        return (SpdyChannel) super.getFramedChannel();
-    }
-
     public SpdyChannel getSpdyChannel() {
         return getFramedChannel();
     }

@@ -27,13 +27,13 @@ import java.nio.ByteBuffer;
  *
  * @author Stuart Douglas
  */
-public class SpdyGoAwayParser extends PushBackParser {
+public class SpdyGoAwayParser extends SpdyPushBackParser {
 
     private int statusCode;
     private int lastGoodStreamId;
 
     public SpdyGoAwayParser(Pool<ByteBuffer> bufferPool, int frameLength) {
-        super(bufferPool, frameLength);
+        super(frameLength);
     }
 
     @Override

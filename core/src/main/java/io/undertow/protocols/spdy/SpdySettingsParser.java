@@ -18,16 +18,16 @@
 
 package io.undertow.protocols.spdy;
 
-import org.xnio.Pool;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * SPDY settings parser
+ *
  * @author Stuart Douglas
  */
-class SpdySettingsParser extends PushBackParser {
+class SpdySettingsParser extends SpdyPushBackParser {
 
     private int length = -1;
 
@@ -35,8 +35,8 @@ class SpdySettingsParser extends PushBackParser {
 
     private final List<SpdySetting> settings = new ArrayList<>();
 
-    public SpdySettingsParser(Pool<ByteBuffer> bufferPool, int frameLength) {
-        super(bufferPool, frameLength);
+    public SpdySettingsParser(int frameLength) {
+        super(frameLength);
     }
 
     @Override

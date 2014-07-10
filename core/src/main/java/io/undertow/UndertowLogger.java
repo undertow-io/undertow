@@ -169,4 +169,11 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5032, value = "Listener not making progress on framed channel, closing channel to prevent infinite loop")
     void listenerNotProgressing();
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5033, value = "Failed to initiate HTTP2 connection")
+    void couldNotInitiateHttp2Connection();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5034, value = "Remote endpoint failed to send initial settings frame in HTTP2 connection")
+    void remoteEndpointFailedToSendInitialSettings();
 }
