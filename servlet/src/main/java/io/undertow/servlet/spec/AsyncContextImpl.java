@@ -275,6 +275,10 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     public synchronized void completeInternal() {
+        if(timeoutKey != null) {
+            timeoutKey.remove();
+            timeoutKey = null;
+        }
 
         Thread currentThread = Thread.currentThread();
         if (!initialRequestDone && currentThread == initiatingThread) {
