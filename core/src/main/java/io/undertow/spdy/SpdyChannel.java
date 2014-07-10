@@ -126,6 +126,12 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     protected SpdyStreamSourceChannel createChannel(FrameHeaderData frameHeaderData, Pooled<ByteBuffer> frameData) throws IOException {
         SpdyFrameParser frameParser = (SpdyFrameParser) frameHeaderData;
         SpdyStreamSourceChannel channel;
+        if(!frameParser.control) {
+            //we only handle control frames here. If a data frame falls through it means that it has been cancelled
+            //we just free the data and return null, effectivly dropping the frame
+            UndertowLogger.REQUEST_LOGGER.tracef("Dropping Frame of length %s for stream %s", frameParser.getFrameLength(), frameParser.dataFrameStreamId);
+            return null;
+        }
         //note that not all frame types are covered here, as some are only relevant to already active streams
         //if which case they are handled by the existing channel support
         switch (frameParser.type) {
@@ -145,6 +151,12 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                 if (!Bits.anyAreSet(frameParser.flags, FLAG_FIN)) {
                     incomingStreams.put(parser.streamId, channel);
                 }
+                break;
+            }
+            case RST_STREAM: {
+                SpdyRstStreamParser parser = (SpdyRstStreamParser) frameParser.parser;
+                channel = new SpdyRstStreamStreamSourceChannel(this, frameData, frameParser.getFrameLength(), parser.getStreamId());
+                handleRstStream(parser.getStreamId());
                 break;
             }
             case SETTINGS: {
@@ -446,14 +458,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     }
 
     public void sendRstStream(int streamId, int statusCode) {
-        SpdyStreamSourceChannel incoming = incomingStreams.remove(streamId);
-        if(incoming != null) {
-            incoming.rstStream();
-        }
-        SpdyStreamStreamSinkChannel outgoing = outgoingStreams.remove(streamId);
-        if(outgoing != null) {
-            outgoing.rstStream();
-        }
+        handleRstStream(streamId);
         try {
             SpdyRstStreamSinkChannel channel = new SpdyRstStreamSinkChannel(this, streamId, statusCode);
             channel.shutdownWrites();
@@ -468,6 +473,17 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
             }
         } catch (IOException e) {
             markWritesBroken(e);
+        }
+    }
+
+    private void handleRstStream(int streamId) {
+        SpdyStreamSourceChannel incoming = incomingStreams.remove(streamId);
+        if(incoming != null) {
+            incoming.rstStream();
+        }
+        SpdyStreamStreamSinkChannel outgoing = outgoingStreams.remove(streamId);
+        if(outgoing != null) {
+            outgoing.rstStream();
         }
     }
 

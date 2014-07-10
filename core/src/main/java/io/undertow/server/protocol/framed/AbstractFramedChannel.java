@@ -274,7 +274,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if (frameDataRemaining > 0) {
                 if (frameDataRemaining >= pooled.getResource().remaining()) {
                     frameDataRemaining -= pooled.getResource().remaining();
-                    receiver.dataReady(null, pooled);
+                    if(receiver != null) {
+                        receiver.dataReady(null, pooled);
+                    } else {
+                        //we are dropping a frame
+                        pooled.free();
+                    }
                     readData = null;
                     return null;
                 } else {
@@ -284,7 +289,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     frameDataRemaining = 0;
                     Pooled<ByteBuffer> frameData = pooled.createView(buf);
                     //note that we don't return here, there may be another frame
-                    receiver.dataReady(null, frameData);
+                    if(receiver != null) {
+                        receiver.dataReady(null, frameData);
+                    } else{
+                        //we are dropping the frame
+                        frameData.free();
+                    }
                     receiver = null;
                 }
             }
@@ -311,10 +321,15 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 } else {
                     boolean moreData = data.getFrameLength() > frameData.getResource().remaining();
                     R newChannel = createChannel(data, frameData);
-                    if (moreData) {
-                        receiver = newChannel;
+                    if (newChannel != null) {
+                        if (moreData) {
+                            receiver = newChannel;
+                        }
+                        receivers.add(newChannel);
+                    } else {
+                        frameData.free();
                     }
-                    receivers.add(newChannel);
+
                     return newChannel;
                 }
             }

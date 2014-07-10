@@ -94,6 +94,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
 
 
                 final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
+                dataChannel.setMaxStreamSize(maxEntitySize);
                 exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
                 exchange.setProtocol(new HttpString(exchange.getRequestHeaders().getFirst(VERSION)));
                 exchange.setRequestMethod(new HttpString(exchange.getRequestHeaders().getFirst(METHOD)));

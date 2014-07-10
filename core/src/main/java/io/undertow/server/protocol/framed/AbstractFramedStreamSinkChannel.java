@@ -81,8 +81,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     /**
      * writes are shutdown, data has been written, but flush has not been called
      */
-    private static final int STATE_FULLY_FLUSHED = 1 << 7;
-    private static final int STATE_FINAL_FRAME_QUEUED = 1 << 8;
+    private static final int STATE_FULLY_FLUSHED = 1 << 8;
+    private static final int STATE_FINAL_FRAME_QUEUED = 1 << 9;
 
 
     protected AbstractFramedStreamSinkChannel(C channel) {
@@ -428,9 +428,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      * @throws IOException
      */
     protected void channelForciblyClosed() throws IOException {
-        //TODO: need to think about this more
-        //if the frame has had nothing written out it should not break the parent channel
-        channel.close();
+        if(isFirstDataWritten()) {
+            getChannel().markWritesBroken(null);
+        }
         wakeupWaiters();
     }
 

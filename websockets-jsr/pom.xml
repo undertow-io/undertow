@@ -127,6 +127,7 @@
                 <configuration>
                     <enableAssertions>true</enableAssertions>
                     <runOrder>reversealphabetical</runOrder>
+                    <skip>${test.spdy}</skip>
                     <systemPropertyVariables>
                         <proxy>${proxy}</proxy>
                         <default.server.address>localhost</default.server.address>

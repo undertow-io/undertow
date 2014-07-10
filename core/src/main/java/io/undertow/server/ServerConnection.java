@@ -165,6 +165,10 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      */
     protected abstract StreamSinkConduit getSinkConduit(HttpServerExchange exchange, final StreamSinkConduit conduit);
 
+    /**
+     *
+     * @return true if this connection supports HTTP upgrade
+     */
     protected abstract boolean isUpgradeSupported();
 
     /**
@@ -173,6 +177,13 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
     protected abstract void exchangeComplete(HttpServerExchange exchange);
 
     protected abstract void setUpgradeListener(HttpUpgradeListener upgradeListener);
+
+    /**
+     * Callback that is invoked if the max entity size is updated.
+     *
+     * @param exchange The current exchange
+     */
+    protected abstract void maxEntitySizeUpdated(HttpServerExchange exchange);
 
     public interface CloseListener {
 

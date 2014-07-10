@@ -19,35 +19,26 @@
 package io.undertow.spdy;
 
 import java.nio.ByteBuffer;
+import org.xnio.Pooled;
 
-import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.server.protocol.framed.AbstractFramedChannel;
 
 /**
+ * A SPDY Ping frame
+ *
  * @author Stuart Douglas
  */
-class SpdyRstStreamSinkChannel extends SpdyControlFrameStreamSinkChannel {
+public class SpdyRstStreamStreamSourceChannel extends SpdyStreamSourceChannel {
 
     private final int streamId;
-    private final int statusCode;
 
-    protected SpdyRstStreamSinkChannel(SpdyChannel channel, int streamId, int statusCode) {
-        super(channel);
-        this.statusCode = statusCode;
+    SpdyRstStreamStreamSourceChannel(AbstractFramedChannel<SpdyChannel, SpdyStreamSourceChannel, SpdyStreamSinkChannel> framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, int streamId) {
+        super(framedChannel, data, frameDataRemaining);
         this.streamId = streamId;
+        lastFrame();
     }
 
-    @Override
-    protected SendFrameHeader createFrameHeader() {
-        ByteBuffer buf = ByteBuffer.allocate(16);
-
-        int firstInt = SpdyChannel.CONTROL_FRAME | (getChannel().getSpdyVersion() << 16) | SpdyChannel.RST_STREAM;
-        SpdyProtocolUtils.putInt(buf, firstInt);
-        SpdyProtocolUtils.putInt(buf, 8);
-        SpdyProtocolUtils.putInt(buf, streamId);
-        SpdyProtocolUtils.putInt(buf, statusCode);
-        buf.flip();
-        return new SendFrameHeader(new ImmediatePooled<>(buf));
+    public int getStreamId() {
+        return streamId;
     }
-
 }

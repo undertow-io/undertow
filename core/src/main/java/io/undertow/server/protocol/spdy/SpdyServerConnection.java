@@ -228,6 +228,11 @@ public class SpdyServerConnection extends ServerConnection {
     }
 
     @Override
+    protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
+        requestChannel.setMaxStreamSize(exchange.getMaxEntitySize());
+    }
+
+    @Override
     public <T> void addToAttachmentList(AttachmentKey<AttachmentList<T>> key, T value) {
         channel.addToAttachmentList(key, value);
     }

@@ -33,8 +33,6 @@ import java.nio.ByteBuffer;
  */
 public class SpdyStreamSourceChannel extends AbstractFramedStreamSourceChannel<SpdyChannel, SpdyStreamSourceChannel, SpdyStreamSinkChannel> {
 
-    private boolean reset = true;
-
     SpdyStreamSourceChannel(AbstractFramedChannel<SpdyChannel, SpdyStreamSourceChannel, SpdyStreamSinkChannel> framedChannel) {
         super(framedChannel);
     }
@@ -66,6 +64,8 @@ public class SpdyStreamSourceChannel extends AbstractFramedStreamSourceChannel<S
     }
 
     void rstStream() {
-        super.markStreamBroken();
+        //noop by default
     }
+
+
 }

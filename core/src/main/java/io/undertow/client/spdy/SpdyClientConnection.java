@@ -26,6 +26,7 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.spdy.SpdyChannel;
 import io.undertow.spdy.SpdyPingStreamSourceChannel;
+import io.undertow.spdy.SpdyRstStreamStreamSourceChannel;
 import io.undertow.spdy.SpdyStreamSourceChannel;
 import io.undertow.spdy.SpdySynReplyStreamSourceChannel;
 import io.undertow.spdy.SpdySynStreamStreamSinkChannel;
@@ -267,6 +268,15 @@ public class SpdyClientConnection implements ClientConnection {
 
                 } else if (result instanceof SpdyPingStreamSourceChannel) {
                     handlePing((SpdyPingStreamSourceChannel) result);
+                } else if (result instanceof SpdyRstStreamStreamSourceChannel) {
+                    int stream = ((SpdyRstStreamStreamSourceChannel)result).getStreamId();
+                    UndertowLogger.REQUEST_LOGGER.debugf("Client received RST_STREAM for stream %s", stream);
+                    SpdyClientExchange exchange = currentExchanges.get(stream);
+                    if(exchange != null) {
+                        exchange.failed(UndertowMessages.MESSAGES.spdyStreamWasReset());
+                    }
+                } else if(!channel.isOpen()) {
+                    throw UndertowMessages.MESSAGES.channelIsClosed();
                 }
 
             } catch (IOException e) {

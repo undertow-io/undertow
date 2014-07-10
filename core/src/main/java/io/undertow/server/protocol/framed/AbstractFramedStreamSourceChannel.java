@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
@@ -79,6 +80,8 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     private int waiters;
     private volatile boolean waitingForFrame;
     private int readFrameCount = 0;
+    private long maxStreamSize = -1;
+    private long currentStreamSize;
 
     public AbstractFramedStreamSourceChannel(AbstractFramedChannel<C, R, S> framedChannel) {
         this.framedChannel = framedChannel;
@@ -90,6 +93,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         this.waitingForFrame = data == null && frameDataRemaining <= 0;
         this.data = data;
         this.frameDataRemaining = frameDataRemaining;
+        this.currentStreamSize = frameDataRemaining;
         if (data != null) {
             if (!data.getResource().hasRemaining()) {
                 data.free();
@@ -163,6 +167,23 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         } finally {
             exitRead();
         }
+    }
+
+    public long getMaxStreamSize() {
+        return maxStreamSize;
+    }
+
+    public void setMaxStreamSize(long maxStreamSize) {
+        this.maxStreamSize = maxStreamSize;
+        if(maxStreamSize > 0) {
+            if(maxStreamSize > currentStreamSize) {
+                handleStreamTooLarge();
+            }
+        }
+    }
+
+    private void handleStreamTooLarge() {
+        IoUtils.safeClose(this);
     }
 
     @Override
@@ -243,7 +264,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     protected void lastFrame() {
         state |= STATE_LAST_FRAME;
         waitingForFrame = false;
-        if(data == null && pendingFrameData.isEmpty()) {
+        if(data == null && pendingFrameData.isEmpty() && frameDataRemaining == 0) {
             state |= STATE_DONE | STATE_CLOSED;
         }
     }
@@ -309,6 +330,12 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         if (anyAreSet(state, STATE_READS_RESUMED)) {
             resumeReadsInternal(true);
+        }
+        if(headerData != null) {
+            currentStreamSize += headerData.getFrameLength();
+            if(maxStreamSize > 0 && currentStreamSize > maxStreamSize) {
+                handleStreamTooLarge();
+            }
         }
     }
 
@@ -488,15 +515,24 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     @Override
     public void close() throws IOException {
+        if(anyAreSet(state, STATE_CLOSED)) {
+            return;
+        }
         state |= STATE_CLOSED;
-        if (allAreClear(state, STATE_DONE)) {
-            framedChannel.markReadsBroken(null);
+        if (allAreClear(state, STATE_DONE | STATE_LAST_FRAME)) {
+            state |= STATE_STREAM_BROKEN;
+            channelForciblyClosed();
         }
         if (data != null) {
             data.free();
             data = null;
         }
         ChannelListeners.invokeChannelListener(this, (ChannelListener<? super AbstractFramedStreamSourceChannel<C, R, S>>) closeSetter.get());
+    }
+
+    protected void channelForciblyClosed() {
+        //TODO: what should be the default action?
+        //we can probably just ignore it, as it does not affect the underlying protocol
     }
 
     protected AbstractFramedChannel<C, R, S> getFramedChannel() {
@@ -511,8 +547,16 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * Called when this stream is no longer valid. Reads from the stream will result
      * in an exception.
      */
-    protected void markStreamBroken() {
+    protected synchronized void markStreamBroken() {
         state |= STATE_STREAM_BROKEN;
+        if(data != null) {
+            data.free();
+            data = null;
+        }
+        for(FrameData frame : pendingFrameData) {
+            frame.frameData.free();
+        }
+        pendingFrameData.clear();
         if(isReadResumed()) {
             resumeReadsInternal(true);
         }

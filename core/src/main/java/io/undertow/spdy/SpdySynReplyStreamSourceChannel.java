@@ -36,6 +36,7 @@ public class SpdySynReplyStreamSourceChannel extends SpdyStreamSourceChannel {
     private final int streamId;
     private HeaderMap newHeaders = null;
     private int flowControlWindow;
+    private boolean rst = false;
 
     SpdySynReplyStreamSourceChannel(SpdyChannel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, HeaderMap headers, int streamId) {
         super(framedChannel, data, frameDataRemaining);
@@ -130,4 +131,20 @@ public class SpdySynReplyStreamSourceChannel extends SpdyStreamSourceChannel {
     public int getStreamId() {
         return streamId;
     }
+
+    @Override
+    void rstStream() {
+        if(rst) {
+            return;
+        }
+        rst = true;
+        markStreamBroken();
+        getSpdyChannel().sendRstStream(streamId, SpdyChannel.RST_STATUS_REFUSED_STREAM);
+    }
+
+    @Override
+    protected void channelForciblyClosed() {
+        rstStream();
+    }
+
 }

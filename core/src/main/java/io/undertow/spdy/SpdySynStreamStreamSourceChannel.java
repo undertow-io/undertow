@@ -36,6 +36,7 @@ import java.util.zip.Deflater;
 public class SpdySynStreamStreamSourceChannel extends SpdyStreamSourceChannel {
 
 
+    private boolean rst = false;
     private final Deflater deflater;
     private final HeaderMap headers;
     private final int streamId;
@@ -157,5 +158,23 @@ public class SpdySynStreamStreamSourceChannel extends SpdyStreamSourceChannel {
 
     public void setCompletionListener(ChannelListener<SpdySynStreamStreamSourceChannel> completionListener) {
         this.completionListener = completionListener;
+    }
+
+    @Override
+    void rstStream() {
+        if(rst) {
+            return;
+        }
+        rst = true;
+        markStreamBroken();
+        getSpdyChannel().sendRstStream(streamId, SpdyChannel.RST_STATUS_CANCEL);
+    }
+
+    @Override
+    protected void channelForciblyClosed() {
+        if(completionListener != null) {
+            completionListener.handleEvent(this);
+        }
+        rstStream();
     }
 }

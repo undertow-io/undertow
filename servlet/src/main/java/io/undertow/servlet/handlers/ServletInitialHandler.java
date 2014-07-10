@@ -463,6 +463,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
             //ignore
         }
+
+        @Override
+        protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
+        }
     }
 
 }

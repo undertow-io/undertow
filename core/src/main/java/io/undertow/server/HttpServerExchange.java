@@ -1575,6 +1575,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
         this.maxEntitySize = maxEntitySize;
+        connection.maxEntitySizeUpdated(this);
         return this;
     }
 
