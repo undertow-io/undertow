@@ -90,7 +90,13 @@ public class SpdyClientConnection implements ClientConnection {
         request.getRequestHeaders().put(HOST, request.getRequestHeaders().getFirst(Headers.HOST));
         request.getRequestHeaders().remove(Headers.HOST);
 
-        SpdySynStreamStreamSinkChannel sinkChannel = spdyChannel.createStream(request.getRequestHeaders());
+        SpdySynStreamStreamSinkChannel sinkChannel;
+        try {
+            sinkChannel = spdyChannel.createStream(request.getRequestHeaders());
+        } catch (IOException e) {
+            clientCallback.failed(e);
+            return;
+        }
         SpdyClientExchange exchange = new SpdyClientExchange(this, sinkChannel, request);
         currentExchanges.put(sinkChannel.getStreamId(), exchange);
 

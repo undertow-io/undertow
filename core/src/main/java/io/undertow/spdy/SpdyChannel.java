@@ -205,6 +205,11 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     }
 
     @Override
+    public boolean isOpen() {
+        return super.isOpen() && !peerGoneAway && !thisGoneAway;
+    }
+
+    @Override
     protected boolean isLastFrameReceived() {
         return peerGoneAway;
     }
@@ -352,7 +357,10 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         }
     }
 
-    public synchronized SpdySynStreamStreamSinkChannel createStream(HeaderMap requestHeaders) {
+    public synchronized SpdySynStreamStreamSinkChannel createStream(HeaderMap requestHeaders) throws IOException {
+        if(!isOpen()) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
         int streamId = streamIdCounter;
         streamIdCounter += 2;
         SpdySynStreamStreamSinkChannel spdySynStreamStreamSinkChannel = new SpdySynStreamStreamSinkChannel(this, requestHeaders, streamId, deflater);
