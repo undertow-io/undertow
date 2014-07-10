@@ -484,6 +484,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     protected synchronized void queueFrame(final S channel) throws IOException {
         assert !newFrames.contains(channel);
         if (isWritesBroken() || !this.channel.getSinkChannel().isOpen()) {
+            IoUtils.safeClose(channel);
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         newFrames.add(channel);
@@ -563,7 +564,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     @Override
     public void close() throws IOException {
         safeClose(channel);
-        wakeupWrites();
+        markWritesBroken(null);
+        markReadsBroken(null);
     }
 
     @Override

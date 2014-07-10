@@ -199,7 +199,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void shutdownWrites() throws IOException {
-        if(anyAreSet(state, STATE_BROKEN)) {
+        if(anyAreSet(state, STATE_BROKEN | STATE_WRITES_SHUTDOWN)) {
             return;
         }
         state |= STATE_WRITES_SHUTDOWN;
@@ -392,7 +392,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void close() throws IOException {
-        if(anyAreSet(state, STATE_FINAL_FRAME_QUEUED | STATE_CLOSED)) {
+        if(anyAreSet(state, STATE_CLOSED | STATE_FULLY_FLUSHED)) {
             return;
         }
         state |= STATE_CLOSED;

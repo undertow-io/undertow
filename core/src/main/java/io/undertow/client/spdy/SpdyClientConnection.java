@@ -219,7 +219,7 @@ public class SpdyClientConnection implements ClientConnection {
 
     @Override
     public void close() throws IOException {
-        spdyChannel.close();
+        spdyChannel.sendGoAway(SpdyChannel.CLOSE_OK);
     }
 
     @Override

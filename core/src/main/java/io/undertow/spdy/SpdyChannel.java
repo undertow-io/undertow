@@ -40,7 +40,6 @@ import org.xnio.ssl.SslConnection;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -195,7 +194,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     }
 
     protected void lastDataRead() {
-        if(!peerGoneAway) {
+        if(!peerGoneAway && !thisGoneAway) {
             //the peer has performed an unclean close
             //we assume something happened to the underlying connection
             //we attempt to send our own GOAWAY, however it will probably fail,
@@ -301,6 +300,10 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     }
 
     public void sendGoAway(int status, final ChannelExceptionHandler<SpdyStreamSinkChannel> exceptionHandler) {
+        if(thisGoneAway) {
+            return;
+        }
+        thisGoneAway = true;
         SpdyGoAwayStreamSinkChannel goAway = new SpdyGoAwayStreamSinkChannel(this, status, lastGoodStreamId);
         try {
             goAway.shutdownWrites();
