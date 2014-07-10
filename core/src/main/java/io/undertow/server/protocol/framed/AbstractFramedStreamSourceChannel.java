@@ -243,6 +243,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     protected void lastFrame() {
         state |= STATE_LAST_FRAME;
         waitingForFrame = false;
+        if(data == null && pendingFrameData.isEmpty()) {
+            state |= STATE_DONE | STATE_CLOSED;
+        }
     }
 
     @Override

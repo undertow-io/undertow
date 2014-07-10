@@ -183,6 +183,9 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
      * @return The number of bytes that can be sent
      */
     protected synchronized int grabFlowControlBytes(int toSend) {
+        if(toSend == 0) {
+            return 0;
+        }
         int newWindowSize = this.getChannel().getInitialWindowSize();
         int settingsDelta = newWindowSize - this.initialWindowSize;
         //first adjust for any settings frame updates
@@ -192,9 +195,6 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
         int min = Math.min(toSend, this.flowControlWindow);
         int actualBytes = this.getChannel().grabFlowControlBytes(min);
         this.flowControlWindow -= actualBytes;
-        if (actualBytes == 0) {
-            suspendWritesInternal();
-        }
         return actualBytes;
     }
 
@@ -204,7 +204,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
         if (exhausted) {
             getChannel().notifyFlowControlAllowed();
             if (isWriteResumed()) {
-                resumeWritesInternal();
+                resumeWritesInternal(true);
             }
         }
     }

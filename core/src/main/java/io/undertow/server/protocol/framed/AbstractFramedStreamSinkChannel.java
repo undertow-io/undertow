@@ -103,14 +103,6 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         state &= ~STATE_WRITES_RESUMED;
     }
 
-    protected void suspendWritesInternal() {
-        channel.suspendWrites();
-    }
-
-    protected void resumeWritesInternal() {
-        channel.resumeWrites();
-    }
-
     /**
      * Returns the header for the current frame.
      *
@@ -163,12 +155,24 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void wakeupWrites() {
-        resumeWrites();
+        resumeWritesInternal(true);
     }
 
     @Override
     public void resumeWrites() {
+        resumeWritesInternal(false);
+    }
+
+    protected void resumeWritesInternal(boolean wakeup) {
+        boolean alreadyResumed = anyAreSet(state, STATE_WRITES_RESUMED);
+        if(!wakeup && alreadyResumed) {
+            return;
+        }
         state |= STATE_WRITES_RESUMED;
+        if(anyAreSet(state, STATE_READY_FOR_FLUSH) && !wakeup) {
+            //we already have data queued to be flushed
+            return;
+        }
 
         if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
             getIoThread().execute(new Runnable() {
@@ -408,7 +412,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         }
         //we need to wake up/invoke the write listener
         if(isWriteResumed()) {
-            resumeWritesInternal();
+            ChannelListeners.invokeChannelListener(getIoThread(), this, (ChannelListener)getWriteListener());
         }
         wakeupWrites();
     }
