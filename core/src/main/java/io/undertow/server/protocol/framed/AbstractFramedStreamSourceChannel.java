@@ -185,7 +185,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     @Override
     public void resumeReads() {
-        resumeReadsInternal();
+        resumeReadsInternal(false);
     }
 
     @Override
@@ -195,36 +195,39 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     @Override
     public void wakeupReads() {
-        resumeReadsInternal();
+        resumeReadsInternal(true);
     }
 
     /**
      * For this class there is no difference between a resume and a wakeup
      */
-    void resumeReadsInternal() {
+    void resumeReadsInternal(boolean wakeup) {
+        boolean alreadyResumed = anyAreSet(state, STATE_READS_RESUMED);
         state |= STATE_READS_RESUMED;
-        if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
-            getIoThread().execute(new Runnable() {
+        if(!alreadyResumed || wakeup) {
+            if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
+                getIoThread().execute(new Runnable() {
 
-                @Override
-                public void run() {
-                    state |= STATE_IN_LISTENER_LOOP;
-                    try {
-                        do {
-                            ChannelListener<? super R> listener = getReadListener();
-                            if (listener == null || !isReadResumed()) {
-                                return;
-                            }
-                            ChannelListeners.invokeChannelListener((R) AbstractFramedStreamSourceChannel.this, listener);
-                            //if writes are shutdown or we become active then we stop looping
-                            //we stop when writes are shutdown because we can't flush until we are active
-                            //although we may be flushed as part of a batch
-                        } while (allAreClear(state, STATE_CLOSED) && frameDataRemaining > 0 && data != null);
-                    } finally {
-                        state &= ~STATE_IN_LISTENER_LOOP;
+                    @Override
+                    public void run() {
+                        state |= STATE_IN_LISTENER_LOOP;
+                        try {
+                            do {
+                                ChannelListener<? super R> listener = getReadListener();
+                                if (listener == null || !isReadResumed()) {
+                                    return;
+                                }
+                                ChannelListeners.invokeChannelListener((R) AbstractFramedStreamSourceChannel.this, listener);
+                                //if writes are shutdown or we become active then we stop looping
+                                //we stop when writes are shutdown because we can't flush until we are active
+                                //although we may be flushed as part of a batch
+                            } while (allAreClear(state, STATE_CLOSED) && frameDataRemaining > 0 && data != null);
+                        } finally {
+                            state &= ~STATE_IN_LISTENER_LOOP;
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 
@@ -302,7 +305,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             waitingForFrame = false;
         }
         if (anyAreSet(state, STATE_READS_RESUMED)) {
-            resumeReadsInternal();
+            resumeReadsInternal(true);
         }
     }
 
@@ -508,7 +511,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     protected void markStreamBroken() {
         state |= STATE_STREAM_BROKEN;
         if(isReadResumed()) {
-            resumeReadsInternal();
+            resumeReadsInternal(true);
         }
         if (waiters > 0) {
             lock.notifyAll();

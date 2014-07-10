@@ -564,8 +564,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     @Override
     public void close() throws IOException {
         safeClose(channel);
-        markWritesBroken(null);
-        markReadsBroken(null);
     }
 
     @Override

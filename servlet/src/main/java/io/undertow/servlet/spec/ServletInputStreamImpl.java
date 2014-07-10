@@ -213,7 +213,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     channel.getIoThread().execute(new Runnable() {
                         @Override
                         public void run() {
-                            channel.resumeReads();
+                            if(!channel.isReadResumed()) {
+                                channel.resumeReads();
+                            }
                         }
                     });
                 }
