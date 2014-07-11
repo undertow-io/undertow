@@ -34,6 +34,7 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
@@ -75,6 +76,8 @@ import java.util.concurrent.Executor;
  */
 public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
+    private static final String HTTP2_UPGRADE_PREFIX = "h2";
+
     private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.servlet.CREATE_INITIAL_HANDLER");
 
     private final HttpHandler next;
@@ -112,7 +115,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         //https://issues.jboss.org/browse/WFLY-3439
         //if the request is an upgrade request then we don't want to redirect
         //as there is a good chance the web socket client won't understand the redirect
-        boolean isUpgradeRequest = exchange.getRequestHeaders().contains(Headers.UPGRADE);
+        //we make an exception for HTTP2 upgrade requests, as this would have already be handled at
+        //the connector level if it was going to be handled.
+        String upgradeString = exchange.getRequestHeaders().getFirst(Headers.UPGRADE);
+        boolean isUpgradeRequest = upgradeString != null && !upgradeString.startsWith(HTTP2_UPGRADE_PREFIX);
         if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
