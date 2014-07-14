@@ -130,9 +130,13 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
                 for (Map.Entry<String, Object> entry : result.getSessionData().entrySet()) {
 
                     if (entry.getValue() instanceof HttpSessionActivationListener) {
-                        ((HttpSessionActivationListener) entry.getValue()).sessionWillPassivate(event);
+                        ((HttpSessionActivationListener) entry.getValue()).sessionDidActivate(event);
                     }
-                    session.setAttribute(entry.getKey(), entry.getValue());
+                    if(entry.getKey().startsWith(HttpSessionImpl.IO_UNDERTOW)) {
+                        session.getSession().setAttribute(entry.getKey(), entry.getValue());
+                    } else {
+                        session.setAttribute(entry.getKey(), entry.getValue());
+                    }
                 }
             }
         }
