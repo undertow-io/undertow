@@ -20,7 +20,6 @@ package io.undertow.servlet.api;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -152,19 +151,28 @@ public class ServletInfo implements Cloneable {
     }
 
     public ServletInfo addMapping(final String mapping) {
-        mappings.add(mapping);
+        if(!mapping.startsWith("/") && !mapping.startsWith("*") && !mapping.isEmpty()) {
+            //if the user adds a mapping like 'index.html' we transparently translate it to '/index.html'
+            mappings.add("/" + mapping);
+        } else {
+            mappings.add(mapping);
+        }
         return this;
     }
 
 
     public ServletInfo addMappings(final Collection<String> mappings) {
-        this.mappings.addAll(mappings);
+        for(String m : mappings) {
+            addMapping(m);
+        }
         return this;
     }
 
 
     public ServletInfo addMappings(final String... mappings) {
-        this.mappings.addAll(Arrays.asList(mappings));
+        for(String m : mappings) {
+            addMapping(m);
+        }
         return this;
     }
 

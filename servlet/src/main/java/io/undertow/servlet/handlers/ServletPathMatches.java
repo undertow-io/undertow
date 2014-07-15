@@ -308,7 +308,13 @@ public class ServletPathMatches {
                 builder.addExactMatch("/", createHandler(deploymentInfo, targetServletMatch.handler, noExtension, targetServletMatch.matchedPath, targetServletMatch.defaultServlet));
             } else {
                 //we need to check for an extension match, so paths like /exact.txt will have the correct filter applied
-                String lastSegment = path.substring(path.lastIndexOf('/'));
+                int lastSegmentIndex = path.lastIndexOf('/');
+                String lastSegment;
+                if(lastSegmentIndex > 0) {
+                    lastSegment = path.substring(lastSegmentIndex);
+                } else {
+                    lastSegment = path;
+                }
                 if (lastSegment.contains(".")) {
                     String ext = lastSegment.substring(lastSegment.lastIndexOf('.') + 1);
                     if (extension.containsKey(ext)) {
