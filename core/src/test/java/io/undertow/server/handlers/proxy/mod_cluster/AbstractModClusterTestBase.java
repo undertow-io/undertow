@@ -170,6 +170,9 @@ public abstract class AbstractModClusterTestBase {
     static void stopServers() {
         if (servers != null) {
             for (final Undertow server : servers) {
+                if (server == null) {
+                    continue;
+                }
                 try {
                     server.stop();
                 } catch (Exception e) {

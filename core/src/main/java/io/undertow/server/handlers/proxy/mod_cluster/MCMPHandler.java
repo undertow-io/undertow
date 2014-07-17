@@ -40,7 +40,6 @@ import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.STICKY
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TIMEOUT;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TTL;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TYPE;
-import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TYPE_STRING;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -135,10 +134,11 @@ class MCMPHandler implements HttpHandler {
             return;
         }
 
-        if (exchange.isInIoThread()) { // we should probably take this decision at a later point
-            exchange.dispatch(this);
-            return;
-        }
+//        Maybe it's not worth dispatching even registration/removals?
+//        if (exchange.isInIoThread()) {
+//            exchange.dispatch(this);
+//            return;
+//        }
 
         final HttpString method = exchange.getRequestMethod();
         try {
@@ -202,6 +202,11 @@ class MCMPHandler implements HttpHandler {
         while (i.hasNext()) {
             final HttpString name = i.next();
             final String value = requestData.getFirst(name);
+
+            if (!checkString(value)) {
+                processError(TYPESYNTAX, SBADFLD + name + SBADFLD1, exchange);
+                return;
+            }
 
             if (BALANCER.equals(name)) {
                 node.setBalancer(value);
@@ -772,6 +777,10 @@ class MCMPHandler implements HttpHandler {
             return deque == null ? null : deque.peekFirst();
         }
 
+    }
+
+    static boolean checkString(final String value) {
+        return value != null && value.length() > 0;
     }
 
 }

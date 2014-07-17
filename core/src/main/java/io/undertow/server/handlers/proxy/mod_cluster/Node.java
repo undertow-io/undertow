@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.AVAILABLE;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.FULL;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
 
@@ -79,6 +81,7 @@ class Node {
     private static final int ERROR = 1 << 31;
     private static final int REMOVED = 1 << 30;
     private static final int HOT_STANDBY = 1 << 29;
+    private static final int ACTIVE_PING = 1 << 28;
     private static final int ERROR_MASK = (1 << 10) - 1;
 
     private static final AtomicInteger idGen = new AtomicInteger();
@@ -143,19 +146,23 @@ class Node {
         return lbStatus.getElected();
     }
 
+    int getElectedDiff() {
+        return lbStatus.getElectedDiff();
+    }
+
     /**
      * Get the load information. Add the error information for clients.
      *
      * @return the node load
      */
     public int getLoad() {
-        switch (getStatus()) {
-            case NODE_DOWN:
-                return -1;
-            case NODE_HOT_STANDBY:
-                return 0;
-            default:
-                return lbStatus.getLbfactor();
+        final int status = this.state;
+        if (anyAreSet(status, ERROR)) {
+            return -1;
+        } else if (anyAreSet(status, HOT_STANDBY)) {
+            return 0;
+        } else {
+            return lbStatus.getLbFactor();
         }
     }
 
@@ -169,8 +176,10 @@ class Node {
     }
 
     protected boolean checkHealth() {
-        // Check the health if the node wasn't elected or is in error state
-        return !lbStatus.update() || anyAreSet(state, ERROR);
+        if (anyAreSet(state, ERROR)) {
+            return true;
+        }
+        return !lbStatus.update() || allAreClear(state, ACTIVE_PING);
     }
 
     /**
@@ -304,6 +313,7 @@ class Node {
             oldState = this.state;
             newState = oldState | HOT_STANDBY;
             if (stateUpdater.compareAndSet(this, oldState, newState)) {
+                lbStatus.updateLoad(0);
                 return;
             }
         }
@@ -327,7 +337,7 @@ class Node {
             oldState = this.state;
             newState = oldState | ERROR;
             if (stateUpdater.compareAndSet(this, oldState, newState)) {
-                UndertowLogger.ROOT_LOGGER.infof("Node '%s' in error", jvmRoute);
+                UndertowLogger.ROOT_LOGGER.debugf("Node '%s' in error", jvmRoute);
                 return;
             }
         }
@@ -344,7 +354,7 @@ class Node {
             oldState = this.state;
             if ((oldState & ERROR) != ERROR) {
                 newState = oldState | ERROR;
-                UndertowLogger.ROOT_LOGGER.infof("Node '%s' in error", jvmRoute);
+                UndertowLogger.ROOT_LOGGER.debugf("Node '%s' in error", jvmRoute);
             } else if ((oldState & ERROR_MASK) == ERROR_MASK) {
                 return ERROR_MASK;
             } else {
@@ -370,7 +380,12 @@ class Node {
     }
 
     protected boolean checkAvailable(final boolean existingSession) {
-        return allAreClear(state, ERROR | REMOVED | HOT_STANDBY) && connectionPool.available() == ProxyConnectionPool.AvailabilityType.AVAILABLE;
+        if (allAreClear(state, ERROR | REMOVED)) {
+            // This needs to be tied into the connection pool better
+            final ProxyConnectionPool.AvailabilityType poolState = connectionPool.available();
+            return poolState == AVAILABLE || poolState == FULL;
+        }
+        return false;
     }
 
     private class NodeConnectionPoolManager implements ConnectionPoolManager {
@@ -378,7 +393,7 @@ class Node {
 
         @Override
         public boolean canCreateConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
-            return true;
+            return connections < 10;
         }
 
         @Override

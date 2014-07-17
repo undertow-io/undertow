@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -375,7 +374,7 @@ class ModClusterContainer {
      * @return the node, {@code null} if no node could be found
      */
     Node findNewNode(final VirtualHost.HostEntry entry) {
-        return electNode(entry.getContexts(), false);
+        return electNode(entry.getContexts(), false, null);
     }
 
     /**
@@ -399,24 +398,17 @@ class ModClusterContainer {
         } else {
             failOverDomain = domain;
         }
+        final Collection<Context> contexts = entry.getContexts();
         if (failOverDomain != null) {
-            final List<Context> filtered = new ArrayList<>();
-            for (final Context context : entry.getContexts()) {
-                if (failOverDomain.equals(context.getNode().getNodeConfig().getDomain())) {
-                    filtered.add(context);
-                }
-            }
-            if (!filtered.isEmpty()) {
-                final Node node = electNode(filtered, true);
-                if (node != null) {
-                    return node;
-                }
+            final Node node = electNode(contexts, true, failOverDomain);
+            if (node != null) {
+                return node;
             }
         }
         if (forceStickySession) {
             return null;
         } else {
-            return electNode(entry.getContexts(), false);
+            return electNode(contexts, false, null);
         }
     }
 
@@ -436,11 +428,9 @@ class ModClusterContainer {
                 if (i > 0) {
                     host = hosts.get(hostName.substring(0, i));
                     if (host == null) {
-                        UndertowLogger.ROOT_LOGGER.infof("could not find context for " + hostName.substring(0, i));
                         return null;
                     }
                 } else {
-                    UndertowLogger.ROOT_LOGGER.infof("could not find context for " + hostName);
                     return null;
                 }
             }
@@ -462,22 +452,43 @@ class ModClusterContainer {
         return route;
     }
 
-    // TODO hot standby, if all nodes in the lbgroup are down this node can be used
-    // if no single node can be found, hot-standby nodes can be considered as well
-    static Node electNode(final Iterable<Context> contexts, final boolean existingSession) {
+    static Node electNode(final Iterable<Context> contexts, final boolean existingSession, final String domain) {
         Node candidate = null;
+        boolean candidateHotStandby = false;
         for (Context context : contexts) {
             // Skip disabled contexts
             if (context.checkAvailable(existingSession)) {
                 final Node node = context.getNode();
+                final boolean hotStandby = node.isHotStandby();
+                // Check that we only failover in the domain
+                if (domain != null && !domain.equals(node.getNodeConfig().getDomain())) {
+                    continue;
+                }
                 if (candidate != null) {
-                    final int lbStatus1 = candidate.getLoadStatus();
-                    final int lbStatus2 = node.getLoadStatus();
-                    if (lbStatus1 > lbStatus2) {
-                        candidate = node;
+                    // Check if the nodes are in hot-standby
+                    if (candidateHotStandby) {
+                        if (hotStandby) {
+                            if (candidate.getElectedDiff() > node.getElectedDiff()) {
+                                candidate = node;
+                            }
+                        } else {
+                            candidate = node;
+                            candidateHotStandby = hotStandby;
+                        }
+                    } else if (hotStandby) {
+                        continue;
+                    } else {
+                        // Normal election process
+                        final int lbStatus1 = candidate.getLoadStatus();
+                        final int lbStatus2 = node.getLoadStatus();
+                        if (lbStatus1 > lbStatus2) {
+                            candidate = node;
+                            candidateHotStandby = false;
+                        }
                     }
                 } else {
                     candidate = node;
+                    candidateHotStandby = hotStandby;
                 }
             }
         }

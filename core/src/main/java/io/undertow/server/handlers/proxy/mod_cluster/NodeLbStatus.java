@@ -31,20 +31,16 @@ class NodeLbStatus {
     private volatile int lbstatus;
     private volatile int elected;
 
-    public int getOldelected() {
-        return oldelected;
-    }
-
-    public int getLbfactor() {
+    public int getLbFactor() {
         return lbfactor;
-    }
-
-    public int getLbstatus() {
-        return lbstatus;
     }
 
     public int getElected() {
         return elected;
+    }
+
+    synchronized int getElectedDiff() {
+        return elected - oldelected;
     }
 
     /**
@@ -60,14 +56,19 @@ class NodeLbStatus {
             this.lbstatus = ((elected - oldelected) * 1000) / lbfactor;
         }
         this.oldelected = elected;
-        return elected != oldelected; // TODO ping if they are equal
+        return elected != oldelected; // ping if they are equal
     }
 
     synchronized void elected() {
-        elected++;
+        if (elected == Integer.MAX_VALUE) {
+            oldelected = (elected - oldelected);
+            elected = 1;
+        } else {
+            elected++;
+        }
     }
 
-    synchronized void updateLoad(int load) {
+    void updateLoad(int load) {
         lbfactor = load;
     }
 
@@ -77,6 +78,7 @@ class NodeLbStatus {
      * @return
      */
     synchronized int getLbStatus() {
+        int lbfactor = this.lbfactor;
         if (lbfactor > 0) {
             return (((elected - oldelected) * 1000) / lbfactor) + lbstatus;
         } else {

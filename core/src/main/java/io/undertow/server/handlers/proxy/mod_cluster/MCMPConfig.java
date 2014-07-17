@@ -201,7 +201,7 @@ public class MCMPConfig {
         boolean checkNonce = true;
         boolean reduceDisplay = false;
         boolean allowCmd = true;
-        boolean displaySessionids = true;
+        boolean displaySessionids = false;
 
         public WebBuilder setCheckNonce(boolean checkNonce) {
             this.checkNonce = checkNonce;
