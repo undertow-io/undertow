@@ -273,22 +273,26 @@ public class AsyncSenderImpl implements Sender {
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
         ByteBuffer bytes = ByteBuffer.wrap(data.getBytes(charset));
-        int i = 0;
-        ByteBuffer[] bufs = null;
-        while (bytes.hasRemaining()) {
-            Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-            if (bufs == null) {
-                int noBufs = (bytes.remaining() + pooled.getResource().remaining() - 1) / pooled.getResource().remaining(); //round up division trick
-                pooledBuffers = new Pooled[noBufs];
-                bufs = new ByteBuffer[noBufs];
+        if (bytes.remaining() == 0) {
+            callback.onComplete(exchange, this);
+        } else {
+            int i = 0;
+            ByteBuffer[] bufs = null;
+            while (bytes.hasRemaining()) {
+                Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
+                if (bufs == null) {
+                    int noBufs = (bytes.remaining() + pooled.getResource().remaining() - 1) / pooled.getResource().remaining(); //round up division trick
+                    pooledBuffers = new Pooled[noBufs];
+                    bufs = new ByteBuffer[noBufs];
+                }
+                pooledBuffers[i] = pooled;
+                bufs[i] = pooled.getResource();
+                Buffers.copy(pooled.getResource(), bytes);
+                pooled.getResource().flip();
+                ++i;
             }
-            pooledBuffers[i] = pooled;
-            bufs[i] = pooled.getResource();
-            Buffers.copy(pooled.getResource(), bytes);
-            pooled.getResource().flip();
-            ++i;
+            send(bufs, callback);
         }
-        send(bufs, callback);
     }
 
     @Override
