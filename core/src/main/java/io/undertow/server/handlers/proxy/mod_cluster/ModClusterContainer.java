@@ -9,117 +9,448 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.server.handlers.proxy.mod_cluster;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 import io.undertow.UndertowLogger;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.proxy.ProxyConnectionPool;
+import io.undertow.server.handlers.cache.LRUCache;
+import io.undertow.server.handlers.proxy.ProxyClient;
+import io.undertow.util.CopyOnWriteMap;
+import io.undertow.util.Headers;
+import io.undertow.util.PathMatcher;
+import org.xnio.IoUtils;
+import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
 
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 /**
- * Container for all mod_proxy related things.
- *
  * @author Stuart Douglas
+ * @author Emanuel Muckenhuber
  */
-public class ModClusterContainer {
+class ModClusterContainer {
 
-    private final List<Balancer> balancers = new CopyOnWriteArrayList<>();
-    private final List<Node> nodes = new CopyOnWriteArrayList<>();
-    private final List<Context> contexts = new CopyOnWriteArrayList<>();
-    private final List<Node> failedNodes = new CopyOnWriteArrayList<>();
-    private final List<VHost> hosts = new CopyOnWriteArrayList<>();
-    private final List<SessionId> sessionIds = Collections.synchronizedList(new ArrayList<SessionId>());
-    private final Random random = new SecureRandom();
-    private Timer timer;
+    // The configured balancers
+    private final ConcurrentMap<String, Balancer> balancers = new CopyOnWriteMap<>();
 
-    private final UndertowClient undertowClient;
-    private final XnioSsl ssl;
+    // The available nodes
+    private final ConcurrentMap<String, Node> nodes = new CopyOnWriteMap<>();
 
-    private volatile ModClusterLoadBalancingProxyClient proxyClient;
+    // virtual-host > per context balancing table
+    private final ConcurrentMap<String, VirtualHost> hosts = new CopyOnWriteMap<>();
 
-    public ModClusterContainer(UndertowClient undertowClient, XnioSsl ssl) {
-        this.undertowClient = undertowClient;
-        this.ssl = ssl;
+    // Map of removed jvmRoutes to failover domain
+    private final LRUCache<String, String> failoverDomains = new LRUCache<>(100, 5 * 60 * 1000);
+
+    private final XnioSsl xnioSsl;
+    private final UndertowClient client;
+    private final ProxyClient proxyClient;
+    private final ModCluster modCluster;
+    private final long removeBrokenNodesThreshold;
+
+    ModClusterContainer(final ModCluster modCluster, final XnioSsl xnioSsl, final UndertowClient client) {
+        this.xnioSsl = xnioSsl;
+        this.client = client;
+        this.modCluster = modCluster;
+        this.proxyClient = new ModClusterProxyClient(null, this);
+        this.removeBrokenNodesThreshold = removeThreshold(modCluster.getHealtCheckInterval(), modCluster.getRemoveBrokenNodes());
     }
 
-    public ModClusterContainer(UndertowClient undertowClient) {
-        this(undertowClient, null);
+    String getServerID() {
+        return modCluster.getServerID();
     }
 
-    public ModClusterContainer() {
-        this(UndertowClient.getInstance(), null);
+    UndertowClient getClient() {
+        return client;
     }
 
-    public synchronized void start() {
-        timer = new Timer(true);
-
-
-        startNewTimerTask(new NodeStatusChecker(), 500);
-        // Start new thread for failed node health check
-        startNewTimerTask(new HealthChecker(), 5000);
-        startNewTimerTask(new MCMConfigBackgroundProcessor(), 5000);
-        proxyClient = new ModClusterLoadBalancingProxyClient(null, this);
-    }
-
-    public synchronized void stop() {
-        timer.cancel();
-        proxyClient = null;
-    }
-
-    public ModClusterLoadBalancingProxyClient getProxyClient() {
+    /**
+     * Get the proxy client.
+     *
+     * @return the proxy client
+     */
+    public ProxyClient getProxyClient() {
         return proxyClient;
     }
 
-    public Node findNode(final HttpServerExchange exchange) {
-        for (Balancer balancer : balancers) {
-            Map<String, Cookie> cookies = exchange.getRequestCookies();
+    Collection<Balancer> getBalancers() {
+        return Collections.unmodifiableCollection(balancers.values());
+    }
+
+    Collection<Node> getNodes() {
+        return Collections.unmodifiableCollection(nodes.values());
+    }
+
+    Node getNode(final String jvmRoute) {
+        return nodes.get(jvmRoute);
+    }
+
+    /**
+     * Get the mod cluster proxy target.
+     *
+     * @param exchange the http exchange
+     * @return
+     */
+    public ModClusterProxyTarget findTarget(final HttpServerExchange exchange) {
+        // There is an option to disable the virtual host check, probably a default virtual host
+        final PathMatcher.PathMatch<VirtualHost.HostEntry> entry = mapVirtualHost(exchange);
+        if (entry == null) {
+            return null;
+        }
+        for (final Balancer balancer : balancers.values()) {
+            final Map<String, Cookie> cookies = exchange.getRequestCookies();
             if (balancer.isStickySession()) {
                 if (cookies.containsKey(balancer.getStickySessionCookie())) {
-                    Node node = findNodeBySessionId(cookies.get(balancer.getStickySessionCookie()).getValue());
-                    if (node != null && node.getConnectionPool().available() != ProxyConnectionPool.AvailabilityType.PROBLEM
-                            && node.getNodeState().isNodeUp()) {
-                        return node;
+                    final String jvmRoute = getJVMRoute(cookies.get(balancer.getStickySessionCookie()).getValue());
+                    if (jvmRoute != null) {
+                        return new ModClusterProxyTarget.ExistingSessionTarget(jvmRoute, entry.getValue(), this, balancer.isStickySessionForce());
                     }
                 }
                 if (exchange.getPathParameters().containsKey(balancer.getStickySessionPath())) {
-                    String id = exchange.getPathParameters().get(balancer.getStickySessionPath()).getFirst();
-                    Node node = findNodeBySessionId(id);
-                    if (node != null && node.getConnectionPool().available() != ProxyConnectionPool.AvailabilityType.PROBLEM
-                            && node.getNodeState().isNodeUp()) {
-                        return node;
+                    final String id = exchange.getPathParameters().get(balancer.getStickySessionPath()).getFirst();
+                    final String jvmRoute = getJVMRoute(id);
+                    if (jvmRoute != null) {
+                        return new ModClusterProxyTarget.ExistingSessionTarget(jvmRoute, entry.getValue(), this, balancer.isStickySessionForce());
                     }
                 }
             }
         }
-        return getNode();
+        return new ModClusterProxyTarget.BasicTarget(entry.getValue(), this);
     }
 
     /**
-     * @param sessionId The full session id
-     * @return The node, or <code>null</code>
+     * Register a new node.
+     *
+     * @param config            the node configuration
+     * @param balancerConfig    the balancer configuration
+     * @param ioThread          the associated I/O thread
+     * @return whether the node could be created or not
      */
-    public Node findNodeBySessionId(String sessionId) {
-        int index = sessionId.indexOf('.');
+    public synchronized boolean addNode(final NodeConfig config, final Balancer.BalancerBuilder balancerConfig, final XnioIoThread ioThread) {
 
+        final String jvmRoute = config.getJvmRoute();
+        final Node existing = nodes.get(config);
+        if (existing != null) {
+            if (config.getConnectionURI().equals(existing.getNodeConfig().getConnectionURI())) {
+                // TODO better check if they are the same
+                existing.resetState();
+                return true;
+            } else {
+                existing.markRemoved();
+                removeNode(existing);
+                if (!existing.isInErrorState()) {
+                    return false; // replies with MNODERM error
+                }
+            }
+        }
+
+        final String balancerRef = config.getBalancer();
+        Balancer balancer = balancers.get(balancerRef);
+        if (balancer == null) {
+            // TODO compare balancer configs, if they are not equal log a warning?
+            balancer = balancerConfig.build();
+            balancers.put(balancerRef, balancer);
+        }
+        final Node node = new Node(config, balancer, ioThread, xnioSsl, client);
+        nodes.put(jvmRoute, node);
+        // Remove from the failover groups
+        failoverDomains.remove(node.getJvmRoute());
+        UndertowLogger.ROOT_LOGGER.infof("registering node %s, connection: %s", jvmRoute, config.getConnectionURI());
+        return true;
+    }
+
+    /**
+     * Management command enabling all contexts on the given node.
+     *
+     * @param jvmRoute    the jvmRoute
+     * @return
+     */
+    public synchronized boolean enableNode(final String jvmRoute) {
+        final Node node = nodes.get(jvmRoute);
+        if (node != null) {
+            for (final Context context : node.getContexts()) {
+                context.enable();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Management command disabling all contexts on the given node.
+     *
+     * @param jvmRoute    the jvmRoute
+     * @return
+     */
+    public synchronized boolean disableNode(final String jvmRoute) {
+        final Node node = nodes.get(jvmRoute);
+        if (node != null) {
+            for (final Context context : node.getContexts()) {
+                context.disable();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Management command stopping all contexts on the given node.
+     *
+     * @param jvmRoute    the jvmRoute
+     * @return
+     */
+    public synchronized boolean stopNode(final String jvmRoute) {
+        final Node node = nodes.get(jvmRoute);
+        if (node != null) {
+            for (final Context context : node.getContexts()) {
+                context.stop();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Remove a node.
+     *
+     * @param jvmRoute the jvmRoute
+     * @return the removed node
+     */
+    public synchronized Node removeNode(final String jvmRoute) {
+        final Node node = nodes.get(jvmRoute);
+        if (node != null) {
+            removeNode(node);
+        }
+        return node;
+    }
+
+    protected synchronized void removeNode(final Node node) {
+        final String jvmRoute = node.getJvmRoute();
+        node.markRemoved();
+        if (nodes.remove(jvmRoute, node)) {
+            UndertowLogger.ROOT_LOGGER.infof("removing node %s", jvmRoute);
+            node.markRemoved();
+            for (final Context context : node.getContexts()) {
+                removeContext(context.getPath(), node, context.getVirtualHosts());
+            }
+            final String domain = node.getNodeConfig().getDomain();
+            if (domain != null) {
+                failoverDomains.add(node.getJvmRoute(), domain);
+            }
+            final String balancerName = node.getBalancer().getName();
+            for (final Node other : nodes.values()) {
+                if (other.getBalancer().getName().equals(balancerName)) {
+                    return;
+                }
+            }
+            balancers.remove(balancerName);
+        }
+    }
+
+    /**
+     * Register a web context. If the web context already exists, just enable it.
+     *
+     * @param contextPath the context path
+     * @param jvmRoute    the jvmRoute
+     * @param aliases     the virtual host aliases
+     */
+    public synchronized boolean enableContext(final String contextPath, final String jvmRoute, final List<String> aliases) {
+        final Node node = nodes.get(jvmRoute);
+        if (node != null) {
+            Context context = node.getContext(contextPath, aliases);
+            if (context == null) {
+                context = node.registerContext(contextPath, aliases);
+                UndertowLogger.ROOT_LOGGER.infof("registering context %s, for node %s, with aliases %s", contextPath, jvmRoute, aliases);
+                for (final String alias : aliases) {
+                    VirtualHost virtualHost = hosts.get(alias);
+                    if (virtualHost == null) {
+                        virtualHost = new VirtualHost();
+                        hosts.put(alias, virtualHost);
+                    }
+                    virtualHost.registerContext(contextPath, jvmRoute, context);
+                }
+            }
+            context.enable();
+            return true;
+        }
+        return false;
+    }
+
+    synchronized boolean disableContext(final String contextPath, final String jvmRoute, List<String> aliases) {
+        final Node node = nodes.get(jvmRoute);
+        if (node != null) {
+            node.disableContext(contextPath, aliases);
+            return true;
+        }
+        return false;
+    }
+
+    synchronized int stopContext(final String contextPath, final String jvmRoute, List<String> aliases) {
+        final Node node = nodes.get(jvmRoute);
+        if (node != null) {
+            return node.stopContext(contextPath, aliases);
+        }
+        return -1;
+    }
+
+    synchronized boolean removeContext(final String contextPath, final String jvmRoute, List<String> aliases) {
+        final Node node = nodes.get(jvmRoute);
+        if (node != null) {
+            return removeContext(contextPath, node, aliases);
+        }
+        return false;
+    }
+
+    public synchronized boolean removeContext(final String contextPath, final Node node, List<String> aliases) {
+        if (node == null) {
+            return false;
+        }
+        final String jvmRoute = node.getJvmRoute();
+        UndertowLogger.ROOT_LOGGER.infof("unregistering context '%s' from node '%s'", contextPath, jvmRoute);
+        final Context context = node.removeContext(contextPath, aliases);
+        if (context == null) {
+            return false;
+        }
+        context.stop();
+        for (final String alias : context.getVirtualHosts()) {
+            final VirtualHost virtualHost = hosts.get(alias);
+            if (virtualHost != null) {
+                virtualHost.removeContext(contextPath, jvmRoute, context);
+                if (virtualHost.isEmpty()) {
+                    hosts.remove(alias);
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check the health of all registered nodes
+     */
+    void checkHealth() {
+        for (final Node node : nodes.values()) {
+            if (node.checkHealth()) {
+                // TODO properly ping the node using the node connection pool
+                try {
+                    final URI uri = node.getNodeConfig().getConnectionURI();
+                    final InetSocketAddress address = new InetSocketAddress(uri.getHost(), uri.getPort());
+                    final Socket socket = new Socket();
+                    try {
+                        socket.setSoLinger(true, 0);
+                        socket.connect(address, 3000);
+                    } finally {
+                        IoUtils.safeClose(socket);
+                    }
+                } catch (IOException e) {
+                    if (node.healthCheckFailed() == removeBrokenNodesThreshold) {
+                        removeNode(node);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Find a new node handling this request.
+     *
+     * @param entry the resolved virtual host entry
+     * @return the node, {@code null} if no node could be found
+     */
+    Node findNewNode(final VirtualHost.HostEntry entry) {
+        return electNode(entry.getContexts(), false);
+    }
+
+    /**
+     * Try to find a failover node within the same load balancing group.
+     *
+     * @oaram entry      the resolved virtual host entry
+     * @param domain     the load balancing domain, if known
+     * @param jvmRoute   the original jvmRoute
+     * @return
+     */
+    Node findFailoverNode(final VirtualHost.HostEntry entry, final String domain, final String jvmRoute, final boolean forceStickySession) {
+        String failOverDomain = null;
+        if (domain == null) {
+            final Node node = nodes.get(jvmRoute);
+            if (node != null) {
+                failOverDomain = node.getNodeConfig().getDomain();
+            }
+            if (failOverDomain == null) {
+                failOverDomain = failoverDomains.get(jvmRoute);
+            }
+        } else {
+            failOverDomain = domain;
+        }
+        if (failOverDomain != null) {
+            final List<Context> filtered = new ArrayList<>();
+            for (final Context context : entry.getContexts()) {
+                if (failOverDomain.equals(context.getNode().getNodeConfig().getDomain())) {
+                    filtered.add(context);
+                }
+            }
+            if (!filtered.isEmpty()) {
+                final Node node = electNode(filtered, true);
+                if (node != null) {
+                    return node;
+                }
+            }
+        }
+        if (forceStickySession) {
+            return null;
+        } else {
+            return electNode(entry.getContexts(), false);
+        }
+    }
+
+    /**
+     * Map a request to virtual host.
+     *
+     * @param exchange    the http exchange
+     * @return
+     */
+    private PathMatcher.PathMatch<VirtualHost.HostEntry> mapVirtualHost(final HttpServerExchange exchange) {
+        final String hostName = exchange.getRequestHeaders().getFirst(Headers.HOST);
+        if (hostName != null) {
+            final String context = exchange.getRelativePath();
+            VirtualHost host = hosts.get(hostName);
+            if (host == null) {
+                int i = hostName.indexOf(":"); // Remove the port from the host
+                if (i > 0) {
+                    host = hosts.get(hostName.substring(0, i));
+                    if (host == null) {
+                        UndertowLogger.ROOT_LOGGER.infof("could not find context for " + hostName.substring(0, i));
+                        return null;
+                    }
+                } else {
+                    UndertowLogger.ROOT_LOGGER.infof("could not find context for " + hostName);
+                    return null;
+                }
+            }
+            return host.match(context);
+        }
+        return null;
+    }
+
+    static String getJVMRoute(final String sessionId) {
+        int index = sessionId.indexOf('.');
         if (index == -1) {
             return null;
         }
@@ -128,464 +459,46 @@ public class ModClusterContainer {
         if (index != -1) {
             route = route.substring(0, index);
         }
-        for (Node node : nodes) {
-            if (route.equals(node.getJvmRoute())) {
-                return node;
-            }
-        }
-        return null;
+        return route;
     }
 
-    //OLD CODE
-
-    /**
-     * Create and start a new thread for the specified target task
-     *
-     * @param task
-     */
-    private void startNewTimerTask(final TimerTask task, long interval) {
-        timer.schedule(task, interval, interval);
-    }
-
-    /**
-     * @return the number of active nodes
-     */
-    public int getActiveNodes() {
-        return this.nodes.size();
-    }
-
-    /**
-     * Select a node randomly
-     *
-     * @param n the number of tries
-     * @return a {@link Node}
-     * @see #getNode()
-     */
-    private Node getNode(int n) {
-        if (n >= this.nodes.size()) {
-            return null;
-        } else {
-            int index = random.nextInt(this.nodes.size());
-            Node node = this.nodes.get(index);
-            return (node.getNodeState().isNodeUp() ? node : getNode(n + 1));
-        }
-    }
-
-    public List<Balancer> getBalancers() {
-        return balancers;
-    }
-
-    /**
-     * Select a node for the specified {@code Request}
-     *
-     * @param sessionid
-     * @return a node instance form the list of nodes
-     */
-    public Node getNodeBySessionid(String sessionid) {
-        // URI decoding
-        // String requestURI = request.decodedURI().toString();
-
-        // TODO complete code here
-        System.out.println("getNode: " + sessionid);
-
-        return getNode();
-    }
-
-    /**
-     *
-     */
-    public void printNodes() {
-        if (this.nodes.isEmpty()) {
-            UndertowLogger.ROOT_LOGGER.info("No nodes available");
-            return;
-        }
-        StringBuilder sb = new StringBuilder("--> Available nodes : [");
-        int i = 0;
-        for (Node n : this.nodes) {
-            sb.append(n.getNodeConfig().getHostname() + ":" + n.getNodeConfig().getPort());
-            if ((i++) < this.nodes.size() - 1) {
-                sb.append(", ");
-            }
-        }
-        sb.append("]");
-        UndertowLogger.ROOT_LOGGER.info(sb);
-    }
-
-    /**
-     * Select a new node for the specified request and mark the failed node as unreachable
-     *
-     * @param sessionid
-     * @param failedNode
-     * @return
-     */
-    public Node getNodeBySessionid(String sessionid, Node failedNode) {
-        if (failedNode != null) {
-            // Set the node status to down
-            UndertowLogger.ROOT_LOGGER.warn("The node [" + failedNode.getNodeConfig().getHostname() + ":" + failedNode.getNodeConfig().getPort() + "] is down");
-            failedNode.getNodeState().setStatus(NodeState.NodeStatus.NODE_DOWN);
-        }
-        return getNodeBySessionid(sessionid);
-    }
-
-    public Node getNode(String jvmRoute) {
-        for (Node nod : nodes) {
-            if (nod.getJvmRoute().equals(jvmRoute)) {
-                return nod;
-            }
-        }
-        return null;
-    }
-
-    /* get the least loaded node according to the tablel values */
-    public Node getNode() {
-        Node nodeConfig = null;
-        for (Node nod : nodes) {
-            if (nod.getNodeState().getStatus() == NodeState.NodeStatus.NODE_DOWN)
-                continue; // skip it.
-            if (nodeConfig != null) {
-                int status = ((nodeConfig.getNodeState().getElected() - nodeConfig.getNodeState().getOldelected()) * 1000) / nodeConfig.getNodeState().getLoad();
-                int status1 = ((nod.getNodeState().getElected() - nod.getNodeState().getOldelected()) * 1000) / nod.getNodeState().getLoad();
-                if (status1 > status)
-                    nodeConfig = nod;
-            } else
-                nodeConfig = nod;
-        }
-        if (nodeConfig != null)
-            nodeConfig.getNodeState().setElected(nodeConfig.getNodeState().getElected() + 1);
-        return nodeConfig;
-    }
-
-    public void insertupdate(NodeConfig nodeConfig) {
-        if (nodes.isEmpty()) {
-            // TODO add the connection manager.
-            nodes.add(new Node(nodeConfig, this, ssl, undertowClient));
-        } else {
-            int i = 1;
-            Node replace = null;
-            for (Node nod : nodes) {
-                if (nod.getJvmRoute().equals(nodeConfig.getJvmRoute())) {
-                    // replace it.
-                    // TODO that is more tricky see mod_cluster C code.
-                    replace = nod;
-                    break;
+    // TODO hot standby, if all nodes in the lbgroup are down this node can be used
+    // if no single node can be found, hot-standby nodes can be considered as well
+    static Node electNode(final Iterable<Context> contexts, final boolean existingSession) {
+        Node candidate = null;
+        for (Context context : contexts) {
+            // Skip disabled contexts
+            if (context.checkAvailable(existingSession)) {
+                final Node node = context.getNode();
+                if (candidate != null) {
+                    final int lbStatus1 = candidate.getLoadStatus();
+                    final int lbStatus2 = node.getLoadStatus();
+                    if (lbStatus1 > lbStatus2) {
+                        candidate = node;
+                    }
                 } else {
-                    i++;
+                    candidate = node;
                 }
             }
-            if (replace != null) {
-                replace.updateConfig(nodeConfig);
+        }
+        if (candidate != null) {
+            candidate.elected(); // We have a winner!
+        }
+        return candidate;
+    }
+
+    static long removeThreshold(final long healthChecks, final long removeBrokenNodes) {
+        if (healthChecks > 0 && removeBrokenNodes > 0) {
+            final long threshold = removeBrokenNodes / healthChecks;
+            if (threshold > 1000) {
+                return 1000;
+            } else if (threshold < 1) {
+                return 1;
             } else {
-                // TODO add the connection manager.
-                nodes.add(new Node(nodeConfig, this, ssl, undertowClient));
+                return threshold;
             }
-        }
-    }
-
-    public void insertupdate(Balancer balancer) {
-        if (getBalancers().isEmpty()) {
-            getBalancers().add(balancer);
         } else {
-            for (Balancer bal : getBalancers()) {
-                if (bal.getName().equals(balancer.getName())) {
-                    // replace it.
-                    // TODO that is more tricky see mod_cluster C code.
-                    getBalancers().remove(bal);
-                    getBalancers().add(balancer);
-                    break; // Done
-                }
-            }
-        }
-    }
-
-    public long insertupdate(VHost host) {
-        int i = 1;
-        if (hosts.isEmpty()) {
-            host.setId(i);
-            hosts.add(host);
-            return 1;
-        } else {
-            for (VHost hos : hosts) {
-                if (hos.getJVMRoute().equals(host.getJVMRoute())
-                        && isSame(host.getAliases(), hos.getAliases())) {
-                    return hos.getId();
-                }
-                i++;
-            }
-        }
-        host.setId(i);
-        hosts.add(host);
-        return i;
-    }
-
-    private boolean isSame(List<String> aliases, List<String> aliases2) {
-        if (aliases.size() != aliases2.size())
-            return false;
-        for (String host : aliases)
-            if (!aliases.contains(host))
-                return false;
-        return true;
-    }
-
-    public void insertupdate(Context context) {
-        if (contexts.isEmpty()) {
-            contexts.add(context);
-            return;
-        } else {
-            for (Context con : contexts) {
-                if (context.getJvmRoute().equals(con.getJvmRoute())
-                        && context.getHostid() == con.getHostid()
-                        && context.getPath().equals(con.getPath())) {
-                    // update the status.
-                    con.setStatus(context.getStatus());
-                    return;
-                }
-            }
-            contexts.add(context);
-        }
-    }
-
-    public void checkHealthNode() {
-        for (Node nod : nodes) {
-            if (nod.getNodeState().getElected() == nod.getNodeState().getOldelected()) {
-                // nothing change bad
-                // TODO and the CPING/CPONG
-            } else {
-                nod.getNodeState().setOldelected(nod.getNodeState().getElected());
-            }
-        }
-    }
-
-    /*
-     * remove the context and the corresponding host if that is last context of the host.
-     */
-
-    public void remove(Context context, VHost host) {
-        for (Context con : contexts) {
-            if (context.getJvmRoute().equals(con.getJvmRoute())
-                    && isSame(getHostById(con.getHostid()).getAliases(), host.getAliases())
-                    && context.getPath().equals(con.getPath())) {
-                contexts.remove(con);
-                removeEmptyHost(con.getHostid());
-                return;
-            }
-
-        }
-    }
-
-    private void removeEmptyHost(long hostid) {
-        boolean remove = true;
-        for (Context con : contexts) {
-            if (con.getHostid() == hostid) {
-                remove = false;
-                break;
-            }
-        }
-        if (remove)
-            hosts.remove(getHostById(hostid));
-    }
-
-    private VHost getHostById(long hostid) {
-        for (VHost hos : hosts) {
-            if (hos.getId() == hostid)
-                return hos;
-        }
-        return null;
-    }
-
-    /*
-     * Remove the node, host, context corresponding to jvmRoute.
-     */
-    public void removeNode(String jvmRoute) {
-        List<Context> remcons = new ArrayList<>();
-        for (Context con : contexts) {
-            if (con.getJvmRoute().equals(jvmRoute))
-                remcons.add(con);
-        }
-        for (Context con : remcons)
-            contexts.remove(con);
-
-        List<VHost> remhosts = new ArrayList<>();
-        for (VHost hos : hosts) {
-            if (hos.getJVMRoute().equals(jvmRoute))
-                remhosts.add(hos);
-        }
-        for (VHost hos : remhosts)
-            hosts.remove(hos);
-
-        List<Node> remnodes = new ArrayList<>();
-        for (Node nod : nodes) {
-            if (nod.getJvmRoute().equals(jvmRoute))
-                remnodes.add(nod);
-        }
-        for (Node nod : remnodes)
-            nodes.remove(nod);
-    }
-
-    public List<SessionId> getSessionIds() {
-        return sessionIds;
-    }
-
-    /*
-     * Count the number of sessionid corresponding to the node.
-     */
-    public String getJVMRouteSessionCount(String jvmRoute) {
-        int i = 0;
-        for (SessionId s : this.sessionIds) {
-            if (s.getJmvRoute().equals(jvmRoute))
-                i++;
-        }
-        return "" + i;
-    }
-
-    void scheduleTask(TimerTask task, int interval) {
-        timer.schedule(task, interval, interval);
-    }
-
-    public List<Node> getNodes() {
-        return nodes;
-    }
-
-    public List<Context> getContexts() {
-        return contexts;
-    }
-
-    public List<VHost> getHosts() {
-        return hosts;
-    }
-
-    public long getNodeId(String jvmRoute) {
-        Node node = getNode(jvmRoute);
-        if(node != null) {
-            return node.getId();
-        }
-        return -1;
-    }
-
-
-    protected class MCMConfigBackgroundProcessor extends TimerTask {
-
-        @Override
-        public void run() {
-            checkHealthNode();
-        }
-
-    }
-
-    /**
-     * {@code HealthChecker}
-     * <p/>
-     * Created on Sep 18, 2012 at 3:46:36 PM
-     *
-     * @author <a href="mailto:nbenothm@redhat.com">Nabil Benothman</a>
-     */
-    private class HealthChecker extends TimerTask {
-
-        @Override
-        public void run() {
-            List<Node> tmp = new ArrayList<>();
-            if (failedNodes.isEmpty()) {
-                return;
-            }
-            UndertowLogger.ROOT_LOGGER.debug("Starting health check for previously failed nodes");
-            for (Node nodeConfig : failedNodes) {
-                if (checkHealth(nodeConfig)) {
-                    nodeConfig.getNodeState().setStatus(NodeState.NodeStatus.NODE_UP);
-                    tmp.add(nodeConfig);
-                }
-            }
-
-            if (tmp.isEmpty()) {
-                return;
-            }
-
-            nodes.addAll(tmp);
-
-            failedNodes.removeAll(tmp);
-
-        }
-
-        /**
-         * Check the health of the failed node
-         *
-         * @param node
-         * @return <tt>true</tt> if the node is reachable else <tt>false</tt>
-         */
-        public boolean checkHealth(Node node) {
-            if (node == null) {
-                return false;
-            }
-            boolean ok = false;
-            // TODO we should use the connectionPool instead.
-            java.net.Socket s = null;
-            try {
-                s = new java.net.Socket(node.getNodeConfig().getHostname(), node.getNodeConfig().getPort());
-                s.setSoLinger(true, 0);
-                ok = true;
-            } catch (Exception e) {
-                // Ignore
-            } finally {
-                if (s != null) {
-                    try {
-                        s.close();
-                    } catch (Exception e) {
-                        // Ignore
-                    }
-                }
-            }
-            return ok;
-        }
-    }
-
-    /**
-     * {@code NodeStatusChecker}
-     * <p/>
-     * Created on Sep 18, 2012 at 3:49:56 PM
-     *
-     * @author <a href="mailto:nbenothm@redhat.com">Nabil Benothman</a>
-     */
-    private class NodeStatusChecker extends TimerTask {
-
-        @Override
-        public void run() {
-            List<Node> tmp = new ArrayList<>();
-            try {
-                // Retrieve nodes with status "DOWN"
-                for (Node n : nodes) {
-                    if (n.getNodeState().isNodeDown()) {
-                        tmp.add(n);
-                    }
-                }
-
-                if (tmp.isEmpty()) {
-                    return;
-                }
-                // Remove failed nodes from the list of nodes
-                nodes.removeAll(tmp);
-                // Add selected nodes to the list of failed nodes
-                failedNodes.addAll(tmp);
-                tmp.clear();
-
-                // Retrieve nodes with status "UP"
-                for (Node n : failedNodes) {
-                    if (n.getNodeState().isNodeUp()) {
-                        tmp.add(n);
-                    }
-                }
-
-                if (tmp.isEmpty()) {
-                    return;
-                }
-                // Remove all healthy nodes from the list of failed nodes
-                failedNodes.removeAll(tmp);
-                // Add selected nodes to the list of healthy nodes
-                nodes.addAll(tmp);
-                tmp.clear();
-
-                // printNodes();
-            } catch (Throwable e) {
-                e.printStackTrace();
-            }
-
+            return -1;
         }
     }
 
