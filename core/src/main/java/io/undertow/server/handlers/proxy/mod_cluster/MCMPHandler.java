@@ -129,7 +129,8 @@ class MCMPHandler implements HttpHandler {
          */
         // TODO maybe this should be handled outside here?
         final InetSocketAddress addr = exchange.getDestinationAddress();
-        if (addr.getPort() != config.getManagementPort() || !addr.getHostName().equals(config.getManagementHost())) {
+        //we use getHostString to avoid a reverse lookup
+        if (addr.getPort() != config.getManagementPort() || !addr.getHostString().equals(config.getManagementHost())) {
             next.handleRequest(exchange);
             return;
         }
