@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.handlers;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.AccessController;
 import java.util.List;
@@ -222,7 +223,11 @@ public class ServletRequestContext {
             if(localAddress == null) {
                 return false;
             }
-            if(!localAddress.getAddress().isLoopbackAddress()) {
+            InetAddress address = localAddress.getAddress();
+            if(address == null) {
+                return false;
+            }
+            if(!address.isLoopbackAddress()) {
                 return false;
             }
             return !getExchange().getRequestHeaders().contains(Headers.X_FORWARDED_FOR);

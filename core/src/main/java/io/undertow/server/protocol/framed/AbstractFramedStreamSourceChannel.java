@@ -271,9 +271,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     @Override
     public void awaitReadable() throws IOException {
-        if (data == null) {
+        if (data == null && pendingFrameData.isEmpty()) {
             synchronized (lock) {
-                if (data == null) {
+                if (data == null && pendingFrameData.isEmpty()) {
                     try {
                         waiters++;
                         lock.wait();

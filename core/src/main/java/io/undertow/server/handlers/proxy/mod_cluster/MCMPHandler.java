@@ -134,11 +134,11 @@ class MCMPHandler implements HttpHandler {
             return;
         }
 
-//        Maybe it's not worth dispatching even registration/removals?
-//        if (exchange.isInIoThread()) {
-//            exchange.dispatch(this);
-//            return;
-//        }
+        if(exchange.isInIoThread()) {
+            //for now just do all the management stuff in a worker, as it uses blocking IO
+            exchange.dispatch(this);
+            return;
+        }
 
         final HttpString method = exchange.getRequestMethod();
         try {
