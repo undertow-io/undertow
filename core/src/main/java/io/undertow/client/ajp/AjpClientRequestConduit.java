@@ -24,7 +24,6 @@ import io.undertow.client.UndertowClientMessages;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -40,38 +39,18 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static io.undertow.util.Methods.ACL;
-import static io.undertow.util.Methods.BASELINE_CONTROL;
-import static io.undertow.util.Methods.CHECKIN;
-import static io.undertow.util.Methods.CHECKOUT;
-import static io.undertow.util.Methods.COPY;
-import static io.undertow.util.Methods.DELETE;
-import static io.undertow.util.Methods.GET;
-import static io.undertow.util.Methods.HEAD;
-import static io.undertow.util.Methods.LABEL;
-import static io.undertow.util.Methods.LOCK;
-import static io.undertow.util.Methods.MERGE;
-import static io.undertow.util.Methods.MKACTIVITY;
-import static io.undertow.util.Methods.MKCOL;
-import static io.undertow.util.Methods.MKWORKSPACE;
-import static io.undertow.util.Methods.MOVE;
-import static io.undertow.util.Methods.OPTIONS;
-import static io.undertow.util.Methods.POST;
-import static io.undertow.util.Methods.PROPFIND;
-import static io.undertow.util.Methods.PROPPATCH;
-import static io.undertow.util.Methods.PUT;
-import static io.undertow.util.Methods.REPORT;
-import static io.undertow.util.Methods.SEARCH;
-import static io.undertow.util.Methods.TRACE;
-import static io.undertow.util.Methods.UNCHECKOUT;
-import static io.undertow.util.Methods.UNLOCK;
-import static io.undertow.util.Methods.UPDATE;
-import static io.undertow.util.Methods.VERSION_CONTROL;
+import static io.undertow.client.ajp.AjpConstants.ATTR_AUTH_TYPE;
+import static io.undertow.client.ajp.AjpConstants.ATTR_QUERY_STRING;
+import static io.undertow.client.ajp.AjpConstants.ATTR_REMOTE_USER;
+import static io.undertow.client.ajp.AjpConstants.ATTR_ROUTE;
+import static io.undertow.client.ajp.AjpConstants.ATTR_SECRET;
+import static io.undertow.client.ajp.AjpConstants.ATTR_SSL_CERT;
+import static io.undertow.client.ajp.AjpConstants.ATTR_SSL_CIPHER;
+import static io.undertow.client.ajp.AjpConstants.ATTR_SSL_KEY_SIZE;
+import static io.undertow.client.ajp.AjpConstants.ATTR_SSL_SESSION;
+import static io.undertow.client.ajp.AjpConstants.ATTR_STORED_METHOD;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
@@ -87,9 +66,6 @@ import static org.xnio.Bits.longBitMask;
 final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
     private static final int MAX_DATA_SIZE = 8186;
-
-    private static final Map<HttpString, Integer> HEADER_MAP;
-    private static final Map<HttpString, Integer> HTTP_METHODS;
 
     private final Pool<ByteBuffer> pool;
 
@@ -128,56 +104,6 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
     private static final long FLAG_WRITES_RESUMED = 1L << 60L;
     private static final long FLAG_FINAL_CHUNK_GENERATED = 1L << 59L;
 
-    static {
-        final Map<HttpString, Integer> headers = new HashMap<>();
-        headers.put(Headers.ACCEPT, 0xA001);
-        headers.put(Headers.ACCEPT_CHARSET, 0xA002);
-        headers.put(Headers.ACCEPT_ENCODING, 0xA003);
-        headers.put(Headers.ACCEPT_LANGUAGE, 0xA004);
-        headers.put(Headers.AUTHORIZATION, 0xA005);
-        headers.put(Headers.CONNECTION, 0xA006);
-        headers.put(Headers.CONTENT_TYPE, 0xA007);
-        headers.put(Headers.CONTENT_LENGTH, 0xA008);
-        headers.put(Headers.COOKIE, 0xA009);
-        headers.put(Headers.COOKIE2, 0xA00A);
-        headers.put(Headers.HOST, 0xA00B);
-        headers.put(Headers.PRAGMA, 0xA00C);
-        headers.put(Headers.REFERER, 0xA00D);
-        headers.put(Headers.USER_AGENT, 0xA00E);
-
-        HEADER_MAP = Collections.unmodifiableMap(headers);
-
-        final Map<HttpString, Integer> methods = new HashMap<>();
-        methods.put(OPTIONS, 1);
-        methods.put(GET, 2);
-        methods.put(HEAD, 3);
-        methods.put(POST, 4);
-        methods.put(PUT, 5);
-        methods.put(DELETE, 6);
-        methods.put(TRACE, 7);
-        methods.put(PROPFIND, 8);
-        methods.put(PROPPATCH, 9);
-        methods.put(MKCOL, 10);
-        methods.put(COPY, 11);
-        methods.put(MOVE, 12);
-        methods.put(LOCK, 13);
-        methods.put(UNLOCK, 14);
-        methods.put(ACL, 15);
-        methods.put(REPORT, 16);
-        methods.put(VERSION_CONTROL, 17);
-        methods.put(CHECKIN, 18);
-        methods.put(CHECKOUT, 19);
-        methods.put(UNCHECKOUT, 20);
-        methods.put(SEARCH, 21);
-        methods.put(MKWORKSPACE, 22);
-        methods.put(UPDATE, 23);
-        methods.put(LABEL, 24);
-        methods.put(MERGE, 25);
-        methods.put(BASELINE_CONTROL, 26);
-        methods.put(MKACTIVITY, 27);
-        HTTP_METHODS = Collections.unmodifiableMap(methods);
-
-    }
 
     AjpClientRequestConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final AjpClientExchange exchange, ConduitListener<? super AjpClientRequestConduit> finishListener, long size) {
         super(next);
@@ -278,9 +204,11 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
             buffer.put((byte) 0); //we fill the size in later
             buffer.put((byte) 0);
             buffer.put((byte) 2);
-            final Integer methodNp = HTTP_METHODS.get(request.getMethod());
+            boolean storeMethod = false;
+            Integer methodNp = AjpConstants.HTTP_METHODS_MAP.get(request.getMethod());
             if (methodNp == null) {
-                throw UndertowClientMessages.MESSAGES.unknownMethod(request.getMethod());
+                methodNp = 0xFF;
+                storeMethod = true;
             }
             buffer.put((byte) (int) methodNp);
             putHttpString(buffer, exchange.getRequest().getProtocol());
@@ -303,7 +231,7 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
 
             for (final HttpString header : responseHeaders.getHeaderNames()) {
                 for (String headerValue : responseHeaders.get(header)) {
-                    Integer headerCode = HEADER_MAP.get(header);
+                    Integer headerCode = AjpConstants.HEADER_MAP.get(header);
                     if (headerCode != null) {
                         putInt(buffer, headerCode);
                     } else {
@@ -314,54 +242,53 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
             }
 
             if (queryString != null) {
-                buffer.put((byte) 5); //query_string
+                buffer.put((byte) ATTR_QUERY_STRING); //query_string
                 putString(buffer, queryString);
             }
-
             String remoteUser = request.getAttachment(ProxiedRequestAttachments.REMOTE_USER);
             if(remoteUser != null) {
-                buffer.put((byte) 3);
+                buffer.put((byte) ATTR_REMOTE_USER);
                 putString(buffer, remoteUser);
             }
             String authType = request.getAttachment(ProxiedRequestAttachments.AUTH_TYPE);
             if(authType != null) {
-                buffer.put((byte) 4);
+                buffer.put((byte) ATTR_AUTH_TYPE);
                 putString(buffer, authType);
             }
             String route = request.getAttachment(ProxiedRequestAttachments.ROUTE);
             if(route != null) {
-                buffer.put((byte) 6);
+                buffer.put((byte) ATTR_ROUTE);
                 putString(buffer, route);
             }
             String sslCert = request.getAttachment(ProxiedRequestAttachments.SSL_CERT);
             if(sslCert != null) {
-                buffer.put((byte) 7);
+                buffer.put((byte) ATTR_SSL_CERT);
                 putString(buffer, sslCert);
             }
             String sslCypher = request.getAttachment(ProxiedRequestAttachments.SSL_CYPHER);
             if(sslCypher != null) {
-                buffer.put((byte) 8);
+                buffer.put((byte) ATTR_SSL_CIPHER);
                 putString(buffer, sslCypher);
             }
             byte[] sslSession = request.getAttachment(ProxiedRequestAttachments.SSL_SESSION_ID);
             if(sslSession != null) {
-                buffer.put((byte) 9);
+                buffer.put((byte) ATTR_SSL_SESSION);
                 putString(buffer, FlexBase64.encodeString(sslSession, false));
             }
             Integer sslKeySize = request.getAttachment(ProxiedRequestAttachments.SSL_KEY_SIZE);
             if(sslKeySize != null) {
-                buffer.put((byte) 0xB);
+                buffer.put((byte) ATTR_SSL_KEY_SIZE);
                 putString(buffer, sslKeySize.toString());
             }
             String secret = request.getAttachment(ProxiedRequestAttachments.SECRET);
             if(secret != null) {
-                buffer.put((byte) 0xC);
+                buffer.put((byte) ATTR_SECRET);
                 putString(buffer, secret);
             }
-            String storedMethod = request.getAttachment(ProxiedRequestAttachments.STORED_METHOD);
-            if(storedMethod != null) {
-                buffer.put((byte) 0xD);
-                putString(buffer, storedMethod);
+
+            if(storeMethod) {
+                buffer.put((byte) ATTR_STORED_METHOD);
+                putString(buffer, request.getMethod().toString());
             }
             buffer.put((byte) 0xFF);
 

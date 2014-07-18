@@ -22,7 +22,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 /**
@@ -52,13 +51,28 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             } else {
                 value = forwardedFor.substring(0, index);
             }
-            InetAddress address = InetAddress.getByName(value);
             //we have no way of knowing the port
-            exchange.setSourceAddress(new InetSocketAddress(address, 0));
+            exchange.setSourceAddress(InetSocketAddress.createUnresolved(value, 0));
         }
         String forwardedProto = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PROTO);
         if (forwardedProto != null) {
             exchange.setRequestScheme(forwardedProto);
+        }
+        String forwardedHost = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_HOST);
+        String forwardedPort = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PORT);
+        if (forwardedHost != null) {
+            int index = forwardedHost.indexOf(',');
+            final String value;
+            if (index == -1) {
+                value = forwardedHost;
+            } else {
+                value = forwardedHost.substring(0, index);
+            }
+            int port = 0;
+            if(forwardedPort != null) {
+                port = Integer.parseInt(forwardedPort);
+            }
+            exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
         }
         next.handleRequest(exchange);
     }

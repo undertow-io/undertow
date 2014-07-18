@@ -103,6 +103,8 @@ public final class Headers {
     public static final String WWW_AUTHENTICATE_STRING = "WWW-Authenticate";
     public static final String X_FORWARDED_FOR_STRING = "X-Forwarded-For";
     public static final String X_FORWARDED_PROTO_STRING = "X-Forwarded-Proto";
+    public static final String X_FORWARDED_HOST_STRING = "X-Forwarded-Host";
+    public static final String X_FORWARDED_PORT_STRING = "X-Forwarded-Port";
 
     // Header names
 
@@ -178,7 +180,9 @@ public final class Headers {
     public static final HttpString WARNING = new HttpString(WARNING_STRING, 65);
     public static final HttpString WWW_AUTHENTICATE = new HttpString(WWW_AUTHENTICATE_STRING, 66);
     public static final HttpString X_FORWARDED_FOR = new HttpString(X_FORWARDED_FOR_STRING, 67);
-    public static final HttpString X_FORWARDED_PROTO = new HttpString(X_FORWARDED_PROTO_STRING, 68);
+    public static final HttpString X_FORWARDED_HOST = new HttpString(X_FORWARDED_HOST_STRING, 68);
+    public static final HttpString X_FORWARDED_PORT = new HttpString(X_FORWARDED_PORT_STRING, 69);
+    public static final HttpString X_FORWARDED_PROTO = new HttpString(X_FORWARDED_PROTO_STRING, 70);
 
     // Content codings
 

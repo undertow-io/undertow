@@ -23,8 +23,6 @@ import static io.undertow.Handlers.path;
 import static io.undertow.testutils.DefaultServer.getClientSSLContext;
 import static io.undertow.testutils.DefaultServer.getHostAddress;
 import static io.undertow.testutils.DefaultServer.getHostPort;
-import static io.undertow.testutils.DefaultServer.isProxy;
-import static io.undertow.testutils.DefaultServer.isSpdy;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -95,7 +93,7 @@ public abstract class AbstractModClusterTestBase {
     public static void setupModCluster() {
         modCluster = ModCluster.builder(undertowClient, xnioSsl).build();
 
-        final int serverPort = isProxy() || isSpdy() ? getHostPort("default") + 1111 : getHostPort("default");
+        final int serverPort = getHostPort("default");
         final HttpHandler proxy = modCluster.getProxyHandler();
         final HttpHandler mcmp = MCMPConfig.webBuilder()
                 .setManagementHost(getHostAddress("default"))

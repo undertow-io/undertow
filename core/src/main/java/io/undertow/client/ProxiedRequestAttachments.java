@@ -41,6 +41,5 @@ public class ProxiedRequestAttachments {
     public static final AttachmentKey<byte[]> SSL_SESSION_ID = AttachmentKey.create(byte[].class);
     public static final AttachmentKey<Integer> SSL_KEY_SIZE = AttachmentKey.create(Integer.class);
     public static final AttachmentKey<String> SECRET = AttachmentKey.create(String.class);
-    public static final AttachmentKey<String> STORED_METHOD = AttachmentKey.create(String.class);
 
 }

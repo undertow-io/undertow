@@ -19,7 +19,6 @@
 package io.undertow.client.ajp;
 
 import io.undertow.server.protocol.ajp.AbstractAjpParser;
-import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
 import java.nio.ByteBuffer;
@@ -31,31 +30,12 @@ class AjpResponseParser extends AbstractAjpParser {
 
     public static final AjpResponseParser INSTANCE = new AjpResponseParser();
 
-    private static final HttpString[] HTTP_HEADERS;
-
     public static final int SEND_HEADERS = 4;
     public static final int CPONG = 9;
     public static final int CPING = 10;
     public static final int SHUTDOWN = 7;
 
     private static final int AB = ('A' << 8) + 'B';
-
-    static {
-
-        HTTP_HEADERS = new HttpString[]{null,
-                Headers.CONTENT_TYPE,
-                Headers.CONTENT_LANGUAGE,
-                Headers.CONTENT_LENGTH,
-                Headers.DATE,
-                Headers.LAST_MODIFIED,
-                Headers.LOCATION,
-                Headers.SET_COOKIE,
-                Headers.SET_COOKIE2,
-                Headers.SERVLET_ENGINE,
-                Headers.STATUS,
-                Headers.WWW_AUTHENTICATE
-        };
-    }
 
     public void parse(final ByteBuffer buf, final AjpResponseParseState state, final AjpResponseBuilder builder) {
         if (!buf.hasRemaining()) {
@@ -166,6 +146,6 @@ class AjpResponseParser extends AbstractAjpParser {
 
     @Override
     protected HttpString headers(int offset) {
-        return HTTP_HEADERS[offset];
+        return AjpConstants.HTTP_HEADERS_ARRAY[offset];
     }
 }

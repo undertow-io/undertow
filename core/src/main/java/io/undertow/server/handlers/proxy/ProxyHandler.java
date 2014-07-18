@@ -326,11 +326,13 @@ public final class ProxyHandler implements HttpHandler {
             }
             SocketAddress address = exchange.getConnection().getPeerAddress();
             if (address instanceof InetSocketAddress) {
-                outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, ((InetSocketAddress) address).getHostString());
+                request.putAttachment(ProxiedRequestAttachments.REMOTE_HOST, ((InetSocketAddress) address).getHostString());
             } else {
-                outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, "localhost");
+                request.putAttachment(ProxiedRequestAttachments.REMOTE_HOST, "localhost");
             }
-            outboundRequestHeaders.put(Headers.X_FORWARDED_PROTO, exchange.getRequestScheme());
+            request.putAttachment(ProxiedRequestAttachments.IS_SSL, exchange.getRequestScheme().equals("https"));
+            request.putAttachment(ProxiedRequestAttachments.SERVER_NAME, exchange.getHostName());
+            request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, exchange.getConnection().getLocalAddress(InetSocketAddress.class).getPort());
 
             if (exchange.getRequestScheme().equals("https")) {
                 request.putAttachment(ProxiedRequestAttachments.IS_SSL, true);

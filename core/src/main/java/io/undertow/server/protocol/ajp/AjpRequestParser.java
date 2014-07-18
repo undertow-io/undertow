@@ -18,17 +18,6 @@
 
 package io.undertow.server.protocol.ajp;
 
-import io.undertow.security.impl.ExternalAuthenticationMechanism;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.URLUtils;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.ByteBuffer;
-
 import static io.undertow.util.Methods.ACL;
 import static io.undertow.util.Methods.BASELINE_CONTROL;
 import static io.undertow.util.Methods.CHECKIN;
@@ -56,6 +45,17 @@ import static io.undertow.util.Methods.UNCHECKOUT;
 import static io.undertow.util.Methods.UNLOCK;
 import static io.undertow.util.Methods.UPDATE;
 import static io.undertow.util.Methods.VERSION_CONTROL;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.ByteBuffer;
+
+import io.undertow.security.impl.ExternalAuthenticationMechanism;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.URLUtils;
 
 /**
  * @author Stuart Douglas
@@ -216,7 +216,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                     int method = buf.get();
                     if (method > 0 && method < 28) {
                         exchange.setRequestMethod(HTTP_METHODS[method]);
-                    } else {
+                    } else if((method & 0xFF) != 0xFF) {
                         throw new IllegalArgumentException("Unknown method type " + method);
                     }
                 }
@@ -235,7 +235,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
                     int colon = result.value.indexOf(';');
-                    if(colon == -1) {
+                    if (colon == -1) {
                         String res = decode(result.value, result.containsUrlCharacters);
                         exchange.setRequestURI(result.value);
                         exchange.setRequestPath(res);
@@ -295,7 +295,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                     return;
                 } else {
                     final byte isSsl = buf.get();
-                    if(isSsl != 0) {
+                    if (isSsl != 0) {
                         exchange.setRequestScheme("https");
                     } else {
                         exchange.setRequestScheme("http");
@@ -385,10 +385,12 @@ public class AjpRequestParser extends AbstractAjpParser {
                     if (state.currentAttribute.equals(QUERY_STRING)) {
                         exchange.setQueryString(result == null ? "" : result);
                         URLUtils.parseQueryString(result, exchange, encoding, doDecode);
-                    } else if(state.currentAttribute.equals(REMOTE_USER)) {
+                    } else if (state.currentAttribute.equals(REMOTE_USER)) {
                         exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_PRINCIPAL, result);
-                    } else if(state.currentAttribute.equals(AUTH_TYPE)) {
+                    } else if (state.currentAttribute.equals(AUTH_TYPE)) {
                         exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_AUTHENTICATION_TYPE, result);
+                    } else if (state.currentAttribute.equals(STORED_METHOD)) {
+                        exchange.setRequestMethod(new HttpString(result));
                     } else {
                         //other attributes
                         state.attributes.put(state.currentAttribute, result);
@@ -401,7 +403,7 @@ public class AjpRequestParser extends AbstractAjpParser {
     }
 
     private String decode(String url, final boolean containsUrlCharacters) throws UnsupportedEncodingException {
-        if(doDecode && containsUrlCharacters) {
+        if (doDecode && containsUrlCharacters) {
             return URLDecoder.decode(url, encoding);
         }
         return url;
