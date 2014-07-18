@@ -100,17 +100,22 @@ public final class ProxyHandler implements HttpHandler {
 
     private final HttpHandler next;
 
+    private final boolean rewriteHostHeader;
+
     public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next) {
+        this(proxyClient, maxRequestTime, next, false);
+    }
+
+    public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next, boolean rewriteHostHeader) {
         this.proxyClient = proxyClient;
         this.maxRequestTime = maxRequestTime;
         this.next = next;
+        this.rewriteHostHeader = rewriteHostHeader;
     }
 
 
     public ProxyHandler(ProxyClient proxyClient, HttpHandler next) {
-        this.proxyClient = proxyClient;
-        this.next = next;
-        this.maxRequestTime = -1;
+        this(proxyClient, -1, next);
     }
 
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -233,7 +238,7 @@ public final class ProxyHandler implements HttpHandler {
         @Override
         public void completed(HttpServerExchange exchange, ProxyConnection result) {
             exchange.putAttachment(CONNECTION, result);
-            exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(result, exchange, requestHeaders));
+            exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(result, exchange, requestHeaders, rewriteHostHeader));
         }
 
         @Override
@@ -252,11 +257,13 @@ public final class ProxyHandler implements HttpHandler {
         private final ProxyConnection clientConnection;
         private final HttpServerExchange exchange;
         private final Map<HttpString, ExchangeAttribute> requestHeaders;
+        private final boolean rewriteHostHeader;
 
-        public ProxyAction(final ProxyConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders) {
+        public ProxyAction(final ProxyConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders, boolean rewriteHostHeader) {
             this.clientConnection = clientConnection;
             this.exchange = exchange;
             this.requestHeaders = requestHeaders;
+            this.rewriteHostHeader = rewriteHostHeader;
         }
 
         @Override
@@ -357,6 +364,11 @@ public final class ProxyHandler implements HttpHandler {
                 request.putAttachment(ProxiedRequestAttachments.SSL_SESSION_ID, sslSessionInfo.getSessionId());
             }
 
+            if(rewriteHostHeader) {
+                InetSocketAddress targetAddress = clientConnection.getConnection().getPeerAddress(InetSocketAddress.class);
+                request.getRequestHeaders().put(Headers.HOST, targetAddress.getHostString() + ":" + targetAddress.getPort());
+                request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, exchange.getRequestHeaders().getFirst(Headers.HOST));
+            }
 
             clientConnection.getConnection().sendRequest(request, new ClientCallback<ClientExchange>() {
                 @Override
