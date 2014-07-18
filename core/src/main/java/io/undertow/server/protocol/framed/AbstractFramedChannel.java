@@ -42,6 +42,7 @@ import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
+import org.xnio.channels.CloseableChannel;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -134,7 +135,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
         channel.getSourceChannel().getReadSetter().set(new FrameReadListener());
         connectedStreamChannel.getSinkChannel().getWriteSetter().set(new FrameWriteListener());
-        connectedStreamChannel.getSinkChannel().getCloseSetter().set(new FrameCloseListener());
+        FrameCloseListener closeListener = new FrameCloseListener();
+        connectedStreamChannel.getSinkChannel().getCloseSetter().set(closeListener);
+        connectedStreamChannel.getSourceChannel().getCloseSetter().set(closeListener);
     }
 
     protected IdleTimeoutConduit createIdleTimeoutChannel(StreamConnection connectedStreamChannel) {
@@ -712,10 +715,22 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     /**
      * close listener, just goes through and activates any sub channels to make sure their listeners are invoked
      */
-    private class FrameCloseListener implements ChannelListener<StreamSinkChannel> {
+    private class FrameCloseListener implements ChannelListener<CloseableChannel> {
+
+        private boolean sinkClosed;
+        private boolean sourceClosed;
 
         @Override
-        public void handleEvent(final StreamSinkChannel c) {
+        public void handleEvent(final CloseableChannel c) {
+            if(c instanceof  StreamSinkChannel) {
+                sinkClosed = true;
+            } else if(c instanceof StreamSourceChannel) {
+                sourceClosed = true;
+            }
+            if(!sourceClosed || !sinkClosed) {
+                return; //both sides need to be closed
+            }
+
             if (Thread.currentThread() != c.getIoThread()) {
                 ChannelListeners.invokeChannelListener(c.getIoThread(), c, this);
                 return;

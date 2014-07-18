@@ -99,6 +99,23 @@ public final class UndertowSession implements Session {
         this.attrs = Collections.synchronizedMap(new HashMap<>(config.getUserProperties()));
         this.extensions = extensions;
         this.subProtocol = subProtocol;
+        webSocketChannel.addCloseTask(new ChannelListener<WebSocketChannel>() {
+            @Override
+            public void handleEvent(WebSocketChannel channel) {
+                //so this puts us in an interesting position. We know the underlying
+                //TCP connection has been torn down, however this may have involved reading
+                //a close frame, which will be delivered shortly
+                //to get around this we schedule the code in the IO thread, so if there is a close
+                //frame awaiting delivery it will be delivered before the close
+                channel.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        //we delegate this execution to the IO thread
+                        IoUtils.safeClose(UndertowSession.this);
+                    }
+                });
+            }
+        });
     }
 
     @Override
