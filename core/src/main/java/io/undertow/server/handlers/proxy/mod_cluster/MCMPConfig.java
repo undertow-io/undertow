@@ -18,6 +18,9 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import io.undertow.server.HttpHandler;
 
 /**
@@ -34,6 +37,7 @@ public class MCMPConfig {
     }
 
     private final String managementHost;
+    private final String managementHostIp;
     private final int managementPort;
     private final AdvertiseConfig advertiseConfig;
 
@@ -45,6 +49,13 @@ public class MCMPConfig {
         } else {
             this.advertiseConfig = null;
         }
+        String mhip = managementHost;
+        try {
+            mhip = InetAddress.getByName(managementHost).getHostAddress();
+        } catch (UnknownHostException e) {
+
+        }
+        this.managementHostIp = mhip;
     }
 
     public String getManagementHost() {
@@ -53,6 +64,10 @@ public class MCMPConfig {
 
     public int getManagementPort() {
         return managementPort;
+    }
+
+    public String getManagementHostIp() {
+        return managementHostIp;
     }
 
     AdvertiseConfig getAdvertiseConfig() {
