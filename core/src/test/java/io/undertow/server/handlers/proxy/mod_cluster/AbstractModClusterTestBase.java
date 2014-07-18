@@ -297,7 +297,17 @@ public abstract class AbstractModClusterTestBase {
         return null;
     }
 
+    static NodeTestConfig[] createConfigs(int number) {
+        final NodeTestConfig[] configs = new NodeTestConfig[number];
+        for (int i = 0; i < number; i++) {
+            configs[i] = NodeTestConfig.builder()
+                    .setJvmRoute("server" + i)
+                    .setType("http")
+                    .setHostname("localhost")
+                    .setPort(port + i + 1);
 
-
+        }
+        return configs;
+    }
 
 }

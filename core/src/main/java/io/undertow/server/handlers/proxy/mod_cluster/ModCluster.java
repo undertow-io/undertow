@@ -59,7 +59,7 @@ public class ModCluster {
         return container;
     }
 
-    long getHealtCheckInterval() {
+    long getHealthCheckInterval() {
         return healtCheckInterval;
     }
 

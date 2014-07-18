@@ -24,6 +24,7 @@ import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.builder.PredicatedHandlersParser;
 
 /**
  * Server setup to the run the mod_cluster tests
@@ -73,7 +74,18 @@ public class ModClusterTestSetup {
                     .setManagementPort(cport)
                     .build();
 
-            final HttpHandler mcmp = config.create(modCluster, proxy);
+
+            // Setup specific rewrite rules for the mod_cluster tests.
+            final HttpHandler root = Handlers.predicates(
+            PredicatedHandlersParser.parse(
+                    "regex[pattern='cluster.domain.com', value='%{i,Host}'] and equals[%R, '/'] -> rewrite['/myapp/MyCount']\n" +
+                    "regex[pattern='cluster.domain.org', value='%{i,Host}'] and regex['/(.*)'] -> rewrite['/myapp/${1}']\n" +
+                    "regex[pattern='cluster.domain.net', value='%{i,Host}'] and regex['/test/(.*)'] -> rewrite['/myapp/${1}']\n" +
+                    "regex[pattern='cluster.domain.info', value='%{i,Host}'] and path-template['/{one}/{two}'] -> rewrite['/test/${two}?partnerpath=/${one}&%q']\n",
+                    ModClusterTestSetup.class.getClassLoader()
+            ), proxy);
+
+            final HttpHandler mcmp = config.create(modCluster, root);
             final HttpHandler web = webConfig.create(modCluster, ResponseCodeHandler.HANDLE_404);
 
             server = Undertow.builder()

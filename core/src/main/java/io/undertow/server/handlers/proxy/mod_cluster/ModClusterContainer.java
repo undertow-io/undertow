@@ -70,7 +70,7 @@ class ModClusterContainer {
         this.client = client;
         this.modCluster = modCluster;
         this.proxyClient = new ModClusterProxyClient(null, this);
-        this.removeBrokenNodesThreshold = removeThreshold(modCluster.getHealtCheckInterval(), modCluster.getRemoveBrokenNodes());
+        this.removeBrokenNodesThreshold = removeThreshold(modCluster.getHealthCheckInterval(), modCluster.getRemoveBrokenNodes());
     }
 
     String getServerID() {
