@@ -271,6 +271,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     @Override
     public void awaitReadable() throws IOException {
+        if(Thread.currentThread() == getIoThread()) {
+            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        }
         if (data == null && pendingFrameData.isEmpty()) {
             synchronized (lock) {
                 if (data == null && pendingFrameData.isEmpty()) {
@@ -290,6 +293,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     @Override
     public void awaitReadable(long l, TimeUnit timeUnit) throws IOException {
+        if(Thread.currentThread() == getIoThread()) {
+            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        }
         if (data == null) {
             synchronized (lock) {
                 if (data == null) {

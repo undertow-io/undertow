@@ -1748,6 +1748,22 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             });
         }
+
+        @Override
+        public void awaitWritable() throws IOException {
+            if(Thread.currentThread() == getIoThread()) {
+                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+            }
+            super.awaitWritable();
+        }
+
+        @Override
+        public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
+            if(Thread.currentThread() == getIoThread()) {
+                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+            }
+            super.awaitWritable(time, timeUnit);
+        }
     }
 
     /**
@@ -1826,6 +1842,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void awaitReadable() throws IOException {
+            if(Thread.currentThread() == getIoThread()) {
+                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+            }
             Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 super.awaitReadable();
@@ -1880,6 +1899,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
+            if(Thread.currentThread() == getIoThread()) {
+                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+            }
             Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 super.awaitReadable(time, timeUnit);

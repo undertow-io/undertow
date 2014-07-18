@@ -306,4 +306,6 @@ public interface UndertowMessages {
     @Message(id = 93, value = "A SPDY stream was reset by the remote endpoint")
     IOException spdyStreamWasReset();
 
+    @Message(id = 94, value = "Blocking await method called from IO thread. Blocking IO must be dispatched to a worker thread or deadlocks will result.")
+    IOException awaitCalledFromIoThread();
 }

@@ -224,6 +224,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable() throws IOException {
+        if(Thread.currentThread() == getIoThread()) {
+            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        }
         synchronized (lock) {
             if (anyAreSet(state, STATE_BROKEN | STATE_CLOSED)) {
                 return;
@@ -240,6 +243,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable(long l, TimeUnit timeUnit) throws IOException {
+        if(Thread.currentThread() == getIoThread()) {
+            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        }
         synchronized (lock) {
             if (anyAreSet(state, STATE_BROKEN | STATE_CLOSED)) {
                 return;
