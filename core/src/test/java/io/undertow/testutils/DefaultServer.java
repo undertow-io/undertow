@@ -235,7 +235,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     }
                     for(DebuggingSlicePool.DebuggingBuffer b : DebuggingSlicePool.BUFFERS) {
                         b.getAllocationPoint().printStackTrace();
-                        notifier.fireTestFailure(new Failure(description,  new RuntimeException(b.getLabel(), b.getAllocationPoint())));
+                        notifier.fireTestFailure(new Failure(description,  new RuntimeException("Buffer Leak " + b.getLabel(), b.getAllocationPoint())));
                     }
                     DebuggingSlicePool.BUFFERS.clear();
                 }
