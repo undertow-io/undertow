@@ -60,6 +60,7 @@ import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.CanonicalPathUtils;
+import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
 import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
@@ -465,16 +466,29 @@ public class AsyncContextImpl implements AsyncContext {
                     onAsyncTimeout();
                     if (!dispatched) {
                         if(!getResponse().isCommitted()) {
-                            //servlet
-                            try {
-                                if (servletResponse instanceof HttpServletResponse) {
-                                    ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                                } else {
-                                    servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                            //close the connection on timeout
+                            exchange.setPersistent(false);
+                            exchange.getResponseHeaders().put(Headers.CONNECTION, Headers.CLOSE.toString());
+                            doDispatch(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Connectors.executeRootHandler(new HttpHandler() {
+                                        @Override
+                                        public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                            //servlet
+                                            try {
+                                                if (servletResponse instanceof HttpServletResponse) {
+                                                    ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                                                } else {
+                                                    servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                                                }
+                                            } catch (IOException e) {
+                                                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                                            }
+                                        }
+                                    }, exchange);
                                 }
-                            } catch (IOException e) {
-                                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                            }
+                            });
                         } else {
                             //not much we can do, just break the connection
                             IoUtils.safeClose(exchange.getConnection());
