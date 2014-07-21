@@ -115,6 +115,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
     private static final boolean spdy = Boolean.getBoolean("test.spdy");
+    private static final boolean ssl = Boolean.getBoolean("test.ssl");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
     private static final boolean dump = Boolean.getBoolean("test.dump");
     private static final boolean single = Boolean.getBoolean("test.single");
@@ -306,6 +307,25 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
 
+                } else if (ssl) {
+
+                    XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, getServerSslContext());
+                    XnioSsl clientSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, createClientSslContext());
+                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
+                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+
+                    InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
+                    server = xnioSsl.createSslConnectionServer(worker, targetAddress, acceptListener, serverOptions);
+
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
+                    proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
+                    proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("https", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), clientSsl), 30000, HANDLE_404);
+                    setupProxyHandlerForSSL(proxyHandler);
+                    proxyOpenListener.setRootHandler(proxyHandler);
+                    proxyServer.resumeAccepts();
+
+
                 } else {
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
@@ -436,6 +456,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             }
             if(spdy) {
                 sb.append("{spdy}");
+            }
+            if(ssl) {
+                sb.append("{ssl}");
             }
             return sb.toString();
         }
