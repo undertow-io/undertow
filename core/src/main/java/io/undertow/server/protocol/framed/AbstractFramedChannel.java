@@ -284,6 +284,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         pooled.free();
                     }
                     readData = null;
+                    if(frameDataRemaining == 0) {
+                        receiver = null;
+                    }
                     return null;
                 } else {
                     ByteBuffer buf = pooled.getResource().duplicate();
