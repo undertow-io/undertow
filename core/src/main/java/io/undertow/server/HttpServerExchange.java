@@ -1388,6 +1388,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     public HttpServerExchange endExchange() {
         final int state = this.state;
         if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+            if(blockingHttpExchange != null) {
+                //we still have to close the blocking exchange in this case,
+                IoUtils.safeClose(blockingHttpExchange);
+            }
             return this;
         }
         if(defaultResponseListeners != null) {

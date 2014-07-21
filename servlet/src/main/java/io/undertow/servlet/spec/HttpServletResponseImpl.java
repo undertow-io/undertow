@@ -478,6 +478,15 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         }
     }
 
+    public void freeResources() throws IOException {
+        if(writer != null) {
+            writer.close();
+        }
+        if(servletOutputStream != null) {
+            servletOutputStream.close();
+        }
+    }
+
     @Override
     public void resetBuffer() {
         if (servletOutputStream != null) {

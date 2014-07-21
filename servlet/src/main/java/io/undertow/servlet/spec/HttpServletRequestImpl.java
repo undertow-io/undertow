@@ -592,6 +592,19 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         servletInputStream.close();
     }
 
+    /**
+     * Frees any resources (namely buffers) that may be associated with this request.
+     *
+     */
+    public void freeResources() throws IOException {
+        if(reader != null) {
+            reader.close();
+        }
+        if(servletInputStream != null) {
+            servletInputStream.close();
+        }
+    }
+
     @Override
     public String getParameter(final String name) {
         if(queryParameters == null) {

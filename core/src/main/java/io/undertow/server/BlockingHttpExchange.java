@@ -18,6 +18,7 @@
 
 package io.undertow.server;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -30,7 +31,7 @@ import io.undertow.io.Sender;
  *
  * @author Stuart Douglas
  */
-public interface BlockingHttpExchange {
+public interface BlockingHttpExchange extends Closeable {
 
     /**
      * Returns the input stream that is in use for this exchange.

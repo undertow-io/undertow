@@ -80,14 +80,22 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     @Override
     public void close() throws IOException {
+        ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         if (!exchange.isComplete()) {
-            ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
             try {
                 HttpServletRequestImpl request = servletRequestContext.getOriginalRequest();
                 request.closeAndDrainRequest();
             } finally {
                 HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                 response.closeStreamAndWriter();
+            }
+        } else {
+            try {
+            HttpServletRequestImpl request = servletRequestContext.getOriginalRequest();
+            request.freeResources();
+            } finally {
+                HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
+                response.freeResources();
             }
         }
     }
