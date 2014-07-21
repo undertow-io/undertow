@@ -257,6 +257,28 @@
                                     <reportsDirectory>${project.build.directory}/surefire-spdy-reports</reportsDirectory>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>proxy-https</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <systemPropertyVariables>
+                                        <test.proxy>true</test.proxy>
+                                        <test.https>true</test.https>
+                                        <test.dump>${dump}</test.dump>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                 </plugins>
