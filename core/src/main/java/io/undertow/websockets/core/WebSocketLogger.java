@@ -61,4 +61,8 @@ public interface WebSocketLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 25006, value = "Failed to get idle timeout")
     void getIdleTimeFailed(@Cause Throwable cause);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 25007, value = "Unhandled exception for annotated endpoint %s")
+    void unhandledErrorInAnnotatedEndpoint(Object instance, @Cause Throwable thr);
 }

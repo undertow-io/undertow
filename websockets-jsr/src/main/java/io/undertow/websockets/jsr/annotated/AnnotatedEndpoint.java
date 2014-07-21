@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.jsr.annotated;
 
+import io.undertow.UndertowLogger;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedBinaryMessage;
@@ -26,6 +27,7 @@ import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.jsr.DefaultPongMessage;
 import io.undertow.websockets.jsr.OrderedExecutor;
@@ -102,7 +104,7 @@ public class AnnotatedEndpoint extends Endpoint {
             public void run() {
                 try {
                     method.invoke(instance.getInstance(), params);
-                } catch (DecodeException e) {
+                } catch (Exception e) {
                     onError(session, e);
                 }
             }
@@ -138,6 +140,10 @@ public class AnnotatedEndpoint extends Endpoint {
                         }
                     }
                 });
+            } else if(thr instanceof IOException) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) thr);
+            } else {
+                WebSocketLogger.REQUEST_LOGGER.unhandledErrorInAnnotatedEndpoint(instance.getInstance(), thr);
             }
         } finally {
             ((UndertowSession) session).forceClose();
