@@ -13,6 +13,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DebuggingSlicePool implements Pool<ByteBuffer>{
 
+    /**
+     * context that can be added to allocations to give more information about buffer leaks, useful when debugging buffer leaks
+     */
+    private static final ThreadLocal<String> ALLOCATION_CONTEXT = new ThreadLocal<>();
+
     static final Set<DebuggingBuffer> BUFFERS = Collections.newSetFromMap(new ConcurrentHashMap<DebuggingBuffer, Boolean>());
     static volatile String currentLabel;
 
@@ -22,6 +27,9 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
         this.delegate = delegate;
     }
 
+    public static void addContext(String context) {
+        ALLOCATION_CONTEXT.set(context);
+    }
 
     @Override
     public Pooled<ByteBuffer> allocate() {
@@ -38,7 +46,9 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
         public DebuggingBuffer(Pooled<ByteBuffer> delegate, String label) {
             this.delegate = delegate;
             this.label = label;
-            allocationPoint = new RuntimeException();
+            String ctx = ALLOCATION_CONTEXT.get();
+            ALLOCATION_CONTEXT.remove();
+            allocationPoint = new RuntimeException(ctx == null ? "[NO_CONTEXT]" : ctx);
             BUFFERS.add(this);
         }
 

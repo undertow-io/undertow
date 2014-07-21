@@ -115,7 +115,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
     private static final boolean spdy = Boolean.getBoolean("test.spdy");
-    private static final boolean ssl = Boolean.getBoolean("test.ssl");
+    private static final boolean https = Boolean.getBoolean("test.https");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
     private static final boolean dump = Boolean.getBoolean("test.dump");
     private static final boolean single = Boolean.getBoolean("test.single");
@@ -307,7 +307,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
 
-                } else if (ssl) {
+                } else if (https) {
 
                     XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, getServerSslContext());
                     XnioSsl clientSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, createClientSslContext());
@@ -420,6 +420,16 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
+        if(https) {
+            HttpsIgnore httpsIgnore = method.getAnnotation(HttpsIgnore.class);
+            if(httpsIgnore == null) {
+                httpsIgnore = method.getMethod().getDeclaringClass().getAnnotation(HttpsIgnore.class);
+            }
+            if(httpsIgnore != null) {
+                notifier.fireTestIgnored(describeChild(method));
+                return;
+            }
+        }
         if (proxy) {
             if (method.getAnnotation(ProxyIgnore.class) != null ||
                     method.getMethod().getDeclaringClass().isAnnotationPresent(ProxyIgnore.class)) {
@@ -457,7 +467,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             if(spdy) {
                 sb.append("{spdy}");
             }
-            if(ssl) {
+            if(https) {
                 sb.append("{ssl}");
             }
             return sb.toString();

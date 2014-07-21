@@ -53,7 +53,7 @@ public class TimeoutEndpoint {
     }
 
     public static  CloseReason getReason() throws InterruptedException {
-        closeLatch.await(10, TimeUnit.SECONDS);
+        closeLatch.await(10, TimeUnit.MINUTES);
         return closeReason;
     }
 

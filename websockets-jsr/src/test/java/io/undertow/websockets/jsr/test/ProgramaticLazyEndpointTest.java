@@ -36,6 +36,7 @@ import org.xnio.ByteBufferSlicePool;
 
 import javax.net.ssl.SSLContext;
 import javax.websocket.ClientEndpointConfig;
+import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
@@ -43,6 +44,7 @@ import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
@@ -103,14 +105,20 @@ public class ProgramaticLazyEndpointTest {
         clientEndpointConfig.getUserProperties().put(DefaultWebSocketClientSslProvider.SSL_CONTEXT, context);
         ContainerProvider.getWebSocketContainer().connectToServer(endpoint, clientEndpointConfig, new URI("wss://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default") + "/foo"));
         Assert.assertEquals("Hello Stuart", endpoint.getResponses().poll(15, TimeUnit.SECONDS));
+        endpoint.session.close();
+        endpoint.closeLatch.await(10, TimeUnit.SECONDS);
     }
 
     public static class ProgramaticClientEndpoint extends Endpoint {
 
         private final LinkedBlockingDeque<String> responses = new LinkedBlockingDeque<>();
 
+        final CountDownLatch closeLatch = new CountDownLatch(1);
+        volatile Session session;
+
         @Override
         public void onOpen(Session session, EndpointConfig config) {
+            this.session = session;
             session.getAsyncRemote().sendText("Stuart");
             session.addMessageHandler(new MessageHandler.Whole<String>() {
 
@@ -119,6 +127,11 @@ public class ProgramaticLazyEndpointTest {
                     responses.add(message);
                 }
             });
+        }
+
+        @Override
+        public void onClose(Session session, CloseReason closeReason) {
+            closeLatch.countDown();
         }
 
         public LinkedBlockingDeque<String> getResponses() {
