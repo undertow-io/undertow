@@ -129,6 +129,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
             try {
                 final ByteBuffer buffer = pooled.getResource();
                 do {
+                    buffer.clear();
                     c = channel.read(buffer);
                     if (c > 0) {
                         buffer.flip();
