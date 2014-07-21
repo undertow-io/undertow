@@ -460,7 +460,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     /**
-     * Method that is invoked when a frame has been fully flushed
+     * Method that is invoked when a frame has been fully flushed. This method is only invoked by the IO thread
      */
     final void flushComplete() throws IOException {
         try {
@@ -483,17 +483,16 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             header = null;
             trailer = null;
 
-            final ChannelListener<? super S> closeListener = this.closeSetter.get();
-            if (channelClosed && closeListener != null) {
-                getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelListeners.invokeChannelListener((S) AbstractFramedStreamSinkChannel.this, closeListener);
-                    }
-                });
-            }
             if (isWriteResumed() && !channelClosed) {
                 wakeupWrites();
+            } else if(isWriteResumed()) {
+                //we need to execute the write listener one last time
+                ChannelListeners.invokeChannelListener((S)this, getWriteListener());
+            }
+
+            final ChannelListener<? super S> closeListener = this.closeSetter.get();
+            if (channelClosed && closeListener != null) {
+                ChannelListeners.invokeChannelListener((S) AbstractFramedStreamSinkChannel.this, closeListener);
             }
             handleFlushComplete();
         } finally {

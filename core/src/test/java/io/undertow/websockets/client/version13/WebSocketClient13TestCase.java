@@ -18,18 +18,12 @@
 
 package io.undertow.websockets.client.version13;
 
-import io.undertow.testutils.AjpIgnore;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
-import io.undertow.util.FileUtils;
-import io.undertow.util.StringWriteChannelListener;
-import io.undertow.websockets.client.WebSocketClient;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -37,21 +31,24 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
-import org.xnio.streams.ChannelInputStream;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.SpdyIgnore;
+import io.undertow.util.StringWriteChannelListener;
+import io.undertow.websockets.client.WebSocketClient;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
 
 /**
  * @author Stuart Douglas
@@ -92,23 +89,19 @@ public class WebSocketClient13TestCase {
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();
-        webSocketChannel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
+        webSocketChannel.getReceiveSetter().set(new AbstractReceiveListener() {
             @Override
-            public void handleEvent(final WebSocketChannel channel) {
-                ChannelInputStream stream = null;
-                try {
-                    final StreamSourceFrameChannel r = channel.receive();
-                    if (r != null) {
-                        stream = new ChannelInputStream(r);
-                        result.set(FileUtils.readFile(stream));
-                        latch.countDown();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    latch.countDown();
-                } finally {
-                    IoUtils.safeClose(stream);
-                }
+            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+                String data = message.getData();
+                result.set(data);
+                latch.countDown();
+            }
+
+            @Override
+            protected void onError(WebSocketChannel channel, Throwable error) {
+                super.onError(channel, error);
+                error.printStackTrace();
+                latch.countDown();
             }
         });
         webSocketChannel.resumeReceives();
