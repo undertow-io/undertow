@@ -462,16 +462,17 @@ public class AsyncContextImpl implements AsyncContext {
         public void run() {
             synchronized (AsyncContextImpl.this) {
                 if (!dispatched) {
-                    UndertowServletLogger.REQUEST_LOGGER.debug("Async request timed out");
-                    onAsyncTimeout();
-                    if (!dispatched) {
-                        if(!getResponse().isCommitted()) {
-                            //close the connection on timeout
-                            exchange.setPersistent(false);
-                            exchange.getResponseHeaders().put(Headers.CONNECTION, Headers.CLOSE.toString());
-                            doDispatch(new Runnable() {
-                                @Override
-                                public void run() {
+                    addAsyncTask(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            UndertowServletLogger.REQUEST_LOGGER.debug("Async request timed out");
+                            onAsyncTimeout();
+                            if (!dispatched) {
+                                if (!getResponse().isCommitted()) {
+                                    //close the connection on timeout
+                                    exchange.setPersistent(false);
+                                    exchange.getResponseHeaders().put(Headers.CONNECTION, Headers.CLOSE.toString());
                                     Connectors.executeRootHandler(new HttpHandler() {
                                         @Override
                                         public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -487,16 +488,16 @@ public class AsyncContextImpl implements AsyncContext {
                                             }
                                         }
                                     }, exchange);
+                                } else {
+                                    //not much we can do, just break the connection
+                                    IoUtils.safeClose(exchange.getConnection());
                                 }
-                            });
-                        } else {
-                            //not much we can do, just break the connection
-                            IoUtils.safeClose(exchange.getConnection());
+                                if (!dispatched) {
+                                    complete();
+                                }
+                            }
                         }
-                        if (!dispatched) {
-                            complete();
-                        }
-                    }
+                    });
                 }
             }
         }
