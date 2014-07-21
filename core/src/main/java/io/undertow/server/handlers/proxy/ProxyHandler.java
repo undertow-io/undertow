@@ -518,6 +518,7 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void handleException(Channel channel, IOException exception) {
+            IoUtils.safeClose(channel);
             if (exchange.isResponseStarted()) {
                 IoUtils.safeClose(clientConnection);
                 UndertowLogger.REQUEST_IO_LOGGER.debug("Exception reading from target server", exception);
