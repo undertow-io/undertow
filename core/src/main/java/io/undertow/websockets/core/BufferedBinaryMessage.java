@@ -97,6 +97,9 @@ public class BufferedBinaryMessage {
                     channel.getReadSetter().set(new ChannelListener<StreamSourceFrameChannel>() {
                         @Override
                         public void handleEvent(StreamSourceFrameChannel channel) {
+                            if(complete ) {
+                                return;
+                            }
                             try {
                                 for (; ; ) {
                                     if (current == null) {

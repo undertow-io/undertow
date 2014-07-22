@@ -230,7 +230,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * of calling this method then it can prevent frame channels for being fully consumed.
      */
     public synchronized R receive() throws IOException {
-        if (isLastFrameReceived()) {
+        if (isLastFrameReceived() && receiver == null) {
             //we have received the last frame, we just shut down and return
             //it would probably make more sense to have the last channel responsible for this
             //however it is much simpler just to have it here
@@ -690,7 +690,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
             final R receiver = AbstractFramedChannel.this.receiver;
-            if (isLastFrameReceived() || receivesSuspended) {
+            if ((isLastFrameReceived() || receivesSuspended) && receiver == null) {
                 channel.suspendReads();
                 return;
             } else {
