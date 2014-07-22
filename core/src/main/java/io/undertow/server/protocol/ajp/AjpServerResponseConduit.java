@@ -83,6 +83,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
     private static final int FLAG_WRITE_RESUMED = 1 << 2;
     private static final int FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER = 1 << 3;
     private static final int FLAG_WRITE_SHUTDOWN = 1 << 4;
+    private static final int FLAG_READS_DONE = 1 << 5;
 
     private static final ByteBuffer CLOSE_FRAME_PERSISTENT;
     private static final ByteBuffer CLOSE_FRAME_NON_PERSISTENT;

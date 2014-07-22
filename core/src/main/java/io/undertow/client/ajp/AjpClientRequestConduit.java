@@ -96,13 +96,14 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
     /**
      * The remaining bits are used to store the remaining chunk size.
      */
-    private static final long STATE_MASK = longBitMask(0, 58);
+    private static final long STATE_MASK = longBitMask(0, 57);
 
     private static final long FLAG_START = 1L << 63L; //indicates that the header has not been generated yet.
     private static final long FLAG_SHUTDOWN = 1L << 62L;
     private static final long FLAG_DELEGATE_SHUTDOWN = 1L << 61L;
     private static final long FLAG_WRITES_RESUMED = 1L << 60L;
     private static final long FLAG_FINAL_CHUNK_GENERATED = 1L << 59L;
+    private static final long FLAG_DISCARD = 1L << 58L;
 
 
     AjpClientRequestConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final AjpClientExchange exchange, ConduitListener<? super AjpClientRequestConduit> finishListener, long size) {
@@ -162,11 +163,9 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
      * and if the request has not been full written then the channel is closed.
      */
     void setRequestDone() {
-        if(!anyAreSet(state, FLAG_SHUTDOWN)) {
-            state |= FLAG_SHUTDOWN;
-            if (anyAreSet(state, FLAG_WRITES_RESUMED)) {
-                next.resumeWrites();
-            }
+        state |= FLAG_DISCARD;
+        if (anyAreSet(state, FLAG_WRITES_RESUMED)) {
+            next.wakeupWrites();
         }
     }
 
@@ -378,6 +377,12 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
 
 
     public int write(final ByteBuffer src) throws IOException {
+        if(anyAreSet(state, FLAG_DISCARD)) {
+            int ret = src.remaining();
+            src.position(src.limit());
+            totalRemaining-=ret;
+            return ret;
+        }
         if(anyAreSet(state, FLAG_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
@@ -499,16 +504,21 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
     }
 
     public boolean flush() throws IOException {
-        if (!processWrite()) {
-            return false;
+        long state = this.state;
+        boolean discard = anyAreSet(state, FLAG_DISCARD);
+        if(!discard) {
+            if (!processWrite()) {
+                return false;
+            }
         }
         if (allAreClear(state, FLAG_SHUTDOWN)) {
             return next.flush();
         }
-        if (!handleFinalChunk()) {
-            return false;
+        if(!discard) {
+            if (!handleFinalChunk()) {
+                return false;
+            }
         }
-        long state = this.state;
         if (allAreSet(state, FLAG_SHUTDOWN) && allAreClear(state, FLAG_DELEGATE_SHUTDOWN)) {
             if (finishListener != null) {
                 finishListener.handleEvent(this);

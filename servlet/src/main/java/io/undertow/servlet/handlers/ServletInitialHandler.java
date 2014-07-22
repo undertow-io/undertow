@@ -363,6 +363,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
 
         @Override
+        public void terminateRequestChannel(HttpServerExchange exchange) {
+
+        }
+
+        @Override
         public boolean isOpen() {
             return true;
         }

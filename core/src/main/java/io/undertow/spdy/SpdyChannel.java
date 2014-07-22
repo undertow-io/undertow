@@ -74,16 +74,16 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     static final int FLAG_UNIDIRECTIONAL = 2;
     static final int CONTROL_FRAME = 1 << 31;
 
-    static final int RST_STATUS_PROTOCOL_ERROR = 1;
-    static final int RST_STATUS_INVALID_STREAM = 2;
-    static final int RST_STATUS_REFUSED_STREAM = 3;
-    static final int RST_STATUS_UNSUPPORTED_VERSION = 4;
-    static final int RST_STATUS_CANCEL = 5;
-    static final int RST_STATUS_INTERNAL_ERROR = 6;
-    static final int RST_STATUS_FLOW_CONTROL_ERROR = 7;
-    static final int RST_STATUS_STREAM_IN_USE = 8;
-    static final int RST_STATUS_STREAM_ALREADY_CLOSED = 9;
-    static final int RST_STATUS_FRAME_TOO_LARGE = 11;
+    public static final int RST_STATUS_PROTOCOL_ERROR = 1;
+    public static final int RST_STATUS_INVALID_STREAM = 2;
+    public static final int RST_STATUS_REFUSED_STREAM = 3;
+    public static final int RST_STATUS_UNSUPPORTED_VERSION = 4;
+    public static final int RST_STATUS_CANCEL = 5;
+    public static final int RST_STATUS_INTERNAL_ERROR = 6;
+    public static final int RST_STATUS_FLOW_CONTROL_ERROR = 7;
+    public static final int RST_STATUS_STREAM_IN_USE = 8;
+    public static final int RST_STATUS_STREAM_ALREADY_CLOSED = 9;
+    public static final int RST_STATUS_FRAME_TOO_LARGE = 11;
 
     private final Inflater inflater = new Inflater(false);
     private final Deflater deflater = new Deflater(6);

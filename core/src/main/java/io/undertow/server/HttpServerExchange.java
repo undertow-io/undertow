@@ -1412,6 +1412,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
+        if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
+            connection.terminateRequestChannel(this);
+        }
+
         if (blockingHttpExchange != null) {
             try {
                 //TODO: can we end up in this situation in a IO thread?
@@ -1424,7 +1428,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         //417 means that we are rejecting the request
         //so the client should not actually send any data
-        //TODO: how
         if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
 
             //not really sure what the best thing to do here is

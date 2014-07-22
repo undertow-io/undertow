@@ -109,6 +109,12 @@ public class SpdyServerConnection extends ServerConnection {
     }
 
     @Override
+    public void terminateRequestChannel(HttpServerExchange exchange) {
+        //todo: should we RST_STREAM in this case
+        //channel.sendRstStream(responseChannel.getStreamId(), SpdyChannel.RST_STATUS_CANCEL);
+    }
+
+    @Override
     public boolean isOpen() {
         return channel.isOpen();
     }
