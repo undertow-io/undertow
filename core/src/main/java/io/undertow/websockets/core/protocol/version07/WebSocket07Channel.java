@@ -22,6 +22,7 @@ import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketException;
+import io.undertow.websockets.core.WebSocketFrame;
 import io.undertow.websockets.core.WebSocketFrameCorruptedException;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketLogger;
@@ -116,7 +117,7 @@ public class WebSocket07Channel extends WebSocketChannel {
         }
     }
 
-    class WebSocketFrameHeader implements PartialFrame {
+    class WebSocketFrameHeader implements WebSocketFrame {
 
         private boolean frameFinalFlag;
         private int frameRsv;
@@ -459,11 +460,15 @@ public class WebSocket07Channel extends WebSocketChannel {
                 StreamSourceFrameChannel ret = fragmentedChannel;
                 if(frameFinalFlag) {
                     fragmentedChannel = null;
-                    ret.finalFrame(); //TODO: should  be in handle header data, maybe
                 }
                 return ret;
             }
             return null;
+        }
+
+        @Override
+        public boolean isFinalFragment() {
+            return frameFinalFlag;
         }
     }
 }
