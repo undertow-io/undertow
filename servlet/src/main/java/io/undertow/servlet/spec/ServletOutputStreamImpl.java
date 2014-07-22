@@ -792,6 +792,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     }
                 } while (written < toWrite);
                 buffersToWrite = null;
+                buffer.clear();
             }
             if (pendingFile != null) {
                 try {
