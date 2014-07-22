@@ -377,6 +377,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     channel.shutdownWrites();
                     state |= FLAG_DELEGATE_SHUTDOWN;
                     channel.flush();
+                    if(pooledBuffer != null) {
+                        pooledBuffer.free();
+                        buffer = null;
+                        pooledBuffer = null;
+                    }
                 }
             }
         }
