@@ -501,7 +501,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             long res;
             do {
                 res = channel.write(buffer);
-                written += res;
             } while (buffer.hasRemaining() && res != 0);
             if (!buffer.hasRemaining()) {
                 channel.flush();
