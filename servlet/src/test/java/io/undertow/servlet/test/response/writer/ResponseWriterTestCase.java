@@ -18,6 +18,14 @@
 
 package io.undertow.servlet.test.response.writer;
 
+import javax.servlet.ServletException;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -27,14 +35,6 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.servlet.ServletException;
 
 /**
  * @author Tomaz Cerar
@@ -53,7 +53,9 @@ public class ResponseWriterTestCase {
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .addServlet(Servlets.servlet("resp", ResponseWriterServlet.class)
-                .addMapping("/resp"));
+                        .addMapping("/resp"))
+                .addServlet(Servlets.servlet("respLArget", LargeResponseWriterServlet.class)
+                        .addMapping("/large"));
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -71,6 +73,22 @@ public class ResponseWriterTestCase {
             String data = FileUtils.readFile(result.getEntity().getContent());
             Assert.assertEquals("first-aaaa", data);
             Assert.assertEquals(0, result.getHeaders("not-header").length);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testWriterLargeResponse() throws Exception {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/large");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String data = FileUtils.readFile(result.getEntity().getContent());
+            Assert.assertEquals(LargeResponseWriterServlet.getMessage(), data);
 
         } finally {
             client.getConnectionManager().shutdown();

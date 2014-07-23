@@ -141,26 +141,6 @@ public class ServletPrintWriter {
             }
 
             if (charsetEncoder == null) {
-                //fast path, basically we are hoping this is ascii only
-                int remaining = buffer.remaining();
-                boolean ok = true;
-                //so we have a pure ascii buffer, just write it out and skip all the encoder cost
-                while (input.hasRemaining()) {
-                    if (!buffer.hasRemaining()) {
-                        outputStream.flushInternal();
-                    }
-                    char c = input.get();
-                    if (c > 127) {
-                        ok = false;
-                        input.position(input.position() - 1); //push the character back
-                        break;
-                    }
-                    buffer.put((byte) c);
-                }
-                outputStream.updateWritten(remaining - buffer.remaining());
-                if (ok) {
-                    return;
-                }
                 createEncoder();
             }
             final CharBuffer cb;
@@ -212,73 +192,143 @@ public class ServletPrintWriter {
     }
 
     public void write(final int c) {
-        final CharBuffer cb = CharBuffer.wrap(Character.toString((char) c));
-        write(cb);
+        write(Character.toString((char)c));
     }
 
     public void write(final char[] buf, final int off, final int len) {
+        if(charsetEncoder == null) {
+            try {
+                ByteBuffer buffer = outputStream.underlyingBuffer();
+                if(buffer == null) {
+                    //already closed
+                    error = true;
+                    return;
+                }
+                //fast path, basically we are hoping this is ascii only
+                int remaining = buffer.remaining();
+                boolean ok = true;
+                //so we have a pure ascii buffer, just write it out and skip all the encoder cost
+
+                int end = off + len;
+                int i = off;
+                int fpos = i + remaining;
+                for (; i < end; ++i) {
+                    if (i == fpos) {
+                        outputStream.flushInternal();
+                        fpos = i + buffer.remaining();
+                    }
+                    char c = buf[i];
+                    if (c > 127) {
+                        ok = false;
+                        break;
+                    }
+                    buffer.put((byte) c);
+                }
+                outputStream.updateWritten(remaining - buffer.remaining());
+                if (ok) {
+                    return;
+                }
+                final CharBuffer cb = CharBuffer.wrap(buf, off + i, off + len);
+                write(cb);
+                return;
+            } catch (IOException e) {
+                error = false;
+                return;
+            }
+
+        }
         final CharBuffer cb = CharBuffer.wrap(buf, off, len);
         write(cb);
     }
 
     public void write(final char[] buf) {
-        final CharBuffer cb = CharBuffer.wrap(buf);
-        write(cb);
+        write(buf,0, buf.length);
     }
 
     public void write(final String s, final int off, final int len) {
+        if(charsetEncoder == null) {
+            try {
+                ByteBuffer buffer = outputStream.underlyingBuffer();
+                if(buffer == null) {
+                    //already closed
+                    error = true;
+                    return;
+                }
+                //fast path, basically we are hoping this is ascii only
+                int remaining = buffer.remaining();
+                boolean ok = true;
+                //so we have a pure ascii buffer, just write it out and skip all the encoder cost
+
+                int end = off + len;
+                int i = off;
+                int fpos = i + remaining;
+                for (; i < end; ++i) {
+                    if (i == fpos) {
+                        outputStream.flushInternal();
+                        fpos = i + buffer.remaining();
+                    }
+                    char c = s.charAt(i);
+                    if (c > 127) {
+                        ok = false;
+                        break;
+                    }
+                    buffer.put((byte) c);
+                }
+                outputStream.updateWritten(remaining - buffer.remaining());
+                if (ok) {
+                    return;
+                }
+                final CharBuffer cb = CharBuffer.wrap(s, off + i, off + len);
+                write(cb);
+                return;
+            } catch (IOException e) {
+                error = false;
+                return;
+            }
+
+        }
         final CharBuffer cb = CharBuffer.wrap(s, off, off + len);
         write(cb);
     }
 
     public void write(final String s) {
-        final CharBuffer cb = CharBuffer.wrap(s);
-        write(cb);
+        write(s, 0, s.length());
     }
 
     public void print(final boolean b) {
-        final CharBuffer cb = CharBuffer.wrap(Boolean.toString(b));
-        write(cb);
+        write(Boolean.toString(b));
     }
 
     public void print(final char c) {
-        final CharBuffer cb = CharBuffer.wrap(Character.toString(c));
-        write(cb);
+        write(Character.toString(c));
     }
 
     public void print(final int i) {
-        final CharBuffer cb = CharBuffer.wrap(Integer.toString(i));
-        write(cb);
+        write(Integer.toString(i));
     }
 
     public void print(final long l) {
-        final CharBuffer cb = CharBuffer.wrap(Long.toString(l));
-        write(cb);
+        write(Long.toString(l));
     }
 
     public void print(final float f) {
-        final CharBuffer cb = CharBuffer.wrap(Float.toString(f));
-        write(cb);
+        write(Float.toString(f));
     }
 
     public void print(final double d) {
-        final CharBuffer cb = CharBuffer.wrap(Double.toString(d));
-        write(cb);
+        write(Double.toString(d));
     }
 
     public void print(final char[] s) {
-        final CharBuffer cb = CharBuffer.wrap(s);
-        write(cb);
+        write(CharBuffer.wrap(s));
     }
 
     public void print(final String s) {
-        final CharBuffer cb = CharBuffer.wrap(s == null ? "null" : s);
-        write(cb);
+        write(s == null ? "null" : s);
     }
 
     public void print(final Object obj) {
-        final CharBuffer cb = CharBuffer.wrap(obj == null ? "null" : obj.toString());
-        write(cb);
+        write(obj == null ? "null" : obj.toString());
     }
 
     public void println() {
@@ -348,10 +398,11 @@ public class ServletPrintWriter {
     }
 
     public void append(final CharSequence csq) {
-        if (csq == null)
+        if (csq == null) {
             write("null");
-        else
+        } else {
             write(csq.toString());
+        }
     }
 
     public void append(final CharSequence csq, final int start, final int end) {
