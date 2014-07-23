@@ -43,11 +43,11 @@ import java.util.concurrent.TimeUnit;
 public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
 
 
-    protected final ConduitStreamSinkChannel delegate;
+    protected final StreamSinkChannel delegate;
     protected ChannelListener.SimpleSetter<DetachableStreamSinkChannel> writeSetter;
     protected ChannelListener.SimpleSetter<DetachableStreamSinkChannel> closeSetter;
 
-    public DetachableStreamSinkChannel(final ConduitStreamSinkChannel delegate) {
+    public DetachableStreamSinkChannel(final StreamSinkChannel delegate) {
         this.delegate = delegate;
     }
 
@@ -139,7 +139,11 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
         if (writeSetter == null) {
             writeSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
-                delegate.setWriteListener(ChannelListeners.delegatingChannelListener(this, writeSetter));
+                if(delegate instanceof ConduitStreamSinkChannel) {
+                    ((ConduitStreamSinkChannel) delegate).setWriteListener(ChannelListeners.delegatingChannelListener(this, writeSetter));
+                } else {
+                    delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
+                }
             }
         }
         return writeSetter;
@@ -150,7 +154,7 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
         if (closeSetter == null) {
             closeSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
-                delegate.setCloseListener(ChannelListeners.delegatingChannelListener(this, closeSetter));
+                delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
             }
         }
         return closeSetter;
@@ -252,8 +256,13 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
     }
 
     public void responseDone() {
-        delegate.setCloseListener(null);
-        delegate.setWriteListener(null);
+        if(delegate instanceof ConduitStreamSinkChannel) {
+            ((ConduitStreamSinkChannel) delegate).setCloseListener(null);
+            ((ConduitStreamSinkChannel) delegate).setWriteListener(null);
+        } else {
+            delegate.getCloseSetter().set(null);
+            delegate.getWriteSetter().set(null);
+        }
         if (delegate.isWriteResumed()) {
             delegate.suspendWrites();
         }

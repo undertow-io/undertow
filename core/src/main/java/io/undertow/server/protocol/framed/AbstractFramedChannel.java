@@ -450,20 +450,20 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             ByteBuffer[] data = new ByteBuffer[toSend * 3];
             int j = 0;
             it = pendingFrames.listIterator();
-            while (j < toSend) {
-                S next = it.next();
-                //todo: rather than adding empty buffers just store the offsets
-                SendFrameHeader frameHeader = next.getFrameHeader();
-                Pooled<ByteBuffer> frameHeaderByteBuffer = frameHeader.getByteBuffer();
-                data[j * 3] = frameHeaderByteBuffer != null
-                        ? frameHeaderByteBuffer.getResource()
-                        : Buffers.EMPTY_BYTE_BUFFER;
-                data[(j * 3) + 1] = next.getBuffer();
-                data[(j * 3) + 2] = next.getFrameFooter();
-                ++j;
-            }
-            long toWrite = Buffers.remaining(data);
             try {
+                while (j < toSend) {
+                    S next = it.next();
+                    //todo: rather than adding empty buffers just store the offsets
+                    SendFrameHeader frameHeader = next.getFrameHeader();
+                    Pooled<ByteBuffer> frameHeaderByteBuffer = frameHeader.getByteBuffer();
+                    data[j * 3] = frameHeaderByteBuffer != null
+                            ? frameHeaderByteBuffer.getResource()
+                            : Buffers.EMPTY_BYTE_BUFFER;
+                    data[(j * 3) + 1] = next.getBuffer();
+                    data[(j * 3) + 2] = next.getFrameFooter();
+                    ++j;
+                }
+                long toWrite = Buffers.remaining(data);
                 long res;
                 do {
                     res = channel.getSinkChannel().write(data);

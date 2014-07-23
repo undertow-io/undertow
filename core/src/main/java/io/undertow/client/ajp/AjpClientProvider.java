@@ -21,6 +21,8 @@ package io.undertow.client.ajp;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
+import io.undertow.protocols.ajp.AjpClientChannel;
+
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
@@ -104,7 +106,7 @@ public class AjpClientProvider implements ClientProvider {
     }
 
     private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
-        listener.completed(new AjpClientConnection(connection, options, bufferPool));
+        listener.completed(new AjpClientConnection(new AjpClientChannel(connection, bufferPool) , options, bufferPool));
     }
 
 
