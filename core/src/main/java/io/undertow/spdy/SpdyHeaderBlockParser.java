@@ -49,6 +49,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
     private ByteArrayOutputStream partialValue;
     private int remainingData;
     private boolean beforeHeadersHandled = false;
+    private byte[] dataOverflow;
 
 
     public SpdyHeaderBlockParser(Pool<ByteBuffer> bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
@@ -63,12 +64,20 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
             if (!handleBeforeHeader(resource)) {
                 return;
             }
-        } beforeHeadersHandled = true;
+        }
+        beforeHeadersHandled = true;
         Pooled<ByteBuffer> outPooled = channel.getHeapBufferPool().allocate();
         Pooled<ByteBuffer> inPooled = channel.getHeapBufferPool().allocate();
+
+        boolean extraOutput = false;
         try {
             ByteBuffer outputBuffer = outPooled.getResource();
             ByteBuffer inPooledResource = inPooled.getResource();
+            if(dataOverflow != null) {
+                outputBuffer.put(dataOverflow);
+                dataOverflow = null;
+                extraOutput = true;
+            }
             byte[] inputBuffer = inPooledResource.array();
             while (resource.hasRemaining()) {
                 int rem = resource.remaining();
@@ -88,13 +97,25 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                     }
                     if (copied == 0 && inflater.needsDictionary()) {
                         inflater.setDictionary(SpdyProtocolUtils.SPDY_DICT);
-                    } else {
+                    } else if(copied > 0) {
                         outputBuffer.position(outputBuffer.position() + copied);
                         handleDecompressedData(outputBuffer);
+                        if(outputBuffer.hasRemaining()) {
+                            outputBuffer.compact();
+                            extraOutput = true;
+                        } else {
+                            extraOutput = false;
+                            outputBuffer.clear();
+                        }
                     }
                 }
             }
         } finally {
+            if(extraOutput) {
+                outPooled.getResource().flip();
+                dataOverflow = new byte[outPooled.getResource().remaining()];
+                outPooled.getResource().get(dataOverflow);
+            }
             inPooled.free();
             outPooled.free();
         }
@@ -107,6 +128,10 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
         data.flip();
 
         if (numHeaders == -1) {
+
+            if(data.remaining() < 4) {
+                return;
+            }
             numHeaders = (data.get() & 0xFF) << 24;
             numHeaders += (data.get() & 0xFF) << 16;
             numHeaders += (data.get() & 0xFF) << 8;
@@ -115,7 +140,6 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
         while (readHeaders < numHeaders) {
             if (currentHeader == null && partialValue == null) {
                 if (data.remaining() < 4) {
-                    data.compact();
                     return;
                 }
                 int nameLength = (data.get() & 0xFF) << 24;
@@ -133,7 +157,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                     remainingData = nameLength - data.remaining();
                     partialValue = new ByteArrayOutputStream();
                     partialValue.write(data.array(), data.arrayOffset() + data.position(), data.remaining());
-                    data.clear();
+                    data.position(data.limit());
                     return;
                 }
             } else if (currentHeader == null && partialValue != null) {
@@ -146,13 +170,12 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                 } else {
                     remainingData = remainingData - data.remaining();
                     partialValue.write(data.array(), data.arrayOffset() + data.position(), data.remaining());
-                    data.clear();
+                    data.position(data.limit());
                     return;
                 }
             }
             if (partialValue == null) {
                 if (data.remaining() < 4) {
-                    data.compact();
                     return;
                 }
                 int valueLength = (data.get() & 0xFF) << 24;
@@ -188,7 +211,7 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                     }
                     partialValue = new ByteArrayOutputStream();
                     partialValue.write(array, start, end - start);
-                    data.clear();
+                    data.position(data.limit());
                     return;
                 }
             } else {
@@ -210,15 +233,13 @@ abstract class SpdyHeaderBlockParser extends PushBackParser {
                     this.partialValue = null;
                 } else {
                     remainingData = remainingData - data.remaining();
-                    partialValue = new ByteArrayOutputStream();
                     partialValue.write(data.array(), data.arrayOffset() + data.position(), data.remaining());
-                    data.clear();
+                    data.position(data.limit());
                     return;
                 }
             }
             this.readHeaders++;
         }
-        data.compact();
     }
 
     HeaderMap getHeaderMap() {
