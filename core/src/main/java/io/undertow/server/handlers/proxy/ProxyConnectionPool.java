@@ -219,7 +219,6 @@ public class ProxyConnectionPool implements Closeable {
                     callback.getCallback().failed(callback.getExchange());
                 } else {
                     connectionPoolManager.queuedConnectionFailed(callback.getProxyTarget(), callback.getExchange(), callback.getCallback(), callback.getExpireTime() > 0 ? time - callback.getExpireTime() : -1);
-                    callback.getCallback().failed(callback.getExchange());
                 }
             }
             callback = hostData.awaitingConnections.poll();
