@@ -234,9 +234,9 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
             chunkRemaining = this.state & STATE_MASK;
         }
 
-        int limit = dst.limit();
+        int limit = dst.remaining();
         try {
-            if (limit > chunkRemaining) {
+            if (dst.remaining() > chunkRemaining) {
                 dst.limit((int) (dst.position() + chunkRemaining));
             }
             int read = next.read(dst);
