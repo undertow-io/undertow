@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.undertow.Undertow;
+import io.undertow.UndertowOptions;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -52,7 +53,6 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Xnio;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
 
@@ -74,7 +74,6 @@ public abstract class AbstractModClusterTestBase {
     protected static final String hostName;
 
     private static ModCluster modCluster;
-    private static final Xnio xnio;
     private static final XnioSsl xnioSsl;
     private static final UndertowClient undertowClient = UndertowClient.getInstance();
     private static final String COUNT = "count";
@@ -83,8 +82,7 @@ public abstract class AbstractModClusterTestBase {
         port = getHostPort("default");
         hostName = getHostAddress("default");
 
-        xnio = Xnio.getInstance("nio", AbstractModClusterTestBase.class.getClassLoader());
-        xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, getClientSSLContext());
+        xnioSsl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, getClientSSLContext());
     }
 
     protected List<NodeTestConfig> nodes;
@@ -256,6 +254,7 @@ public abstract class AbstractModClusterTestBase {
 
     static Undertow createNode(final NodeTestConfig config, final SessionCookieConfig sessionConfig) {
         final Undertow.Builder builder = Undertow.builder();
+
         final String type = config.getType();
         switch (type) {
             case "ajp":
@@ -264,12 +263,16 @@ public abstract class AbstractModClusterTestBase {
             case "http":
                 builder.addHttpListener(config.getPort(), config.getHostname());
                 break;
+            case "spdy":
+                builder.setServerOption(UndertowOptions.ENABLE_SPDY, true);
             case "https":
                 builder.addHttpsListener(config.getPort(), config.getHostname(), DefaultServer.getServerSslContext());
                 break;
+            default:
+                throw new IllegalArgumentException(type);
         }
         builder.setSocketOption(Options.REUSE_ADDRESSES, true)
-               .setHandler(jvmRoute("JSESSIONID", config.getJvmRoute(), path()
+               .setHandler(jvmRoute("JSESSIONID", config.getJvmRoute(), path(ResponseCodeHandler.HANDLE_200)
                        .addPrefixPath("/name", new StringSendHandler(config.getJvmRoute()))
                        .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(config.getJvmRoute(), sessionConfig), new InMemorySessionManager(""), sessionConfig))));
         return builder.build();

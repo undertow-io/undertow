@@ -75,7 +75,7 @@ public class MCMPConfig {
     }
 
     public HttpHandler create(final ModCluster modCluster, final HttpHandler next) {
-        return new MCMPHandler(this, modCluster.getContainer(), next);
+        return new MCMPHandler(this, modCluster, next);
     }
 
     static class MCMPWebManagerConfig extends MCMPConfig {
@@ -111,7 +111,7 @@ public class MCMPConfig {
 
         @Override
         public HttpHandler create(ModCluster modCluster, HttpHandler next) {
-            return new MCMPWebManager(this, modCluster.getContainer(), next);
+            return new MCMPWebManager(this, modCluster, next);
         }
     }
 

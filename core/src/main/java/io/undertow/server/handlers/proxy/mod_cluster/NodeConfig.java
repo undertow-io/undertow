@@ -66,12 +66,6 @@ public class NodeConfig {
     private final int ping;
 
     /**
-     * soft max inactive connection over that limit after ttl are closed. Default depends on the mpm configuration (See below
-     * for more information)
-     */
-    private final int smax;
-
-    /**
      * max time in seconds to life for connection above smax. Default 60 seconds (60_000 in milliseconds).
      */
     private final int ttl;
@@ -81,6 +75,12 @@ public class NodeConfig {
      */
     private final int timeout;
 
+    // Proxy connection pool defaults
+    private final int maxConnections;
+    private final int cacheConnections;
+    private final int requestQueueSize;
+    private final boolean queueNewRequests;
+
     NodeConfig(NodeBuilder b, final URI connectionURI) {
         this.connectionURI = connectionURI;
         balancer = b.balancer;
@@ -89,9 +89,12 @@ public class NodeConfig {
         flushPackets = b.flushPackets;
         flushwait = b.flushwait;
         ping = b.ping;
-        smax = b.smax;
         ttl = b.ttl;
         timeout = b.timeout;
+        maxConnections = b.maxConnections;
+        cacheConnections = b.cacheConnections;
+        requestQueueSize = b.requestQueueSize;
+        queueNewRequests = b.queueNewRequests;
     }
 
     /**
@@ -136,7 +139,7 @@ public class NodeConfig {
      * @return the smax
      */
     public int getSmax() {
-        return this.smax;
+        return this.cacheConnections;
     }
 
     /**
@@ -178,8 +181,44 @@ public class NodeConfig {
         return jvmRoute;
     }
 
-    public static NodeBuilder builder() {
-        return new NodeBuilder();
+    /**
+     * Get the maximum connection limit for a nodes thread-pool.
+     *
+     * @return the max connections limit
+     */
+    public int getMaxConnections() {
+        return maxConnections;
+    }
+
+    /**
+     * Get the amount of connections which should be kept alive in the connection pool.
+     *
+     * @return the number of cached connections
+     */
+    public int getCacheConnections() {
+        return cacheConnections;
+    }
+
+    /**
+     * Get the max queue size for requests.
+     *
+     * @return the queue size for requests
+     */
+    public int getRequestQueueSize() {
+        return requestQueueSize;
+    }
+
+    /**
+     * Flag indicating whether requests without a session can be queued.
+     *
+     * @return true if requests without a session id can be queued
+     */
+    public boolean isQueueNewRequests() {
+        return queueNewRequests;
+    }
+
+    public static NodeBuilder builder(ModCluster modCluster) {
+        return new NodeBuilder(modCluster);
     }
 
     public static class NodeBuilder {
@@ -195,12 +234,20 @@ public class NodeConfig {
         private boolean flushPackets = false;
         private int flushwait = 10;
         private int ping = 10000;
-        private int smax;
+
+        private int maxConnections;
+        private int cacheConnections;
+        private int requestQueueSize;
+        private boolean queueNewRequests = false;
+
         private int ttl = 60000;
         private int timeout = 0;
 
-        NodeBuilder() {
-            //
+        NodeBuilder(final ModCluster modCluster) {
+            this.maxConnections = modCluster.getMaxConnections();
+            this.cacheConnections = modCluster.getCacheConnections();
+            this.requestQueueSize = modCluster.getRequestQueueSize();
+            this.queueNewRequests = modCluster.isQueueNewRequests();
         }
 
         public NodeBuilder setHostname(String hostname) {
@@ -249,7 +296,27 @@ public class NodeConfig {
         }
 
         public NodeBuilder setSmax(int smax) {
-            this.smax = smax;
+            this.cacheConnections = smax;
+            return this;
+        }
+
+        public NodeBuilder setMaxConnections(int maxConnections) {
+            this.maxConnections = maxConnections;
+            return this;
+        }
+
+        public NodeBuilder setCacheConnections(int cacheConnections) {
+            this.cacheConnections = cacheConnections;
+            return this;
+        }
+
+        public NodeBuilder setRequestQueueSize(int requestQueueSize) {
+            this.requestQueueSize = requestQueueSize;
+            return this;
+        }
+
+        public NodeBuilder setQueueNewRequests(boolean queueNewRequests) {
+            this.queueNewRequests = queueNewRequests;
             return this;
         }
 

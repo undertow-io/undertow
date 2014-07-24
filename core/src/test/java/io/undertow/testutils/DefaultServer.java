@@ -593,6 +593,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @return The client side SSLContext.
      */
     public static SSLContext getClientSSLContext() {
+        if (clientSslContext == null) {
+            clientSslContext = createClientSslContext();
+        }
         return clientSslContext;
     }
 
@@ -605,7 +608,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      */
     public static void startSSLServer() throws IOException {
         SSLContext serverContext = getServerSslContext();
-        clientSslContext = createClientSslContext();
+        getClientSSLContext();
 
         startSSLServer(serverContext, OptionMap.create(SSL_CLIENT_AUTH_MODE, REQUESTED));
     }

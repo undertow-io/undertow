@@ -84,23 +84,6 @@ public class LoadBalancingProxyClient implements ProxyClient {
     private static final ProxyTarget PROXY_TARGET = new ProxyTarget() {
     };
 
-    private final ConnectionPoolManager manager = new ConnectionPoolManager() {
-        @Override
-        public boolean canCreateConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
-            return connections < connectionsPerThread;
-        }
-
-        @Override
-        public void queuedConnectionFailed(ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeoutMills) {
-            getConnection(proxyTarget, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS);
-        }
-
-        @Override
-        public int getProblemServerRetry() {
-            return problemServerRetry;
-        }
-    };
-
     public LoadBalancingProxyClient() {
         this(UndertowClient.getInstance());
     }
@@ -162,8 +145,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl) {
 
-        ProxyConnectionPool pool = new ProxyConnectionPool(manager, host, ssl, client, OptionMap.EMPTY);
-        Host h = new Host(pool, jvmRoute, host, ssl);
+        Host h = new Host(jvmRoute, null, host, ssl, OptionMap.EMPTY);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];
         System.arraycopy(existing, 0, newHosts, 0, existing.length);
@@ -182,8 +164,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
 
     public synchronized LoadBalancingProxyClient addHost(final InetSocketAddress bindAddress, final URI host, String jvmRoute, XnioSsl ssl, OptionMap options) {
-        ProxyConnectionPool pool = new ProxyConnectionPool(manager, bindAddress, host, ssl, client, options);
-        Host h = new Host(pool, jvmRoute, host, ssl);
+        Host h = new Host(jvmRoute, bindAddress, host, ssl, options);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];
         System.arraycopy(existing, 0, newHosts, 0, existing.length);
@@ -335,17 +316,53 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return null;
     }
 
-    protected static final class Host {
+    protected final class Host implements ConnectionPoolManager {
         final ProxyConnectionPool connectionPool;
         final String jvmRoute;
         final URI uri;
         final XnioSsl ssl;
+        private volatile boolean problem;
 
-        private Host(ProxyConnectionPool connectionPool, String jvmRoute, URI uri, XnioSsl ssl) {
-            this.connectionPool = connectionPool;
+        private Host(String jvmRoute, InetSocketAddress bindAddress, URI uri, XnioSsl ssl, OptionMap options) {
+            this.connectionPool = new ProxyConnectionPool(this, bindAddress, uri, ssl, client, options);
             this.jvmRoute = jvmRoute;
             this.uri = uri;
             this.ssl = ssl;
+        }
+
+        @Override
+        public boolean isAvailable() {
+            return !problem;
+        }
+
+        @Override
+        public void connectionError() {
+            problem = true;
+        }
+
+        @Override
+        public void clearErrorState() {
+            problem = false;
+        }
+
+        @Override
+        public boolean canCreateConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
+            return connections < connectionsPerThread;
+        }
+
+        @Override
+        public boolean cacheConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
+            return connections <= connectionsPerThread;
+        }
+
+        @Override
+        public void queuedConnectionFailed(ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeoutMills) {
+            getConnection(proxyTarget, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS);
+        }
+
+        @Override
+        public int getProblemServerRetry() {
+            return problemServerRetry;
         }
     }
 

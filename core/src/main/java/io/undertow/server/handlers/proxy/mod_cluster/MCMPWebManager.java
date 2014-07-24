@@ -50,8 +50,8 @@ class MCMPWebManager extends MCMPHandler {
     private final Random r = new SecureRandom();
     private String nonce = null;
 
-    public MCMPWebManager(MCMPConfig.MCMPWebManagerConfig config, ModClusterContainer container, HttpHandler next) {
-        super(config, container, next);
+    public MCMPWebManager(MCMPConfig.MCMPWebManagerConfig config, ModCluster modCluster, HttpHandler next) {
+        super(config, modCluster, next);
         this.checkNonce = config.isCheckNonce();
         this.reduceDisplay = config.isReduceDisplay();
         this.allowCmd = config.isAllowCmd();

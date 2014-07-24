@@ -113,12 +113,14 @@ class MCMPHandler implements HttpHandler {
     private final MCMPConfig config;
     private final HttpHandler next;
     private final long creationTime = System.currentTimeMillis(); // This should change with each restart
+    private final ModCluster modCluster;
     protected final ModClusterContainer container;
 
-    public MCMPHandler(MCMPConfig config, ModClusterContainer container, HttpHandler next) {
+    public MCMPHandler(MCMPConfig config, ModCluster modCluster, HttpHandler next) {
         this.config = config;
-        this.container = container;
         this.next = next;
+        this.modCluster = modCluster;
+        this.container = modCluster.getContainer();
         this.parserFactory = FormParserFactory.builder(false).addParser(new FormEncodedDataDefinition().setForceCreation(true)).build();
     }
 
@@ -198,7 +200,7 @@ class MCMPHandler implements HttpHandler {
         List<String> hosts = null;
         List<String> contexts = null;
         final Balancer.BalancerBuilder balancer = Balancer.builder();
-        final NodeConfig.NodeBuilder node = NodeConfig.builder();
+        final NodeConfig.NodeBuilder node = NodeConfig.builder(modCluster);
         final Iterator<HttpString> i = requestData.iterator();
         while (i.hasNext()) {
             final HttpString name = i.next();
@@ -274,7 +276,7 @@ class MCMPHandler implements HttpHandler {
         try {
             // Build the config
             config = node.build();
-            if (container.addNode(config, balancer, exchange.getIoThread())) {
+            if (container.addNode(config, balancer, exchange.getIoThread(), exchange.getConnection().getBufferPool())) {
                 // Apparently this is hard to do in the C part, so maybe we should just remove this
                 if (contexts != null && hosts != null) {
                     for (final String context : contexts) {

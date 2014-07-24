@@ -45,6 +45,7 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.XnioSsl;
 
@@ -126,7 +127,7 @@ class NodePingUtil {
             return;
         }
 
-        final int timeout = node.getNodeConfig().getTimeout();
+        final int timeout = node.getNodeConfig().getPing();
         exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : exchange.getIoThread(), new Runnable() {
             @Override
             public void run() {
@@ -146,6 +147,25 @@ class NodePingUtil {
         });
     }
 
+    /**
+     * Internally ping a node. This should probably use the connections from the nodes pool, if there are any available.
+     *
+     * @param node          the node
+     * @param callback      the ping callback
+     * @param ioThread      the xnio i/o thread
+     * @param bufferPool    the xnio buffer pool
+     * @param client        the undertow client
+     * @param xnioSsl       the ssl setup
+     * @param options       the options
+     */
+    static void internalPingNode(Node node, PingCallback callback, XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, UndertowClient client, XnioSsl xnioSsl, OptionMap options) {
+
+        final URI uri = node.getNodeConfig().getConnectionURI();
+        final long timeout = node.getNodeConfig().getPing();
+        final HttpClientPingTask r = new HttpClientPingTask(uri, callback, ioThread, client, xnioSsl, bufferPool, options);
+        ioThread.execute(r);
+    }
+
     static class ConnectionPoolPingTask implements Runnable {
 
         private final PingCallback callback;
@@ -163,19 +183,24 @@ class NodePingUtil {
             proxyConnection.getConnection().sendRequest(PING_REQUEST, new ClientCallback<ClientExchange>() {
                 @Override
                 public void completed(final ClientExchange result) {
-                    result.setResponseListener(new ClientCallback<ClientExchange>() {
-                        @Override
-                        public void completed(ClientExchange result) {
-                            final RequestExchangeListener listener = new RequestExchangeListener(callback, result, false);
-                            result.setResponseListener(listener);
+                    final RequestExchangeListener listener = new RequestExchangeListener(callback, result, false);
+                    result.setResponseListener(listener);
+                    try {
+                        result.getRequestChannel().shutdownWrites();
+                        if(!result.getRequestChannel().flush()) {
+                            result.getRequestChannel().getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<StreamSinkChannel>() {
+                                @Override
+                                public void handleException(StreamSinkChannel channel, IOException exception) {
+                                    IoUtils.safeClose(proxyConnection.getConnection());
+                                    callback.failed();
+                                }
+                            }));
+                            result.getRequestChannel().resumeWrites();
                         }
-
-                        @Override
-                        public void failed(IOException e) {
-                            callback.failed();
-                            IoUtils.safeClose(result.getConnection());
-                        }
-                    });
+                    } catch (IOException e) {
+                        IoUtils.safeClose(proxyConnection.getConnection());
+                        callback.failed();
+                    }
                 }
 
                 @Override
@@ -260,18 +285,34 @@ class NodePingUtil {
             // TODO AJP has a special ping thing
             client.connect(new ClientCallback<ClientConnection>() {
                 @Override
-                public void completed(final ClientConnection result) {
-                    result.sendRequest(PING_REQUEST, new ClientCallback<ClientExchange>() {
+                public void completed(final ClientConnection clientConnection) {
+                    clientConnection.sendRequest(PING_REQUEST, new ClientCallback<ClientExchange>() {
                         @Override
                         public void completed(ClientExchange result) {
-                            final RequestExchangeListener listener = new RequestExchangeListener(callback, result, true);
+                            final RequestExchangeListener listener = new RequestExchangeListener(callback, result, false);
                             result.setResponseListener(listener);
+                            try {
+                                result.getRequestChannel().shutdownWrites();
+                                if(!result.getRequestChannel().flush()) {
+                                    result.getRequestChannel().getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<StreamSinkChannel>() {
+                                        @Override
+                                        public void handleException(StreamSinkChannel channel, IOException exception) {
+                                            IoUtils.safeClose(clientConnection);
+                                            callback.failed();
+                                        }
+                                    }));
+                                    result.getRequestChannel().resumeWrites();
+                                }
+                            } catch (IOException e) {
+                                IoUtils.safeClose(clientConnection);
+                                callback.failed();
+                            }
                         }
 
                         @Override
                         public void failed(IOException e) {
                             callback.failed();
-                            IoUtils.safeClose(result);
+                            IoUtils.safeClose(clientConnection);
                         }
                     });
                 }

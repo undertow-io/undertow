@@ -18,11 +18,10 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.AVAILABLE;
-import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.FULL;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
 
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
-import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ConnectionPoolManager;
 import io.undertow.server.handlers.proxy.ProxyCallback;
@@ -40,8 +38,8 @@ import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.server.handlers.proxy.ProxyConnectionPool;
 import org.xnio.OptionMap;
+import org.xnio.Pool;
 import org.xnio.XnioIoThread;
-import org.xnio.ssl.XnioSsl;
 
 /**
  * @author Stuart Douglas
@@ -72,9 +70,12 @@ class Node {
     private final ProxyConnectionPool connectionPool;
     private final NodeStats stats = new NodeStats();
     private final NodeLbStatus lbStatus = new NodeLbStatus();
+    private final ModClusterContainer container;
     private final List<VHostMapping> vHosts = new CopyOnWriteArrayList<>();
     private final List<Context> contexts = new CopyOnWriteArrayList<>();
+
     private final XnioIoThread ioThread;
+    private final Pool<ByteBuffer> bufferPool;
 
     private volatile int state = ERROR; // This gets cleared with the first status report
 
@@ -87,14 +88,16 @@ class Node {
     private static final AtomicInteger idGen = new AtomicInteger();
     private static final AtomicIntegerFieldUpdater<Node> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(Node.class, "state");
 
-    protected Node(NodeConfig nodeConfig, Balancer balancerConfig, XnioIoThread ioThread, XnioSsl xnioSsl, UndertowClient client) {
+    protected Node(NodeConfig nodeConfig, Balancer balancerConfig, XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, ModClusterContainer container) {
         this.id = idGen.incrementAndGet();
         this.jvmRoute = nodeConfig.getJvmRoute();
         this.nodeConfig = nodeConfig;
         this.ioThread = ioThread;
+        this.bufferPool = bufferPool;
         this.balancerConfig = balancerConfig;
+        this.container = container;
         this.connectionPoolManager = new NodeConnectionPoolManager();
-        this.connectionPool = new ProxyConnectionPool(connectionPoolManager, nodeConfig.getConnectionURI(), xnioSsl, client, OptionMap.EMPTY);
+        this.connectionPool = new ProxyConnectionPool(connectionPoolManager, nodeConfig.getConnectionURI(), container.getXnioSsl(), container.getClient(), OptionMap.EMPTY);
     }
 
     public int getId() {
@@ -175,13 +178,6 @@ class Node {
         return lbStatus.getLbStatus();
     }
 
-    protected boolean checkHealth() {
-        if (anyAreSet(state, ERROR)) {
-            return true;
-        }
-        return !lbStatus.update() || allAreClear(state, ACTIVE_PING);
-    }
-
     /**
      * This node got elected to serve a request!
      */
@@ -198,7 +194,58 @@ class Node {
     }
 
     /**
-     * Async ping.
+     * Check the health of the node and try to ping it if necessary.
+     *
+     * @param threshold    the threshold after which the node should be removed
+     */
+    protected void checkHealth(long threshold) {
+        final int state = this.state;
+        if (anyAreSet(state, REMOVED | ACTIVE_PING)) {
+            return;
+        }
+        if (allAreClear(state, ERROR)) {
+            if (lbStatus.update()) {
+                return;
+            }
+        }
+        healthCheckPing(threshold);
+    }
+
+    void healthCheckPing(final long threshold) {
+        int oldState, newState;
+        for (;;) {
+            oldState = this.state;
+            if ((oldState & ACTIVE_PING) != 0) {
+                // There is already a ping active
+                return;
+            }
+            newState = oldState | ACTIVE_PING;
+            if (stateUpdater.compareAndSet(this, oldState, newState)) {
+                break;
+            }
+        }
+
+        NodePingUtil.internalPingNode(this, new NodePingUtil.PingCallback() {
+            @Override
+            public void completed() {
+                clearActivePing();
+            }
+
+            @Override
+            public void failed() {
+                try {
+                    if (healthCheckFailed() == threshold) {
+                        container.removeNode(Node.this);
+                    }
+                } finally {
+                    clearActivePing();
+                }
+            }
+        }, ioThread, bufferPool, container.getClient(), container.getXnioSsl(), OptionMap.EMPTY);
+    }
+
+    /**
+     * Async ping from the user
      *
      * @param exchange    the http server exchange
      * @param callback    the ping callback
@@ -296,17 +343,6 @@ class Node {
         }
     }
 
-    protected void clearError() {
-        int oldState, newState;
-        for (;;) {
-            oldState = this.state;
-            newState = oldState & ~(ERROR | ERROR_MASK);
-            if (stateUpdater.compareAndSet(this, oldState, newState)) {
-                return;
-            }
-        }
-    }
-
     protected void hotStandby() {
         int oldState, newState;
         for (;;) {
@@ -343,12 +379,23 @@ class Node {
         }
     }
 
+    private void clearActivePing() {
+        int oldState, newState;
+        for (;;) {
+            oldState = this.state;
+            newState = oldState & ~ACTIVE_PING;
+            if (stateUpdater.compareAndSet(this, oldState, newState)) {
+                return;
+            }
+        }
+    }
+
     /**
      * Mark a node in error. Mod_cluster has a threshold after which broken nodes get removed.
      *
      * @return
      */
-    protected int healthCheckFailed() {
+    private int healthCheckFailed() {
         int oldState, newState;
         for (;;) {
             oldState = this.state;
@@ -381,19 +428,53 @@ class Node {
 
     protected boolean checkAvailable(final boolean existingSession) {
         if (allAreClear(state, ERROR | REMOVED)) {
-            // This needs to be tied into the connection pool better
-            final ProxyConnectionPool.AvailabilityType poolState = connectionPool.available();
-            return poolState == AVAILABLE || poolState == FULL;
+            // Check the state of the queue on the connection pool
+            final int queueState = connectionPool.getQueueStatus();
+            if (queueState == -1) {
+                return true; // Connections available
+            } else if (queueState > -1) {
+                // If there are more queued requests than our max size, this node cannot be elected
+                if (queueState > nodeConfig.getRequestQueueSize()) {
+                    return false;
+                } else {
+                    // In case there is an existing session or we allow queueing of new requests
+                    if (existingSession) {
+                        return true;
+                    } else if (!existingSession && nodeConfig.isQueueNewRequests()) {
+                        return true;
+                    }
+                }
+            }
         }
         return false;
     }
 
     private class NodeConnectionPoolManager implements ConnectionPoolManager {
-        //TODO: this whole thing...
+
+        @Override
+        public boolean isAvailable() {
+            return allAreClear(state, ERROR | REMOVED);
+        }
+
+        @Override
+        public void connectionError() {
+            markInError();
+        }
+
+        @Override
+        public void clearErrorState() {
+            // This needs to be cleared through the update status
+        }
 
         @Override
         public boolean canCreateConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
-            return connections < 10;
+            final int maxConnections = nodeConfig.getMaxConnections();
+            return maxConnections > 0 ? connections < maxConnections : true;
+        }
+
+        @Override
+        public boolean cacheConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
+            return connections <= nodeConfig.getCacheConnections();
         }
 
         @Override
@@ -409,7 +490,7 @@ class Node {
 
         @Override
         public int getProblemServerRetry() {
-            return nodeConfig.getPing();
+            return -1; // Disable ping from the pool, this is handled through the health-check
         }
     }
 

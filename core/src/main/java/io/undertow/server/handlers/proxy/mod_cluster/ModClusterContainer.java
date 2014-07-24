@@ -18,10 +18,7 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +34,7 @@ import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
 import io.undertow.util.PathMatcher;
-import org.xnio.IoUtils;
+import org.xnio.Pool;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
 
@@ -79,6 +76,10 @@ class ModClusterContainer {
 
     UndertowClient getClient() {
         return client;
+    }
+
+    XnioSsl getXnioSsl() {
+        return xnioSsl;
     }
 
     /**
@@ -141,12 +142,13 @@ class ModClusterContainer {
      * @param config            the node configuration
      * @param balancerConfig    the balancer configuration
      * @param ioThread          the associated I/O thread
+     * @param bufferPool        the buffer pool
      * @return whether the node could be created or not
      */
-    public synchronized boolean addNode(final NodeConfig config, final Balancer.BalancerBuilder balancerConfig, final XnioIoThread ioThread) {
+    public synchronized boolean addNode(final NodeConfig config, final Balancer.BalancerBuilder balancerConfig, final XnioIoThread ioThread, final Pool<ByteBuffer> bufferPool) {
 
         final String jvmRoute = config.getJvmRoute();
-        final Node existing = nodes.get(config);
+        final Node existing = nodes.get(jvmRoute);
         if (existing != null) {
             if (config.getConnectionURI().equals(existing.getNodeConfig().getConnectionURI())) {
                 // TODO better check if they are the same
@@ -168,7 +170,7 @@ class ModClusterContainer {
             balancer = balancerConfig.build();
             balancers.put(balancerRef, balancer);
         }
-        final Node node = new Node(config, balancer, ioThread, xnioSsl, client);
+        final Node node = new Node(config, balancer, ioThread, bufferPool, this);
         nodes.put(jvmRoute, node);
         // Remove from the failover groups
         failoverDomains.remove(node.getJvmRoute());
@@ -346,24 +348,7 @@ class ModClusterContainer {
      */
     void checkHealth() {
         for (final Node node : nodes.values()) {
-            if (node.checkHealth()) {
-                // TODO properly ping the node using the node connection pool
-                try {
-                    final URI uri = node.getNodeConfig().getConnectionURI();
-                    final InetSocketAddress address = new InetSocketAddress(uri.getHost(), uri.getPort());
-                    final Socket socket = new Socket();
-                    try {
-                        socket.setSoLinger(true, 0);
-                        socket.connect(address, 3000);
-                    } finally {
-                        IoUtils.safeClose(socket);
-                    }
-                } catch (IOException e) {
-                    if (node.healthCheckFailed() == removeBrokenNodesThreshold) {
-                        removeNode(node);
-                    }
-                }
-            }
+            node.checkHealth(removeBrokenNodesThreshold);
         }
     }
 

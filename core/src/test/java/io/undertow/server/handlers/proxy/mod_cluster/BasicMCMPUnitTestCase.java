@@ -39,13 +39,13 @@ public class BasicMCMPUnitTestCase extends AbstractModClusterTestBase {
     static {
         server1 = NodeTestConfig.builder()
                 .setJvmRoute("s1")
-                .setType("http")
+                .setType("https")
                 .setHostname("localhost")
                 .setPort(port + 1);
 
         server2 = NodeTestConfig.builder()
                 .setJvmRoute("s2")
-                .setType("ajp")
+                .setType("https")
                 .setHostname("localhost")
                 .setPort(port + 2);
     }
@@ -141,10 +141,10 @@ public class BasicMCMPUnitTestCase extends AbstractModClusterTestBase {
         String response = modClusterClient.ping(null, "localhost", port + 1);
         Assert.assertFalse(response.contains("NOTOK"));
 
-        response = modClusterClient.ping("http", "localhost", port + 1);
+        response = modClusterClient.ping(server1.getType(), "localhost", port + 1);
         Assert.assertFalse(response.contains("NOTOK"));
 
-        response = modClusterClient.ping("ajp", "localhost", port + 2);
+        response = modClusterClient.ping(server2.getType(), "localhost", port + 2);
         Assert.assertFalse(response.contains("NOTOK"));
 
         response = modClusterClient.ping(null, "localhost", 0);

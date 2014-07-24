@@ -36,8 +36,16 @@ public class ModCluster {
 
     private static final HttpHandler NEXT_HANDLER = ResponseCodeHandler.HANDLE_404;
 
+    // Health check intervals
     private final long healtCheckInterval;
     private final long removeBrokenNodes;
+
+    // Proxy connection pool defaults
+    private final int maxConnections;
+    private final int cacheConnections;
+    private final int requestQueueSize;
+    private final boolean queueNewRequests;
+
     private final ModClusterContainer container;
     private final HttpHandler proxyHandler;
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
@@ -45,10 +53,14 @@ public class ModCluster {
     private final String serverID = UUID.randomUUID().toString(); // TODO
 
     ModCluster(Builder builder) {
-        this.healtCheckInterval = builder.healthCheckInterval;
-        this.removeBrokenNodes = builder.removeBrokenNodes;
         this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client);
         this.proxyHandler = new ProxyHandler(container.getProxyClient(), builder.maxRequestTime, NEXT_HANDLER);
+        this.maxConnections = builder.maxConnections;
+        this.cacheConnections = builder.cacheConnections;
+        this.requestQueueSize = builder.requestQueueSize;
+        this.queueNewRequests = builder.queueNewRequests;
+        this.healtCheckInterval = builder.healthCheckInterval;
+        this.removeBrokenNodes = builder.removeBrokenNodes;
     }
 
     protected String getServerID() {
@@ -59,11 +71,27 @@ public class ModCluster {
         return container;
     }
 
-    long getHealthCheckInterval() {
+    public int getMaxConnections() {
+        return maxConnections;
+    }
+
+    public int getCacheConnections() {
+        return cacheConnections;
+    }
+
+    public int getRequestQueueSize() {
+        return requestQueueSize;
+    }
+
+    public boolean isQueueNewRequests() {
+        return queueNewRequests;
+    }
+
+    public long getHealthCheckInterval() {
         return healtCheckInterval;
     }
 
-    long getRemoveBrokenNodes() {
+    public long getRemoveBrokenNodes() {
         return removeBrokenNodes;
     }
 
@@ -129,6 +157,12 @@ public class ModCluster {
         private final XnioSsl xnioSsl;
         private final UndertowClient client;
 
+        // Fairly restrictive connection pool defaults
+        private int maxConnections = 16;
+        private int cacheConnections = 8;
+        private int requestQueueSize = 0;
+        private boolean queueNewRequests = false;
+
         private int maxRequestTime = -1;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
         private long removeBrokenNodes = TimeUnit.MINUTES.toMillis(1);
@@ -154,6 +188,26 @@ public class ModCluster {
 
         public Builder setRemoveBrokenNodes(long removeBrokenNodes) {
             this.removeBrokenNodes = removeBrokenNodes;
+            return this;
+        }
+
+        public Builder setMaxConnections(int maxConnections) {
+            this.maxConnections = maxConnections;
+            return this;
+        }
+
+        public Builder setCacheConnections(int cacheConnections) {
+            this.cacheConnections = cacheConnections;
+            return this;
+        }
+
+        public Builder setRequestQueueSize(int requestQueueSize) {
+            this.requestQueueSize = requestQueueSize;
+            return this;
+        }
+
+        public Builder setQueueNewRequests(boolean queueNewRequests) {
+            this.queueNewRequests = queueNewRequests;
             return this;
         }
     }
