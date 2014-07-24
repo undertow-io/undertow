@@ -78,6 +78,7 @@ public class AnnotatedEndpointTest {
                                 .addEndpoint(AnnotatedClientEndpointWithConfigurator.class)
                                 .addEndpoint(IncrementEndpoint.class)
                                 .addEndpoint(EncodingEndpoint.class)
+                                .addEndpoint(EncodingGenericsEndpoint.class)
                                 .addEndpoint(TimeoutEndpoint.class)
                                 .addEndpoint(ErrorEndpoint.class)
                                 .addEndpoint(RootContextEndpoint.class)
@@ -212,6 +213,18 @@ public class AnnotatedEndpointTest {
         final FutureResult latch = new FutureResult();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encoding/Stuart"));
+        client.connect();
+        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+
+    @Test
+    public void testEncodingWithGenericSuperclass() throws Exception {
+        final byte[] payload = "hello".getBytes();
+        final FutureResult latch = new FutureResult();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encodingGenerics/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
         latch.getIoFuture().get();
