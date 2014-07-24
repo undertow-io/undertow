@@ -18,52 +18,51 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
+import java.io.IOException;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import javax.websocket.ClientEndpoint;
 import javax.websocket.OnClose;
+import javax.websocket.OnError;
 import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
 
 /**
+ * Test error handling behaviour
+ *
  * @author Stuart Douglas
  */
-@ClientEndpoint(subprotocols = {"foo", "bar"})
-public class AnnotatedClientEndpoint {
+@ServerEndpoint("/error")
+public class ErrorEndpoint {
 
-    private static final BlockingDeque<String> MESSAGES = new LinkedBlockingDeque<>();
 
-    private volatile boolean open = false;
-
-    public static String message() throws InterruptedException {
-        return MESSAGES.pollFirst(3, TimeUnit.SECONDS);
-    }
-
-    @OnOpen
-    public void onOpen(final Session session) {
-        session.getAsyncRemote().sendText("hi");
-        this.open = true;
-    }
+    private static final BlockingDeque<String> QUEUE = new LinkedBlockingDeque<>();
 
     @OnMessage
-    public void onMessage(final String message) {
-        MESSAGES.add(message);
+    public void handleMessage(final String message) throws IOException {
+        QUEUE.add(message);
+        if(message.equals("app-error")) {
+            throw new RuntimeException("an error");
+        } else if(message.equals("io-error")) {
+            throw new IOException();
+        }
+    }
+
+    @OnError
+    public void error(Throwable t) {
+        QUEUE.add("ERROR: " + t.getClass().getName());
     }
 
     @OnClose
-    public void onClose() {
-        this.open = false;
-        MESSAGES.add("CLOSED");
+    public void closed() {
+        QUEUE.add("CLOSED");
     }
 
-    public boolean isOpen() {
-        return open;
+    public static String getMessage() {
+        try {
+            return QUEUE.poll(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
-
-    public static void reset() {
-        MESSAGES.clear();
-    }
-
 }

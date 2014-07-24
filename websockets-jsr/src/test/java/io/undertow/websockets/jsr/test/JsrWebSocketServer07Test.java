@@ -30,8 +30,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
@@ -47,6 +49,7 @@ import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.Assert;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.FutureResult;
@@ -65,6 +68,8 @@ import io.undertow.testutils.SpdyIgnore;
 import io.undertow.util.NetworkUtils;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.UndertowSession;
+import io.undertow.websockets.jsr.test.annotated.AnnotatedClientEndpoint;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
 
@@ -630,11 +635,40 @@ public class JsrWebSocketServer07Test {
         client.destroy();
     }
 
+
+    @Test
+    public void testErrorHandling() throws Exception {
+
+
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(ProgramaticErrorEndpoint.class, "/").configurator(new InstanceConfigurator(new ProgramaticErrorEndpoint())).build());
+        deployServlet(builder);
+
+        AnnotatedClientEndpoint c = new AnnotatedClientEndpoint();
+
+        Session session = ContainerProvider.getWebSocketContainer().connectToServer(c, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        Assert.assertEquals("hi", ProgramaticErrorEndpoint.getMessage());
+        session.getAsyncRemote().sendText("app-error");
+        Assert.assertEquals("app-error", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.lang.RuntimeException", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+
+        session.getBasicRemote().sendText("io-error");
+        Assert.assertEquals("io-error", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.lang.RuntimeException", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+        ((UndertowSession)session).forceClose();
+        Assert.assertEquals("CLOSED", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertFalse(c.isOpen());
+
+    }
+
     protected WebSocketVersion getVersion() {
         return WebSocketVersion.V07;
     }
 
-    private void deployServlet(final ServerWebSocketContainer deployment) throws ServletException {
+    private ServletContext deployServlet(final ServerWebSocketContainer deployment) throws ServletException {
 
         final DeploymentInfo builder;
         builder = new DeploymentInfo()
@@ -653,6 +687,7 @@ public class JsrWebSocketServer07Test {
         root.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(root);
+        return manager.getDeployment().getServletContext();
     }
 
     private static class InstanceConfigurator extends ServerEndpointConfig.Configurator {

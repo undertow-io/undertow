@@ -28,6 +28,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpsIgnore;
 import io.undertow.testutils.SpdyIgnore;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.UndertowSession;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
@@ -78,6 +79,7 @@ public class AnnotatedEndpointTest {
                                 .addEndpoint(IncrementEndpoint.class)
                                 .addEndpoint(EncodingEndpoint.class)
                                 .addEndpoint(TimeoutEndpoint.class)
+                                .addEndpoint(ErrorEndpoint.class)
                                 .addEndpoint(RootContextEndpoint.class)
                                 .addEndpoint(ThreadSafetyEndpoint.class)
                                 .addEndpoint(RequestUriEndpoint.class)
@@ -169,6 +171,28 @@ public class AnnotatedEndpointTest {
         session.close();
         Assert.assertEquals("CLOSED", AnnotatedClientEndpointWithConfigurator.message());
     }
+
+    @Test
+    public void testErrorHandling() throws Exception {
+        AnnotatedClientEndpoint c = new AnnotatedClientEndpoint();
+
+        Session session = deployment.connectToServer(c, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/error"));
+        Assert.assertEquals("hi", ErrorEndpoint.getMessage());
+        session.getAsyncRemote().sendText("app-error");
+        Assert.assertEquals("app-error", ErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.lang.RuntimeException", ErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+
+        session.getBasicRemote().sendText("io-error");
+        Assert.assertEquals("io-error", ErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.io.IOException", ErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+        ((UndertowSession)session).forceClose();
+        Assert.assertEquals("CLOSED", ErrorEndpoint.getMessage());
+        Assert.assertFalse(c.isOpen());
+
+    }
+
 
     @Test
     public void testImplicitIntegerConversion() throws Exception {

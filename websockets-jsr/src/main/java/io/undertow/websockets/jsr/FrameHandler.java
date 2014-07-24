@@ -105,11 +105,7 @@ class FrameHandler extends AbstractReceiveListener {
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
-                try {
-                    getEndpoint().onError(session, e);
-                } finally {
-                    session.forceClose();
-                }
+                getEndpoint().onError(session, e);
             }
         });
     }
@@ -238,33 +234,29 @@ class FrameHandler extends AbstractReceiveListener {
             @Override
             public void run() {
                 MessageHandler mHandler = handler.getHandler();
+                try {
 
-                if (mHandler instanceof MessageHandler.Partial) {
-                    if (handler.getMessageType() == String.class) {
-                        ((MessageHandler.Partial) handler.getHandler()).onMessage(message, finalFragment);
-                    } else if (handler.getMessageType() == Reader.class) {
-                        ((MessageHandler.Partial) handler.getHandler()).onMessage(new StringReader(message), finalFragment);
-                    } else {
-                        try {
+                    if (mHandler instanceof MessageHandler.Partial) {
+                        if (handler.getMessageType() == String.class) {
+                            ((MessageHandler.Partial) handler.getHandler()).onMessage(message, finalFragment);
+                        } else if (handler.getMessageType() == Reader.class) {
+                            ((MessageHandler.Partial) handler.getHandler()).onMessage(new StringReader(message), finalFragment);
+                        } else {
                             Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
                             ((MessageHandler.Partial) handler.getHandler()).onMessage(object, finalFragment);
-                        } catch (DecodeException e) {
-                            invokeOnError(e);
                         }
-                    }
-                } else {
-                    if (handler.getMessageType() == String.class) {
-                        ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
-                    } else if (handler.getMessageType() == Reader.class) {
-                        ((MessageHandler.Whole) handler.getHandler()).onMessage(new StringReader(message));
                     } else {
-                        try {
+                        if (handler.getMessageType() == String.class) {
+                            ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
+                        } else if (handler.getMessageType() == Reader.class) {
+                            ((MessageHandler.Whole) handler.getHandler()).onMessage(new StringReader(message));
+                        } else {
                             Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
                             ((MessageHandler.Whole) handler.getHandler()).onMessage(object);
-                        } catch (DecodeException e) {
-                            invokeOnError(e);
                         }
                     }
+                } catch (Exception e) {
+                    invokeOnError(e);
                 }
             }
         });
