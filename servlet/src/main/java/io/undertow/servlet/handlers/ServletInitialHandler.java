@@ -24,7 +24,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
-import io.undertow.servlet.ExceptionLog;
+import io.undertow.servlet.api.ExceptionHandler;
+import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.ApplicationListeners;
@@ -38,8 +39,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
-import org.jboss.logging.BasicLogger;
-import org.jboss.logging.Logger;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
@@ -90,6 +89,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     private final ServletPathMatches paths;
 
+    private final ExceptionHandler exceptionHandler;
+
     public ServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
         this.next = next;
         this.setupAction = setupAction;
@@ -100,6 +101,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             //handle request can use doPrivilidged
             //we need to make sure this is not abused
             AccessController.checkPermission(PERMISSION);
+        }
+        ExceptionHandler handler = servletContext.getDeployment().getDeploymentInfo().getExceptionHandler();
+        if(handler != null) {
+             this.exceptionHandler = handler;
+        } else {
+            this.exceptionHandler = LoggingExceptionHandler.DEFAULT;
         }
     }
 
@@ -253,34 +260,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 //
             } catch (Throwable t) {
 
-                ExceptionLog log = t.getClass().getAnnotation(ExceptionLog.class);
-                if(log != null) {
-                    Logger.Level level = log.value();
-                    Logger.Level stackTraceLevel = log.stackTraceLevel();
-                    String category = log.category();
-                    BasicLogger logger = UndertowLogger.REQUEST_LOGGER;
-                    if(!category.isEmpty()) {
-                        logger = Logger.getLogger(category);
-                    }
-                    boolean stackTrace = true;
-                    if(stackTraceLevel.ordinal() > level.ordinal()) {
-                        if(!logger.isEnabled(stackTraceLevel)) {
-                            stackTrace = false;
-                        }
-                    }
-                    if(stackTrace) {
-                        logger.logf(level, t, "Exception handling request to %s", exchange.getRequestURI());
-                    } else {
-                        logger.logf(level, "Exception handling request to %s: %s", exchange.getRequestURI(), t.getMessage());
-                    }
-                } else if(t instanceof IOException) {
-                    //we log IOExceptions at a lower level
-                    //because they can be easily caused by malicious remote clients in at attempt to DOS the server by filling the logs
-                    UndertowLogger.REQUEST_IO_LOGGER.debugf(t, "Exception handling request to %s", exchange.getRequestURI());
-                } else {
-                    UndertowLogger.REQUEST_LOGGER.exceptionHandlingRequest(t, exchange.getRequestURI());
-                }
-                if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
+                //by default this will just log the exception
+                boolean handled = exceptionHandler.handleThrowable(exchange, request, response, t);
+
+                if(handled) {
+                    exchange.endExchange();
+                } else if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
                     exchange.unDispatch();
                     servletRequestContext.getOriginalRequest().getAsyncContextInternal().handleError(t);
                 } else {

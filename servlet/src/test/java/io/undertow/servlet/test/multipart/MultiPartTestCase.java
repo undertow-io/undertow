@@ -28,6 +28,7 @@ import javax.servlet.ServletException;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -38,6 +39,7 @@ import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
+import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,6 +61,8 @@ public class MultiPartTestCase {
             @Override
             public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
                 deploymentInfo.addListener(Servlets.listener(AddMultipartServetListener.class));
+                deploymentInfo.setExceptionHandler(LoggingExceptionHandler.builder().add(RuntimeException.class, "io.undertow", Logger.Level.DEBUG).build());
+
             }
         },
                 servlet("mp0", MultiPartServlet.class)

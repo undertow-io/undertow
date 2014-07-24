@@ -11,6 +11,8 @@ import java.lang.annotation.Target;
 /**
  * Annotation that can be applied to exceptions to control how they are logged by Undertow.
  *
+ * Note that this will only take effect if the deployments error handler has not been changed.
+ *
  * @author Stuart Douglas
  */
 @Retention(RetentionPolicy.RUNTIME)

@@ -94,6 +94,7 @@ public class DeploymentInfo implements Cloneable {
     private SessionConfigWrapper sessionConfigWrapper = null;
     private boolean eagerFilterInit = false;
     private boolean disableCachingForSecuredPages = true;
+    private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
     private final Map<String, FilterInfo> filters = new HashMap<>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<>();
@@ -1014,6 +1015,24 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(lifecycleInterceptors);
     }
 
+    /**
+     * Returns the exception handler that is used by this deployment. By default this will simply
+     * log unhandled exceptions
+     */
+    public ExceptionHandler getExceptionHandler() {
+        return exceptionHandler;
+    }
+
+    /**
+     * Sets the default exception handler for this deployment
+     * @param exceptionHandler The exception handler
+     * @return
+     */
+    public DeploymentInfo setExceptionHandler(ExceptionHandler exceptionHandler) {
+        this.exceptionHandler = exceptionHandler;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1085,6 +1104,7 @@ public class DeploymentInfo implements Cloneable {
         info.sessionConfigWrapper = sessionConfigWrapper;
         info.eagerFilterInit = eagerFilterInit;
         info.disableCachingForSecuredPages = disableCachingForSecuredPages;
+        info.exceptionHandler = exceptionHandler;
         this.lifecycleInterceptors.addAll(lifecycleInterceptors);
         return info;
     }
