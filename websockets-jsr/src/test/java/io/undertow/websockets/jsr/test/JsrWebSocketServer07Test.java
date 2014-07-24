@@ -660,7 +660,6 @@ public class JsrWebSocketServer07Test {
         Assert.assertTrue(c.isOpen());
         ((UndertowSession)session).forceClose();
         Assert.assertEquals("CLOSED", ProgramaticErrorEndpoint.getMessage());
-        Assert.assertFalse(c.isOpen());
 
     }
 

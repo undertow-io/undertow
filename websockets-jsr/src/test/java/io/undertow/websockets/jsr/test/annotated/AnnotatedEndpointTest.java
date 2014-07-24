@@ -189,7 +189,6 @@ public class AnnotatedEndpointTest {
         Assert.assertTrue(c.isOpen());
         ((UndertowSession)session).forceClose();
         Assert.assertEquals("CLOSED", ErrorEndpoint.getMessage());
-        Assert.assertFalse(c.isOpen());
 
     }
 
