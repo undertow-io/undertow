@@ -18,17 +18,15 @@
 
 package io.undertow.conduits;
 
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
-
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
-import io.undertow.util.Headers;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.XnioIoThread;
@@ -39,8 +37,10 @@ import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreSet;
+import io.undertow.UndertowLogger;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConduitFactory;
+import io.undertow.util.Headers;
 
 /**
  * Channel that handles deflate compression
@@ -60,7 +60,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     /**
      * The streams buffer. This is freed when the next is shutdown
      */
-    protected final Pooled<ByteBuffer> currentBuffer;
+    protected Pooled<ByteBuffer> currentBuffer;
     /**
      * there may have been some additional data that did not fit into the first buffer
      */
@@ -88,28 +88,33 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public int write(final ByteBuffer src) throws IOException {
-        if (anyAreSet(SHUTDOWN | CLOSED, state)) {
+        if (anyAreSet(SHUTDOWN | CLOSED, state) || currentBuffer == null) {
             throw new ClosedChannelException();
         }
-        if (!performFlushIfRequired()) {
-            return 0;
-        }
-        if (src.remaining() == 0) {
-            return 0;
-        }
-        //we may already have some input, if so compress it
-        if(!deflater.needsInput()) {
-            deflateData();
-            if(!deflater.needsInput()) {
+        try {
+            if (!performFlushIfRequired()) {
                 return 0;
             }
+            if (src.remaining() == 0) {
+                return 0;
+            }
+            //we may already have some input, if so compress it
+            if (!deflater.needsInput()) {
+                deflateData();
+                if (!deflater.needsInput()) {
+                    return 0;
+                }
+            }
+            byte[] data = new byte[src.remaining()];
+            src.get(data);
+            preDeflate(data);
+            deflater.setInput(data);
+            deflateData();
+            return data.length;
+        } catch (IOException e) {
+            freeBuffer();
+            throw e;
         }
-        byte[] data = new byte[src.remaining()];
-        src.get(data);
-        preDeflate(data);
-        deflater.setInput(data);
-        deflateData();
-        return data.length;
     }
 
     protected void preDeflate(byte[] data) {
@@ -118,20 +123,25 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
-        if (anyAreSet(SHUTDOWN | CLOSED, state)) {
+        if (anyAreSet(SHUTDOWN | CLOSED, state) || currentBuffer == null) {
             throw new ClosedChannelException();
         }
-        int total = 0;
-        for (int i = offset; i < offset + length; ++i) {
-            if (srcs[i].hasRemaining()) {
-                int ret = write(srcs[i]);
-                total += ret;
-                if (ret == 0) {
-                    return total;
+        try {
+            int total = 0;
+            for (int i = offset; i < offset + length; ++i) {
+                if (srcs[i].hasRemaining()) {
+                    int ret = write(srcs[i]);
+                    total += ret;
+                    if (ret == 0) {
+                        return total;
+                    }
                 }
             }
+            return total;
+        } catch (IOException e) {
+            freeBuffer();
+            throw e;
         }
-        return total;
     }
 
     @Override
@@ -269,77 +279,82 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public boolean flush() throws IOException {
-        boolean nextCreated = false;
         try {
-            if (anyAreSet(SHUTDOWN, state)) {
-                if (anyAreSet(NEXT_SHUTDOWN, state)) {
-                    return next.flush();
-                } else {
-                    if (!performFlushIfRequired()) {
-                        return false;
-                    }
-                    //if the deflater has not been fully flushed we need to flush it
-                    if (!deflater.finished()) {
-                        deflateData();
-                        //if could not fully flush
+            boolean nextCreated = false;
+            try {
+                if (anyAreSet(SHUTDOWN, state)) {
+                    if (anyAreSet(NEXT_SHUTDOWN, state)) {
+                        return next.flush();
+                    } else {
+                        if (!performFlushIfRequired()) {
+                            return false;
+                        }
+                        //if the deflater has not been fully flushed we need to flush it
                         if (!deflater.finished()) {
+                            deflateData();
+                            //if could not fully flush
+                            if (!deflater.finished()) {
+                                return false;
+                            }
+                        }
+                        final ByteBuffer buffer = currentBuffer.getResource();
+                        if (allAreClear(WRITTEN_TRAILER, state)) {
+                            state |= WRITTEN_TRAILER;
+                            byte[] data = getTrailer();
+                            if (data != null) {
+                                if (data.length <= buffer.remaining()) {
+                                    buffer.put(data);
+                                } else if (additionalBuffer == null) {
+                                    additionalBuffer = ByteBuffer.wrap(data);
+                                } else {
+                                    byte[] newData = new byte[additionalBuffer.remaining() + data.length];
+                                    int pos = 0;
+                                    while (additionalBuffer.hasRemaining()) {
+                                        newData[pos++] = additionalBuffer.get();
+                                    }
+                                    for (byte aData : data) {
+                                        newData[pos++] = aData;
+                                    }
+                                    this.additionalBuffer = ByteBuffer.wrap(newData);
+                                }
+                            }
+                        }
+
+                        //ok the deflater is flushed, now we need to flush the buffer
+                        if (!anyAreSet(FLUSHING_BUFFER, state)) {
+                            buffer.flip();
+                            state |= FLUSHING_BUFFER;
+                            if (next == null) {
+                                nextCreated = true;
+                                this.next = createNextChannel();
+                            }
+                        }
+                        if (performFlushIfRequired()) {
+                            state |= NEXT_SHUTDOWN;
+                            freeBuffer();
+                            next.terminateWrites();
+                            return next.flush();
+                        } else {
                             return false;
                         }
                     }
-                    final ByteBuffer buffer = currentBuffer.getResource();
-                    if (allAreClear(WRITTEN_TRAILER, state)) {
-                        state |= WRITTEN_TRAILER;
-                        byte[] data  = getTrailer();
-                        if(data != null) {
-                            if(data.length <= buffer.remaining()) {
-                                buffer.put(data);
-                            } else if(additionalBuffer == null) {
-                                additionalBuffer = ByteBuffer.wrap(data);
-                            } else {
-                                byte[] newData = new byte[additionalBuffer.remaining() + data.length];
-                                int pos = 0;
-                                while (additionalBuffer.hasRemaining()) {
-                                    newData[pos++] = additionalBuffer.get();
-                                }
-                                for (byte aData : data) {
-                                    newData[pos++] = aData;
-                                }
-                                this.additionalBuffer = ByteBuffer.wrap(newData);
-                            }
-                        }
-                    }
-
-                    //ok the deflater is flushed, now we need to flush the buffer
-                    if (!anyAreSet(FLUSHING_BUFFER, state)) {
-                        buffer.flip();
-                        state |= FLUSHING_BUFFER;
-                        if (next == null) {
-                            nextCreated = true;
-                            this.next = createNextChannel();
-                        }
-                    }
-                    if (performFlushIfRequired()) {
-                        state |= NEXT_SHUTDOWN;
-                        currentBuffer.free();
-                        next.terminateWrites();
-                        return next.flush();
-                    } else {
-                        return false;
-                    }
+                } else {
+                    return performFlushIfRequired();
                 }
-            } else {
-                return performFlushIfRequired();
-            }
-        } finally {
-            if (nextCreated) {
-                if (anyAreSet(WRITES_RESUMED, state) && !anyAreSet(NEXT_SHUTDOWN, state)) {
-                    try {
-                        next.resumeWrites();
-                    } catch (Exception e) {
-                        UndertowLogger.REQUEST_LOGGER.debug("Failed to resume", e);
+            } finally {
+                if (nextCreated) {
+                    if (anyAreSet(WRITES_RESUMED, state) && !anyAreSet(NEXT_SHUTDOWN, state)) {
+                        try {
+                            next.resumeWrites();
+                        } catch (Exception e) {
+                            UndertowLogger.REQUEST_LOGGER.debug("Failed to resume", e);
+                        }
                     }
                 }
             }
+        } catch (IOException e) {
+            freeBuffer();
+            throw e;
         }
     }
 
@@ -453,10 +468,15 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public void truncateWrites() throws IOException {
-        if (!anyAreSet(NEXT_SHUTDOWN, state)) {
-            currentBuffer.free();
-        }
+        freeBuffer();
         state |= CLOSED;
         next.truncateWrites();
+    }
+
+    private void freeBuffer() {
+        if (currentBuffer != null) {
+            currentBuffer.free();
+            currentBuffer = null;
+        }
     }
 }
