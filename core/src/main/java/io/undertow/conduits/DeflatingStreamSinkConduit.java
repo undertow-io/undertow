@@ -19,6 +19,7 @@
 package io.undertow.conduits;
 
 import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
@@ -88,7 +89,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public int write(final ByteBuffer src) throws IOException {
-        if (anyAreSet(SHUTDOWN | CLOSED, state) || currentBuffer == null) {
+        if (anyAreSet(state, SHUTDOWN | CLOSED) || currentBuffer == null) {
             throw new ClosedChannelException();
         }
         try {
@@ -123,7 +124,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
-        if (anyAreSet(SHUTDOWN | CLOSED, state) || currentBuffer == null) {
+        if (anyAreSet(state, SHUTDOWN | CLOSED) || currentBuffer == null) {
             throw new ClosedChannelException();
         }
         try {
@@ -156,7 +157,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
-        if (anyAreSet(SHUTDOWN | CLOSED, state)) {
+        if (anyAreSet(state, SHUTDOWN | CLOSED)) {
             throw new ClosedChannelException();
         }
         if (!performFlushIfRequired()) {
@@ -168,7 +169,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
-        if (anyAreSet(SHUTDOWN | CLOSED, state)) {
+        if (anyAreSet(state, SHUTDOWN | CLOSED)) {
             throw new ClosedChannelException();
         }
         if (!performFlushIfRequired()) {
@@ -195,7 +196,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     @Override
     public boolean isWriteResumed() {
         if (next == null) {
-            return anyAreSet(WRITES_RESUMED, state);
+            return anyAreSet(state, WRITES_RESUMED);
         } else {
             return next.isWriteResumed();
         }
@@ -279,11 +280,14 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public boolean flush() throws IOException {
+        if (currentBuffer == null) {
+            return true;
+        }
         try {
             boolean nextCreated = false;
             try {
-                if (anyAreSet(SHUTDOWN, state)) {
-                    if (anyAreSet(NEXT_SHUTDOWN, state)) {
+                if (anyAreSet(state, SHUTDOWN)) {
+                    if (anyAreSet(state, NEXT_SHUTDOWN)) {
                         return next.flush();
                     } else {
                         if (!performFlushIfRequired()) {
@@ -298,7 +302,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                             }
                         }
                         final ByteBuffer buffer = currentBuffer.getResource();
-                        if (allAreClear(WRITTEN_TRAILER, state)) {
+                        if (allAreClear(state, WRITTEN_TRAILER)) {
                             state |= WRITTEN_TRAILER;
                             byte[] data = getTrailer();
                             if (data != null) {
@@ -321,7 +325,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                         }
 
                         //ok the deflater is flushed, now we need to flush the buffer
-                        if (!anyAreSet(FLUSHING_BUFFER, state)) {
+                        if (!anyAreSet(state, FLUSHING_BUFFER)) {
                             buffer.flip();
                             state |= FLUSHING_BUFFER;
                             if (next == null) {
@@ -343,7 +347,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                 }
             } finally {
                 if (nextCreated) {
-                    if (anyAreSet(WRITES_RESUMED, state) && !anyAreSet(NEXT_SHUTDOWN, state)) {
+                    if (anyAreSet(state, WRITES_RESUMED) && !anyAreSet(state ,NEXT_SHUTDOWN)) {
                         try {
                             next.resumeWrites();
                         } catch (Exception e) {
@@ -371,7 +375,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
      * @return false if there is still more to flush
      */
     private boolean performFlushIfRequired() throws IOException {
-        if (anyAreSet(FLUSHING_BUFFER, state)) {
+        if (anyAreSet(state, FLUSHING_BUFFER)) {
             final ByteBuffer[] bufs = new ByteBuffer[additionalBuffer == null ? 1 : 2];
             long totalLength = 0;
             bufs[0] = currentBuffer.getResource();
@@ -400,7 +404,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
 
     private StreamSinkConduit createNextChannel() {
-        if (deflater.finished()) {
+        if (deflater.finished() && allAreSet(state, WRITTEN_TRAILER)) {
             //the deflater was fully flushed before we created the channel. This means that what is in the buffer is
             //all there is
             int remaining = currentBuffer.getResource().remaining();
@@ -428,7 +432,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             Pooled<ByteBuffer> pooled = this.currentBuffer;
             final ByteBuffer outputBuffer = pooled.getResource();
 
-            final boolean shutdown = anyAreSet(SHUTDOWN, state);
+            final boolean shutdown = anyAreSet(state, SHUTDOWN);
 
             byte[] buffer = new byte[1024]; //TODO: we should pool this and make it configurable or something
             while (!deflater.needsInput() || (shutdown && !deflater.finished())) {
@@ -458,7 +462,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             }
         } finally {
             if (nextCreated) {
-                if (anyAreSet(WRITES_RESUMED, state)) {
+                if (anyAreSet(state, WRITES_RESUMED)) {
                     next.resumeWrites();
                 }
             }
