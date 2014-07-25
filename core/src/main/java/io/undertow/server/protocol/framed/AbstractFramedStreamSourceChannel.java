@@ -266,6 +266,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         waitingForFrame = false;
         if(data == null && pendingFrameData.isEmpty() && frameDataRemaining == 0) {
             state |= STATE_DONE | STATE_CLOSED;
+            getFramedChannel().notifyFrameReadComplete(this);
         }
     }
 

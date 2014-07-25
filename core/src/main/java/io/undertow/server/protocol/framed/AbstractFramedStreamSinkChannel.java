@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.framed;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.util.ImmediatePooled;
 import org.xnio.Buffers;
@@ -59,7 +60,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     private static final Pooled<ByteBuffer> EMPTY_BYTE_BUFFER = new ImmediatePooled<>(ByteBuffer.allocateDirect(0));
 
-    private final Pooled<ByteBuffer> buffer;
+    private Pooled<ByteBuffer> buffer;
     private final C channel;
     private final ChannelListener.SimpleSetter<S> writeSetter = new ChannelListener.SimpleSetter<>();
     private final ChannelListener.SimpleSetter<S> closeSetter = new ChannelListener.SimpleSetter<>();
@@ -211,7 +212,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void queueFinalFrame() throws IOException {
-        if (allAreClear(state, STATE_READY_FOR_FLUSH | STATE_FINAL_FRAME_QUEUED | STATE_BROKEN)) {
+        if (allAreClear(state, STATE_READY_FOR_FLUSH | STATE_FINAL_FRAME_QUEUED | STATE_BROKEN | STATE_FULLY_FLUSHED | STATE_CLOSED)) {
             buffer.getResource().flip();
             state |= STATE_READY_FOR_FLUSH | STATE_FINAL_FRAME_QUEUED | STATE_FIRST_DATA_WRITTEN;
             channel.queueFrame((S) this);
@@ -407,6 +408,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         }
         state |= STATE_CLOSED;
         buffer.free();
+        buffer = null;
         if(header != null && header.getByteBuffer() != null) {
             header.getByteBuffer().free();
         }
@@ -473,6 +475,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if (channelClosed) {
                 state |= STATE_FULLY_FLUSHED;
                 buffer.free();
+                buffer = null;
             } else {
                 buffer.getResource().compact();
             }
@@ -482,6 +485,23 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             trailer.free();
             header = null;
             trailer = null;
+            if(anyAreSet(state, STATE_WRITES_SHUTDOWN) && anyAreClear(state, STATE_FINAL_FRAME_QUEUED)) {
+                //we can't actually queue from here, as this method gets invoked from flushSenders()
+                //and recursive invocations are not allowed
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            queueFinalFrame();
+                        } catch (IOException e) {
+                            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                            markBroken();
+                        } catch (Exception e) {
+                            markBroken(); //should never happen
+                        }
+                    }
+                });
+            }
 
             if (isWriteResumed() && !channelClosed) {
                 wakeupWrites();

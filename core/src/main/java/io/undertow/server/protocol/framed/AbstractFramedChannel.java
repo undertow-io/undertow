@@ -25,9 +25,11 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -91,7 +93,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     private volatile long frameDataRemaining;
     private volatile R receiver;
-    private final List<R> receivers = new CopyOnWriteArrayList<>();
+    private final Set<R> receivers = new HashSet<R>();
 
     private boolean receivesSuspended = true;
 
@@ -106,6 +108,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     private ReferenceCountedPooled<ByteBuffer> readData = null;
     private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<>();
+    private boolean flushingSenders = false;
 
     /**
      * Create a new {@link io.undertow.server.protocol.framed.AbstractFramedChannel}
@@ -401,88 +404,96 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * @throws IOException
      */
     protected synchronized void flushSenders() {
-        int toSend = 0;
-        while (!newFrames.isEmpty()) {
-            S frame = newFrames.poll();
-            if (framePriority.insertFrame(frame, pendingFrames)) {
-                if (!heldFrames.isEmpty()) {
-                    framePriority.frameAdded(frame, pendingFrames, heldFrames);
-                }
-            } else {
-                heldFrames.add(frame);
-            }
+        if(flushingSenders) {
+            throw UndertowMessages.MESSAGES.recursiveCallToFlushingSenders();
         }
-
-        boolean finalFrame = false;
-        ListIterator<S> it = pendingFrames.listIterator();
-        while (it.hasNext()) {
-            S sender = it.next();
-            if (sender.isReadyForFlush()) {
-                ++toSend;
-            } else {
-                break;
-            }
-            if (sender.isLastFrame()) {
-                finalFrame = true;
-            }
-        }
-        if (toSend == 0) {
-            channel.getSinkChannel().suspendWrites();
-            return;
-        }
-        ByteBuffer[] data = new ByteBuffer[toSend * 3];
-        int j = 0;
-        it = pendingFrames.listIterator();
-        while (j < toSend) {
-            S next = it.next();
-            //todo: rather than adding empty buffers just store the offsets
-            SendFrameHeader frameHeader = next.getFrameHeader();
-            Pooled<ByteBuffer> frameHeaderByteBuffer = frameHeader.getByteBuffer();
-            data[j * 3] = frameHeaderByteBuffer != null
-                    ? frameHeaderByteBuffer.getResource()
-                    : Buffers.EMPTY_BYTE_BUFFER;
-            data[(j * 3) + 1] = next.getBuffer();
-            data[(j * 3) + 2] = next.getFrameFooter();
-            ++j;
-        }
-        long toWrite = Buffers.remaining(data);
+        flushingSenders = true;
         try {
-            long res;
-            do {
-                res = channel.getSinkChannel().write(data);
-                toWrite -= res;
-            } while (res > 0 && toWrite > 0);
-            int max = toSend;
+            int toSend = 0;
+            while (!newFrames.isEmpty()) {
+                S frame = newFrames.poll();
+                if (framePriority.insertFrame(frame, pendingFrames)) {
+                    if (!heldFrames.isEmpty()) {
+                        framePriority.frameAdded(frame, pendingFrames, heldFrames);
+                    }
+                } else {
+                    heldFrames.add(frame);
+                }
+            }
 
-            while (max > 0) {
-                S sinkChannel = pendingFrames.get(0);
-                Pooled<ByteBuffer> frameHeaderByteBuffer = sinkChannel.getFrameHeader().getByteBuffer();
-                if (frameHeaderByteBuffer != null && frameHeaderByteBuffer.getResource().hasRemaining()
-                        || sinkChannel.getBuffer().hasRemaining()
-                        || sinkChannel.getFrameFooter().hasRemaining()) {
+            boolean finalFrame = false;
+            ListIterator<S> it = pendingFrames.listIterator();
+            while (it.hasNext()) {
+                S sender = it.next();
+                if (sender.isReadyForFlush()) {
+                    ++toSend;
+                } else {
                     break;
                 }
-                sinkChannel.flushComplete();
-                pendingFrames.remove(sinkChannel);
-                max--;
-            }
-            if (!pendingFrames.isEmpty()) {
-                channel.getSinkChannel().resumeWrites();
-            } else {
-                channel.getSinkChannel().suspendWrites();
-            }
-            if (pendingFrames.isEmpty() && finalFrame) {
-                //all data has been sent. Close gracefully
-                channel.getSinkChannel().shutdownWrites();
-                if (!channel.getSinkChannel().flush()) {
-                    channel.getSinkChannel().setWriteListener(ChannelListeners.flushingChannelListener(null, null));
-                    channel.getSinkChannel().resumeWrites();
+                if (sender.isLastFrame()) {
+                    finalFrame = true;
                 }
             }
+            if (toSend == 0) {
+                channel.getSinkChannel().suspendWrites();
+                return;
+            }
+            ByteBuffer[] data = new ByteBuffer[toSend * 3];
+            int j = 0;
+            it = pendingFrames.listIterator();
+            while (j < toSend) {
+                S next = it.next();
+                //todo: rather than adding empty buffers just store the offsets
+                SendFrameHeader frameHeader = next.getFrameHeader();
+                Pooled<ByteBuffer> frameHeaderByteBuffer = frameHeader.getByteBuffer();
+                data[j * 3] = frameHeaderByteBuffer != null
+                        ? frameHeaderByteBuffer.getResource()
+                        : Buffers.EMPTY_BYTE_BUFFER;
+                data[(j * 3) + 1] = next.getBuffer();
+                data[(j * 3) + 2] = next.getFrameFooter();
+                ++j;
+            }
+            long toWrite = Buffers.remaining(data);
+            try {
+                long res;
+                do {
+                    res = channel.getSinkChannel().write(data);
+                    toWrite -= res;
+                } while (res > 0 && toWrite > 0);
+                int max = toSend;
 
-        } catch (IOException e) {
-            safeClose(channel);
-            markWritesBroken(e);
+                while (max > 0) {
+                    S sinkChannel = pendingFrames.get(0);
+                    Pooled<ByteBuffer> frameHeaderByteBuffer = sinkChannel.getFrameHeader().getByteBuffer();
+                    if (frameHeaderByteBuffer != null && frameHeaderByteBuffer.getResource().hasRemaining()
+                            || sinkChannel.getBuffer().hasRemaining()
+                            || sinkChannel.getFrameFooter().hasRemaining()) {
+                        break;
+                    }
+                    sinkChannel.flushComplete();
+                    pendingFrames.remove(sinkChannel);
+                    max--;
+                }
+                if (!pendingFrames.isEmpty()) {
+                    channel.getSinkChannel().resumeWrites();
+                } else {
+                    channel.getSinkChannel().suspendWrites();
+                }
+                if (pendingFrames.isEmpty() && finalFrame) {
+                    //all data has been sent. Close gracefully
+                    channel.getSinkChannel().shutdownWrites();
+                    if (!channel.getSinkChannel().flush()) {
+                        channel.getSinkChannel().setWriteListener(ChannelListeners.flushingChannelListener(null, null));
+                        channel.getSinkChannel().resumeWrites();
+                    }
+                }
+
+            } catch (IOException e) {
+                safeClose(channel);
+                markWritesBroken(e);
+            }
+        } finally {
+            flushingSenders = false;
         }
     }
 
@@ -585,6 +596,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     @Override
     public void close() throws IOException {
         safeClose(channel);
+        if(readData != null) {
+            readData.free();
+            readData = null;
+        }
     }
 
     @Override
@@ -611,6 +626,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
                 IoUtils.safeClose(receiver);
             }
+            receivers.clear();
         }
     }
 

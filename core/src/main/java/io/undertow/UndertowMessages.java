@@ -308,4 +308,7 @@ public interface UndertowMessages {
 
     @Message(id = 94, value = "Blocking await method called from IO thread. Blocking IO must be dispatched to a worker thread or deadlocks will result.")
     IOException awaitCalledFromIoThread();
+
+    @Message(id = 95, value = "Recursive call to flushSenders()")
+    RuntimeException recursiveCallToFlushingSenders();
 }
