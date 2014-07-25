@@ -46,6 +46,7 @@ public class SpdyClientExchange extends AbstractAttachable implements ClientExch
     private final ClientConnection clientConnection;
     private final SpdyStreamSinkChannel request;
     private final ClientRequest clientRequest;
+    private IOException failedReason;
 
     public SpdyClientExchange(ClientConnection clientConnection, SpdyStreamSinkChannel request, ClientRequest clientRequest) {
         this.clientConnection = clientConnection;
@@ -53,10 +54,16 @@ public class SpdyClientExchange extends AbstractAttachable implements ClientExch
         this.clientRequest = clientRequest;
     }
 
-
     @Override
     public void setResponseListener(ClientCallback<ClientExchange> responseListener) {
         this.responseListener = responseListener;
+        if (responseListener != null) {
+            if (failedReason != null) {
+                responseListener.failed(failedReason);
+            } else if (clientResponse != null) {
+                responseListener.completed(this);
+            }
+        }
     }
 
     @Override
@@ -98,6 +105,7 @@ public class SpdyClientExchange extends AbstractAttachable implements ClientExch
     }
 
     void failed(final IOException e) {
+        this.failedReason = e;
         if(responseListener != null) {
             responseListener.failed(e);
         }
