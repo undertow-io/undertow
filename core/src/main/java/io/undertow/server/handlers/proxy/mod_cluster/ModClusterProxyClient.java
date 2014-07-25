@@ -70,7 +70,7 @@ class ModClusterProxyClient implements ProxyClient {
 
         // Resolve the node
         final ModClusterProxyTarget proxyTarget = (ModClusterProxyTarget) target;
-        final Node node = proxyTarget.findNode(exchange);
+        final Context node = proxyTarget.resolveContext(exchange);
         if (node == null) {
             callback.failed(exchange);
         } else {
@@ -78,7 +78,7 @@ class ModClusterProxyClient implements ProxyClient {
                 // If we have a holder, even if the connection was closed we now
                 // exclusivity was already requested so our client
                 // may be assuming it still exists.
-                node.getConnectionPool().connect(target, exchange, new ProxyCallback<ProxyConnection>() {
+                final ProxyCallback<ProxyConnection> wrappedCallback = new ProxyCallback<ProxyConnection>() {
 
                     @Override
                     public void failed(HttpServerExchange exchange) {
@@ -107,9 +107,12 @@ class ModClusterProxyClient implements ProxyClient {
                         }
                         callback.completed(exchange, result);
                     }
-                }, timeout, timeUnit, true);
+                };
+
+                node.handleRequest(proxyTarget, exchange, wrappedCallback, timeout, timeUnit, true);
+                /// node.getConnectionPool().connect(target, exchange, , timeout, timeUnit, true);
             } else {
-                node.getConnectionPool().connect(target, exchange, callback, timeout, timeUnit, false);
+                node.handleRequest(proxyTarget, exchange, callback, timeout, timeUnit, true);
             }
         }
     }

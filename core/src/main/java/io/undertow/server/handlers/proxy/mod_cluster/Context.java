@@ -22,8 +22,15 @@ import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.proxy.ProxyCallback;
+import io.undertow.server.handlers.proxy.ProxyConnection;
+import org.xnio.IoUtils;
 
 /**
  *
@@ -151,16 +158,43 @@ class Context {
         }
     }
 
-    boolean addRequest(boolean existingSession) {
+    /**
+     * Handle a proxy request for this context.
+     *
+     * @param target       the proxy target
+     * @param exchange     the http server exchange
+     * @param callback     the proxy callback
+     * @param timeout      the timeout
+     * @param timeUnit     the time unit
+     * @param exclusive    whether this connection is exclusive
+     */
+    void handleRequest(final ModClusterProxyTarget target, final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit, boolean exclusive) {
+        if (addRequest()) {
+            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                @Override
+                public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                    requestDone();
+                    nextListener.proceed();
+                }
+            });
+            node.getConnectionPool().connect(target, exchange, callback, timeout, timeUnit, exclusive);
+        } else {
+            if (exchange.isResponseStarted()) {
+                IoUtils.safeClose(exchange.getConnection());
+            } else {
+                exchange.setResponseCode(503);
+                exchange.endExchange();
+            }
+        }
+    }
+
+    boolean addRequest() {
         int oldState, newState;
         for (;;) {
             oldState = this.state;
             if ((oldState & STOPPED) != 0) {
                 return false;
             }
-//            if (!existingSession && (oldState & DISABLED) != 0) {
-//                return false;
-//            }
             newState = oldState + 1;
             if ((newState & REQUEST_MASK) == REQUEST_MASK) {
                 return false;

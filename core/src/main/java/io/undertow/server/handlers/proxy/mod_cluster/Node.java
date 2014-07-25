@@ -481,12 +481,12 @@ class Node {
         @Override
         public void queuedConnectionFailed(ProxyClient.ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeoutMills) {
             final ModClusterProxyTarget target = (ModClusterProxyTarget) proxyTarget;
-            final Node node = target.findNode(exchange);
-            if(node == null || node == Node.this) {
+            final Context context = target.resolveContext(exchange);
+            if(context == null || context.getNode() == Node.this) {
                 callback.failed(exchange);
                 return;
             }
-            node.getConnectionPool().connect(proxyTarget, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS, false);
+            context.handleRequest(target, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS, false);
         }
 
         @Override

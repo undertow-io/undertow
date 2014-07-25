@@ -27,12 +27,12 @@ import io.undertow.server.handlers.proxy.ProxyClient;
 public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget {
 
     /**
-     * Find a node.
+     * Resolve the responsible context handling this request.
      *
      * @param exchange the http server exchange
-     * @return the node
+     * @return the context
      */
-    Node findNode(HttpServerExchange exchange);
+    Context resolveContext(HttpServerExchange exchange);
 
     class ExistingSessionTarget implements ModClusterProxyTarget {
 
@@ -49,12 +49,12 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget {
         }
 
         @Override
-        public Node findNode(HttpServerExchange exchange) {
+        public Context resolveContext(HttpServerExchange exchange) {
             final Context context = entry.getContextForNode(jvmRoute);
             if (context != null && context.checkAvailable(true)) {
                 final Node node = context.getNode();
-                node.elected();
-                return node;
+                node.elected(); // Maybe move this to context#handleRequest
+                return context;
             }
             final String domain = context != null ? context.getNode().getNodeConfig().getDomain() : null;
             return container.findFailoverNode(entry, domain, jvmRoute, forceStickySession);
@@ -72,7 +72,7 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget {
         }
 
         @Override
-        public Node findNode(HttpServerExchange exchange) {
+        public Context resolveContext(HttpServerExchange exchange) {
             return container.findNewNode(entry);
         }
     }

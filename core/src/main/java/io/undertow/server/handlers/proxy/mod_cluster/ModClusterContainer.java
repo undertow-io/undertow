@@ -358,9 +358,9 @@ class ModClusterContainer {
      * Find a new node handling this request.
      *
      * @param entry the resolved virtual host entry
-     * @return the node, {@code null} if no node could be found
+     * @return the context, {@code null} if not found
      */
-    Node findNewNode(final VirtualHost.HostEntry entry) {
+    Context findNewNode(final VirtualHost.HostEntry entry) {
         return electNode(entry.getContexts(), false, null);
     }
 
@@ -370,9 +370,9 @@ class ModClusterContainer {
      * @oaram entry      the resolved virtual host entry
      * @param domain     the load balancing domain, if known
      * @param jvmRoute   the original jvmRoute
-     * @return
+     * @return the context, {@code null} if not found
      */
-    Node findFailoverNode(final VirtualHost.HostEntry entry, final String domain, final String jvmRoute, final boolean forceStickySession) {
+    Context findFailoverNode(final VirtualHost.HostEntry entry, final String domain, final String jvmRoute, final boolean forceStickySession) {
         String failOverDomain = null;
         if (domain == null) {
             final Node node = nodes.get(jvmRoute);
@@ -387,9 +387,9 @@ class ModClusterContainer {
         }
         final Collection<Context> contexts = entry.getContexts();
         if (failOverDomain != null) {
-            final Node node = electNode(contexts, true, failOverDomain);
-            if (node != null) {
-                return node;
+            final Context context = electNode(contexts, true, failOverDomain);
+            if (context != null) {
+                return context;
             }
         }
         if (forceStickySession) {
@@ -441,7 +441,8 @@ class ModClusterContainer {
         return route;
     }
 
-    static Node electNode(final Iterable<Context> contexts, final boolean existingSession, final String domain) {
+    static Context electNode(final Iterable<Context> contexts, final boolean existingSession, final String domain) {
+        Context elected = null;
         Node candidate = null;
         boolean candidateHotStandby = false;
         for (Context context : contexts) {
@@ -459,9 +460,11 @@ class ModClusterContainer {
                         if (hotStandby) {
                             if (candidate.getElectedDiff() > node.getElectedDiff()) {
                                 candidate = node;
+                                elected = context;
                             }
                         } else {
                             candidate = node;
+                            elected = context;
                             candidateHotStandby = hotStandby;
                         }
                     } else if (hotStandby) {
@@ -472,11 +475,13 @@ class ModClusterContainer {
                         final int lbStatus2 = node.getLoadStatus();
                         if (lbStatus1 > lbStatus2) {
                             candidate = node;
+                            elected = context;
                             candidateHotStandby = false;
                         }
                     }
                 } else {
                     candidate = node;
+                    elected = context;
                     candidateHotStandby = hotStandby;
                 }
             }
@@ -484,7 +489,7 @@ class ModClusterContainer {
         if (candidate != null) {
             candidate.elected(); // We have a winner!
         }
-        return candidate;
+        return elected;
     }
 
     static long removeThreshold(final long healthChecks, final long removeBrokenNodes) {
