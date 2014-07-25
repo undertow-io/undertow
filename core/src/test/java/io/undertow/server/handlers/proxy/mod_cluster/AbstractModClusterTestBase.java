@@ -87,6 +87,23 @@ public abstract class AbstractModClusterTestBase {
 
     protected List<NodeTestConfig> nodes;
 
+    /**
+     * Dynamically change the worker nodes protocol based on the test parameters
+     *
+     * @return the protocol type
+     */
+    static String getType() {
+        if (DefaultServer.isAjp()) {
+            return "ajp";
+        } else if (DefaultServer.isSpdy()) {
+            return "spdy";
+        } else if (DefaultServer.isHttps()) {
+            return "https";
+        } else {
+            return "http";
+        }
+    }
+
     @BeforeClass
     public static void setupModCluster() {
         modCluster = ModCluster.builder(undertowClient, xnioSsl).build();

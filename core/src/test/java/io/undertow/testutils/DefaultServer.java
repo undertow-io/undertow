@@ -768,6 +768,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return spdy || spdyPlain;
     }
 
+    public static boolean isHttps() {
+        return https;
+    }
+
     /**
      * The root handler is tied to the connection, and AJP can re-use connections for different tests, so we
      * use a delegating handler to chance the next handler after the root.

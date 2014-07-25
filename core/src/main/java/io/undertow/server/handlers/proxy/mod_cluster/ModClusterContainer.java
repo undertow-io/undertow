@@ -60,12 +60,14 @@ class ModClusterContainer {
     private final UndertowClient client;
     private final ProxyClient proxyClient;
     private final ModCluster modCluster;
+    private final NodeHealthChecker healthChecker;
     private final long removeBrokenNodesThreshold;
 
     ModClusterContainer(final ModCluster modCluster, final XnioSsl xnioSsl, final UndertowClient client) {
         this.xnioSsl = xnioSsl;
         this.client = client;
         this.modCluster = modCluster;
+        this.healthChecker = modCluster.getHealthChecker();
         this.proxyClient = new ModClusterProxyClient(null, this);
         this.removeBrokenNodesThreshold = removeThreshold(modCluster.getHealthCheckInterval(), modCluster.getRemoveBrokenNodes());
     }
@@ -348,7 +350,7 @@ class ModClusterContainer {
      */
     void checkHealth() {
         for (final Node node : nodes.values()) {
-            node.checkHealth(removeBrokenNodesThreshold);
+            node.checkHealth(removeBrokenNodesThreshold, healthChecker);
         }
     }
 
@@ -407,17 +409,19 @@ class ModClusterContainer {
         final String hostName = exchange.getRequestHeaders().getFirst(Headers.HOST);
         if (hostName != null) {
             final String context = exchange.getRelativePath();
-            VirtualHost host = hosts.get(hostName);
-            if (host == null) {
-                int i = hostName.indexOf(":"); // Remove the port from the host
-                if (i > 0) {
-                    host = hosts.get(hostName.substring(0, i));
-                    if (host == null) {
-                        return null;
-                    }
-                } else {
-                    return null;
+            // Remove the port from the host
+            int i = hostName.indexOf(":");
+            VirtualHost host;
+            if (i > 0) {
+                host = hosts.get(hostName.substring(0, i));
+                if (host == null) {
+                    host = hosts.get(hostName);
                 }
+            } else {
+                host = hosts.get(hostName);
+            }
+            if (host == null) {
+                return null;
             }
             return host.match(context);
         }

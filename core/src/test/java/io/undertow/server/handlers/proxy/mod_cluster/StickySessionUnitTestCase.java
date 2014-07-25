@@ -37,13 +37,13 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
     static {
         server1 = NodeTestConfig.builder()
                 .setJvmRoute("server1")
-                .setType("ajp")
+                .setType(getType())
                 .setHostname("localhost")
                 .setPort(port + 1);
 
         server2 = NodeTestConfig.builder()
                 .setJvmRoute("server2")
-                .setType("http")
+                .setType(getType())
                 .setHostname("localhost")
                 .setPort(port + 2);
     }

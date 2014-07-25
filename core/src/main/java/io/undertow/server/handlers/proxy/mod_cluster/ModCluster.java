@@ -39,6 +39,7 @@ public class ModCluster {
     // Health check intervals
     private final long healtCheckInterval;
     private final long removeBrokenNodes;
+    private final NodeHealthChecker healthChecker;
 
     // Proxy connection pool defaults
     private final int maxConnections;
@@ -53,14 +54,15 @@ public class ModCluster {
     private final String serverID = UUID.randomUUID().toString(); // TODO
 
     ModCluster(Builder builder) {
-        this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client);
-        this.proxyHandler = new ProxyHandler(container.getProxyClient(), builder.maxRequestTime, NEXT_HANDLER);
         this.maxConnections = builder.maxConnections;
         this.cacheConnections = builder.cacheConnections;
         this.requestQueueSize = builder.requestQueueSize;
         this.queueNewRequests = builder.queueNewRequests;
         this.healtCheckInterval = builder.healthCheckInterval;
         this.removeBrokenNodes = builder.removeBrokenNodes;
+        this.healthChecker = builder.healthChecker;
+        this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client);
+        this.proxyHandler = new ProxyHandler(container.getProxyClient(), builder.maxRequestTime, NEXT_HANDLER);
     }
 
     protected String getServerID() {
@@ -93,6 +95,10 @@ public class ModCluster {
 
     public long getRemoveBrokenNodes() {
         return removeBrokenNodes;
+    }
+
+    public NodeHealthChecker getHealthChecker() {
+        return healthChecker;
     }
 
     /**
@@ -164,6 +170,8 @@ public class ModCluster {
         private boolean queueNewRequests = false;
 
         private int maxRequestTime = -1;
+
+        private NodeHealthChecker healthChecker = NodeHealthChecker.OK;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
         private long removeBrokenNodes = TimeUnit.MINUTES.toMillis(1);
 
@@ -208,6 +216,11 @@ public class ModCluster {
 
         public Builder setQueueNewRequests(boolean queueNewRequests) {
             this.queueNewRequests = queueNewRequests;
+            return this;
+        }
+
+        public Builder setHealthChecker(NodeHealthChecker healthChecker) {
+            this.healthChecker = healthChecker;
             return this;
         }
     }

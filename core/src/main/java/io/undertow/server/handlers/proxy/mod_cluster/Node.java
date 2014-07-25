@@ -196,9 +196,10 @@ class Node {
     /**
      * Check the health of the node and try to ping it if necessary.
      *
-     * @param threshold    the threshold after which the node should be removed
+     * @param threshold     the threshold after which the node should be removed
+     * @param healthChecker the node health checker
      */
-    protected void checkHealth(long threshold) {
+    protected void checkHealth(long threshold, NodeHealthChecker healthChecker) {
         final int state = this.state;
         if (anyAreSet(state, REMOVED | ACTIVE_PING)) {
             return;
@@ -208,10 +209,10 @@ class Node {
                 return;
             }
         }
-        healthCheckPing(threshold);
+        healthCheckPing(threshold, healthChecker);
     }
 
-    void healthCheckPing(final long threshold) {
+    void healthCheckPing(final long threshold, NodeHealthChecker healthChecker) {
         int oldState, newState;
         for (;;) {
             oldState = this.state;
@@ -241,7 +242,7 @@ class Node {
                     clearActivePing();
                 }
             }
-        }, ioThread, bufferPool, container.getClient(), container.getXnioSsl(), OptionMap.EMPTY);
+        }, healthChecker, ioThread, bufferPool, container.getClient(), container.getXnioSsl(), OptionMap.EMPTY);
     }
 
     /**

@@ -110,7 +110,8 @@ class NodePingUtil {
     static void pingHttpClient(URI connection, PingCallback callback, HttpServerExchange exchange, UndertowClient client, XnioSsl xnioSsl, OptionMap options) {
 
         final XnioIoThread thread = exchange.getIoThread();
-        final Runnable r = new HttpClientPingTask(connection, callback, thread, client, xnioSsl, exchange.getConnection().getBufferPool(), options);
+        final RequestExchangeListener exchangeListener = new RequestExchangeListener(callback, NodeHealthChecker.NO_CHECK, true);
+        final Runnable r = new HttpClientPingTask(connection, exchangeListener, thread, client, xnioSsl, exchange.getConnection().getBufferPool(), options);
         exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : thread, r);
     }
 
@@ -134,7 +135,8 @@ class NodePingUtil {
                 node.getConnectionPool().connect(null, exchange, new ProxyCallback<ProxyConnection>() {
                     @Override
                     public void completed(final HttpServerExchange exchange, ProxyConnection result) {
-                        exchange.dispatch(SameThreadExecutor.INSTANCE, new ConnectionPoolPingTask(result, callback));
+                        final RequestExchangeListener exchangeListener = new RequestExchangeListener(callback, NodeHealthChecker.NO_CHECK, false);
+                        exchange.dispatch(SameThreadExecutor.INSTANCE, new ConnectionPoolPingTask(result, exchangeListener));
                     }
 
                     @Override
@@ -158,22 +160,23 @@ class NodePingUtil {
      * @param xnioSsl       the ssl setup
      * @param options       the options
      */
-    static void internalPingNode(Node node, PingCallback callback, XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, UndertowClient client, XnioSsl xnioSsl, OptionMap options) {
+    static void internalPingNode(Node node, PingCallback callback, NodeHealthChecker healthChecker, XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, UndertowClient client, XnioSsl xnioSsl, OptionMap options) {
 
         final URI uri = node.getNodeConfig().getConnectionURI();
         final long timeout = node.getNodeConfig().getPing();
-        final HttpClientPingTask r = new HttpClientPingTask(uri, callback, ioThread, client, xnioSsl, bufferPool, options);
+        final RequestExchangeListener exchangeListener = new RequestExchangeListener(callback, healthChecker, true);
+        final HttpClientPingTask r = new HttpClientPingTask(uri, exchangeListener, ioThread, client, xnioSsl, bufferPool, options);
         ioThread.execute(r);
     }
 
     static class ConnectionPoolPingTask implements Runnable {
 
-        private final PingCallback callback;
+        private final RequestExchangeListener exchangeListener;
         private final ProxyConnection proxyConnection;
 
-        ConnectionPoolPingTask(ProxyConnection proxyConnection, PingCallback callback) {
+        ConnectionPoolPingTask(ProxyConnection proxyConnection, RequestExchangeListener exchangeListener) {
             this.proxyConnection = proxyConnection;
-            this.callback = callback;
+            this.exchangeListener = exchangeListener;
         }
 
         @Override
@@ -183,29 +186,29 @@ class NodePingUtil {
             proxyConnection.getConnection().sendRequest(PING_REQUEST, new ClientCallback<ClientExchange>() {
                 @Override
                 public void completed(final ClientExchange result) {
-                    final RequestExchangeListener listener = new RequestExchangeListener(callback, result, false);
-                    result.setResponseListener(listener);
+                    exchangeListener.exchange = result;
+                    result.setResponseListener(exchangeListener);
                     try {
                         result.getRequestChannel().shutdownWrites();
-                        if(!result.getRequestChannel().flush()) {
+                        if (!result.getRequestChannel().flush()) {
                             result.getRequestChannel().getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<StreamSinkChannel>() {
                                 @Override
                                 public void handleException(StreamSinkChannel channel, IOException exception) {
                                     IoUtils.safeClose(proxyConnection.getConnection());
-                                    callback.failed();
+                                    exchangeListener.callback.failed();
                                 }
                             }));
                             result.getRequestChannel().resumeWrites();
                         }
                     } catch (IOException e) {
                         IoUtils.safeClose(proxyConnection.getConnection());
-                        callback.failed();
+                        exchangeListener.callback.failed();
                     }
                 }
 
                 @Override
                 public void failed(IOException e) {
-                    callback.failed();
+                    exchangeListener.callback.failed();
                 }
             });
         }
@@ -261,22 +264,22 @@ class NodePingUtil {
 
     static class HttpClientPingTask implements Runnable {
 
-        private URI connection;
-        private PingCallback callback;
-        private XnioIoThread thread;
-        private UndertowClient client;
-        private XnioSsl xnioSsl;
-        private Pool<ByteBuffer> bufferPool;
-        private OptionMap options;
+        private final URI connection;
+        private final XnioIoThread thread;
+        private final UndertowClient client;
+        private final XnioSsl xnioSsl;
+        private final Pool<ByteBuffer> bufferPool;
+        private final OptionMap options;
+        private final RequestExchangeListener exchangeListener;
 
-        HttpClientPingTask(URI connection, PingCallback callback, XnioIoThread thread, UndertowClient client, XnioSsl xnioSsl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+        HttpClientPingTask(URI connection, RequestExchangeListener exchangeListener, XnioIoThread thread, UndertowClient client, XnioSsl xnioSsl, Pool<ByteBuffer> bufferPool, OptionMap options) {
             this.connection = connection;
-            this.callback = callback;
             this.thread = thread;
             this.client = client;
             this.xnioSsl = xnioSsl;
             this.bufferPool = bufferPool;
             this.options = options;
+            this.exchangeListener = exchangeListener;
         }
 
         @Override
@@ -289,29 +292,29 @@ class NodePingUtil {
                     clientConnection.sendRequest(PING_REQUEST, new ClientCallback<ClientExchange>() {
                         @Override
                         public void completed(ClientExchange result) {
-                            final RequestExchangeListener listener = new RequestExchangeListener(callback, result, false);
-                            result.setResponseListener(listener);
+                            exchangeListener.exchange = result;
+                            result.setResponseListener(exchangeListener);
                             try {
                                 result.getRequestChannel().shutdownWrites();
-                                if(!result.getRequestChannel().flush()) {
+                                if (!result.getRequestChannel().flush()) {
                                     result.getRequestChannel().getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<StreamSinkChannel>() {
                                         @Override
                                         public void handleException(StreamSinkChannel channel, IOException exception) {
                                             IoUtils.safeClose(clientConnection);
-                                            callback.failed();
+                                            exchangeListener.callback.failed();
                                         }
                                     }));
                                     result.getRequestChannel().resumeWrites();
                                 }
                             } catch (IOException e) {
                                 IoUtils.safeClose(clientConnection);
-                                callback.failed();
+                                exchangeListener.callback.failed();
                             }
                         }
 
                         @Override
                         public void failed(IOException e) {
-                            callback.failed();
+                            exchangeListener.callback.failed();
                             IoUtils.safeClose(clientConnection);
                         }
                     });
@@ -319,7 +322,7 @@ class NodePingUtil {
 
                 @Override
                 public void failed(IOException e) {
-                    callback.failed();
+                    exchangeListener.callback.failed();
                 }
             }, connection, thread, xnioSsl, bufferPool, options);
 
@@ -329,13 +332,14 @@ class NodePingUtil {
     static class RequestExchangeListener implements ClientCallback<ClientExchange> {
 
         private final PingCallback callback;
-        private final ClientExchange exchange;
+        private ClientExchange exchange;
         private final boolean closeConnection;
+        private final NodeHealthChecker healthChecker;
 
-        RequestExchangeListener(PingCallback callback, ClientExchange exchange, boolean closeConnection) {
+        RequestExchangeListener(PingCallback callback, NodeHealthChecker healthChecker, boolean closeConnection) {
             this.callback = callback;
-            this.exchange = exchange;
             this.closeConnection = closeConnection;
+            this.healthChecker = healthChecker;
         }
 
         @Override
@@ -343,11 +347,18 @@ class NodePingUtil {
             final ChannelListener<StreamSourceChannel> listener = ChannelListeners.drainListener(Long.MAX_VALUE, new ChannelListener<StreamSourceChannel>() {
                 @Override
                 public void handleEvent(StreamSourceChannel channel) {
-                    final int responseCode = result.getResponse().getResponseCode();
-                    // TODO this should actually check the HTTP 200 OK
-                    callback.completed();
-                    if (closeConnection) {
-                        IoUtils.safeClose(exchange.getConnection());
+                    try {
+                        if (healthChecker.checkResponse(result.getResponse())) {
+                            callback.completed();
+                        } else {
+                            callback.failed();
+                        }
+                    } finally {
+                        if (closeConnection) {
+                            if (exchange != null) {
+                                IoUtils.safeClose(exchange.getConnection());
+                            }
+                        }
                     }
                 }
             }, new ChannelExceptionHandler<StreamSourceChannel>() {
@@ -366,7 +377,9 @@ class NodePingUtil {
         @Override
         public void failed(IOException e) {
             callback.failed();
-            IoUtils.safeClose(exchange.getConnection());
+            if (exchange != null) {
+                IoUtils.safeClose(exchange.getConnection());
+            }
         }
     }
 

@@ -39,13 +39,13 @@ public class BasicMCMPUnitTestCase extends AbstractModClusterTestBase {
     static {
         server1 = NodeTestConfig.builder()
                 .setJvmRoute("s1")
-                .setType("https")
+                .setType(getType())
                 .setHostname("localhost")
                 .setPort(port + 1);
 
         server2 = NodeTestConfig.builder()
                 .setJvmRoute("s2")
-                .setType("https")
+                .setType(getType())
                 .setHostname("localhost")
                 .setPort(port + 2);
     }
