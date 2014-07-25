@@ -494,6 +494,14 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
         } finally {
             flushingSenders = false;
+            if(!newFrames.isEmpty()) {
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        flushSenders();
+                    }
+                });
+            }
         }
     }
 
@@ -520,7 +528,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         newFrames.add(channel);
-        if (newFrames.peek() == channel) {
+        if (newFrames.peek() == channel && !flushingSenders) {
             if(channel.getIoThread() == Thread.currentThread()) {
                 flushSenders();
             } else {

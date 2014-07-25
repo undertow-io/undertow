@@ -486,21 +486,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             header = null;
             trailer = null;
             if(anyAreSet(state, STATE_WRITES_SHUTDOWN) && anyAreClear(state, STATE_FINAL_FRAME_QUEUED)) {
-                //we can't actually queue from here, as this method gets invoked from flushSenders()
-                //and recursive invocations are not allowed
-                getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            queueFinalFrame();
-                        } catch (IOException e) {
-                            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                            markBroken();
-                        } catch (Exception e) {
-                            markBroken(); //should never happen
-                        }
-                    }
-                });
+                queueFinalFrame();
             }
 
             if (isWriteResumed() && !channelClosed) {
