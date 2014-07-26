@@ -35,6 +35,8 @@ import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
+
+import org.junit.Ignore;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -365,7 +367,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     @Override
     protected Description describeChild(FrameworkMethod method) {
-        if (runs > 1) {
+        if (runs > 1 && method.getAnnotation(Ignore.class) == null) {
             return describeRepeatTest(method);
         }
         return super.describeChild(method);
