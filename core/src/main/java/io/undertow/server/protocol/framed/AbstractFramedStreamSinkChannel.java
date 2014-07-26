@@ -18,7 +18,6 @@
 
 package io.undertow.server.protocol.framed;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.util.ImmediatePooled;
 import org.xnio.Buffers;
