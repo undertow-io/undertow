@@ -205,7 +205,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                             //we stop when writes are shutdown because we can't flush until we are active
                             //although we may be flushed as part of a batch
                         }
-                        while (allAreClear(state, STATE_CLOSED) && !broken && !readyForFlush && (anyAreSet(state, STATE_FULLY_FLUSHED) || buffer.getResource().hasRemaining()));
+                        while (allAreSet(state, STATE_WRITES_RESUMED) && allAreClear(state, STATE_CLOSED) && !broken && !readyForFlush && (anyAreSet(state, STATE_FULLY_FLUSHED) || buffer.getResource().hasRemaining()));
                     } finally {
                         state &= ~STATE_IN_LISTENER_LOOP;
                     }
@@ -505,12 +505,13 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 wakeupWrites();
             } else if(isWriteResumed()) {
                 //we need to execute the write listener one last time
-                ChannelListeners.invokeChannelListener((S)this, getWriteListener());
+                //we need to dispatch it back to the IO thread, so we don't invoke it recursivly
+                ChannelListeners.invokeChannelListener(getIoThread(), (S)this, getWriteListener());
             }
 
             final ChannelListener<? super S> closeListener = this.closeSetter.get();
             if (channelClosed && closeListener != null) {
-                ChannelListeners.invokeChannelListener((S) AbstractFramedStreamSinkChannel.this, closeListener);
+                ChannelListeners.invokeChannelListener(getIoThread(), (S) AbstractFramedStreamSinkChannel.this, closeListener);
             }
             handleFlushComplete();
         } finally {

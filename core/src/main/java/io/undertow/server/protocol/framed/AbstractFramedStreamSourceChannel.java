@@ -19,6 +19,7 @@
 package io.undertow.server.protocol.framed;
 
 import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
@@ -242,7 +243,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                                 //if writes are shutdown or we become active then we stop looping
                                 //we stop when writes are shutdown because we can't flush until we are active
                                 //although we may be flushed as part of a batch
-                            } while (allAreClear(state, STATE_CLOSED) && frameDataRemaining > 0 && data != null);
+                            } while (allAreSet(state, STATE_READS_RESUMED) && allAreClear(state, STATE_CLOSED) && frameDataRemaining > 0 && data != null);
                         } finally {
                             state &= ~STATE_IN_LISTENER_LOOP;
                         }
