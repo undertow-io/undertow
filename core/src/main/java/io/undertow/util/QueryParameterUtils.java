@@ -97,7 +97,7 @@ public class QueryParameterUtils {
                 needsDecode = false;
                 startPos = i + 1;
                 equalPos = -1;
-            } else if(c == '%' && encoding != null) {
+            } else if((c == '%' || c == '+') && encoding != null) {
                 needsDecode = true;
             }
         }
