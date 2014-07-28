@@ -34,7 +34,7 @@ public class SpdySynReplyStreamSourceChannel extends SpdyStreamSourceChannel {
 
     private final HeaderMap headers;
     private final int streamId;
-    private HeaderMap newHeaders = null;
+    private volatile HeaderMap newHeaders = null;
     private int flowControlWindow;
     private boolean rst = false;
 
@@ -88,10 +88,12 @@ public class SpdySynReplyStreamSourceChannel extends SpdyStreamSourceChannel {
     /**
      * Merge any new headers from HEADERS blocks into the exchange.
      */
-    private synchronized void handleNewHeaders() {
+    private void handleNewHeaders() {
         if (newHeaders != null) {
-            for (HeaderValues header : newHeaders) {
-                headers.addAll(header.getHeaderName(), header);
+            synchronized (this) {
+                for (HeaderValues header : newHeaders) {
+                    headers.addAll(header.getHeaderName(), header);
+                }
             }
             newHeaders = null;
         }
