@@ -1,2 +1,3 @@
 io.undertow.servlet.attribute.ServletRequestAttribute$Builder
 io.undertow.servlet.attribute.ServletSessionAttribute$Builder
+io.undertow.servlet.attribute.ServletSessionIdAttribute$Builder
