@@ -90,8 +90,8 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
     }
 
     @Override
-    protected void handleFlushComplete() {
-        if(isFinalFrameQueued()) {
+    protected void handleFlushComplete(boolean finalFrame) {
+        if(finalFrame) {
             getChannel().removeStreamSink(getStreamId());
         }
     }

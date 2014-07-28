@@ -512,13 +512,13 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if (channelClosed && closeListener != null) {
                 ChannelListeners.invokeChannelListener(getIoThread(), (S) AbstractFramedStreamSinkChannel.this, closeListener);
             }
-            handleFlushComplete();
+            handleFlushComplete(channelClosed);
         } finally {
             wakeupWaiters();
         }
     }
 
-    protected void handleFlushComplete() {
+    protected void handleFlushComplete(boolean finalFrame) {
 
     }
 

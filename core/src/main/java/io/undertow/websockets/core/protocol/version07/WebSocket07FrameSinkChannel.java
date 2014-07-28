@@ -56,7 +56,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     }
 
     @Override
-    protected void handleFlushComplete() {
+    protected void handleFlushComplete(boolean finalFrame) {
         dataWritten = true;
     }
 
