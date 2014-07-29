@@ -22,6 +22,7 @@ import io.undertow.predicate.Predicate;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.PathTemplateMatcher;
 
@@ -66,6 +67,14 @@ public class RoutingHandler implements HttpHandler {
         }
         PathTemplateMatcher.PathMatchResult<RoutingMatch> match = matcher.match(exchange.getRelativePath());
         if (match == null) {
+            // Check all PathTemplateMatchers to see if there is a match
+            // with a different HttpMethod
+            for (PathTemplateMatcher<RoutingMatch> value : matches.values()) {
+                if (value.match(exchange.getRelativePath()) != null) {
+                    invalidMethodHandler.handleRequest(exchange);
+                    return;
+                }
+            }
             fallbackHandler.handleRequest(exchange);
             return;
         }
@@ -105,6 +114,22 @@ public class RoutingHandler implements HttpHandler {
         return this;
     }
 
+    public synchronized RoutingHandler get(final String template, HttpHandler handler) {
+        return add(Methods.GET, template, handler);
+    }
+
+    public synchronized RoutingHandler post(final String template, HttpHandler handler) {
+        return add(Methods.POST, template, handler);
+    }
+
+    public synchronized RoutingHandler put(final String template, HttpHandler handler) {
+        return add(Methods.PUT, template, handler);
+    }
+
+    public synchronized RoutingHandler delete(final String template, HttpHandler handler) {
+        return add(Methods.DELETE, template, handler);
+    }
+
     public synchronized RoutingHandler add(final String method, final String template, Predicate predicate, HttpHandler handler) {
         return add(new HttpString(method), template, predicate, handler);
     }
@@ -120,6 +145,22 @@ public class RoutingHandler implements HttpHandler {
         }
         res.predicatedHandlers.add(new HandlerHolder(predicate, handler));
         return this;
+    }
+
+    public synchronized RoutingHandler get(final String template, Predicate predicate, HttpHandler handler) {
+        return add(Methods.GET, template, predicate, handler);
+    }
+
+    public synchronized RoutingHandler post(final String template, Predicate predicate, HttpHandler handler) {
+        return add(Methods.POST, template, predicate, handler);
+    }
+
+    public synchronized RoutingHandler put(final String template, Predicate predicate, HttpHandler handler) {
+        return add(Methods.PUT, template, predicate, handler);
+    }
+
+    public synchronized RoutingHandler delete(final String template, Predicate predicate, HttpHandler handler) {
+        return add(Methods.DELETE, template, predicate, handler);
     }
 
     public synchronized RoutingHandler addAll(RoutingHandler routingHandler) {
