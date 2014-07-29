@@ -22,6 +22,7 @@ import io.undertow.UndertowMessages;
 
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -158,6 +159,16 @@ public class PathTemplateMatcher<T> {
 
     Map<String, Set<PathTemplateHolder>> getPathTemplateMap() {
         return pathTemplateMap;
+    }
+
+    public Set<PathTemplate> getPathTemplates() {
+        Set<PathTemplate> templates = new HashSet<>();
+        for (Set<PathTemplateHolder> holders : pathTemplateMap.values()) {
+            for (PathTemplateHolder holder: holders) {
+                templates.add(holder.template);
+            }
+        }
+        return templates;
     }
 
     public synchronized PathTemplateMatcher<T> remove(final String pathTemplate) {
