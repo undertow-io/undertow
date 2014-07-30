@@ -18,7 +18,6 @@
 
 package io.undertow.server.protocol.framed;
 
-import io.undertow.Undertow;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.util.ImmediatePooled;
@@ -43,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
@@ -79,9 +77,17 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private volatile boolean readyForFlush;
 
     /**
-     *
+     * If all the data has been written out and the channel has been fully flushed
      */
     private volatile boolean fullyFlushed;
+
+    /**
+     * If the last frame has been queued.
+     *
+     * Note that this may not actually be the final frame in some circumstances, e.g. if the final frame
+     * is two large to fit in the flow control window. In this case the flag may be cleared after flush is complete.
+     */
+    private volatile boolean finalFrameQueued;
 
     /**
      * If this channel is broken, updated by multiple threads
@@ -96,7 +102,6 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private static final int STATE_WRITES_SHUTDOWN = 1 << 2;
     private static final int STATE_IN_LISTENER_LOOP = 1 << 3;
     private static final int STATE_FIRST_DATA_WRITTEN = 1 << 4;
-    private static final int STATE_FINAL_FRAME_QUEUED = 1 << 5;
 
 
     protected AbstractFramedStreamSinkChannel(C channel) {
@@ -189,13 +194,13 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         }
 
         if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
+            state |= STATE_IN_LISTENER_LOOP;
             getIoThread().execute(new Runnable() {
 
                 int loopCount = 0;
 
                 @Override
                 public void run() {
-                    state |= STATE_IN_LISTENER_LOOP;
                     try {
                         ChannelListener<? super S> listener = getWriteListener();
                         if (listener == null || !isWriteResumed()) {
@@ -234,16 +239,17 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void queueFinalFrame() throws IOException {
-        if (!readyForFlush && !fullyFlushed && allAreClear(state, STATE_FINAL_FRAME_QUEUED | STATE_CLOSED)  && !broken ) {
+        if (!readyForFlush && !fullyFlushed && allAreClear(state, STATE_CLOSED)  && !broken && !finalFrameQueued) {
             readyForFlush = true;
             buffer.getResource().flip();
-            state |= STATE_FINAL_FRAME_QUEUED | STATE_FIRST_DATA_WRITTEN;
+            state |=  STATE_FIRST_DATA_WRITTEN;
+            finalFrameQueued = true;
             channel.queueFrame((S) this);
         }
     }
 
     protected boolean isFinalFrameQueued() {
-        return anyAreSet(state, STATE_FINAL_FRAME_QUEUED);
+        return finalFrameQueued;
     }
 
     @Override
@@ -329,7 +335,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             state |= STATE_CLOSED;
             return true;
         }
-        if (anyAreSet(state, STATE_WRITES_SHUTDOWN) && anyAreClear(state, STATE_FINAL_FRAME_QUEUED)) {
+        if (anyAreSet(state, STATE_WRITES_SHUTDOWN) && !finalFrameQueued) {
             queueFinalFrame();
             return false;
         }
@@ -491,9 +497,16 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     final void flushComplete() throws IOException {
         try {
             int remaining = header.getReminingInBuffer();
-            boolean channelClosed = anyAreSet(state, STATE_FINAL_FRAME_QUEUED) && remaining == 0;
+            boolean finalFrame = finalFrameQueued;
+            boolean channelClosed = finalFrame && remaining == 0;
             if(remaining > 0) {
                 buffer.getResource().limit(buffer.getResource().limit() + remaining);
+                if(finalFrame) {
+                    //we clear the final frame flag, as it could not actually be written out
+                    //note that we don't attempt to requeue, as whatever stopped it from being written will likely still
+                    //be an issue
+                    this.finalFrameQueued = false;
+                }
             }
             if (channelClosed) {
                 fullyFlushed = true;
