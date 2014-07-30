@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.xnio.Buffers;
@@ -89,7 +90,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * new frames to be sent. These will be added to either the pending or held frames list
      * depending on the {@link #framePriority} implementation in use.
      */
-    private final Deque<S> newFrames = new ArrayDeque<>();
+    private final Deque<S> newFrames = new LinkedBlockingDeque<>();
 
     private volatile long frameDataRemaining;
     private volatile R receiver;
@@ -528,7 +529,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         newFrames.add(channel);
-        if (newFrames.peek() == channel && !flushingSenders) {
+        if (!flushingSenders) {
             if(channel.getIoThread() == Thread.currentThread()) {
                 flushSenders();
             } else {
