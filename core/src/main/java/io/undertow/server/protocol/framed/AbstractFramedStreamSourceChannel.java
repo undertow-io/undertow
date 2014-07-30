@@ -228,11 +228,11 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         state |= STATE_READS_RESUMED;
         if(!alreadyResumed || wakeup) {
             if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
+                state |= STATE_IN_LISTENER_LOOP;
                 getIoThread().execute(new Runnable() {
 
                     @Override
                     public void run() {
-                        state |= STATE_IN_LISTENER_LOOP;
                         try {
                             do {
                                 ChannelListener<? super R> listener = getReadListener();
