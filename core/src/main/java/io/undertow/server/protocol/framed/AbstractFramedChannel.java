@@ -436,7 +436,15 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
             }
             if (toSend == 0) {
-                channel.getSinkChannel().suspendWrites();
+                //if there is nothing to send we just attempt a flush on the underlying channel
+                try {
+                    if(channel.getSinkChannel().flush()) {
+                        channel.getSinkChannel().suspendWrites();
+                    }
+                } catch (IOException e) {
+                    safeClose(channel);
+                    markWritesBroken(e);
+                }
                 return;
             }
             ByteBuffer[] data = new ByteBuffer[toSend * 3];
@@ -475,7 +483,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     pendingFrames.remove(sinkChannel);
                     max--;
                 }
-                if (!pendingFrames.isEmpty()) {
+                if (!pendingFrames.isEmpty() || !channel.getSinkChannel().flush()) {
                     channel.getSinkChannel().resumeWrites();
                 } else {
                     channel.getSinkChannel().suspendWrites();
