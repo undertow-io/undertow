@@ -165,4 +165,8 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5031, value = "Proxy request to %s could not connect to backend server %s")
     void proxyFailedToConnectToBackend(String requestURI, URI uri);
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5032, value = "Listener not making progress on framed channel, closing channel to prevent infinite loop")
+    void listenerNotProgressing();
+
 }

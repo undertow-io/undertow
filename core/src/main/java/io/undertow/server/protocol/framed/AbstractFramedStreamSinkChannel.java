@@ -18,6 +18,8 @@
 
 package io.undertow.server.protocol.framed;
 
+import io.undertow.Undertow;
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.util.ImmediatePooled;
 import org.xnio.Buffers;
@@ -77,6 +79,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private volatile boolean readyForFlush;
 
     /**
+     *
+     */
+    private volatile boolean fullyFlushed;
+
+    /**
      * If this channel is broken, updated by multiple threads
      */
     private volatile boolean broken;
@@ -84,18 +91,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private SendFrameHeader header;
     private Pooled<ByteBuffer> trailer;
 
-    private static final int STATE_CLOSED = 1 << 2;
-    private static final int STATE_WRITES_RESUMED = 1 << 4;
-    private static final int STATE_WRITES_SHUTDOWN = 1 << 5;
-    private static final int STATE_IN_LISTENER_LOOP = 1 << 6;
-    private static final int STATE_FIRST_DATA_WRITTEN = 1 << 7;
-
-
-    /**
-     * writes are shutdown, data has been written, but flush has not been called
-     */
-    private static final int STATE_FULLY_FLUSHED = 1 << 8;
-    private static final int STATE_FINAL_FRAME_QUEUED = 1 << 9;
+    private static final int STATE_CLOSED = 1;
+    private static final int STATE_WRITES_RESUMED = 1 << 1;
+    private static final int STATE_WRITES_SHUTDOWN = 1 << 2;
+    private static final int STATE_IN_LISTENER_LOOP = 1 << 3;
+    private static final int STATE_FIRST_DATA_WRITTEN = 1 << 4;
+    private static final int STATE_FINAL_FRAME_QUEUED = 1 << 5;
 
 
     protected AbstractFramedStreamSinkChannel(C channel) {
@@ -190,21 +191,30 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
             getIoThread().execute(new Runnable() {
 
+                int loopCount = 0;
+
                 @Override
                 public void run() {
                     state |= STATE_IN_LISTENER_LOOP;
                     try {
-                        do {
-                            ChannelListener<? super S> listener = getWriteListener();
-                            if (listener == null || !isWriteResumed()) {
-                                return;
-                            }
-                            ChannelListeners.invokeChannelListener((S) AbstractFramedStreamSinkChannel.this, listener);
-                            //if writes are shutdown or we become active then we stop looping
-                            //we stop when writes are shutdown because we can't flush until we are active
-                            //although we may be flushed as part of a batch
+                        ChannelListener<? super S> listener = getWriteListener();
+                        if (listener == null || !isWriteResumed()) {
+                            return;
                         }
-                        while (allAreSet(state, STATE_WRITES_RESUMED) && allAreClear(state, STATE_CLOSED) && !broken && !readyForFlush && (anyAreSet(state, STATE_FULLY_FLUSHED) || buffer.getResource().hasRemaining()));
+                        if(loopCount++ == 10) {
+                            //should never happen
+                            UndertowLogger.ROOT_LOGGER.listenerNotProgressing();
+                            IoUtils.safeClose(AbstractFramedStreamSinkChannel.this);
+                            return;
+                        }
+                        ChannelListeners.invokeChannelListener((S) AbstractFramedStreamSinkChannel.this, listener);
+                        //if writes are shutdown or we become active then we stop looping
+                        //we stop when writes are shutdown because we can't flush until we are active
+                        //although we may be flushed as part of a batch
+
+                        if (allAreSet(state, STATE_WRITES_RESUMED) && allAreClear(state, STATE_CLOSED) && !broken && !readyForFlush && (fullyFlushed || buffer.getResource().hasRemaining())) {
+                            getIoThread().execute(this);
+                        }
                     } finally {
                         state &= ~STATE_IN_LISTENER_LOOP;
                     }
@@ -224,7 +234,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void queueFinalFrame() throws IOException {
-        if (!readyForFlush && allAreClear(state, STATE_FINAL_FRAME_QUEUED | STATE_FULLY_FLUSHED | STATE_CLOSED)  && !broken ) {
+        if (!readyForFlush && !fullyFlushed && allAreClear(state, STATE_FINAL_FRAME_QUEUED | STATE_CLOSED)  && !broken ) {
             readyForFlush = true;
             buffer.getResource().flip();
             state |= STATE_FINAL_FRAME_QUEUED | STATE_FIRST_DATA_WRITTEN;
@@ -315,7 +325,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if (readyForFlush) {
             return false;
         }
-        if (anyAreSet(state, STATE_FULLY_FLUSHED)) {
+        if (fullyFlushed) {
             state |= STATE_CLOSED;
             return true;
         }
@@ -417,7 +427,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void close() throws IOException {
-        if(anyAreSet(state, STATE_CLOSED | STATE_FULLY_FLUSHED)) {
+        if(fullyFlushed || anyAreSet(state, STATE_CLOSED)) {
             return;
         }
         state |= STATE_CLOSED;
@@ -486,7 +496,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 buffer.getResource().limit(buffer.getResource().limit() + remaining);
             }
             if (channelClosed) {
-                state |= STATE_FULLY_FLUSHED;
+                fullyFlushed = true;
                 buffer.free();
                 buffer = null;
             } else {
