@@ -206,7 +206,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                         if (listener == null || !isWriteResumed()) {
                             return;
                         }
-                        if(loopCount++ == 10) {
+                        if(loopCount++ == 100) {
                             //should never happen
                             UndertowLogger.ROOT_LOGGER.listenerNotProgressing();
                             IoUtils.safeClose(AbstractFramedStreamSinkChannel.this);
