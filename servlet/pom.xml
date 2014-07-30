@@ -109,14 +109,14 @@
         </dependency>
 
         <dependency>
-            <groupId>org.mortbay.jetty.npn</groupId>
-            <artifactId>npn-boot</artifactId>
+            <groupId>org.mortbay.jetty.alpn</groupId>
+            <artifactId>alpn-boot</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.jetty.npn</groupId>
-            <artifactId>npn-api</artifactId>
+            <groupId>org.eclipse.jetty.alpn</groupId>
+            <artifactId>alpn-api</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -177,7 +177,7 @@
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
                     </systemPropertyVariables>
-                    <argLine>-Xbootclasspath/p:${org.mortbay.jetty.npn:npn-boot:jar} -Xmx1024m ${jacoco.agent.argLine}</argLine>
+                    <argLine>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar} -Xmx1024m ${jacoco.agent.argLine}</argLine>
                 </configuration>
             </plugin>
         </plugins>

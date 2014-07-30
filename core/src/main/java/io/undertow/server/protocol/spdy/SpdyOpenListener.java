@@ -18,15 +18,11 @@
 
 package io.undertow.server.protocol.spdy;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.OpenListener;
-import io.undertow.server.protocol.http.HttpOpenListener;
-import io.undertow.spdy.SpdyChannel;
-import io.undertow.util.ImmediatePooled;
-import org.eclipse.jetty.npn.NextProtoNego;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+import javax.net.ssl.SSLEngine;
+import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -38,11 +34,14 @@ import org.xnio.conduits.PushBackStreamSourceConduit;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLEngine;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.OpenListener;
+import io.undertow.server.protocol.http.HttpOpenListener;
+import io.undertow.spdy.SpdyChannel;
+import io.undertow.util.ImmediatePooled;
 
 /**
  * Open listener for SPDY server
@@ -118,21 +117,25 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                 delegate.handleEvent(channel);
             }
         } else {
-            NextProtoNego.put(sslEngine, new NextProtoNego.ServerProvider() {
+            ALPN.put(sslEngine, new ALPN.ServerProvider() {
                 @Override
                 public void unsupported() {
                     potentialConnection.selected = HTTP_1_1;
                 }
 
                 @Override
-                public List<String> protocols() {
-                    return Arrays.asList(SPDY_3_1, SPDY_3, HTTP_1_1);
-                }
-
-                @Override
-                public void protocolSelected(String s) {
-                    sslEngine.getSession().putValue(PROTOCOL_KEY, s);
-                    potentialConnection.selected = s;
+                public String select(List<String> strings) {
+                    ALPN.remove(sslEngine);
+                    for(String s : strings) {
+                        if(s.equals(SPDY_3_1)) {
+                            potentialConnection.selected = s;
+                            sslEngine.getSession().putValue(PROTOCOL_KEY, s);
+                            return s;
+                        }
+                    }
+                    sslEngine.getSession().putValue(PROTOCOL_KEY, HTTP_1_1);
+                    potentialConnection.selected = HTTP_1_1;
+                    return HTTP_1_1;
                 }
             });
             potentialConnection.handleEvent(channel.getSourceChannel());
@@ -192,7 +195,6 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                     buffer.getResource().flip();
                     if (SPDY_3.equals(selected) || SPDY_3_1.equals(selected)) {
 
-                        NextProtoNego.remove(JsseXnioSsl.getSslEngine((SslConnection) channel));
                         //cool, we have a spdy connection.
                         SpdyChannel channel = new SpdyChannel(this.channel, bufferPool, buffer, heapBufferPool, false);
                         Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
@@ -204,7 +206,6 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                         channel.resumeReceives();
                         return;
                     } else if (HTTP_1_1.equals(selected) || res > 0) {
-                        NextProtoNego.remove(JsseXnioSsl.getSslEngine((SslConnection) channel));
                         if (delegate == null) {
                             UndertowLogger.REQUEST_IO_LOGGER.couldNotInitiateSpdyConnection();
                             IoUtils.safeClose(channel);

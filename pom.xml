@@ -93,8 +93,9 @@
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.0.Final</version.io.undertow.build.checkstyle-config>
-        <version.org.mortbay.jetty.npn>1.1.7.v20140316</version.org.mortbay.jetty.npn>
-        <version.org.eclipse.jetty.npn>1.1.0.v20120525</version.org.eclipse.jetty.npn>
+
+        <version.org.mortbay.jetty.alpn>7.0.0.v20140317</version.org.mortbay.jetty.alpn>
+        <version.org.eclipse.jetty.alpn>1.0.0</version.org.eclipse.jetty.alpn>
     </properties>
 
     <modules>
@@ -280,9 +281,9 @@
             </dependency>
 
             <dependency>
-                <groupId>org.eclipse.jetty.npn</groupId>
-                <artifactId>npn-api</artifactId>
-                <version>${version.org.eclipse.jetty.npn}</version>
+                <groupId>org.eclipse.jetty.alpn</groupId>
+                <artifactId>alpn-api</artifactId>
+                <version>${version.org.eclipse.jetty.alpn}</version>
             </dependency>
 
             <dependency>
@@ -381,9 +382,9 @@
             </dependency>
 
             <dependency>
-                <groupId>org.mortbay.jetty.npn</groupId>
-                <artifactId>npn-boot</artifactId>
-                <version>${version.org.mortbay.jetty.npn}</version>
+                <groupId>org.mortbay.jetty.alpn</groupId>
+                <artifactId>alpn-boot</artifactId>
+                <version>${version.org.mortbay.jetty.alpn}</version>
             </dependency>
 
             <dependency>

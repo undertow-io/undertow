@@ -146,8 +146,8 @@ public interface UndertowLogger extends BasicLogger {
     void couldNotInitiateSpdyConnection();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5026, value = "Jetty NPN support not found, SPDY client will not be available.")
-    void jettyNpnNotFound();
+    @Message(id = 5026, value = "Jetty ALPN support not found on boot class path, SPDY client will not be available.")
+    void jettyALPNNotFound();
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5027, value = "Timing out request to %s")
