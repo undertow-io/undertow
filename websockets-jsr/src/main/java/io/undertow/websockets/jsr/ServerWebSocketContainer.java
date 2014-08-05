@@ -185,6 +185,18 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
 
         IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation);
+        Number timeout = (Number) cec.getUserProperties().get(TIMEOUT);
+        if(session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS: timeout.intValue(), TimeUnit.SECONDS) != IoFuture.Status.DONE) {
+            //add a notifier to close the channel if the connection actually completes
+            session.cancel();
+            session.addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
+                @Override
+                public void handleDone(WebSocketChannel data, Object attachment) {
+                    IoUtils.safeClose(data);
+                }
+            }, null);
+            throw JsrWebSocketMessages.MESSAGES.connectionTimedOut();
+        }
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
@@ -227,8 +239,8 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
 
 
-        Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
         IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation); //TODO: fix this
+        Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
         if(session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS: timeout.intValue(), TimeUnit.SECONDS) != IoFuture.Status.DONE) {
             //add a notifier to close the channel if the connection actually completes
             session.cancel();
