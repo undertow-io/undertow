@@ -161,13 +161,12 @@ public class HttpContinue {
         try {
             responseChannel.shutdownWrites();
             if (!responseChannel.flush()) {
-                exchange.dispatch();
                 responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
                         new ChannelListener<StreamSinkChannel>() {
                             @Override
                             public void handleEvent(StreamSinkChannel channel) {
-                                callback.onComplete(exchange, null);
                                 channel.suspendWrites();
+                                callback.onComplete(exchange, null);
                             }
                         }, new ChannelExceptionHandler<Channel>() {
                             @Override
