@@ -26,6 +26,9 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
+import io.undertow.protocols.ajp.AjpClientChannel;
+import io.undertow.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
+import io.undertow.protocols.ajp.AjpClientResponseStreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
 import org.xnio.channels.StreamSinkChannel;
@@ -47,11 +50,14 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
     private ClientCallback<ClientExchange> responseCallback;
     private ClientCallback<ClientExchange> readyCallback;
     private ContinueNotification continueNotification;
-    private AjpClientRequestConduit ajpClientRequestConduit;
+    private AjpClientChannel ajpClientChannel;
 
     private ClientResponse response;
     private ClientResponse continueResponse;
     private IOException failedReason;
+
+    private AjpClientResponseStreamSourceChannel responseChannel;
+    private AjpClientRequestClientStreamSinkChannel requestChannel;
 
     private int state = 0;
     private static final int REQUEST_TERMINATED = 1;
@@ -83,8 +89,6 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
         state |= RESPONSE_TERMINATED;
         if (anyAreSet(state, REQUEST_TERMINATED)) {
             clientConnection.requestDone();
-        } else {
-            clientConnection.installReadBodyListener();
         }
     }
 
@@ -138,7 +142,7 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
 
     @Override
     public StreamSinkChannel getRequestChannel() {
-        return new DetachableStreamSinkChannel(clientConnection.getConnection().getSinkChannel()) {
+        return new DetachableStreamSinkChannel(requestChannel) {
             @Override
             protected boolean isFinished() {
                 return anyAreSet(state, REQUEST_TERMINATED);
@@ -148,7 +152,7 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
 
     @Override
     public StreamSourceChannel getResponseChannel() {
-        return new DetachableStreamSourceChannel(clientConnection.getConnection().getSourceChannel()) {
+        return new DetachableStreamSourceChannel(responseChannel) {
             @Override
             protected boolean isFinished() {
                 return anyAreSet(state, RESPONSE_TERMINATED);
@@ -176,18 +180,18 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
         return clientConnection;
     }
 
+    void setResponseChannel(AjpClientResponseStreamSourceChannel responseChannel) {
+        this.responseChannel = responseChannel;
+    }
+
+    void setRequestChannel(AjpClientRequestClientStreamSinkChannel requestChannel) {
+        this.requestChannel = requestChannel;
+    }
+
     void invokeReadReadyCallback(final ClientExchange result) {
         if(readyCallback != null) {
             readyCallback.completed(result);
             readyCallback = null;
         }
-    }
-
-    public AjpClientRequestConduit getAjpClientRequestConduit() {
-        return ajpClientRequestConduit;
-    }
-
-    public void setAjpClientRequestConduit(AjpClientRequestConduit ajpClientRequestConduit) {
-        this.ajpClientRequestConduit = ajpClientRequestConduit;
     }
 }

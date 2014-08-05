@@ -311,4 +311,10 @@ public interface UndertowMessages {
 
     @Message(id = 95, value = "Recursive call to flushSenders()")
     RuntimeException recursiveCallToFlushingSenders();
+
+    @Message(id = 96, value = "More data was written to the channel than specified in the content-length")
+    IllegalStateException fixedLengthOverflow();
+
+    @Message(id = 97, value = "AJP request already in progress")
+    IllegalStateException ajpRequestAlreadyInProgress();
 }

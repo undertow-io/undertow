@@ -54,7 +54,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     private final ChannelListener.SimpleSetter<? extends R> readSetter = new ChannelListener.SimpleSetter();
     private final ChannelListener.SimpleSetter<? extends R> closeSetter = new ChannelListener.SimpleSetter();
 
-    private final AbstractFramedChannel<C, R, S> framedChannel;
+    private final C framedChannel;
     private final Deque<FrameData> pendingFrameData = new LinkedList<>();
 
     private int state = 0;
@@ -84,12 +84,12 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     private long maxStreamSize = -1;
     private long currentStreamSize;
 
-    public AbstractFramedStreamSourceChannel(AbstractFramedChannel<C, R, S> framedChannel) {
+    public AbstractFramedStreamSourceChannel(C framedChannel) {
         this.framedChannel = framedChannel;
         this.waitingForFrame = true;
     }
 
-    public AbstractFramedStreamSourceChannel(AbstractFramedChannel<C, R, S> framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining) {
+    public AbstractFramedStreamSourceChannel(C framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining) {
         this.framedChannel = framedChannel;
         this.waitingForFrame = data == null && frameDataRemaining <= 0;
         this.data = data;
@@ -347,6 +347,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
     }
 
+    protected long handleFrameData(Pooled<ByteBuffer> frameData, long frameDataRemaining) {
+        return frameDataRemaining;
+    }
+
     protected void handleHeaderData(FrameHeaderData headerData) {
 
     }
@@ -485,6 +489,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                         this.frameDataRemaining = pending.getFrameHeaderData().getFrameLength();
                         handleHeaderData(pending.getFrameHeaderData());
                     }
+                    this.frameDataRemaining = handleFrameData(frameData, frameDataRemaining);
                 }
             }
         }
@@ -546,7 +551,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         //we can probably just ignore it, as it does not affect the underlying protocol
     }
 
-    protected AbstractFramedChannel<C, R, S> getFramedChannel() {
+    protected C getFramedChannel() {
         return framedChannel;
     }
 

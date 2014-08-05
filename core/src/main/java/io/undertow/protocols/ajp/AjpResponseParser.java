@@ -1,0 +1,237 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2014 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package io.undertow.protocols.ajp;
+
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
+
+/**
+ * Parser used for the client (i.e. load balancer) side of the AJP connection.
+ *
+ * @author Stuart Douglas
+ */
+class AjpResponseParser extends AbstractAjpParser {
+
+    public static final AjpResponseParser INSTANCE = new AjpResponseParser();
+
+    private static final int AB = ('A' << 8) + 'B';
+
+    //states
+    public static final int BEGIN = 0;
+    public static final int READING_MAGIC_NUMBER = 1;
+    public static final int READING_DATA_SIZE = 2;
+    public static final int READING_PREFIX_CODE = 3;
+    public static final int READING_STATUS_CODE = 4;
+    public static final int READING_REASON_PHRASE = 5;
+    public static final int READING_NUM_HEADERS = 6;
+    public static final int READING_HEADERS = 7;
+    public static final int READING_PERSISTENT_BOOLEAN = 8;
+    public static final int READING_BODY_CHUNK_LENGTH = 9;
+    public static final int DONE = 10;
+
+    //parser states
+    int state;
+    byte prefix;
+    int dataSize;
+    int numHeaders = 0;
+    HttpString currentHeader;
+
+    //final states
+    int statusCode;
+    String reasonPhrase;
+    HeaderMap headers = new HeaderMap();
+    int readBodyChunkSize;
+
+    public boolean isComplete() {
+        return state == DONE;
+    }
+
+    public void reset() {
+        super.reset();
+        state = 0;
+        prefix = 0;
+        dataSize = 0;
+        numHeaders = 0;
+        currentHeader = null;
+
+        statusCode = 0;
+        reasonPhrase = null;
+        headers = new HeaderMap();
+    }
+
+    public void parse(final ByteBuffer buf) throws IOException {
+        if (!buf.hasRemaining()) {
+            return;
+        }
+        switch (this.state) {
+            case BEGIN: {
+                IntegerHolder result = parse16BitInteger(buf);
+                if (!result.readComplete) {
+                    return;
+                } else {
+                    if (result.value != AB) {
+                        throw new IOException("Wrong magic number");
+                    }
+                }
+            }
+            case READING_DATA_SIZE: {
+                IntegerHolder result = parse16BitInteger(buf);
+                if (!result.readComplete) {
+                    this.state = READING_DATA_SIZE;
+                    return;
+                } else {
+                    this.dataSize = result.value;
+                }
+            }
+            case READING_PREFIX_CODE: {
+                if (!buf.hasRemaining()) {
+                    this.state = READING_PREFIX_CODE;
+                    return;
+                } else {
+                    final byte prefix = buf.get();
+                    this.prefix = prefix;
+                    if (prefix == FRAME_TYPE_END_RESPONSE) {
+                        this.state = READING_PERSISTENT_BOOLEAN;
+                        break;
+                    } else if (prefix == FRAME_TYPE_SEND_BODY_CHUNK) {
+                        this.state = READING_BODY_CHUNK_LENGTH;
+                        break;
+                    } else if (prefix != FRAME_TYPE_SEND_HEADERS && prefix != FRAME_TYPE_REQUEST_BODY_CHUNK) {
+                        this.state = DONE;
+                        return;
+                    }
+                }
+            }
+            case READING_STATUS_CODE: {
+                //this state is overloaded for the request size
+                //when reading state=6 (read_body_chunk requests)
+
+                IntegerHolder result = parse16BitInteger(buf);
+                if (result.readComplete) {
+                    if (this.prefix == FRAME_TYPE_SEND_HEADERS) {
+                        statusCode = result.value;
+                    } else {
+                        //read body chunk or end result
+                        //a bit hacky
+                        this.state = DONE;
+                        this.readBodyChunkSize = result.value;
+                        return;
+                    }
+                } else {
+                    this.state = READING_STATUS_CODE;
+                    return;
+                }
+            }
+            case READING_REASON_PHRASE: {
+                StringHolder result = parseString(buf, false);
+                if (result.readComplete) {
+                    reasonPhrase = result.value;
+                    //exchange.setRequestURI(result.value);
+                } else {
+                    this.state = READING_REASON_PHRASE;
+                    return;
+                }
+            }
+            case READING_NUM_HEADERS: {
+                IntegerHolder result = parse16BitInteger(buf);
+                if (!result.readComplete) {
+                    this.state = READING_NUM_HEADERS;
+                    return;
+                } else {
+                    this.numHeaders = result.value;
+                }
+            }
+            case READING_HEADERS: {
+                int readHeaders = this.readHeaders;
+                while (readHeaders < this.numHeaders) {
+                    if (this.currentHeader == null) {
+                        StringHolder result = parseString(buf, true);
+                        if (!result.readComplete) {
+                            this.state = READING_HEADERS;
+                            this.readHeaders = readHeaders;
+                            return;
+                        }
+                        if (result.header != null) {
+                            this.currentHeader = result.header;
+                        } else {
+                            this.currentHeader = HttpString.tryFromString(result.value);
+                        }
+                    }
+                    StringHolder result = parseString(buf, false);
+                    if (!result.readComplete) {
+                        this.state = READING_HEADERS;
+                        this.readHeaders = readHeaders;
+                        return;
+                    }
+                    headers.add(this.currentHeader, result.value);
+                    this.currentHeader = null;
+                    ++readHeaders;
+                }
+                break;
+            }
+        }
+
+        if (state == READING_PERSISTENT_BOOLEAN) {
+            if (!buf.hasRemaining()) {
+                return;
+            }
+            currentIntegerPart = buf.get();
+            this.state = DONE;
+            return;
+        } else if (state == READING_BODY_CHUNK_LENGTH) {
+            IntegerHolder result = parse16BitInteger(buf);
+            if (result.readComplete) {
+                this.currentIntegerPart = result.value;
+                this.state = DONE;
+            }
+            return;
+        } else {
+            this.state = DONE;
+        }
+    }
+
+    @Override
+    protected HttpString headers(int offset) {
+        return AjpConstants.HTTP_HEADERS_ARRAY[offset];
+    }
+
+    public HeaderMap getHeaders() {
+        return headers;
+    }
+
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    public String getReasonPhrase() {
+        return reasonPhrase;
+    }
+
+    public int getReadBodyChunkSize() {
+        return readBodyChunkSize;
+    }
+}

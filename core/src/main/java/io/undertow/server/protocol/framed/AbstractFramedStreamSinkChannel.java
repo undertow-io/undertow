@@ -134,7 +134,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      *
      * @return The header for the current frame, or null
      */
-    final SendFrameHeader getFrameHeader() {
+    final SendFrameHeader getFrameHeader() throws IOException {
         if (header == null) {
             header = createFrameHeader();
             if (header == null) {
@@ -144,7 +144,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         return header;
     }
 
-    protected SendFrameHeader createFrameHeader() {
+    protected SendFrameHeader createFrameHeader() throws IOException{
         return null;
     }
 
@@ -217,7 +217,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                         //we stop when writes are shutdown because we can't flush until we are active
                         //although we may be flushed as part of a batch
 
-                        if (allAreSet(state, STATE_WRITES_RESUMED) && allAreClear(state, STATE_CLOSED) && !broken && !readyForFlush && (fullyFlushed || buffer.getResource().hasRemaining())) {
+                        if (allAreSet(state, STATE_WRITES_RESUMED) && allAreClear(state, STATE_CLOSED) && !broken && !readyForFlush && !fullyFlushed) {
                             getIoThread().execute(this);
                         }
                     } finally {
@@ -496,9 +496,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      */
     final void flushComplete() throws IOException {
         try {
-            int remaining = header.getReminingInBuffer();
+            int remaining = header.getRemainingInBuffer();
             boolean finalFrame = finalFrameQueued;
-            boolean channelClosed = finalFrame && remaining == 0;
+            boolean channelClosed = finalFrame && remaining == 0 && !header.isAnotherFrameRequired();
             if(remaining > 0) {
                 buffer.getResource().limit(buffer.getResource().limit() + remaining);
                 if(finalFrame) {
@@ -507,6 +507,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                     //be an issue
                     this.finalFrameQueued = false;
                 }
+            } else if(header.isAnotherFrameRequired()) {
+                this.finalFrameQueued = false;
             }
             if (channelClosed) {
                 fullyFlushed = true;
@@ -571,7 +573,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if(trailer != null) {
                 trailer.free();
             }
-            buffer.free();
+            if(buffer != null) {
+                buffer.free();
+            }
         }
     }
 

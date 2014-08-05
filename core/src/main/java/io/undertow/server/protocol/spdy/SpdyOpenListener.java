@@ -37,11 +37,12 @@ import org.xnio.ssl.SslConnection;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.protocols.spdy.SpdyChannel;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
-import io.undertow.spdy.SpdyChannel;
 import io.undertow.util.ImmediatePooled;
+
 
 /**
  * Open listener for SPDY server
@@ -103,7 +104,7 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
         //resuming an existing session, no need for NPN
         if (existing != null) {
             UndertowLogger.REQUEST_LOGGER.debug("Resuming existing session, not doing NPN negotiation");
-            if(existing.equals(SPDY_3_1) || existing.equals(SPDY_3)) {
+            if (existing.equals(SPDY_3_1) || existing.equals(SPDY_3)) {
                 SpdyChannel sc = new SpdyChannel(channel, bufferPool, new ImmediatePooled<>(ByteBuffer.wrap(new byte[0])), heapBufferPool, false);
                 sc.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize));
                 sc.resumeReceives();
@@ -126,8 +127,8 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                 @Override
                 public String select(List<String> strings) {
                     ALPN.remove(sslEngine);
-                    for(String s : strings) {
-                        if(s.equals(SPDY_3_1)) {
+                    for (String s : strings) {
+                        if (s.equals(SPDY_3_1)) {
                             potentialConnection.selected = s;
                             sslEngine.getSession().putValue(PROTOCOL_KEY, s);
                             return s;
@@ -198,7 +199,7 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                         //cool, we have a spdy connection.
                         SpdyChannel channel = new SpdyChannel(this.channel, bufferPool, buffer, heapBufferPool, false);
                         Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
-                        if(idleTimeout != null && idleTimeout > 0) {
+                        if (idleTimeout != null && idleTimeout > 0) {
                             channel.setIdleTimeout(idleTimeout);
                         }
                         free = false;

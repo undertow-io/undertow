@@ -316,7 +316,10 @@ class NodePingUtil {
                     IoUtils.safeClose(exchange.getConnection());
                 }
             });
-            listener.handleEvent(result.getResponseChannel());
+            StreamSourceChannel responseChannel = result.getResponseChannel();
+            responseChannel.getReadSetter().set(listener);
+            responseChannel.resumeReads();
+            listener.handleEvent(responseChannel);
         }
 
         @Override

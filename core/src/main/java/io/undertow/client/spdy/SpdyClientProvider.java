@@ -50,7 +50,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
-import io.undertow.spdy.SpdyChannel;
+import io.undertow.protocols.spdy.SpdyChannel;
 import io.undertow.util.ImmediatePooled;
 
 /**

@@ -1834,8 +1834,13 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         public void requestDone() {
-            delegate.setReadListener(null);
-            delegate.setCloseListener(null);
+            if(delegate instanceof ConduitStreamSourceChannel) {
+                ((ConduitStreamSourceChannel)delegate).setReadListener(null);
+                ((ConduitStreamSourceChannel)delegate).setCloseListener(null);
+            } else {
+                delegate.getReadSetter().set(null);
+                delegate.getCloseSetter().set(null);
+            }
         }
 
         @Override
