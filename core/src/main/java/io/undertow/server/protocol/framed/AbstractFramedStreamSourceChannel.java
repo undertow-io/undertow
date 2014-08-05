@@ -480,16 +480,20 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                 FrameData pending = pendingFrameData.poll();
                 if (pending != null) {
                     Pooled<ByteBuffer> frameData = pending.getFrameData();
+                    boolean hasData = true;
                     if(frameData.getResource().hasRemaining()) {
                         this.data = frameData;
                     } else {
                         frameData.free();
+                        hasData = false;
                     }
                     if (pending.getFrameHeaderData() != null) {
                         this.frameDataRemaining = pending.getFrameHeaderData().getFrameLength();
                         handleHeaderData(pending.getFrameHeaderData());
                     }
-                    this.frameDataRemaining = handleFrameData(frameData, frameDataRemaining);
+                    if(hasData) {
+                        this.frameDataRemaining = handleFrameData(frameData, frameDataRemaining);
+                    }
                 }
             }
         }

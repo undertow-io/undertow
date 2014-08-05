@@ -80,7 +80,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
             return sourceChannel;
         } else if (frameHeaderData instanceof RequestBodyChunk) {
             RequestBodyChunk r = (RequestBodyChunk) frameHeaderData;
-            ((AjpClientRequestClientStreamSinkChannel) this.sink).chunkRequested(r.getLength());
+            this.sink.chunkRequested(r.getLength());
             frameData.free();
             return null;
         } else {
