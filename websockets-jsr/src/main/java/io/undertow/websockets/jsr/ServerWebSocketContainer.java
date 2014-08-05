@@ -31,6 +31,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 import org.xnio.IoFuture;
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.XnioWorker;
@@ -63,6 +64,7 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -72,6 +74,8 @@ import java.util.concurrent.Executor;
  */
 public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
+    public static final String TIMEOUT = "io.undertow.websocket.CONNECT_TIMEOUT";
+    public static final int DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS = 10;
 
     private final ClassIntrospecter classIntrospecter;
 
@@ -223,7 +227,18 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
 
 
+        Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
         IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation); //TODO: fix this
+        if(session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS: timeout.intValue(), TimeUnit.SECONDS) != IoFuture.Status.DONE) {
+            //add a notifier to close the channel if the connection actually completes
+            session.addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
+                @Override
+                public void handleDone(WebSocketChannel data, Object attachment) {
+                    IoUtils.safeClose(data);
+                }
+            }, null);
+            throw JsrWebSocketMessages.MESSAGES.connectionTimedOut();
+        }
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
