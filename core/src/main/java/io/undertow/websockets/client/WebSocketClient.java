@@ -20,6 +20,8 @@ package io.undertow.websockets.client;
 
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
+
+import org.xnio.Cancellable;
 import org.xnio.ChannelListener;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
@@ -69,7 +71,7 @@ public class WebSocketClient {
         if (clientNegotiation != null) {
             clientNegotiation.beforeRequest(headers);
         }
-        IoFuture<? extends StreamConnection> result;
+        final IoFuture<? extends StreamConnection> result;
         if (ssl != null) {
             result = HttpUpgrade.performUpgrade(worker, ssl, null, newUri, headers, new ChannelListener<StreamConnection>() {
                 @Override
@@ -95,6 +97,13 @@ public class WebSocketClient {
                 }
             }
         }, null);
+        ioFuture.addCancelHandler(new Cancellable() {
+            @Override
+            public Cancellable cancel() {
+                result.cancel();
+                return null;
+            }
+        });
         return ioFuture.getIoFuture();
     }
 

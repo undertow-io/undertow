@@ -231,6 +231,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation); //TODO: fix this
         if(session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS: timeout.intValue(), TimeUnit.SECONDS) != IoFuture.Status.DONE) {
             //add a notifier to close the channel if the connection actually completes
+            session.cancel();
             session.addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
                 @Override
                 public void handleDone(WebSocketChannel data, Object attachment) {
