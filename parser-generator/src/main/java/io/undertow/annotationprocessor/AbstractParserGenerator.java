@@ -482,7 +482,7 @@ public abstract class AbstractParserGenerator {
     }
 
     private void setupLocalVariables(final CodeAttribute c) {
-        c.setupFrame(DescriptorUtils.makeDescriptor("fakeclass"),
+        c.setupFrame(DescriptorUtils.makeDescriptor("__generated.fakeclass"),
                 DescriptorUtils.makeDescriptor(ByteBuffer.class),
                 parseStateDescriptor,
                 httpExchangeDescriptor,
