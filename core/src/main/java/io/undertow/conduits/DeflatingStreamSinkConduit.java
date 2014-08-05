@@ -281,7 +281,11 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     @Override
     public boolean flush() throws IOException {
         if (currentBuffer == null) {
-            return true;
+            if (anyAreSet(state, NEXT_SHUTDOWN)) {
+                return next.flush();
+            } else {
+                return true;
+            }
         }
         try {
             boolean nextCreated = false;
