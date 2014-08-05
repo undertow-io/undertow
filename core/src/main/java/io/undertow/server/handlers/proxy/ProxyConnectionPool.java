@@ -294,6 +294,13 @@ public class ProxyConnectionPool implements Closeable {
                         public void completed(ClientConnection result) {
                             UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Connected to previously failed host %s, returning to service", getUri());
                             connectionPoolManager.clearErrorState();
+                            final HostThreadData data = getData();
+                            result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
+                                @Override
+                                public void handleEvent(ClientConnection channel) {
+                                    handleClosedConnection(data, channel);
+                                }
+                            });
                             returnConnection(result);
                         }
 
