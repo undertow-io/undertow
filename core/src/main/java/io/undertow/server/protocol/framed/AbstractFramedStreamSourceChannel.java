@@ -234,6 +234,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                     @Override
                     public void run() {
                         try {
+                            boolean moreData;
                             do {
                                 ChannelListener<? super R> listener = getReadListener();
                                 if (listener == null || !isReadResumed()) {
@@ -243,7 +244,8 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                                 //if writes are shutdown or we become active then we stop looping
                                 //we stop when writes are shutdown because we can't flush until we are active
                                 //although we may be flushed as part of a batch
-                            } while (allAreSet(state, STATE_READS_RESUMED) && allAreClear(state, STATE_CLOSED) && frameDataRemaining > 0 && data != null);
+                                moreData = (frameDataRemaining > 0 &&  data != null) || !pendingFrameData.isEmpty();
+                            } while (allAreSet(state, STATE_READS_RESUMED) && allAreClear(state, STATE_CLOSED) && moreData);
                         } finally {
                             state &= ~STATE_IN_LISTENER_LOOP;
                         }
