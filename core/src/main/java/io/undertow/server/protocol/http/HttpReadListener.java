@@ -23,13 +23,16 @@ import io.undertow.UndertowOptions;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ClosingChannelExceptionHandler;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
 import java.io.IOException;
@@ -268,7 +271,22 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             if (connection.getExtraBytes() != null) {
                 connection.getChannel().getSourceChannel().setConduit(new ReadDataStreamSourceConduit(connection.getChannel().getSourceChannel().getConduit(), connection));
             }
-            connection.getUpgradeListener().handleUpgrade(connection.getChannel(), exchange);
+            try {
+                if (!connection.getChannel().getSinkChannel().flush()) {
+                    connection.getChannel().getSinkChannel().setWriteListener(ChannelListeners.flushingChannelListener(new ChannelListener<ConduitStreamSinkChannel>() {
+                        @Override
+                        public void handleEvent(ConduitStreamSinkChannel conduitStreamSinkChannel) {
+                            connection.getUpgradeListener().handleUpgrade(connection.getChannel(), exchange);
+                        }
+                    }, new ClosingChannelExceptionHandler<ConduitStreamSinkChannel>(connection)));
+                    connection.getChannel().getSinkChannel().resumeWrites();
+                    return;
+                }
+                connection.getUpgradeListener().handleUpgrade(connection.getChannel(), exchange);
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                IoUtils.safeClose(connection);
+            }
         }
     }
 
