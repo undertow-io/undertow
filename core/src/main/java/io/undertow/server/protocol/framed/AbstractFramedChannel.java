@@ -765,6 +765,27 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
             if(!sourceClosed || !sinkClosed) {
                 return; //both sides need to be closed
+            } else if(readData != null) {
+                //we make sure there is no data left to receive, if there is then we invoke the receive listener
+                final ChannelListener<? super C> listener = receiveSetter.get();
+                if(listener != null) {
+                    channel.getIoThread().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            while (readData != null) {
+                                int rem = readData.getResource().remaining();
+                                ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, (ChannelListener) receiveSetter.get());
+                                if(readData != null && rem == readData.getResource().remaining()) {
+                                    readData.free();
+                                    readData = null;
+                                    break;//make sure we are making progress
+                                }
+                            }
+                            handleEvent(c);
+                        }
+                    });
+                }
+                return;
             }
 
             if (Thread.currentThread() != c.getIoThread()) {
