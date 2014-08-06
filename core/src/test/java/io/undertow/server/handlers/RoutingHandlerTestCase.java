@@ -32,6 +32,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,6 +62,32 @@ public class RoutingHandlerTestCase {
                         }
                     });
 
+        RoutingHandler convienceHandler = Handlers.routing()
+                .get("/bar", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("GET bar");
+                    }
+                })
+                .put("/bar", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("PUT bar");
+                    }
+                })
+                .post("/bar", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("POST bar");
+                    }
+                })
+                .delete("/bar", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("DELETE bar");
+                    }
+                });
+
         DefaultServer.setRootHandler(Handlers.routing()
                 .add(Methods.GET, "/foo", new HttpHandler() {
                     @Override
@@ -86,9 +113,9 @@ public class RoutingHandlerTestCase {
                         exchange.getResponseSender().send("foo-path" + exchange.getQueryParameters().get("bar"));
                     }
                 })
-                .addAll(commonHandler));
+                .addAll(commonHandler)
+                .addAll(convienceHandler));
     }
-
 
     @Test
     public void testRoutingTemplateHandler() throws IOException {
@@ -136,6 +163,26 @@ public class RoutingHandlerTestCase {
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("baz-path[a]", HttpClientUtils.readResponse(result));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/bar");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("GET bar", HttpClientUtils.readResponse(result));
+
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/bar");
+            result = client.execute(post);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("POST bar", HttpClientUtils.readResponse(result));
+
+            HttpPut put = new HttpPut(DefaultServer.getDefaultServerURL() + "/bar");
+            result = client.execute(put);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("PUT bar", HttpClientUtils.readResponse(result));
+
+            delete = new HttpDelete(DefaultServer.getDefaultServerURL() + "/bar");
+            result = client.execute(delete);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("DELETE bar", HttpClientUtils.readResponse(result));
 
         } finally {
             client.getConnectionManager().shutdown();

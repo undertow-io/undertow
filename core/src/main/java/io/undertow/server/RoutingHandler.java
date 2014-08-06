@@ -22,6 +22,8 @@ import io.undertow.predicate.Predicate;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.PathTemplate;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.PathTemplateMatcher;
 
@@ -38,6 +40,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class RoutingHandler implements HttpHandler {
 
     private final Map<HttpString, PathTemplateMatcher<RoutingMatch>> matches = new CopyOnWriteMap<>();
+    private final PathTemplateMatcher<RoutingMatch> allMethodsMatcher = new PathTemplateMatcher<>();
 
     private volatile HttpHandler fallbackHandler = ResponseCodeHandler.HANDLE_404;
     private volatile HttpHandler invalidMethodHandler = ResponseCodeHandler.HANDLE_405;
@@ -66,6 +69,10 @@ public class RoutingHandler implements HttpHandler {
         }
         PathTemplateMatcher.PathMatchResult<RoutingMatch> match = matcher.match(exchange.getRelativePath());
         if (match == null) {
+            if (allMethodsMatcher.match(exchange.getRelativePath()) != null) {
+                invalidMethodHandler.handleRequest(exchange);
+                return;
+            }
             fallbackHandler.handleRequest(exchange);
             return;
         }
@@ -101,8 +108,29 @@ public class RoutingHandler implements HttpHandler {
         if (res == null) {
             matcher.add(template, res = new RoutingMatch());
         }
+        if (allMethodsMatcher.get(template) == null) {
+            allMethodsMatcher.add(template, res);
+        }
         res.defaultHandler = handler;
         return this;
+    }
+
+
+
+    public synchronized RoutingHandler get(final String template, HttpHandler handler) {
+        return add(Methods.GET, template, handler);
+    }
+
+    public synchronized RoutingHandler post(final String template, HttpHandler handler) {
+        return add(Methods.POST, template, handler);
+    }
+
+    public synchronized RoutingHandler put(final String template, HttpHandler handler) {
+        return add(Methods.PUT, template, handler);
+    }
+
+    public synchronized RoutingHandler delete(final String template, HttpHandler handler) {
+        return add(Methods.DELETE, template, handler);
     }
 
     public synchronized RoutingHandler add(final String method, final String template, Predicate predicate, HttpHandler handler) {
@@ -118,8 +146,27 @@ public class RoutingHandler implements HttpHandler {
         if (res == null) {
             matcher.add(template, res = new RoutingMatch());
         }
+        if (allMethodsMatcher.get(template) == null) {
+            allMethodsMatcher.add(template, res);
+        }
         res.predicatedHandlers.add(new HandlerHolder(predicate, handler));
         return this;
+    }
+
+    public synchronized RoutingHandler get(final String template, Predicate predicate, HttpHandler handler) {
+        return add(Methods.GET, template, predicate, handler);
+    }
+
+    public synchronized RoutingHandler post(final String template, Predicate predicate, HttpHandler handler) {
+        return add(Methods.POST, template, predicate, handler);
+    }
+
+    public synchronized RoutingHandler put(final String template, Predicate predicate, HttpHandler handler) {
+        return add(Methods.PUT, template, predicate, handler);
+    }
+
+    public synchronized RoutingHandler delete(final String template, Predicate predicate, HttpHandler handler) {
+        return add(Methods.DELETE, template, predicate, handler);
     }
 
     public synchronized RoutingHandler addAll(RoutingHandler routingHandler) {
@@ -130,6 +177,13 @@ public class RoutingHandler implements HttpHandler {
                 matches.put(method, matcher = new PathTemplateMatcher<>());
             }
             matcher.addAll(entry.getValue());
+            // If we use allMethodsMatcher.addAll() we can have duplicate
+            // PathTemplates which we want to ignore here so it does not crash.
+            for (PathTemplate template : entry.getValue().getPathTemplates()) {
+                if (allMethodsMatcher.get(template.getTemplateString()) == null) {
+                    allMethodsMatcher.add(template, new RoutingMatch());
+                }
+            }
         }
         return this;
     }
