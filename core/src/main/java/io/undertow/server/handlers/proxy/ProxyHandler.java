@@ -372,11 +372,12 @@ public final class ProxyHandler implements HttpHandler {
 
             clientConnection.getConnection().sendRequest(request, new ClientCallback<ClientExchange>() {
                 @Override
-                public void completed(ClientExchange result) {
+                public void completed(final ClientExchange result) {
 
                     result.putAttachment(EXCHANGE, exchange);
 
-                    if (HttpContinue.requiresContinueResponse(exchange)) {
+                    boolean requiresContinueResponse = HttpContinue.requiresContinueResponse(exchange);
+                    if (requiresContinueResponse) {
                         result.setContinueHandler(new ContinueNotification() {
                             @Override
                             public void handleContinue(final ClientExchange clientExchange) {
@@ -393,11 +394,30 @@ public final class ProxyHandler implements HttpHandler {
                                 });
                             }
                         });
+
                     }
 
                     result.setResponseListener(new ResponseCallback(exchange));
-                    IoExceptionHandler handler = new IoExceptionHandler(exchange, clientConnection.getConnection());
+                    final IoExceptionHandler handler = new IoExceptionHandler(exchange, clientConnection.getConnection());
+                    if(requiresContinueResponse) {
+                        try {
+                            if(!result.getRequestChannel().flush()) {
+                                result.getRequestChannel().getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
+                                    @Override
+                                    public void handleEvent(StreamSinkChannel channel) {
+                                        ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, result), handler, handler, exchange.getConnection().getBufferPool());
+
+                                    }
+                                }, handler));
+                                result.getRequestChannel().resumeWrites();
+                                return;
+                            }
+                        } catch (IOException e) {
+                            handler.handleException(result.getRequestChannel(), e);
+                        }
+                    }
                     ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, result), handler, handler, exchange.getConnection().getBufferPool());
+
                 }
 
                 @Override

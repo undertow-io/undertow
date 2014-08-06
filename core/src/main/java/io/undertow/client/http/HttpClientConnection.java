@@ -306,27 +306,6 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             } catch (IOException e) {
                 handleError(e);
             }
-        } else if (!sinkChannel.isWriteResumed()) {
-            try {
-                //TODO: this needs some more thought
-                if (!sinkChannel.flush()) {
-                    sinkChannel.setWriteListener(new ChannelListener<ConduitStreamSinkChannel>() {
-                        @Override
-                        public void handleEvent(ConduitStreamSinkChannel channel) {
-                            try {
-                                if (channel.flush()) {
-                                    channel.suspendWrites();
-                                }
-                            } catch (IOException e) {
-                                handleError(e);
-                            }
-                        }
-                    });
-                    sinkChannel.resumeWrites();
-                }
-            } catch (IOException e) {
-                handleError(e);
-            }
         }
     }
 

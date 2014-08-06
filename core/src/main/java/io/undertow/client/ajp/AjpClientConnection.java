@@ -232,15 +232,6 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             } catch (IOException e) {
                 handleError(e);
             }
-        } else if (!sinkChannel.isWriteResumed()) {
-            try {
-                //TODO: this needs some more thought, should we just thrown an exception
-                if (!sinkChannel.flush()) {
-                    handleFailedFlush(sinkChannel);
-                }
-            } catch (IOException e) {
-                handleError(e);
-            }
         }
     }
 
