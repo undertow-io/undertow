@@ -106,7 +106,8 @@ public abstract class AbstractModClusterTestBase {
 
     @BeforeClass
     public static void setupModCluster() {
-        modCluster = ModCluster.builder(undertowClient, xnioSsl).build();
+
+        modCluster = ModCluster.builder(DefaultServer.getWorker(), undertowClient, xnioSsl).build();
 
         final int serverPort = getHostPort("default");
         final HttpHandler proxy = modCluster.getProxyHandler();

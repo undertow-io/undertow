@@ -19,14 +19,19 @@
 package io.undertow.server.handlers.proxy.mod_cluster;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
+import org.xnio.ChannelListener;
+import org.xnio.OptionMap;
+import org.xnio.XnioWorker;
+import org.xnio.channels.MulticastMessageChannel;
 
 /**
  * @author Emanuel Muckenhuber
@@ -50,31 +55,39 @@ class MCMPAdvertiseTask implements Runnable {
     private final String path;
     private final byte[] ssalt;
     private final MessageDigest md;
-    private final MulticastSocket socket;
     private final InetSocketAddress address;
     private final ModClusterContainer container;
+    private final MulticastMessageChannel channel;
 
-    MCMPAdvertiseTask(final ModClusterContainer container, final MCMPConfig.AdvertiseConfig config) {
+    static void advertise(final ModClusterContainer container, final MCMPConfig.AdvertiseConfig config, final XnioWorker worker) throws IOException {
+        final InetSocketAddress bindAddress;
+        final InetAddress group = InetAddress.getByName(config.getAdvertiseGroup());
+        if (group == null || linuxLike) {
+            bindAddress = new InetSocketAddress(config.getAdvertisePort());
+        } else {
+            bindAddress = new InetSocketAddress(group, config.getAdvertisePort());
+        }
+        final MulticastMessageChannel channel = worker.createUdpServer(bindAddress, new ChannelListener<MulticastMessageChannel>() {
+            @Override
+            public void handleEvent(MulticastMessageChannel channel) {
+                channel.resumeWrites();
+            }
+        }, OptionMap.EMPTY);
+        final MCMPAdvertiseTask task = new MCMPAdvertiseTask(container, config, channel);
+        channel.getIoThread().executeAtInterval(task, config.getAdvertiseFrequency(), TimeUnit.MILLISECONDS);
+    }
+
+    MCMPAdvertiseTask(final ModClusterContainer container, final MCMPConfig.AdvertiseConfig config, final MulticastMessageChannel channel) throws IOException {
 
         this.container = container;
         this.protocol = config.getProtocol();
         this.host = config.getManagementHost();
         this.port = config.getManagementPort();
         this.path = config.getPath();
+        this.channel = channel;
 
-        try {
-            final InetAddress group = InetAddress.getByName(config.getAdvertiseGroup());
-            if (group == null && linuxLike) {
-                address = new InetSocketAddress(config.getAdvertisePort());
-            } else {
-                address = new InetSocketAddress(group, config.getAdvertisePort());
-            }
-            socket = new MulticastSocket(address); // TODO use XNIO multicast channel
-            socket.setTimeToLive(29);
-            socket.joinGroup(group);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        final InetAddress group = InetAddress.getByName(config.getAdvertiseGroup());
+        address = new InetSocketAddress(group, config.getAdvertisePort());
         try {
             md = MessageDigest.getInstance("MD5");
         } catch (NoSuchAlgorithmException e) {
@@ -144,9 +157,8 @@ class MCMPAdvertiseTask implements Runnable {
                     .append("X-Manager-Host: ").append(host).append(CRLF);
 
             final String payload = builder.toString();
-            byte[] buf = payload.getBytes();
-            final DatagramPacket data = new DatagramPacket(buf, buf.length, address);
-            socket.send(data);
+            final ByteBuffer byteBuffer = ByteBuffer.wrap(payload.getBytes());
+            channel.sendTo(address, byteBuffer);
         } catch (Exception Ex) {
             Ex.printStackTrace();
         }

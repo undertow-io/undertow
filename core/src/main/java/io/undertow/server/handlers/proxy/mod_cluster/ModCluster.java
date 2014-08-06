@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,6 +28,7 @@ import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
+import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
 /**
@@ -47,6 +49,7 @@ public class ModCluster {
     private final int requestQueueSize;
     private final boolean queueNewRequests;
 
+    private final XnioWorker xnioWorker;
     private final ModClusterContainer container;
     private final HttpHandler proxyHandler;
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
@@ -54,6 +57,7 @@ public class ModCluster {
     private final String serverID = UUID.randomUUID().toString(); // TODO
 
     ModCluster(Builder builder) {
+        this.xnioWorker = builder.xnioWorker;
         this.maxConnections = builder.maxConnections;
         this.cacheConnections = builder.cacheConnections;
         this.requestQueueSize = builder.requestQueueSize;
@@ -128,15 +132,14 @@ public class ModCluster {
      * Start advertising a mcmp handler.
      *
      * @param config the mcmp handler config
+     * @throws IOException
      */
-    public synchronized void advertise(MCMPConfig config) {
+    public synchronized void advertise(MCMPConfig config) throws IOException {
         final MCMPConfig.AdvertiseConfig advertiseConfig = config.getAdvertiseConfig();
         if (advertiseConfig == null) {
             throw new IllegalArgumentException("advertise not enabled");
         }
-        final int frequency = advertiseConfig.getAdvertiseFrequency();
-        final MCMPAdvertiseTask task = new MCMPAdvertiseTask(container, advertiseConfig);
-        executorService.scheduleAtFixedRate(task, 1000, frequency, TimeUnit.MILLISECONDS);
+        MCMPAdvertiseTask.advertise(container, advertiseConfig, xnioWorker);
     }
 
     /**
@@ -146,22 +149,23 @@ public class ModCluster {
         executorService.shutdownNow();
     }
 
-    public static Builder builder() {
-        return builder(UndertowClient.getInstance(), null);
+    public static Builder builder(final XnioWorker worker) {
+        return builder(worker, UndertowClient.getInstance(), null);
     }
 
-    public static Builder builder(final UndertowClient client) {
-        return builder(client, null);
+    public static Builder builder(final XnioWorker worker, final UndertowClient client) {
+        return builder(worker, client, null);
     }
 
-    public static Builder builder(final UndertowClient client, final XnioSsl xnioSsl) {
-        return new Builder(client, xnioSsl);
+    public static Builder builder(final XnioWorker worker, final UndertowClient client, final XnioSsl xnioSsl) {
+        return new Builder(worker, client, xnioSsl);
     }
 
     public static class Builder {
 
         private final XnioSsl xnioSsl;
         private final UndertowClient client;
+        private final XnioWorker xnioWorker;
 
         // Fairly restrictive connection pool defaults
         private int maxConnections = 16;
@@ -175,9 +179,10 @@ public class ModCluster {
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
         private long removeBrokenNodes = TimeUnit.MINUTES.toMillis(1);
 
-        private Builder(UndertowClient client, XnioSsl xnioSsl) {
+        private Builder(XnioWorker xnioWorker, UndertowClient client, XnioSsl xnioSsl) {
             this.xnioSsl = xnioSsl;
             this.client = client;
+            this.xnioWorker = xnioWorker;
         }
 
         public ModCluster build() {

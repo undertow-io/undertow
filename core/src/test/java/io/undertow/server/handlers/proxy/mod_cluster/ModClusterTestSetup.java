@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.Handlers;
@@ -25,6 +26,9 @@ import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser;
+import org.xnio.OptionMap;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
 
 /**
  * Server setup to the run the mod_cluster tests
@@ -43,10 +47,10 @@ public class ModClusterTestSetup {
     static String phost = System.getProperty("io.undertow.examples.proxy.ADDRESS", "localhost");
     static final int pport = Integer.parseInt(System.getProperty("io.undertow.examples.proxy.PORT", "8000"));
 
-    public static void main(final String[] args) {
+    public static void main(final String[] args) throws IOException {
         final Undertow server;
-
-        final ModCluster modCluster = ModCluster.builder()
+        final XnioWorker worker = Xnio.getInstance().createWorker(OptionMap.EMPTY);
+        final ModCluster modCluster = ModCluster.builder(worker)
                 .setHealthCheckInterval(TimeUnit.SECONDS.toMillis(3))
                 .setRemoveBrokenNodes(TimeUnit.SECONDS.toMillis(30))
                 .build();
