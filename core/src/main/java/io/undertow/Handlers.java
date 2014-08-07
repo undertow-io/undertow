@@ -28,6 +28,7 @@ import io.undertow.server.RoutingHandler;
 import io.undertow.server.handlers.AccessControlListHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.DisableCacheHandler;
+import io.undertow.server.handlers.ExceptionHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
 import io.undertow.server.handlers.HttpContinueAcceptingHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
@@ -488,6 +489,15 @@ public class Handlers {
      */
     public static HttpHandler requestDump(final HttpHandler next) {
         return new RequestDumpingHandler(next);
+    }
+
+    /**
+     * Returns a handler that maps exceptions to additional handlers
+     * @param next The next handler
+     * @return The exception handler
+     */
+    public static ExceptionHandler exceptionHandler(final HttpHandler next) {
+        return new ExceptionHandler(next);
     }
 
     private Handlers() {
