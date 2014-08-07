@@ -50,7 +50,7 @@ public interface NodeHealthChecker {
         @Override
         public boolean checkResponse(final ClientResponse response) {
             final int code = response.getResponseCode();
-            return code >= 200 && code <= 400;
+            return code >= 200 && code < 400;
         }
     };
 

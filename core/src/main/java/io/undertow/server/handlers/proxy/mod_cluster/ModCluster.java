@@ -39,7 +39,7 @@ public class ModCluster {
     private static final HttpHandler NEXT_HANDLER = ResponseCodeHandler.HANDLE_404;
 
     // Health check intervals
-    private final long healtCheckInterval;
+    private final long healthCheckInterval;
     private final long removeBrokenNodes;
     private final NodeHealthChecker healthChecker;
 
@@ -62,7 +62,7 @@ public class ModCluster {
         this.cacheConnections = builder.cacheConnections;
         this.requestQueueSize = builder.requestQueueSize;
         this.queueNewRequests = builder.queueNewRequests;
-        this.healtCheckInterval = builder.healthCheckInterval;
+        this.healthCheckInterval = builder.healthCheckInterval;
         this.removeBrokenNodes = builder.removeBrokenNodes;
         this.healthChecker = builder.healthChecker;
         this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client);
@@ -94,7 +94,7 @@ public class ModCluster {
     }
 
     public long getHealthCheckInterval() {
-        return healtCheckInterval;
+        return healthCheckInterval;
     }
 
     public long getRemoveBrokenNodes() {
@@ -118,13 +118,13 @@ public class ModCluster {
      * Start
      */
     public synchronized void start() {
-        if (healtCheckInterval > 0) {
+        if (healthCheckInterval > 0) {
             executorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
                     container.checkHealth();
                 }
-            }, healtCheckInterval, healtCheckInterval, TimeUnit.MILLISECONDS);
+            }, healthCheckInterval, healthCheckInterval, TimeUnit.MILLISECONDS);
         }
     }
 
