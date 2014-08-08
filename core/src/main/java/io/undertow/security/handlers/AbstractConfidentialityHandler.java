@@ -74,6 +74,8 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
      *
      * This method currently returns true for all requests, sub-classes can override this to provide a custom check.
      *
+     * TODO: we should deprecate this and just use a predicate to decide to execute the handler instead
+     *
      * @param exchange - The {@see HttpServerExchange} for the request being processed.
      * @return true if the request requires confidentiality, false otherwise.
      */

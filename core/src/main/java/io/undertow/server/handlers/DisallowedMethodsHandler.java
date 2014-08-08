@@ -19,11 +19,15 @@
 package io.undertow.server.handlers;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
@@ -58,4 +62,52 @@ public class DisallowedMethodsHandler implements HttpHandler {
         }
     }
 
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "disallowed-methods";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.<String, Class<?>>singletonMap("methods", String[].class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("methods");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "methods";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper((String[]) config.get("methods"));
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final String[] methods;
+
+        private Wrapper(String[] methods) {
+            this.methods = methods;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            HttpString[] strings = new HttpString[methods.length];
+            for(int i = 0; i < methods.length; ++i) {
+                strings[i] = new HttpString(methods[i]);
+            }
+
+            return new DisallowedMethodsHandler(handler, strings);
+        }
+    }
 }

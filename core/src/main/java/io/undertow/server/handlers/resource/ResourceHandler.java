@@ -18,18 +18,25 @@
 
 package io.undertow.server.handlers.resource;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.server.handlers.encoding.ContentEncodedResource;
 import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
@@ -339,5 +346,58 @@ public class ResourceHandler implements HttpHandler {
     public ResourceHandler setContentEncodedResourceManager(ContentEncodedResourceManager contentEncodedResourceManager) {
         this.contentEncodedResourceManager = contentEncodedResourceManager;
         return this;
+    }
+
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "resource";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put("location", String.class);
+            params.put("allow-listing", boolean.class);
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("location");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "location";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper((String)config.get("location"), (Boolean) config.get("allow-listing"));
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final String location;
+        private final boolean allowDirectoryListing;
+
+        private Wrapper(String location, boolean allowDirectoryListing) {
+            this.location = location;
+            this.allowDirectoryListing = allowDirectoryListing;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            ResourceManager rm = new FileResourceManager(new File(location), 1024);
+            ResourceHandler resourceHandler = new ResourceHandler(rm);
+            resourceHandler.setDirectoryListingEnabled(allowDirectoryListing);
+            return resourceHandler;
+        }
     }
 }

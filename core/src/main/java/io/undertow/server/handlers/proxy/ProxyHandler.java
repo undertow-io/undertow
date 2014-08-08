@@ -31,11 +31,13 @@ import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Attachable;
@@ -63,10 +65,16 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.channels.Channel;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -612,5 +620,63 @@ public final class ProxyHandler implements HttpHandler {
         String encoded = URLEncoder.encode(original, UTF_8);
         sb.append(encoded);
         return sb.toString();
+    }
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "reverse-proxy";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.<String, Class<?>>singletonMap("hosts", String[].class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("hosts");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "hosts";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            String[] hosts = (String[]) config.get("hosts");
+            List<URI> uris = new ArrayList<>();
+            for(String host : hosts) {
+                try {
+                    uris.add(new URI(host));
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return new Wrapper(uris);
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final List<URI> uris;
+
+        private Wrapper(List<URI> uris) {
+            this.uris = uris;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+
+            LoadBalancingProxyClient loadBalancingProxyClient = new LoadBalancingProxyClient();
+            for(URI url : uris) {
+                loadBalancingProxyClient.addHost(url);
+            }
+            return new ProxyHandler(loadBalancingProxyClient, handler);
+        }
     }
 }
