@@ -116,8 +116,17 @@ public class ExceptionHandlerTestCase {
                 });
 
         // intentionally not adding any exception handlers
-        HttpHandler exceptionHandler = Handlers.exceptionHandler(pathHandler);
-        DefaultServer.setRootHandler(exceptionHandler);
+        final HttpHandler exceptionHandler = Handlers.exceptionHandler(pathHandler);
+        DefaultServer.setRootHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                Throwable throwable = exchange.getAttachment(ExceptionHandler.THROWABLE);
+                Assert.assertNull(throwable);
+                exceptionHandler.handleRequest(exchange);
+                throwable = exchange.getAttachment(ExceptionHandler.THROWABLE);
+                Assert.assertTrue(throwable instanceof IllegalArgumentException);
+            }
+        });
 
         TestHttpClient client = new TestHttpClient();
         try {
