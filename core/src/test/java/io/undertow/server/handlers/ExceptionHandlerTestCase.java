@@ -117,6 +117,37 @@ public class ExceptionHandlerTestCase {
 
         // intentionally not adding any exception handlers
         final HttpHandler exceptionHandler = Handlers.exceptionHandler(pathHandler);
+        DefaultServer.setRootHandler(exceptionHandler);
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttachException() throws IOException {
+        HttpHandler pathHandler = Handlers.path()
+                .addExactPath("/", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        throw new IllegalArgumentException();
+                    }
+                });
+
+        final HttpHandler exceptionHandler = Handlers.exceptionHandler(pathHandler)
+            .addExceptionHandler(IllegalArgumentException.class, new HttpHandler() {
+                @Override
+                public void handleRequest(HttpServerExchange exchange) throws Exception {
+                    exchange.getResponseSender().send("exception handled");
+                }
+            });
+
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -132,8 +163,8 @@ public class ExceptionHandlerTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("exception handled", HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
         }
