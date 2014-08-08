@@ -25,40 +25,7 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-public interface ConnectionPoolManager {
-
-    /**
-     * Check if the pool is available.
-     *
-     * @return true if the pool can be used
-     */
-    boolean isAvailable();
-
-    /**
-     * Notify a connection error.
-     */
-    void connectionError();
-
-    /**
-     * Clear the connection error.
-     */
-    void clearErrorState();
-
-    /**
-     * Returns true if the connection pool can create a new connection
-     *
-     * @param connections The number of connections associated with the current IO thread.
-     * @param proxyConnectionPool The connection pool
-     * @return true if a connection can be created
-     */
-    boolean canCreateConnection(int connections, ProxyConnectionPool proxyConnectionPool);
-
-    /**
-     * Returns true if the pool should cache a new connection
-     *
-     * @return true if the connection can be cached
-     */
-    boolean cacheConnection(int connections, ProxyConnectionPool proxyConnectionPool);
+public interface ConnectionPoolManager extends ProxyConnectionPoolConfig, ConnectionPoolErrorHandler {
 
     /**
      * This is invoked when the target thread pool transitions to problem status. It will be called once for each queued request

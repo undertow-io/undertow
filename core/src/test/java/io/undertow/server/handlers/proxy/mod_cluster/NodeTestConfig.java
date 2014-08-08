@@ -18,8 +18,10 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import io.undertow.server.handlers.PathHandler;
+
 /**
- * Unit test configuration for a node.s
+ * Unit test configuration for a node.
  *
  * @author Emanuel Muckenhuber
  */
@@ -47,6 +49,8 @@ class NodeTestConfig implements Cloneable {
     private Boolean stickySessionForce;
     private Integer waitWorker;
     private Integer maxattempts;
+
+    private NodeTestHandlers testHandlers;
 
     static NodeTestConfig builder() {
         return new NodeTestConfig();
@@ -221,6 +225,21 @@ class NodeTestConfig implements Cloneable {
     public NodeTestConfig setTimeout(Integer timeout) {
         this.timeout = timeout;
         return this;
+    }
+
+    public NodeTestHandlers getTestHandlers() {
+        return testHandlers;
+    }
+
+    public NodeTestConfig setTestHandlers(NodeTestHandlers testHandlers) {
+        this.testHandlers = testHandlers;
+        return this;
+    }
+
+    void setupHandlers(final PathHandler pathHandler) {
+        if (testHandlers != null) {
+            testHandlers.setup(pathHandler, this);
+        }
     }
 
     @Override

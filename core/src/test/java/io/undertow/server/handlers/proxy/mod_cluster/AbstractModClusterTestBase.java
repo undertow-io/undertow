@@ -33,6 +33,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
@@ -45,6 +46,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.cookie.Cookie;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.cookie.BasicClientCookie;
 import org.apache.http.message.BasicHeader;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -200,9 +202,8 @@ public abstract class AbstractModClusterTestBase {
     static void startServers(final NodeTestConfig... configs) {
         final int l = configs.length;
         servers = new Undertow[l];
-        final SessionCookieConfig session = new SessionCookieConfig();
         for (int i = 0; i < l; i++) {
-            servers[i] = createNode(configs[i], session);
+            servers[i] = createNode(configs[i]);
             servers[i].start();
         }
     }
@@ -213,6 +214,10 @@ public abstract class AbstractModClusterTestBase {
 
     static String checkGet(final String context, int statusCode, String route) throws IOException {
         final HttpGet get = get(context);
+        if (route != null && getSessionRoute() == null) {
+            BasicClientCookie cookie = new BasicClientCookie("JSESSIONID", "randomSessionID."+route);
+            httpClient.getCookieStore().addCookie(cookie);
+        }
         final HttpResponse result = httpClient.execute(get);
         final String response = HttpClientUtils.readResponse(result);
         Assert.assertEquals(statusCode, result.getStatusLine().getStatusCode());
@@ -270,7 +275,7 @@ public abstract class AbstractModClusterTestBase {
         }
     }
 
-    static Undertow createNode(final NodeTestConfig config, final SessionCookieConfig sessionConfig) {
+    static Undertow createNode(final NodeTestConfig config) {
         final Undertow.Builder builder = Undertow.builder();
 
         final String type = config.getType();
@@ -289,10 +294,18 @@ public abstract class AbstractModClusterTestBase {
             default:
                 throw new IllegalArgumentException(type);
         }
+        final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+        if (config.getStickySessionCookie() != null) {
+            sessionConfig.setCookieName(config.getStickySessionCookie());
+        }
+        final PathHandler pathHandler =  path(ResponseCodeHandler.HANDLE_200)
+                .addPrefixPath("/name", new StringSendHandler(config.getJvmRoute()))
+                .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(config.getJvmRoute(), sessionConfig), new InMemorySessionManager(""), sessionConfig));
+
+        config.setupHandlers(pathHandler); // Setup test handlers
+
         builder.setSocketOption(Options.REUSE_ADDRESSES, true)
-               .setHandler(jvmRoute("JSESSIONID", config.getJvmRoute(), path(ResponseCodeHandler.HANDLE_200)
-                       .addPrefixPath("/name", new StringSendHandler(config.getJvmRoute()))
-                       .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(config.getJvmRoute(), sessionConfig), new InMemorySessionManager(""), sessionConfig))));
+               .setHandler(jvmRoute("JSESSIONID", config.getJvmRoute(), pathHandler));
         return builder.build();
     }
 

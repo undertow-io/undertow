@@ -70,12 +70,11 @@ public class ProxyConnectionPool implements Closeable {
      */
     private volatile boolean closed;
 
-    private boolean keepAlive = true; // set tcp keep-alive option
-    private final int maxConnections = 12;
-    private final int maxCachedConnections = 8;
-    private final int sMaxConnections = 0;
-    private final int maxRequestQueueSize = 32;
-    private final long ttl = 1;
+    private final int maxConnections;
+    private final int maxCachedConnections;
+    private final int sMaxConnections;
+    private final int maxRequestQueueSize;
+    private final long ttl;
 
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<>();
 
@@ -92,8 +91,13 @@ public class ProxyConnectionPool implements Closeable {
     }
 
     public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, InetSocketAddress bindAddress,URI uri, XnioSsl ssl, UndertowClient client, OptionMap options) {
-        this.bindAddress = bindAddress;
         this.connectionPoolManager = connectionPoolManager;
+        this.maxConnections = Math.max(connectionPoolManager.getMaxConnections(), 1);
+        this.maxCachedConnections = Math.max(connectionPoolManager.getMaxCachedConnections(), 0);
+        this.sMaxConnections = Math.max(connectionPoolManager.getSMaxConnections(), 0);
+        this.maxRequestQueueSize = Math.max(connectionPoolManager.getMaxQueueSize(), 0);
+        this.ttl = connectionPoolManager.getTtl();
+        this.bindAddress = bindAddress;
         this.uri = uri;
         this.ssl = ssl;
         this.client = client;
@@ -200,7 +204,6 @@ public class ProxyConnectionPool implements Closeable {
         client.connect(new ClientCallback<ClientConnection>() {
             @Override
             public void completed(final ClientConnection result) {
-                connectionPoolManager.clearErrorState();
                 final ConnectionHolder connectionHolder = new ConnectionHolder(result);
                 if (!exclusive) {
                     result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
@@ -218,10 +221,11 @@ public class ProxyConnectionPool implements Closeable {
                 if (!exclusive) {
                     data.connections--;
                 }
-                connectionPoolManager.connectionError();
                 UndertowLogger.REQUEST_LOGGER.debug("Failed to connect", e);
-                redistributeQueued(getData());
-                scheduleFailedHostRetry(exchange);
+                if (!connectionPoolManager.handleError()) {
+                    redistributeQueued(getData());
+                    scheduleFailedHostRetry(exchange);
+                }
                 callback.failed(exchange);
             }
         }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
@@ -259,24 +263,6 @@ public class ProxyConnectionPool implements Closeable {
         callback.completed(exchange, new ProxyConnection(result.clientConnection, uri.getPath() == null ? "/" : uri.getPath()));
     }
 
-    /**
-     * Get the current queue size.
-     *
-     * @return {@code -1} if more connections can be opened
-     *         {@code >= 0} the current size of the queue
-     *         other values represent an error
-     */
-    public int getQueueStatus() {
-        if (closed) {
-            return Integer.MIN_VALUE;
-        }
-        final HostThreadData data = getData();
-        if (data.connections < maxConnections) {
-            return -1;
-        }
-        return data.awaitingConnections.size();
-    }
-
     public AvailabilityType available() {
         if (closed) {
             return AvailabilityType.CLOSED;
@@ -291,6 +277,9 @@ public class ProxyConnectionPool implements Closeable {
         if (!data.availableConnections.isEmpty()) {
             return AvailabilityType.AVAILABLE;
         }
+        if (data.awaitingConnections.size() >= maxConnections) {
+            return AvailabilityType.FULL_QUEUE;
+        }
         return AvailabilityType.FULL;
     }
 
@@ -301,7 +290,8 @@ public class ProxyConnectionPool implements Closeable {
      */
     private void scheduleFailedHostRetry(final HttpServerExchange exchange) {
         final int retry = connectionPoolManager.getProblemServerRetry();
-        if (retry > 0) {
+        // only schedule a retry task if the node is not available
+        if (!connectionPoolManager.isAvailable() && retry > 0) {
             exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
                 public void run() {
@@ -314,21 +304,27 @@ public class ProxyConnectionPool implements Closeable {
                         @Override
                         public void completed(ClientConnection result) {
                             UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Connected to previously failed host %s, returning to service", getUri());
-                            connectionPoolManager.clearErrorState();
-                            final ConnectionHolder connectionHolder = new ConnectionHolder(result);
-                            final HostThreadData data = getData();
-                            result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
-                                @Override
-                                public void handleEvent(ClientConnection channel) {
-                                    handleClosedConnection(data, connectionHolder);
-                                }
-                            });
-                            returnConnection(connectionHolder);
+                            if (connectionPoolManager.clearError()) {
+                                // In case the node is available now, return the connection
+                                final ConnectionHolder connectionHolder = new ConnectionHolder(result);
+                                final HostThreadData data = getData();
+                                result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
+                                    @Override
+                                    public void handleEvent(ClientConnection channel) {
+                                        handleClosedConnection(data, connectionHolder);
+                                    }
+                                });
+                                returnConnection(connectionHolder);
+                            } else {
+                                // Otherwise reschedule the retry task
+                                scheduleFailedHostRetry(exchange);
+                            }
                         }
 
                         @Override
                         public void failed(IOException e) {
                             UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Failed to reconnect to failed host %s", getUri());
+                            connectionPoolManager.handleError();
                             scheduleFailedHostRetry(exchange);
                         }
                     }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
@@ -532,6 +528,10 @@ public class ProxyConnectionPool implements Closeable {
          * All connections are in use, connections will be queued
          */
         FULL,
+        /**
+         * All connections are in use and the queue is full. Requests will be rejected.
+         */
+        FULL_QUEUE,
         /**
          * The host is probably down, only try as a last resort
          */

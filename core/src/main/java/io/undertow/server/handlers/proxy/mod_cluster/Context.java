@@ -30,7 +30,6 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ProxyCallback;
 import io.undertow.server.handlers.proxy.ProxyConnection;
-import org.xnio.IoUtils;
 
 /**
  *
@@ -179,12 +178,7 @@ class Context {
             });
             node.getConnectionPool().connect(target, exchange, callback, timeout, timeUnit, exclusive);
         } else {
-            if (exchange.isResponseStarted()) {
-                IoUtils.safeClose(exchange.getConnection());
-            } else {
-                exchange.setResponseCode(503);
-                exchange.endExchange();
-            }
+            callback.failed(exchange);
         }
     }
 

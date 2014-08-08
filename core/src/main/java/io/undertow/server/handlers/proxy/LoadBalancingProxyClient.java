@@ -316,43 +316,17 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return null;
     }
 
-    protected final class Host implements ConnectionPoolManager {
+    protected final class Host extends ConnectionPoolErrorHandler.SimpleConnectionPoolErrorHandler implements ConnectionPoolManager {
         final ProxyConnectionPool connectionPool;
         final String jvmRoute;
         final URI uri;
         final XnioSsl ssl;
-        private volatile boolean problem;
 
         private Host(String jvmRoute, InetSocketAddress bindAddress, URI uri, XnioSsl ssl, OptionMap options) {
             this.connectionPool = new ProxyConnectionPool(this, bindAddress, uri, ssl, client, options);
             this.jvmRoute = jvmRoute;
             this.uri = uri;
             this.ssl = ssl;
-        }
-
-        @Override
-        public boolean isAvailable() {
-            return !problem;
-        }
-
-        @Override
-        public void connectionError() {
-            problem = true;
-        }
-
-        @Override
-        public void clearErrorState() {
-            problem = false;
-        }
-
-        @Override
-        public boolean canCreateConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
-            return connections < connectionsPerThread;
-        }
-
-        @Override
-        public boolean cacheConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
-            return connections <= connectionsPerThread;
         }
 
         @Override
@@ -363,6 +337,31 @@ public class LoadBalancingProxyClient implements ProxyClient {
         @Override
         public int getProblemServerRetry() {
             return problemServerRetry;
+        }
+
+        @Override
+        public int getMaxConnections() {
+            return connectionsPerThread;
+        }
+
+        @Override
+        public int getMaxCachedConnections() {
+            return connectionsPerThread;
+        }
+
+        @Override
+        public int getSMaxConnections() {
+            return connectionsPerThread;
+        }
+
+        @Override
+        public long getTtl() {
+            return -1;
+        }
+
+        @Override
+        public int getMaxQueueSize() {
+            return 0;
         }
     }
 

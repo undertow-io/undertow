@@ -430,20 +430,14 @@ class Node {
     protected boolean checkAvailable(final boolean existingSession) {
         if (allAreClear(state, ERROR | REMOVED)) {
             // Check the state of the queue on the connection pool
-            final int queueState = connectionPool.getQueueStatus();
-            if (queueState == -1) {
-                return true; // Connections available
-            } else if (queueState > -1) {
-                // If there are more queued requests than our max size, this node cannot be elected
-                if (queueState > nodeConfig.getRequestQueueSize()) {
-                    return false;
-                } else {
-                    // In case there is an existing session or we allow queueing of new requests
-                    if (existingSession) {
-                        return true;
-                    } else if (!existingSession && nodeConfig.isQueueNewRequests()) {
-                        return true;
-                    }
+            final ProxyConnectionPool.AvailabilityType availability = connectionPool.available();
+            if (availability == ProxyConnectionPool.AvailabilityType.AVAILABLE) {
+                return true;
+            } else if (availability == ProxyConnectionPool.AvailabilityType.FULL) {
+                if (existingSession) {
+                    return true;
+                } else if (!existingSession && nodeConfig.isQueueNewRequests()) {
+                    return true;
                 }
             }
         }
@@ -458,24 +452,40 @@ class Node {
         }
 
         @Override
-        public void connectionError() {
+        public boolean handleError() {
             markInError();
+            return false;
         }
 
         @Override
-        public void clearErrorState() {
-            // This needs to be cleared through the update status
+        public boolean clearError() {
+            // This needs to be cleared through the status update
+            return isAvailable();
         }
 
         @Override
-        public boolean canCreateConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
-            final int maxConnections = nodeConfig.getMaxConnections();
-            return maxConnections > 0 ? connections < maxConnections : true;
+        public int getMaxConnections() {
+            return nodeConfig.getMaxConnections();
         }
 
         @Override
-        public boolean cacheConnection(int connections, ProxyConnectionPool proxyConnectionPool) {
-            return connections <= nodeConfig.getCacheConnections();
+        public int getMaxCachedConnections() {
+            return nodeConfig.getCacheConnections();
+        }
+
+        @Override
+        public int getSMaxConnections() {
+            return nodeConfig.getSmax();
+        }
+
+        @Override
+        public long getTtl() {
+            return nodeConfig.getTtl();
+        }
+
+        @Override
+        public int getMaxQueueSize() {
+            return nodeConfig.getRequestQueueSize();
         }
 
         @Override

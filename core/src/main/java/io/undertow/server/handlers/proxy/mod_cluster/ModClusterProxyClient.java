@@ -54,7 +54,6 @@ class ModClusterProxyClient implements ProxyClient {
         return container.findTarget(exchange);
     }
 
-    @Override
     public void getConnection(final ProxyTarget target, final HttpServerExchange exchange,
                               final ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit) {
         final ExclusiveConnectionHolder holder = exchange.getConnection().getAttachment(exclusiveConnectionKey);
@@ -70,8 +69,8 @@ class ModClusterProxyClient implements ProxyClient {
 
         // Resolve the node
         final ModClusterProxyTarget proxyTarget = (ModClusterProxyTarget) target;
-        final Context node = proxyTarget.resolveContext(exchange);
-        if (node == null) {
+        final Context context = proxyTarget.resolveContext(exchange);
+        if (context == null) {
             callback.failed(exchange);
         } else {
             if (holder != null || (exclusivityChecker != null && exclusivityChecker.isExclusivityRequired(exchange))) {
@@ -109,10 +108,9 @@ class ModClusterProxyClient implements ProxyClient {
                     }
                 };
 
-                node.handleRequest(proxyTarget, exchange, wrappedCallback, timeout, timeUnit, true);
-                /// node.getConnectionPool().connect(target, exchange, , timeout, timeUnit, true);
+                context.handleRequest(proxyTarget, exchange, wrappedCallback, timeout, timeUnit, true);
             } else {
-                node.handleRequest(proxyTarget, exchange, callback, timeout, timeUnit, true);
+                context.handleRequest(proxyTarget, exchange, callback, timeout, timeUnit, true);
             }
         }
     }
