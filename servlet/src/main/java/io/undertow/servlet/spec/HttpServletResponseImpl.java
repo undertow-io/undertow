@@ -38,6 +38,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -559,7 +560,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         try {
             closeStreamAndWriter();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         }
     }
 
