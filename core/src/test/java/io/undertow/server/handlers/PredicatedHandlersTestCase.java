@@ -46,7 +46,8 @@ public class PredicatedHandlersTestCase {
 
                         PredicatedHandlersParser.parse(
                                 "method[GET] -> set[attribute='%{o,type}', value=get]\n" +
-                                        "regex['(.*).css'] -> rewrite['${1}.xcss']\n" +
+                                        "regex['(.*).css'] -> rewrite['${1}.xcss'] -> set[attribute='%{o,chained}', value=true]\n" +
+                                        "regex['(.*).redirect$'] -> redirect['${1}.redirected']\n" +
                                         "set[attribute='%{o,someHeader}', value=always]\n" +
                                         "path-template['/foo/{bar}/{f}'] -> set[attribute='%{o,template}', value='${bar}']", getClass().getClassLoader()), new HttpHandler() {
                     @Override
@@ -71,9 +72,19 @@ public class PredicatedHandlersTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("get", result.getHeaders("type")[0].getValue());
+            Assert.assertEquals("true", result.getHeaders("chained")[0].getValue());
             Assert.assertEquals("always", result.getHeaders("someHeader")[0].getValue());
             Assert.assertEquals("a", result.getHeaders("template")[0].getValue());
             Assert.assertEquals("/foo/a/b.xcss", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b.redirect");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("get", result.getHeaders("type")[0].getValue());
+            Assert.assertEquals("always", result.getHeaders("someHeader")[0].getValue());
+            Assert.assertEquals("a", result.getHeaders("template")[0].getValue());
+            Assert.assertEquals("/foo/a/b.redirected", response);
 
         } finally {
             client.getConnectionManager().shutdown();

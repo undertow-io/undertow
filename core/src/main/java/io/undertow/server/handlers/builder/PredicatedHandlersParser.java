@@ -18,16 +18,17 @@
 
 package io.undertow.server.handlers.builder;
 
-import io.undertow.UndertowMessages;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicateParser;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HandlerWrapper;
+import io.undertow.util.ChaninedHandlerWrapper;
 import io.undertow.util.FileUtils;
 
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -65,7 +66,12 @@ public class PredicatedHandlersParser {
                     predicate = Predicates.truePredicate();
                     handler = HandlerParser.parse(parts[0], classLoader);
                 } else {
-                    throw UndertowMessages.MESSAGES.invalidSyntax(line);
+                    predicate = PredicateParser.parse(parts[0], classLoader);
+                    HandlerWrapper[] handlers = new HandlerWrapper[parts.length -1];
+                    for(int i = 0; i < handlers.length; ++i) {
+                        handlers[i] = HandlerParser.parse(parts[i + 1], classLoader);
+                    }
+                    handler = new ChaninedHandlerWrapper(Arrays.asList(handlers));
                 }
                 wrappers.add(new PredicatedHandler(predicate, handler));
             }
