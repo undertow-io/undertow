@@ -2,6 +2,7 @@ package io.undertow.server.handlers;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -13,6 +14,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * parents in order to use different handlers.
  */
 public class ExceptionHandler implements HttpHandler {
+    public static final AttachmentKey<Throwable> THROWABLE = AttachmentKey.create(Throwable.class);
+
     private final HttpHandler handler;
     private final List<ExceptionHandlerHolder<?>> exceptionHandlers = new CopyOnWriteArrayList<>();
 
@@ -27,6 +30,7 @@ public class ExceptionHandler implements HttpHandler {
         } catch (Throwable throwable) {
             for (ExceptionHandlerHolder<?> holder : exceptionHandlers) {
                 if (holder.getClazz().isInstance(throwable)) {
+                    exchange.putAttachment(THROWABLE, throwable);
                     holder.getHandler().handleRequest(exchange);
                     return;
                 }
