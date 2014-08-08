@@ -28,9 +28,10 @@ public class ExceptionHandler implements HttpHandler {
             for (ExceptionHandlerHolder<?> holder : exceptionHandlers) {
                 if (holder.getClazz().isInstance(throwable)) {
                     holder.getHandler().handleRequest(exchange);
-                    break;
+                    return;
                 }
             }
+            throw throwable;
         }
     }
 

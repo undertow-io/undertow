@@ -12,15 +12,14 @@ import java.io.IOException;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(DefaultServer.class)
 public class ExceptionHandlerTestCase {
 
-    @BeforeClass
-    public static void setup() {
+    @Test
+    public void testExceptionMappers() throws IOException {
         HttpHandler pathHandler = Handlers.path()
                 .addExactPath("/", new HttpHandler() {
                     @Override
@@ -73,10 +72,7 @@ public class ExceptionHandlerTestCase {
                     }
                 });
         DefaultServer.setRootHandler(exceptionHandler);
-    }
 
-    @Test
-    public void testExceptionMappers() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
@@ -104,6 +100,31 @@ public class ExceptionHandlerTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("catch all throwables", HttpClientUtils.readResponse(result));
 
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testReThrowUnmatchedException() throws IOException {
+        HttpHandler pathHandler = Handlers.path()
+                .addExactPath("/", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        throw new IllegalArgumentException();
+                    }
+                });
+
+        // intentionally not adding any exception handlers
+        HttpHandler exceptionHandler = Handlers.exceptionHandler(pathHandler);
+        DefaultServer.setRootHandler(exceptionHandler);
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
         } finally {
             client.getConnectionManager().shutdown();
         }
