@@ -25,6 +25,8 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
+import io.undertow.server.session.SessionConfig;
+import io.undertow.server.session.SessionManager;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -246,6 +248,11 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public Object getSession() {
+        SessionManager sm = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+        SessionConfig sessionCookieConfig = exchange.getAttachment(SessionConfig.ATTACHMENT_KEY);
+        if(sm != null && sessionCookieConfig != null) {
+            return sm.getSession(exchange, sessionCookieConfig);
+        }
         return null;
     }
 
