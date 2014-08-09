@@ -8,6 +8,13 @@ import io.undertow.server.handlers.accesslog.AccessLogReceiver;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HttpString;
 
+/**
+ * A handler which can fluently construct complex handlers.
+ * Outside libraries can extend the abstract class in order to add additional custom handlers.
+ * @author bill
+ *
+ * @param <T>
+ */
 public abstract class AbstractCompositeHandler<T extends AbstractCompositeHandler<T>> implements HttpHandler {
     private final HttpHandler handler;
 
@@ -86,6 +93,11 @@ public abstract class AbstractCompositeHandler<T extends AbstractCompositeHandle
         return create(new AccessLogHandler(handler, accessLogReceiver, formatString, classLoader));
     }
 
+    /**
+     * Default implementation
+     * @author bill
+     *
+     */
     public static class CompositeHandler extends AbstractCompositeHandler<CompositeHandler> {
         public CompositeHandler(HttpHandler handler) {
             super(handler);
