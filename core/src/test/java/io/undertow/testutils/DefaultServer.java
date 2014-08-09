@@ -31,6 +31,7 @@ import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.spdy.SpdyOpenListener;
+import io.undertow.server.protocol.spdy.SpdyPlainOpenListener;
 import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
@@ -118,6 +119,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
     private static final boolean spdy = Boolean.getBoolean("test.spdy");
+    private static final boolean spdyPlain = Boolean.getBoolean("test.spdy-plain");
     private static final boolean https = Boolean.getBoolean("test.https");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
     private static final boolean dump = Boolean.getBoolean("test.dump");
@@ -310,6 +312,22 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
 
+                } else if (spdyPlain) {
+                    openListener = new SpdyPlainOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
+                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+
+                    server = worker.createStreamConnectionServer(new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
+                    server.resumeAccepts();
+
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
+                    proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy-plain", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, null, OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404);
+                    setupProxyHandlerForSSL(proxyHandler);
+                    proxyOpenListener.setRootHandler(proxyHandler);
+                    proxyServer.resumeAccepts();
+
+
                 } else if (https) {
 
                     XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, getServerSslContext());
@@ -408,12 +426,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             ajpIgnore = method.getMethod().getDeclaringClass().getAnnotation(AjpIgnore.class);
         }
         if (ajp && ajpIgnore != null) {
-            if (!proxy || !ajpIgnore.apacheOnly() || spdy) {
+            if (!proxy || !ajpIgnore.apacheOnly()) {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
             }
         }
-        if(spdy) {
+        if(spdy || spdyPlain) {
             SpdyIgnore spdyIgnore = method.getAnnotation(SpdyIgnore.class);
             if(spdyIgnore == null) {
                 spdyIgnore = method.getMethod().getDeclaringClass().getAnnotation(SpdyIgnore.class);
@@ -470,6 +488,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             if(spdy) {
                 sb.append("{spdy}");
             }
+            if(spdyPlain) {
+                sb.append("{spdy-plain}");
+            }
             if(https) {
                 sb.append("{ssl}");
             }
@@ -484,7 +505,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @param handler The handler to use
      */
     public static void setRootHandler(HttpHandler handler) {
-        if ((proxy || spdy) && !ajp) {
+        if ((proxy || spdy || spdyPlain) && !ajp) {
             //if we are testing HTTP proxy we always add the SSLHeaderHandler
             //this allows the SSL information to be propagated to be backend
             handler = new SSLHeaderHandler(new ProxyPeerAddressHandler(handler));
@@ -687,7 +708,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static boolean isSpdy() {
-        return spdy;
+        return spdy || spdyPlain;
     }
 
     /**

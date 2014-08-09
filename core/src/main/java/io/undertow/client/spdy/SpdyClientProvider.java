@@ -95,11 +95,22 @@ public class SpdyClientProvider implements ClientProvider {
 
     @Override
     public Set<String> handlesSchemes() {
-        return new HashSet<>(Arrays.asList(new String[]{"spdy"}));
+        return new HashSet<>(Arrays.asList(new String[]{"spdy", "spdy-plain"}));
     }
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        if(uri.getScheme().equals("spdy-plain")) {
+
+            if(bindAddress == null) {
+                worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            } else {
+                worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), null, options).addNotifier(createNotifier(listener), null);
+            }
+            return;
+        }
+
+
         if(ALPN_PUT_METHOD == null) {
             listener.failed(UndertowMessages.MESSAGES.jettyNPNNotAvailable());
             return;
@@ -118,6 +129,16 @@ public class SpdyClientProvider implements ClientProvider {
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        if(uri.getScheme().equals("spdy-plain")) {
+
+            if(bindAddress == null) {
+                ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            } else {
+                ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), null, options).addNotifier(createNotifier(listener), null);
+            }
+            return;
+        }
+
         if(ALPN_PUT_METHOD == null) {
             listener.failed(UndertowMessages.MESSAGES.jettyNPNNotAvailable());
             return;
@@ -155,12 +176,16 @@ public class SpdyClientProvider implements ClientProvider {
     }
 
     private void handleConnected(StreamConnection connection, final ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
-        handlePotentialSpdyConnection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
-            @Override
-            public void handleEvent(SslConnection channel) {
-                listener.failed(UndertowMessages.MESSAGES.spdyNotSupported());
-            }
-        });
+        if(connection instanceof SslConnection) {
+            handlePotentialSpdyConnection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
+                @Override
+                public void handleEvent(SslConnection channel) {
+                    listener.failed(UndertowMessages.MESSAGES.spdyNotSupported());
+                }
+            });
+        } else {
+            listener.completed(createSpdyChannel(connection, bufferPool));
+        }
     }
 
     public static boolean isEnabled() {
