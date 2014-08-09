@@ -94,7 +94,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     private volatile long frameDataRemaining;
     private volatile R receiver;
-    private final Set<R> receivers = new HashSet<R>();
 
     private boolean receivesSuspended = true;
 
@@ -335,7 +334,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         if (moreData) {
                             receiver = newChannel;
                         }
-                        receivers.add(newChannel);
                     } else {
                         frameData.free();
                     }
@@ -637,15 +635,17 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             handleBrokenSourceChannel(cause);
             safeClose(channel.getSourceChannel());
 
-            for (R receiver : receivers) {
-                if (receiver != null && receiver.isReadResumed()) {
-                    ChannelListeners.invokeChannelListener(receiver.getIoThread(), receiver, ((ChannelListener.SimpleSetter) receiver.getReadSetter()).get());
-                }
-                IoUtils.safeClose(receiver);
-            }
-            receivers.clear();
+
+            closeSubChannels();
         }
     }
+
+    /**
+     * Method that is called when the channel is being forcibly closed, and all sub stream sink/source
+     * channels should also be forcibly closed.
+     */
+    protected abstract void closeSubChannels();
+
 
 
     /**
@@ -708,9 +708,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         synchronized (AbstractFramedChannel.this) {
             if (isLastFrameReceived()) {
                 safeClose(AbstractFramedChannel.this.channel.getSourceChannel());
-            }
-            if (channel.isComplete()) {
-                receivers.remove(channel);
             }
         }
     }
@@ -818,9 +815,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                 } finally {
                     synchronized (AbstractFramedChannel.this) {
-                        for (R r : receivers) {
-                            IoUtils.safeClose(r);
-                        }
+                        closeSubChannels();
                         if (readData != null) {
                             readData.free();
                             readData = null;

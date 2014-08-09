@@ -162,6 +162,11 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
         IoUtils.safeClose(this);
     }
 
+    @Override
+    protected void closeSubChannels() {
+        IoUtils.safeClose(source, sink);
+    }
+
     void sinkDone() {
         sinkDone = true;
         if (sourceDone) {

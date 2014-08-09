@@ -29,6 +29,8 @@ import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.function.ChannelFunction;
+
+import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
@@ -97,6 +99,11 @@ public class WebSocket07Channel extends WebSocketChannel {
     @Override
     protected void markReadsBroken(Throwable cause) {
         super.markReadsBroken(cause);
+    }
+
+    @Override
+    protected void closeSubChannels() {
+        IoUtils.safeClose(fragmentedChannel);
     }
 
     @Override
@@ -471,4 +478,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             return frameFinalFlag;
         }
     }
+
+
 }

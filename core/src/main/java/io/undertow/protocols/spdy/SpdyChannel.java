@@ -30,6 +30,7 @@ import io.undertow.util.HeaderMap;
 
 import org.xnio.Bits;
 import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -241,6 +242,27 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     protected void handleBrokenSinkChannel(Throwable e) {
         UndertowLogger.REQUEST_LOGGER.debugf(e, "Closing SPDY channel to %s due to broken write side", getPeerAddress());
         IoUtils.safeClose(this);
+    }
+
+    @Override
+    protected void closeSubChannels() {
+        for (Map.Entry<Integer, SpdyStreamSourceChannel> e : incomingStreams.entrySet()) {
+            SpdyStreamSourceChannel receiver = e.getValue();
+            if (receiver.isReadResumed()) {
+                ChannelListeners.invokeChannelListener(receiver.getIoThread(), receiver, ((ChannelListener.SimpleSetter) receiver.getReadSetter()).get());
+            }
+            IoUtils.safeClose(receiver);
+        }
+        incomingStreams.clear();
+
+        for (Map.Entry<Integer, SpdyStreamStreamSinkChannel> e : outgoingStreams.entrySet()) {
+            SpdyStreamStreamSinkChannel receiver = e.getValue();
+            if (receiver.isWritesShutdown()) {
+                ChannelListeners.invokeChannelListener(receiver.getIoThread(), receiver, ((ChannelListener.SimpleSetter) receiver.getWriteSetter()).get());
+            }
+            IoUtils.safeClose(receiver);
+        }
+        outgoingStreams.clear();
     }
 
     /**
