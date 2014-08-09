@@ -94,6 +94,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      */
     private volatile boolean broken;
 
+    private volatile int waiterCount = 0;
+
     private SendFrameHeader header;
     private Pooled<ByteBuffer> trailer;
 
@@ -263,9 +265,16 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             }
             if (readyForFlush) {
                 try {
-                    lock.wait();
+                    waiterCount++;
+                    //we need to re-check after incrementing the waiters count
+
+                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
+                        lock.wait();
+                    }
                 } catch (InterruptedException e) {
                     throw new InterruptedIOException();
+                } finally {
+                    waiterCount--;
                 }
             }
         }
@@ -282,13 +291,14 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             }
             if (readyForFlush) {
                 try {
-                    if (anyAreSet(state, STATE_CLOSED) || broken) {
-                        return;
+                    waiterCount++;
+                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
+                        lock.wait(timeUnit.toMillis(l));
                     }
-
-                    lock.wait(timeUnit.toMillis(l));
                 } catch (InterruptedException e) {
                     throw new InterruptedIOException();
+                } finally {
+                    waiterCount--;
                 }
             }
         }
@@ -584,8 +594,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void wakeupWaiters() {
-        synchronized (lock) {
-            lock.notifyAll();
+        if(waiterCount > 0) {
+            synchronized (lock) {
+                lock.notifyAll();
+            }
         }
     }
 
