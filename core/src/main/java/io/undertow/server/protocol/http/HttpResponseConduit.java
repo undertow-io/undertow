@@ -79,6 +79,8 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     private static final int MASK_STATE = 0x0000000F;
     private static final int FLAG_SHUTDOWN = 0x00000010;
 
+    private boolean closed = false;
+
     HttpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool) {
         super(next);
         this.pool = pool;
@@ -271,6 +273,9 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
      * Handles writing out the header data in the case where is is too big to fit into a buffer. This is a much slower code path.
      */
     private int processStatefulWrite(int state, final Object userData, int pos, int len) throws IOException {
+        if(closed) {
+            throw new ClosedChannelException();
+        }
         ByteBuffer buffer = pooledBuffer.getResource();
         long fiCookie = this.fiCookie;
         int valueIdx = this.valueIdx;
@@ -432,7 +437,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             } else {
                                 ByteBuffer[] b = new ByteBuffer[1 + len];
                                 b[0] = buffer;
-                                System.arraycopy(userData, 0, b, 1, len);
+                                System.arraycopy(userData, pos, b, 1, len);
                                 do {
                                     long r = next.write(b, 0, b.length);
                                     if (r == 0 && buffer.hasRemaining()) {
@@ -509,7 +514,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     } else {
                         ByteBuffer[] b = new ByteBuffer[1 + len];
                         b[0] = buffer;
-                        System.arraycopy(userData, 0, b, 1, len);
+                        System.arraycopy(userData, pos, b, 1, len);
                         do {
                             long r = next.write(b, 0, b.length);
                             if (r == 0 && buffer.hasRemaining()) {
@@ -677,6 +682,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     void freeBuffers() {
+        closed = true;
         if(pooledBuffer != null) {
             bufferDone();
         }
