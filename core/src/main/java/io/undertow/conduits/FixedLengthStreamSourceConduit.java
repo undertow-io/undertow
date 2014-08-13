@@ -160,7 +160,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
                         UndertowLogger.REQUEST_LOGGER.debug("Exception terminating reads due to exceeding max size", e);
                     }
                     finishListener.handleEvent(this);
-                    state |= FLAG_FINISHED | FLAG_CLOSED;
+                    this.state |= FLAG_FINISHED | FLAG_CLOSED;
                     exchange.setPersistent(false);
                     throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
                 }
