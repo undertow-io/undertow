@@ -38,6 +38,7 @@
         <test.level>INFO</test.level>
         <serverPort>7777</serverPort>
         <proxy>false</proxy>
+        <test.ipv6>false</test.ipv6>
     </properties>
 
     <dependencies>
@@ -134,6 +135,7 @@
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
+                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                     </systemPropertyVariables>
                     <argLine>-Xmx1024m ${jacoco.agent.argLine}</argLine>
                 </configuration>

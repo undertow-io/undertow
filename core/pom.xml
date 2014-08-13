@@ -40,6 +40,7 @@
         <proxy>false</proxy>
         <dump>false</dump>
         <https>false</https>
+        <test.ipv6>false</test.ipv6>
     </properties>
 
     <dependencies>
@@ -197,6 +198,7 @@
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
+                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                     </systemPropertyVariables>
                     <argLine>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar} ${jacoco.agent.argLine}</argLine>
                 </configuration>
@@ -229,6 +231,7 @@
                                         <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
                                 </configuration>
@@ -251,6 +254,7 @@
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-ajp-reports</reportsDirectory>
                                 </configuration>
@@ -273,6 +277,7 @@
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-spdy-reports</reportsDirectory>
                                 </configuration>
@@ -295,6 +300,7 @@
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
                                 </configuration>

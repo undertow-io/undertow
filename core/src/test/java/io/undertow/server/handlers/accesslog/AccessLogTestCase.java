@@ -74,7 +74,7 @@ public class AccessLogTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latch.await(10, TimeUnit.SECONDS);
-            Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header test-value", message);
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header test-value", message);
         } finally {
             client.getConnectionManager().shutdown();
         }
