@@ -21,16 +21,6 @@ package io.undertow.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
-import io.undertow.UndertowOptions;
-import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.testutils.AjpIgnore;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.SpdyIgnore;
-import io.undertow.util.Headers;
-import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -39,6 +29,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
+
+import io.undertow.UndertowOptions;
+import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 
 /**
  * @author Stuart Douglas
@@ -57,23 +57,13 @@ public class MaxRequestSizeTestCase {
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                try {
-                    final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputStream = exchange.getInputStream();
-                    String m = HttpClientUtils.readResponse(inputStream);
-                    Assert.assertEquals(A_MESSAGE, m);
-                    inputStream.close();
-                    outputStream.close();
-                } catch (IOException e) {
-                    try {
-                        exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
-                        exchange.setResponseCode(500);
-                    } catch (Exception ignore) {
-
-                    }
-                    throw new RuntimeException(e);
-                }
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                final OutputStream outputStream = exchange.getOutputStream();
+                final InputStream inputStream = exchange.getInputStream();
+                String m = HttpClientUtils.readResponse(inputStream);
+                Assert.assertEquals(A_MESSAGE, m);
+                inputStream.close();
+                outputStream.close();
             }
         });
     }
@@ -97,7 +87,7 @@ public class MaxRequestSizeTestCase {
                 HttpResponse response = client.execute(post);
                 HttpClientUtils.readResponse(response);
 
-                if(DefaultServer.isProxy() || DefaultServer.isAjp()) {
+                if (DefaultServer.isProxy() || DefaultServer.isAjp()) {
                     Assert.assertEquals(500, response.getStatusLine().getStatusCode());
                 } else {
                     Assert.fail("request should have been too big");
