@@ -97,6 +97,14 @@ public abstract class AbstractLoadBalancingProxyTestCase {
             server1.start();
             server2.stop();
             server2.start();
+            try {
+                //so this is not great, but we need to make sure the connection has actually closed
+                //otherwise the TCP close may not have been processed yet, resulting in the proxy
+                //picking a connection that is about to be closed
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
         Assert.assertTrue(resultString.toString().contains("server1"));
         Assert.assertTrue(resultString.toString().contains("server2"));
