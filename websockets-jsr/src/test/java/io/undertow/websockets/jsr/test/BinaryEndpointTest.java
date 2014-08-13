@@ -33,6 +33,7 @@ import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
+import io.undertow.server.handlers.RequestDumpingHandler;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -94,7 +95,7 @@ public class BinaryEndpointTest {
         manager.deploy();
 
 
-        DefaultServer.setRootHandler(manager.start());
+        DefaultServer.setRootHandler(new RequestDumpingHandler(manager.start()));
         DefaultServer.startSSLServer();
     }
 
