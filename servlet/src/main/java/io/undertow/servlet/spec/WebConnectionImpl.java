@@ -26,6 +26,8 @@ import javax.servlet.ServletInputStream;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.WebConnection;
 
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
@@ -34,14 +36,26 @@ import org.xnio.StreamConnection;
  */
 public class WebConnectionImpl implements WebConnection {
 
+    private final StreamConnection channel;
     private final UpgradeServletOutputStream outputStream;
     private final UpgradeServletInputStream inputStream;
     private final Executor ioExecutor;
 
     public WebConnectionImpl(final StreamConnection channel, Pool<ByteBuffer> bufferPool, Executor ioExecutor) {
+        this.channel = channel;
         this.ioExecutor = ioExecutor;
         this.outputStream = new UpgradeServletOutputStream(channel.getSinkChannel(), ioExecutor);
         this.inputStream = new UpgradeServletInputStream(channel.getSourceChannel(), bufferPool, ioExecutor);
+        channel.getCloseSetter().set(new ChannelListener<StreamConnection>() {
+            @Override
+            public void handleEvent(StreamConnection channel) {
+                try {
+                    close();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     @Override
@@ -56,6 +70,10 @@ public class WebConnectionImpl implements WebConnection {
 
     @Override
     public void close() throws Exception {
-        outputStream.closeBlocking();
+        try {
+            outputStream.closeBlocking();
+        } finally {
+            IoUtils.safeClose(inputStream, channel);
+        }
     }
 }

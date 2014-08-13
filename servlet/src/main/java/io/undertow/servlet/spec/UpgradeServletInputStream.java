@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
 
-import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
@@ -159,7 +158,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
     }
 
     private void readIntoBufferNonBlocking() throws IOException {
-        if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
+        if (pooled == null && !anyAreSet(state, FLAG_FINISHED | FLAG_CLOSED)) {
             pooled = bufferPool.allocate();
             if (listener == null) {
                 int res = channel.read(pooled.getResource());
@@ -223,19 +222,13 @@ public class UpgradeServletInputStream extends ServletInputStream {
         if (anyAreSet(state, FLAG_CLOSED)) {
             return;
         }
-        while (allAreClear(state, FLAG_FINISHED)) {
-            readIntoBuffer();
-            if (pooled != null) {
-                pooled.free();
-                pooled = null;
-            }
-        }
+        state |= FLAG_FINISHED | FLAG_CLOSED;
         if (pooled != null) {
             pooled.free();
             pooled = null;
         }
+        channel.suspendReads();
         channel.shutdownReads();
-        state |= FLAG_FINISHED | FLAG_CLOSED;
     }
 
     private class ServletInputStreamChannelListener implements ChannelListener<StreamSourceChannel> {
@@ -254,6 +247,10 @@ public class UpgradeServletInputStream extends ServletInputStream {
                     }
                 }
             } catch (Exception e) {
+                if(pooled != null) {
+                    pooled.free();
+                    pooled = null;
+                }
                 listener.onError(e);
                 IoUtils.safeClose(channel);
             }
@@ -264,6 +261,10 @@ public class UpgradeServletInputStream extends ServletInputStream {
                         channel.shutdownReads();
                         listener.onAllDataRead();
                     } catch (IOException e) {
+                        if(pooled != null) {
+                            pooled.free();
+                            pooled = null;
+                        }
                         listener.onError(e);
                         IoUtils.safeClose(channel);
                     }
