@@ -47,6 +47,8 @@ import org.xnio.channels.StreamSinkChannel;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -94,9 +96,28 @@ public class SpdyClientConnection implements ClientConnection {
 
         //setup the X-Forwarded-* headers
         String peer = request.getAttachment(ProxiedRequestAttachments.REMOTE_HOST);
-        if(peer != null) {
-            request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, peer);
+
+        if (peer != null) {
+            if (request.getRequestHeaders().contains(Headers.X_FORWARDED_FOR)) {
+              // We have an existing header so we shall simply append the host to the existing list
+              final String current = request.getRequestHeaders().getFirst(Headers.X_FORWARDED_FOR);
+              if (current == null || current.isEmpty()) {
+                // It was empty so just add it
+                request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, peer);
+              }
+              else {
+                // Add the new entry and reset the existing header
+                final List<String> ips = Arrays.asList(current.split(","));
+                ips.add(peer);
+                request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, String.join(",", ips));
+              }
+            }
+            else {
+              // No existing header is in place so set it here
+              request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, peer);
+            }
         }
+
         Boolean proto = request.getAttachment(ProxiedRequestAttachments.IS_SSL);
         if(proto == null || !proto) {
             request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, "http");
