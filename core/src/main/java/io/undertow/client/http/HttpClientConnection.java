@@ -56,9 +56,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Locale;
+import java.util.*;
 
 import static io.undertow.client.UndertowClientMessages.MESSAGES;
 import static io.undertow.util.Headers.CLOSE;
@@ -236,15 +234,35 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
         //setup the X-Forwarded-* headers
         String peer = request.getAttachment(ProxiedRequestAttachments.REMOTE_HOST);
-        if(peer != null) {
-            request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, peer);
+
+        if (peer != null) {
+            if (request.getRequestHeaders().contains(Headers.X_FORWARDED_FOR)) {
+                 // We have an existing header so we shall simply append the host to the existing list
+                final String current = request.getRequestHeaders().getFirst(Headers.X_FORWARDED_FOR);
+                if (current == null || current.isEmpty()) {
+                    // It was empty so just add it
+                    request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, peer);
+                }
+                else {
+                    // Add the new entry and reset the existing header
+                    final List<String> ips = Arrays.asList(current.split(","));
+                    ips.add(peer);
+                    request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, String.join(",", ips));
+                }
+            }
+            else {
+                // No existing header is in place so set it here
+                request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, peer);
+            }
         }
+
         Boolean proto = request.getAttachment(ProxiedRequestAttachments.IS_SSL);
         if(proto == null || !proto) {
             request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, "http");
         } else {
             request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, "https");
         }
+
         String hn = request.getAttachment(ProxiedRequestAttachments.SERVER_NAME);
         if(hn != null) {
             request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, hn);
