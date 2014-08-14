@@ -93,6 +93,8 @@ public class SslUpgradeTestCase {
             out.write("exit\r\n\r\n".getBytes());
             out.flush();
             out.close();
+            in.close();
+            socket.close();
 
         } finally {
             client.getConnectionManager().shutdown();
