@@ -251,7 +251,16 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     // Add the new entry and reset the existing header
                     final List<String> ips = Arrays.asList(current.split(","));
                     ips.add(peer);
-                    request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, String.join(",", ips));
+
+                    final StringBuilder bld = new StringBuilder();
+                    for (int i = 0; i < ips.size(); i++) {
+                        bld.append(ips.get(i));
+                        if (i < ips.size() - 1) {
+                            bld.append(",");
+                        }
+                    }
+
+                    request.getRequestHeaders().put(Headers.X_FORWARDED_FOR,  bld.toString());
                 }
             }
             else {
