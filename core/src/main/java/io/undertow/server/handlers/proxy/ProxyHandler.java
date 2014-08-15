@@ -18,6 +18,25 @@
 
 package io.undertow.server.handlers.proxy;
 
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.security.cert.CertificateEncodingException;
+import javax.security.cert.X509Certificate;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.channels.Channel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
 import io.undertow.UndertowLogger;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
@@ -58,25 +77,6 @@ import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.security.cert.CertificateEncodingException;
-import javax.security.cert.X509Certificate;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.nio.channels.Channel;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
 /**
  * An HTTP handler which proxies content to a remote server.
  * <p/>
@@ -98,8 +98,6 @@ public final class ProxyHandler implements HttpHandler {
     private static final AttachmentKey<ProxyConnection> CONNECTION = AttachmentKey.create(ProxyConnection.class);
     private static final AttachmentKey<HttpServerExchange> EXCHANGE = AttachmentKey.create(HttpServerExchange.class);
     private static final AttachmentKey<XnioExecutor.Key> TIMEOUT_KEY = AttachmentKey.create(XnioExecutor.Key.class);
-
-    private final ProxyClientHandler proxyClientHandler = new ProxyClientHandler();
 
     /**
      * Map of additional headers to add to the request.
@@ -143,26 +141,13 @@ public final class ProxyHandler implements HttpHandler {
             next.handleRequest(exchange);
             return;
         }
-        if (maxRequestTime > 0) {
+        final long timeout = maxRequestTime > 0 ? System.currentTimeMillis() + maxRequestTime : 0;
+        final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, 1);
+        if (timeout > 0) {
             final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
                 public void run() {
-
-
-                    ProxyConnection connectionAttachment = exchange.getAttachment(CONNECTION);
-                    if (connectionAttachment != null) {
-                        ClientConnection clientConnection = connectionAttachment.getConnection();
-                        UndertowLogger.REQUEST_LOGGER.timingOutRequest(clientConnection.getPeerAddress() + "" + exchange.getRequestURI());
-                        IoUtils.safeClose(clientConnection);
-                    } else {
-                        UndertowLogger.REQUEST_LOGGER.timingOutRequest(exchange.getRequestURI());
-                    }
-                    if (exchange.isResponseStarted()) {
-                        IoUtils.safeClose(exchange.getConnection());
-                    } else {
-                        exchange.setResponseCode(503);
-                        exchange.endExchange();
-                    }
+                    clientHandler.cancel(exchange);
                 }
             }, maxRequestTime, TimeUnit.MILLISECONDS);
             exchange.putAttachment(TIMEOUT_KEY, key);
@@ -174,13 +159,7 @@ public final class ProxyHandler implements HttpHandler {
                 }
             });
         }
-        exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : exchange.getIoThread(), new Runnable() {
-            @Override
-            public void run() {
-                log.debugf("Proxying request %s, opening connection", exchange.getRequestURL());
-                proxyClient.getConnection(target, exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
-            }
-        });
+        exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : exchange.getIoThread(), clientHandler);
     }
 
     /**
@@ -251,24 +230,83 @@ public final class ProxyHandler implements HttpHandler {
         return proxyClient;
     }
 
-    private final class ProxyClientHandler implements ProxyCallback<ProxyConnection> {
+    private final class ProxyClientHandler implements ProxyCallback<ProxyConnection>, Runnable {
 
-        @Override
-        public void completed(HttpServerExchange exchange, ProxyConnection result) {
-            exchange.putAttachment(CONNECTION, result);
-            exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(result, exchange, requestHeaders, rewriteHostHeader, reuseXForwarded));
+        private int tries;
+
+        private final long timeout;
+        private final int maxAttempts;
+        private final HttpServerExchange exchange;
+        private ProxyClient.ProxyTarget target;
+
+        ProxyClientHandler(HttpServerExchange exchange, ProxyClient.ProxyTarget target, long timeout, int maxAttempts) {
+            this.exchange = exchange;
+            this.timeout = timeout;
+            this.maxAttempts = maxAttempts;
+            this.target = target;
         }
 
         @Override
-        public void failed(HttpServerExchange exchange) {
-            UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailedToResolveBackend(exchange.getRequestURI());
-            if (!exchange.isResponseStarted()) {
-                exchange.setResponseCode(503);
-                exchange.endExchange();
+        public void run() {
+            proxyClient.getConnection(target, exchange, this, -1, TimeUnit.MILLISECONDS);
+        }
+
+        @Override
+        public void completed(final HttpServerExchange exchange, final ProxyConnection connection) {
+            exchange.putAttachment(CONNECTION, connection);
+            exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(connection, exchange, requestHeaders, rewriteHostHeader, reuseXForwarded));
+        }
+
+        @Override
+        public void failed(final HttpServerExchange exchange) {
+            final long time = System.currentTimeMillis();
+            if (timeout > 0 && timeout > time) {
+                cancel(exchange);
+            } else if (tries++ < maxAttempts) {
+                target = proxyClient.findTarget(exchange);
+                if (target != null) {
+                    final long remaining = timeout > 0 ? timeout - time : -1;
+                    proxyClient.getConnection(target, exchange, this, remaining, TimeUnit.MILLISECONDS);
+                } else {
+                    couldNotResolveBackend(exchange); // The context was registered when we started, so return 503
+                }
             } else {
-                IoUtils.safeClose(exchange.getConnection());
+                couldNotResolveBackend(exchange);
             }
         }
+
+        @Override
+        public void queuedRequestFailed(HttpServerExchange exchange) {
+            failed(exchange);
+        }
+
+        @Override
+        public void couldNotResolveBackend(HttpServerExchange exchange) {
+            if (exchange.isResponseStarted()) {
+                IoUtils.safeClose(exchange.getConnection());
+            } else {
+                exchange.setResponseCode(503);
+                exchange.endExchange();
+            }
+        }
+
+        void cancel(final HttpServerExchange exchange) {
+            final ProxyConnection connectionAttachment = exchange.getAttachment(CONNECTION);
+            if (connectionAttachment != null) {
+                ClientConnection clientConnection = connectionAttachment.getConnection();
+                UndertowLogger.REQUEST_LOGGER.timingOutRequest(clientConnection.getPeerAddress() + "" + exchange.getRequestURI());
+                IoUtils.safeClose(clientConnection);
+            } else {
+                UndertowLogger.REQUEST_LOGGER.timingOutRequest(exchange.getRequestURI());
+            }
+            if (exchange.isResponseStarted()) {
+                IoUtils.safeClose(exchange.getConnection());
+            } else {
+                exchange.setResponseCode(503);
+                exchange.endExchange();
+            }
+        }
+
     }
 
     private static class ProxyAction implements Runnable {

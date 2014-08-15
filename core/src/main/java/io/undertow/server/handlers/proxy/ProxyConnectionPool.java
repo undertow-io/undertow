@@ -242,7 +242,7 @@ public class ProxyConnectionPool implements Closeable {
                 if (callback.getExpireTime() > 0 && callback.getExpireTime() < time) {
                     callback.getCallback().failed(callback.getExchange());
                 } else {
-                    connectionPoolManager.queuedConnectionFailed(callback.getProxyTarget(), callback.getExchange(), callback.getCallback(), callback.getExpireTime() > 0 ? time - callback.getExpireTime() : -1);
+                    callback.getCallback().queuedRequestFailed(callback.getExchange());
                 }
             }
             callback = hostData.awaitingConnections.poll();
@@ -291,7 +291,7 @@ public class ProxyConnectionPool implements Closeable {
     private void scheduleFailedHostRetry(final HttpServerExchange exchange) {
         final int retry = connectionPoolManager.getProblemServerRetry();
         // only schedule a retry task if the node is not available
-        if (!connectionPoolManager.isAvailable() && retry > 0) {
+        if (retry > 0 && !connectionPoolManager.isAvailable()) {
             exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
                 public void run() {
@@ -314,6 +314,7 @@ public class ProxyConnectionPool implements Closeable {
                                         handleClosedConnection(data, connectionHolder);
                                     }
                                 });
+                                data.connections++;
                                 returnConnection(connectionHolder);
                             } else {
                                 // Otherwise reschedule the retry task
@@ -419,7 +420,7 @@ public class ProxyConnectionPool implements Closeable {
         } else {
             // Reject the request directly if we reached the max request queue size
             if (data.awaitingConnections.size() >= maxRequestQueueSize) {
-                connectionPoolManager.queuedConnectionFailed(proxyTarget, exchange, callback, timeout);
+                callback.queuedRequestFailed(exchange);
                 return;
             }
             CallbackHolder holder;

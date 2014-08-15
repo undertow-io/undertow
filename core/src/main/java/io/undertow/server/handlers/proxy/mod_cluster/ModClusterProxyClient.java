@@ -64,25 +64,20 @@ class ModClusterProxyClient implements ProxyClient {
             return;
         }
         if (! (target instanceof ModClusterProxyTarget)) {
-            callback.failed(exchange);
+            callback.couldNotResolveBackend(exchange);
         }
 
         // Resolve the node
         final ModClusterProxyTarget proxyTarget = (ModClusterProxyTarget) target;
         final Context context = proxyTarget.resolveContext(exchange);
         if (context == null) {
-            callback.failed(exchange);
+            callback.couldNotResolveBackend(exchange);
         } else {
             if (holder != null || (exclusivityChecker != null && exclusivityChecker.isExclusivityRequired(exchange))) {
                 // If we have a holder, even if the connection was closed we now
                 // exclusivity was already requested so our client
                 // may be assuming it still exists.
                 final ProxyCallback<ProxyConnection> wrappedCallback = new ProxyCallback<ProxyConnection>() {
-
-                    @Override
-                    public void failed(HttpServerExchange exchange) {
-                        callback.failed(exchange);
-                    }
 
                     @Override
                     public void completed(HttpServerExchange exchange, ProxyConnection result) {
@@ -105,6 +100,21 @@ class ModClusterProxyClient implements ProxyClient {
                             });
                         }
                         callback.completed(exchange, result);
+                    }
+
+                    @Override
+                    public void queuedRequestFailed(HttpServerExchange exchange) {
+                        callback.queuedRequestFailed(exchange);
+                    }
+
+                    @Override
+                    public void failed(HttpServerExchange exchange) {
+                        callback.failed(exchange);
+                    }
+
+                    @Override
+                    public void couldNotResolveBackend(HttpServerExchange exchange) {
+                        callback.couldNotResolveBackend(exchange);
                     }
                 };
 

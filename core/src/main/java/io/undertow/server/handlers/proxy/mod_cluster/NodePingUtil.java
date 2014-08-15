@@ -150,6 +150,16 @@ class NodePingUtil {
                         callback.failed();
                     }
 
+                    @Override
+                    public void queuedRequestFailed(HttpServerExchange exchange) {
+                        callback.failed();
+                    }
+
+                    @Override
+                    public void couldNotResolveBackend(HttpServerExchange exchange) {
+                        callback.failed();
+                    }
+
                 }, timeout, TimeUnit.SECONDS, false);
             }
         });

@@ -217,18 +217,12 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
         final Host host = selectHost(exchange);
         if (host == null) {
-            callback.failed(exchange);
+            callback.couldNotResolveBackend(exchange);
         } else {
             if (holder != null || (exclusivityChecker != null && exclusivityChecker.isExclusivityRequired(exchange))) {
                 // If we have a holder, even if the connection was closed we now exclusivity was already requested so our client
                 // may be assuming it still exists.
                 host.connectionPool.connect(target, exchange, new ProxyCallback<ProxyConnection>() {
-
-                    @Override
-                    public void failed(HttpServerExchange exchange) {
-                        UndertowLogger.PROXY_REQUEST_LOGGER.proxyFailedToConnectToBackend(exchange.getRequestURI(), host.uri);
-                        callback.failed(exchange);
-                    }
 
                     @Override
                     public void completed(HttpServerExchange exchange, ProxyConnection result) {
@@ -251,6 +245,22 @@ public class LoadBalancingProxyClient implements ProxyClient {
                             });
                         }
                         callback.completed(exchange, result);
+                    }
+
+                    @Override
+                    public void queuedRequestFailed(HttpServerExchange exchange) {
+                        callback.queuedRequestFailed(exchange);
+                    }
+
+                    @Override
+                    public void failed(HttpServerExchange exchange) {
+                        UndertowLogger.PROXY_REQUEST_LOGGER.proxyFailedToConnectToBackend(exchange.getRequestURI(), host.uri);
+                        callback.failed(exchange);
+                    }
+
+                    @Override
+                    public void couldNotResolveBackend(HttpServerExchange exchange) {
+                        callback.couldNotResolveBackend(exchange);
                     }
                 }, timeout, timeUnit, true);
             } else {
@@ -329,7 +339,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
             this.ssl = ssl;
         }
 
-        @Override
+        // @Override
         public void queuedConnectionFailed(ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeoutMills) {
             getConnection(proxyTarget, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS);
         }

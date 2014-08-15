@@ -488,12 +488,12 @@ class Node {
             return nodeConfig.getRequestQueueSize();
         }
 
-        @Override
+        // @Override
         public void queuedConnectionFailed(ProxyClient.ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeoutMills) {
             final ModClusterProxyTarget target = (ModClusterProxyTarget) proxyTarget;
             final Context context = target.resolveContext(exchange);
             if(context == null || context.getNode() == Node.this) {
-                callback.failed(exchange);
+                callback.queuedRequestFailed(exchange);
                 return;
             }
             context.handleRequest(target, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS, false);
