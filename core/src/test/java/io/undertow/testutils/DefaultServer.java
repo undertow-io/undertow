@@ -38,6 +38,7 @@ import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
 
+import org.jboss.logging.Logger;
 import org.junit.Ignore;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
@@ -129,6 +130,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final int runs = Integer.getInteger("test.runs", 1);
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
+
+    private static final Logger log = Logger.getLogger(DefaultServer.class);
 
     private static KeyStore loadKeyStore(final String name) throws IOException {
         final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(name);
@@ -295,7 +298,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         proxyServer.resumeAccepts();
 
                     }
-                } else if (spdy) {
+                } else if (spdy && isAlpnEnabled()) {
                     openListener = new SpdyOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
@@ -314,7 +317,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
 
-                } else if (http2) {
+                } else if (http2 && isAlpnEnabled()) {
                     openListener = new Http2OpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
@@ -369,6 +372,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
 
                 } else {
+                    if(http2) {
+                        log.error("HTTP2 selected but Netty ALPN was not on the boot class path");
+                    }
+                    if(spdy) {
+                        log.error("SPDY selected but Netty ALPN was not on the boot class path");
+                    }
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
                     if (!proxy) {
@@ -748,6 +757,15 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
             next.handleRequest(exchange);
+        }
+    }
+
+    private static boolean isAlpnEnabled() {
+        try {
+            Class c = Class.forName("org.eclipse.jetty.alpn.ALPN");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 }
