@@ -52,8 +52,7 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
  * <li><b>%l</b> - Remote logical username from identd (always returns '-')
  * <li><b>%m</b> - Request method
  * <li><b>%p</b> - Local port
- * <li><b>%q</b> - Query string (prepended with a '?' if it exists, otherwise
- * an empty string
+ * <li><b>%q</b> - Query string (excluding the '?' character)
  * <li><b>%r</b> - First line of the request
  * <li><b>%s</b> - HTTP status code of the response
  * <li><b>%t</b> - Date and time, in Common Log Format format
