@@ -25,6 +25,7 @@ import io.undertow.predicate.PredicatesHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.RoutingHandler;
+import io.undertow.server.handlers.AbstractCompositeHandler.CompositeHandler;
 import io.undertow.server.handlers.AccessControlListHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.DisableCacheHandler;
@@ -498,6 +499,15 @@ public class Handlers {
      */
     public static ExceptionHandler exceptionHandler(final HttpHandler next) {
         return new ExceptionHandler(next);
+    }
+
+    /**
+     * Returns a handler that can compose multiple handlers into a single handler.
+     * @param next The next handler
+     * @return The composite handler
+     */
+    public static CompositeHandler composite(final HttpHandler handler) {
+        return new CompositeHandler(handler);
     }
 
     private Handlers() {
