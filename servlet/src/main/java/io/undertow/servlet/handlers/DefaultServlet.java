@@ -243,11 +243,13 @@ public class DefaultServlet extends HttpServlet {
         }
         //todo: handle range requests
         //we are going to proceed. Set the appropriate headers
-        final String contentType = deployment.getServletContext().getMimeType(resource.getName());
-        if (contentType != null) {
-            resp.setContentType(contentType);
-        } else {
-            resp.setContentType("application/octet-stream");
+        if(resp.getContentType() == null) {
+            final String contentType = deployment.getServletContext().getMimeType(resource.getName());
+            if (contentType != null) {
+                resp.setContentType(contentType);
+            } else {
+                resp.setContentType("application/octet-stream");
+            }
         }
         if (lastModified != null) {
             resp.setHeader(Headers.LAST_MODIFIED_STRING, resource.getLastModifiedString());
