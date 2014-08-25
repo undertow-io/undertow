@@ -47,7 +47,7 @@ public class PathHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         final PathMatcher.PathMatch<HttpHandler> match = pathMatcher.match(exchange.getRelativePath());
-        if(match.getValue() == null) {
+        if (match.getValue() == null) {
             ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
             return;
         }
