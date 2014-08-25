@@ -211,10 +211,13 @@ public class ResourceHandler implements HttpHandler {
                 //todo: handle range requests
                 //we are going to proceed. Set the appropriate headers
                 final String contentType = resource.getContentType(mimeMappings);
-                if (contentType != null) {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
-                } else {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/octet-stream");
+
+                if(!exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
+                    if (contentType != null) {
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
+                    } else {
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/octet-stream");
+                    }
                 }
                 if (lastModified != null) {
                     exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, resource.getLastModifiedString());
