@@ -40,7 +40,7 @@ public class RequestURLAttribute implements ExchangeAttribute {
             exchange.setResolvedPath("");
             final String newQueryString = newValue.substring(pos);
             exchange.setQueryString(newQueryString);
-            exchange.getQueryParameters().putAll(QueryParameterUtils.parseQueryString(newQueryString.substring(1)));
+            exchange.getQueryParameters().putAll(QueryParameterUtils.parseQueryString(newQueryString.substring(1), QueryParameterUtils.getQueryParamEncoding(exchange)));
         }
 
     }

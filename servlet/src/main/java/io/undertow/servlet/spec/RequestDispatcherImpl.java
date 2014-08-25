@@ -133,7 +133,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     String newQueryString = newServletPath.substring(qsPos + 1);
                     newServletPath = newServletPath.substring(0, qsPos);
 
-                    Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
+                    String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
+                    Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
                     requestImpl.getExchange().setQueryString(newQueryString);
                     requestImpl.setQueryParameters(newQueryParameters);
                 }
@@ -249,7 +250,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     String newQueryString = newServletPath.substring(qsPos + 1);
                     newServletPath = newServletPath.substring(0, qsPos);
 
-                    Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
+                    String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
+                    Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
                     requestImpl.setQueryParameters(newQueryParameters);
                     requestImpl.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
                 } else {
