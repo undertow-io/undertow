@@ -64,7 +64,7 @@ import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.NetworkUtils;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
@@ -78,7 +78,7 @@ import io.undertow.websockets.utils.WebSocketTestClient;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class JsrWebSocketServer07Test {
 
     @org.junit.Test

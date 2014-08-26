@@ -31,6 +31,7 @@ import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
+import io.undertow.server.protocol.http2.Http2UpgradeHandler;
 import io.undertow.server.protocol.spdy.SpdyOpenListener;
 import io.undertow.server.protocol.spdy.SpdyPlainOpenListener;
 import io.undertow.util.Headers;
@@ -121,7 +122,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
     private static final boolean spdy = Boolean.getBoolean("test.spdy");
-    private static final boolean http2 = Boolean.getBoolean("test.http2");
+    private static final boolean h2 = Boolean.getBoolean("test.h2");
+    private static final boolean h2c = Boolean.getBoolean("test.h2c");
     private static final boolean spdyPlain = Boolean.getBoolean("test.spdy-plain");
     private static final boolean https = Boolean.getBoolean("test.https");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
@@ -317,7 +319,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
 
-                } else if (http2 && isAlpnEnabled()) {
+                } else if (h2 && isAlpnEnabled()) {
                     openListener = new Http2OpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
@@ -330,11 +332,26 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("http2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 120000, HANDLE_404);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 120000, HANDLE_404);
                     setupProxyHandlerForSSL(proxyHandler);
                     proxyOpenListener.setRootHandler(proxyHandler);
                     proxyServer.resumeAccepts();
 
+
+                } else if (h2c) {
+                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+
+                    InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
+                    server = worker.createStreamConnectionServer(targetAddress, acceptListener, serverOptions);
+
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
+                    proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2c", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
+                    setupProxyHandlerForSSL(proxyHandler);
+                    proxyOpenListener.setRootHandler(proxyHandler);
+                    proxyServer.resumeAccepts();
 
                 } else if (spdyPlain) {
                     openListener = new SpdyPlainOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
@@ -372,7 +389,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
 
                 } else {
-                    if(http2) {
+                    if(h2) {
                         log.error("HTTP2 selected but Netty ALPN was not on the boot class path");
                     }
                     if(spdy) {
@@ -396,7 +413,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     }
 
                 }
-                openListener.setRootHandler(rootHandler);
+                if(h2c) {
+                    openListener.setRootHandler(new Http2UpgradeHandler(rootHandler));
+                } else {
+                    openListener.setRootHandler(rootHandler);
+                }
                 server.resumeAccepts();
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -461,12 +482,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        if(spdy || spdyPlain || http2) {
-            SpdyIgnore spdyIgnore = method.getAnnotation(SpdyIgnore.class);
-            if(spdyIgnore == null) {
-                spdyIgnore = method.getMethod().getDeclaringClass().getAnnotation(SpdyIgnore.class);
+        if(spdy || spdyPlain || h2 || h2c) {
+            HttpOneOnly httpOneOnly = method.getAnnotation(HttpOneOnly.class);
+            if(httpOneOnly == null) {
+                httpOneOnly = method.getMethod().getDeclaringClass().getAnnotation(HttpOneOnly.class);
             }
-            if(spdyIgnore != null) {
+            if(httpOneOnly != null) {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
             }
@@ -524,7 +545,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             if(https) {
                 sb.append("{https}");
             }
-            if(http2) {
+            if(h2) {
                 sb.append("{http2}");
             }
             return sb.toString();

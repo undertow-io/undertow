@@ -25,9 +25,11 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -107,6 +109,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private ReferenceCountedPooled<ByteBuffer> readData = null;
     private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<>();
     private boolean flushingSenders = false;
+
+    private final Set<AbstractFramedStreamSourceChannel<C, R, S>> receivers = new HashSet<>();
 
     /**
      * Create a new {@link io.undertow.server.protocol.framed.AbstractFramedChannel}
@@ -329,6 +333,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     boolean moreData = data.getFrameLength() > frameData.getResource().remaining();
                     R newChannel = createChannel(data, frameData);
                     if (newChannel != null) {
+                        receivers.add(newChannel);
                         if (moreData) {
                             receiver = newChannel;
                         }
@@ -710,6 +715,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         }
     }
 
+    void notifyClosed(AbstractFramedStreamSourceChannel<C, R, S> channel) {
+        synchronized (AbstractFramedChannel.this) {
+            receivers.remove(channel);
+        }
+    }
+
+
     /**
      * {@link org.xnio.ChannelListener} which delegates the read notification to the appropriate listener
      */
@@ -804,6 +816,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     for (final S channel : heldFrames) {
                         //if this was a clean shutdown there should not be any senders
                         channel.markBroken();
+                    }
+                    for(AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
+                        IoUtils.safeClose(r);
                     }
                 }
             } finally {

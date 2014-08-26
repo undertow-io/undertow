@@ -27,11 +27,10 @@ import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionManager;
 import io.undertow.server.session.SslSessionConfig;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.SpdyIgnore;
 import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -47,9 +46,8 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
 @ProxyIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class SSLSessionTestCase {
 
     public static final String COUNT = "count";

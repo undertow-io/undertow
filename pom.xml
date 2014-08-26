@@ -101,6 +101,7 @@
         <module>servlet</module>
         <module>examples</module>
         <module>websockets-jsr</module>
+        <module>http2-test-suite</module>
     </modules>
 
     <build>

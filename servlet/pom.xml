@@ -286,7 +286,7 @@
                                 </configuration>
                             </execution>
                             <execution>
-                                <id>proxy-http2</id>
+                                <id>proxy-h2</id>
                                 <phase>test</phase>
                                 <goals>
                                     <goal>test</goal>
@@ -296,7 +296,30 @@
                                     <runOrder>reversealphabetical</runOrder>
                                     <systemPropertyVariables>
                                         <test.proxy>true</test.proxy>
-                                        <test.http2>true</test.http2>
+                                        <test.h2>true</test.h2>
+                                        <test.dump>${dump}</test.dump>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>proxy-h2c</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <systemPropertyVariables>
+                                        <test.proxy>true</test.proxy>
+                                        <test.h2c>true</test.h2c>
                                         <test.dump>${dump}</test.dump>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>

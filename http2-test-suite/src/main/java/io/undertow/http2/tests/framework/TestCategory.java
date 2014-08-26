@@ -16,33 +16,39 @@
  *  limitations under the License.
  */
 
-package io.undertow.protocols.http2;
+package io.undertow.http2.tests.framework;
 
-import java.nio.ByteBuffer;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Parser for SPDY ping frames.
+ * Categorises the tests
  *
  * @author Stuart Douglas
  */
-class Http2RstStreamParser extends Http2PushBackParser {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface TestCategory {
 
-    private int errorCode;
+    /**
+     * @return The major version
+     */
+    int major();
 
-    public Http2RstStreamParser(int frameLength) {
-        super(frameLength);
-    }
+    /**
+     * @return The minor version
+     */
+    int minor();
 
-    @Override
-    protected void handleData(ByteBuffer resource, Http2FrameHeaderParser headerParser) {
-        if (resource.remaining() < 4) {
-            return;
-        }
-        errorCode = Http2ProtocolUtils.readInt(resource);
+    /**
+     * @return The micro version
+     */
+    int micro() default 0;
 
-    }
-
-    public int getErrorCode() {
-        return errorCode;
-    }
+    /**
+     * @return A description of what is being tested
+     */
+    String description();
 }

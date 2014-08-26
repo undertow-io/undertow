@@ -37,9 +37,8 @@ import org.xnio.Pool;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.AbstractReceiveListener;
@@ -54,8 +53,7 @@ import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class WebSocketClient13TestCase {
     private static XnioWorker worker;
 

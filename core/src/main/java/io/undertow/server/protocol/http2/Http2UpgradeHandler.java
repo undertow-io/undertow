@@ -28,6 +28,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.FlexBase64;
+import io.undertow.util.Headers;
 
 /**
  * Upgrade listener for HTTP2, this allows connections to be established using the upgrade
@@ -47,8 +48,8 @@ public class Http2UpgradeHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        String upgrade = exchange.getRequestHeaders().getFirst(Http2Channel.CLEARTEXT_UPGRADE_STRING);
-        if(upgrade != null) {
+        String upgrade = exchange.getRequestHeaders().getFirst(Headers.UPGRADE);
+        if(upgrade != null && upgrade.equals(Http2Channel.CLEARTEXT_UPGRADE_STRING)) {
             String settings = exchange.getRequestHeaders().getFirst("HTTP2-Settings");
             if(settings != null) {
                 //required by spec
@@ -57,12 +58,25 @@ public class Http2UpgradeHandler implements HttpHandler {
                     @Override
                     public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
                         OptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
-                        Http2Channel channel = new Http2Channel(streamConnection, exchange.getConnection().getBufferPool(), null, false, settingsFrame, undertowOptions);
-                        Http2ReceiveListener receiveListener = new Http2ReceiveListener(next, undertowOptions, exchange.getConnection().getBufferSize());
+                        Http2Channel channel = new Http2Channel(streamConnection, exchange.getConnection().getBufferPool(), null, false, true, settingsFrame, undertowOptions);
+                        Http2ReceiveListener receiveListener = new Http2ReceiveListener(new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                //if this header is present we don't actually process the rest of the handler chain
+                                //as the request was only to create the initial request
+                                if(exchange.getRequestHeaders().contains("X-HTTP2-connect-only")) {
+                                    exchange.endExchange();
+                                    return;
+                                }
+                                next.handleRequest(exchange);
+                            }
+                        }, undertowOptions, exchange.getConnection().getBufferSize());
                         channel.getReceiveSetter().set(receiveListener);
                         receiveListener.handleInitialRequest(exchange, channel);
+                        channel.resumeReceives();
                     }
                 });
+                return;
             }
         }
         next.handleRequest(exchange);

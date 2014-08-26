@@ -141,7 +141,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     void handleInitialRequest(HttpServerExchange initial, Http2Channel channel) {
 
         //we have a request
-        Http2HeadersStreamSinkChannel sink = new Http2HeadersStreamSinkChannel(channel, 1);
+        Http2HeadersStreamSinkChannel sink = channel.createInitialUpgradeResponseStream();
         final Http2ServerConnection connection = new Http2ServerConnection(channel, sink, undertowOptions, bufferSize);
 
         HeaderMap requestHeaders = new HeaderMap();
@@ -152,7 +152,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setRequestScheme(initial.getRequestScheme());
         exchange.setProtocol(initial.getProtocol());
         exchange.setRequestMethod(initial.getRequestMethod());
-        setRequestPath(exchange, exchange.getRequestURI(), encoding, allowEncodingSlash, decodeBuffer);
+        setRequestPath(exchange, initial.getRequestURI(), encoding, allowEncodingSlash, decodeBuffer);
 
         SSLSession session = channel.getSslSession();
         if(session != null) {

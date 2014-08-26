@@ -94,7 +94,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         if (existing != null) {
             UndertowLogger.REQUEST_LOGGER.debug("Resuming existing session, not doing NPN negotiation");
             if (existing.equals(HTTP2)) {
-                Http2Channel sc = new Http2Channel(channel, bufferPool, new ImmediatePooled<>(ByteBuffer.wrap(new byte[0])), false, undertowOptions);
+                Http2Channel sc = new Http2Channel(channel, bufferPool, new ImmediatePooled<>(ByteBuffer.wrap(new byte[0])), false, false, undertowOptions);
                 sc.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize));
                 sc.resumeReceives();
             } else {
@@ -186,7 +186,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
                     if (HTTP2.equals(selected)) {
 
                         //cool, we have a Http2 connection.
-                        Http2Channel channel = new Http2Channel(this.channel, bufferPool, buffer, false, undertowOptions);
+                        Http2Channel channel = new Http2Channel(this.channel, bufferPool, buffer, false, false, undertowOptions);
                         Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
                         if (idleTimeout != null && idleTimeout > 0) {
                             channel.setIdleTimeout(idleTimeout);

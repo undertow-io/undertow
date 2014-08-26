@@ -35,6 +35,7 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
+import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowLogger;
@@ -71,7 +72,9 @@ public class Http2ClientConnection implements ClientConnection {
 
     private final Map<Integer, Http2ClientExchange> currentExchanges = new ConcurrentHashMap<>();
 
-    public Http2ClientConnection(Http2Channel http2Channel) {
+    private boolean initialUpgradeRequest;
+
+    public Http2ClientConnection(Http2Channel http2Channel, boolean initialUpgradeRequest) {
         this.http2Channel = http2Channel;
         http2Channel.getReceiveSetter().set(new Http2ReceiveListener());
         http2Channel.resumeReceives();
@@ -81,6 +84,7 @@ public class Http2ClientConnection implements ClientConnection {
                 ChannelListeners.invokeChannelListener(Http2ClientConnection.this, closeSetter.get());
             }
         });
+        this.initialUpgradeRequest = initialUpgradeRequest;
     }
 
     @Override
@@ -285,26 +289,34 @@ public class Http2ClientConnection implements ClientConnection {
                 AbstractHttp2StreamSourceChannel result = channel.receive();
                 if (result instanceof Http2StreamSourceChannel) {
                     Http2ClientExchange request = currentExchanges.remove(((Http2StreamSourceChannel) result).getStreamId());
-                    if (request == null) {
+                    if (request == null && initialUpgradeRequest) {
+                        Channels.drain(result, Long.MAX_VALUE);
+                        initialUpgradeRequest = false;
+                        return;
+                    } else if(request == null) {
+
                         //server side initiated stream, we can't deal with that at the moment
                         //just fail
                         //TODO: either handle this properly or at the very least send RST_STREAM
-                        IoUtils.safeClose(Http2ClientConnection.this);
+                        IoUtils.safeClose(channel);
                         return;
                     }
                     request.responseReady((Http2StreamSourceChannel) result);
-
                 } else if (result instanceof Http2PingStreamSourceChannel) {
                     handlePing((Http2PingStreamSourceChannel) result);
                 } else if (result instanceof Http2RstStreamStreamSourceChannel) {
                     int stream = ((Http2RstStreamStreamSourceChannel)result).getStreamId();
                     UndertowLogger.REQUEST_LOGGER.debugf("Client received RST_STREAM for stream %s", stream);
                     Http2ClientExchange exchange = currentExchanges.get(stream);
+
                     if(exchange != null) {
                         exchange.failed(UndertowMessages.MESSAGES.http2StreamWasReset());
                     }
+                    Channels.drain(result, Long.MAX_VALUE);
                 } else if(!channel.isOpen()) {
                     throw UndertowMessages.MESSAGES.channelIsClosed();
+                } else if(result != null) {
+                    Channels.drain(result, Long.MAX_VALUE);
                 }
 
             } catch (IOException e) {

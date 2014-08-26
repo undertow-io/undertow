@@ -27,6 +27,8 @@ import io.undertow.util.HttpString;
  */
 public class Hpack {
 
+    public static final int DEFAULT_TABLE_SIZE = 4096;
+
     /**
      * table that contains powers of two,
      * used as both bitmask and to quickly calculate 2^n

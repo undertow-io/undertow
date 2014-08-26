@@ -20,6 +20,7 @@ package io.undertow.protocols.http2;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -104,8 +105,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     static final int CONTINUATION_FLAG_END_HEADERS = 0x4;
 
-
     static final int DEFAULT_INITIAL_WINDOW_SIZE = 65535;
+
     public static final byte[] PREFACE_BYTES = {
             0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,
             0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
@@ -117,7 +118,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
 
     //local
-    private int headerTableSize = UndertowOptions.DEFAULT_MAX_HEADER_SIZE;
+    private int encoderHeaderTableSize;
     private boolean enablePush = true;
     private volatile int initialSendWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
     private volatile int initialReceiveWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
@@ -141,8 +142,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private int streamIdCounter;
     private int lastGoodStreamId;
 
-    private final HpackDecoder decoder = new HpackDecoder();
-    private final HpackEncoder encoder = new HpackEncoder();
+    private final HpackDecoder decoder;
+    private final HpackEncoder encoder;
 
     private int prefaceCount;
     private boolean initialSettingsReceived; //settings frame must be the first frame we relieve
@@ -150,35 +151,36 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
 
-    public Http2Channel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, OptionMap settings) {
-        super(connectedStreamChannel, bufferPool, Http2FramePriority.INSTANCE, data);
-        streamIdCounter = clientSide ? 1 : 2;
-        sendPreface();
-        sendSettings();
+    public Http2Channel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
+        this(connectedStreamChannel, bufferPool, data, clientSide, fromUpgrade,  null, settings);
     }
 
-    public Http2Channel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, ByteBuffer initialOtherSideSettings, OptionMap settings) {
+    public Http2Channel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, ByteBuffer initialOtherSideSettings, OptionMap settings) {
         super(connectedStreamChannel, bufferPool, Http2FramePriority.INSTANCE, data);
-        streamIdCounter = clientSide ? 1 : 2;
-        Http2SettingsParser parser = new Http2SettingsParser(initialOtherSideSettings.remaining());
-        try {
-            parser.parse(initialOtherSideSettings, new Http2FrameHeaderParser(this));
-            updateSettings(parser.getSettings());
-        } catch (IOException e) {
-            IoUtils.safeClose(connectedStreamChannel);
-            //should never happen
-            throw new RuntimeException(e);
+        streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
+        if(initialOtherSideSettings != null) {
+            Http2SettingsParser parser = new Http2SettingsParser(initialOtherSideSettings.remaining());
+            try {
+                parser.parse(initialOtherSideSettings, new Http2FrameHeaderParser(this));
+                updateSettings(parser.getSettings());
+            } catch (IOException e) {
+                IoUtils.safeClose(connectedStreamChannel);
+                //should never happen
+                throw new RuntimeException(e);
+            }
         }
         sendPreface();
         sendSettings();
+        encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
+        enablePush = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
+        this.decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
+        this.encoder = new HpackEncoder(encoderHeaderTableSize);
     }
 
     private void sendSettings() {
         List<Http2Setting> settings = new ArrayList<>();
-        settings.add(new Http2Setting(Http2Setting.SETTINGS_HEADER_TABLE_SIZE, headerTableSize));
+        settings.add(new Http2Setting(Http2Setting.SETTINGS_HEADER_TABLE_SIZE, encoderHeaderTableSize));
         settings.add(new Http2Setting(Http2Setting.SETTINGS_ENABLE_PUSH, enablePush ? 1 : 0));
-        //TODO: all the other settings
-
         Http2SettingsStreamSinkChannel stream = new Http2SettingsStreamSinkChannel(this, settings);
         flushChannel(stream);
     }
@@ -229,7 +231,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             case FRAME_TYPE_HEADERS: {
                 Http2HeadersParser parser = (Http2HeadersParser) frameParser.parser;
                 channel = new Http2StreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), parser.getHeaderMap(), frameParser.streamId);
-                lastGoodStreamId = frameParser.streamId;
+                lastGoodStreamId = Math.max(lastGoodStreamId, frameParser.streamId);
                 incomingStreams.put(frameParser.streamId, channel);
                 if (Bits.anyAreSet(frameParser.flags, HEADERS_FLAG_END_STREAM)) {
                     channel.lastFrame();
@@ -241,15 +243,12 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 if (frameParser.streamId == 0) {
                     throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(FRAME_TYPE_RST_STREAM));
                 }
-                if (frameParser.streamId > lastGoodStreamId) {
-                    throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.rstStreamReceivedForIdleStream());
-                }
                 channel = new Http2RstStreamStreamSourceChannel(this, frameData, parser.getErrorCode(), frameParser.streamId);
                 handleRstStream(frameParser.streamId);
                 break;
             }
             case FRAME_TYPE_SETTINGS: {
-                if(!Bits.anyAreSet(frameParser.flags, SETTINGS_FLAG_ACK)) {
+                if (!Bits.anyAreSet(frameParser.flags, SETTINGS_FLAG_ACK)) {
                     updateSettings(((Http2SettingsParser) frameParser.parser).getSettings());
                 } else {
                     sendSettingsAck();
@@ -302,7 +301,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if (!frameParser.handle(data)) {
             return null;
         }
-        if(!initialSettingsReceived) {
+        if (!initialSettingsReceived) {
             if (frameParser.type != FRAME_TYPE_SETTINGS) {
                 UndertowLogger.REQUEST_IO_LOGGER.remoteEndpointFailedToSendInitialSettings();
                 markReadsBroken(new IOException());
@@ -452,7 +451,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
     }
 
-
     public void sendGoAway(int status) {
         sendGoAway(status, new Http2ControlMessageExceptionHandler());
     }
@@ -466,8 +464,15 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         try {
             goAway.shutdownWrites();
             if (!goAway.flush()) {
-                goAway.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, exceptionHandler));
+                goAway.getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<Channel>() {
+                    @Override
+                    public void handleEvent(Channel channel) {
+                        IoUtils.safeClose(Http2Channel.this);
+                    }
+                }, exceptionHandler));
                 goAway.resumeWrites();
+            } else {
+                IoUtils.safeClose(this);
             }
         } catch (IOException e) {
             exceptionHandler.handleException(goAway, e);
@@ -639,6 +644,21 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if (outgoing != null) {
             outgoing.rstStream();
         }
+    }
+
+    /**
+     * Creates a response stream to respond to the initial HTTP upgrade
+     * @return
+     */
+    public Http2HeadersStreamSinkChannel createInitialUpgradeResponseStream() {
+        if(lastGoodStreamId != 0) {
+            throw new IllegalStateException();
+        }
+        lastGoodStreamId = 1;
+        Http2HeadersStreamSinkChannel stream =  new Http2HeadersStreamSinkChannel(this, 1);
+        outgoingStreams.put(1, stream);
+        return stream;
+
     }
 
 

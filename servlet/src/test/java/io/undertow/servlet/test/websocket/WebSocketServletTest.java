@@ -23,9 +23,8 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.websockets.WebSocketServlet;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.NetworkUtils;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.AbstractReceiveListener;
@@ -50,8 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * @author Stuart Douglas
  */
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 @RunWith(DefaultServer.class)
 public class WebSocketServletTest {
     public static final Charset US_ASCII = Charset.forName("US-ASCII");

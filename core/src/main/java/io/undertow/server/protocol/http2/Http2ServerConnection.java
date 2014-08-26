@@ -84,7 +84,7 @@ public class Http2ServerConnection extends ServerConnection {
         originalSinkConduit = new StreamSinkChannelWrappingConduit(responseChannel);
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
-        this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(requestChannel, originalSourceConduit);
+        this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(channel, originalSourceConduit);
     }
 
     /**
@@ -102,7 +102,7 @@ public class Http2ServerConnection extends ServerConnection {
         originalSinkConduit = new StreamSinkChannelWrappingConduit(responseChannel);
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
-        this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(requestChannel, originalSourceConduit);
+        this.conduitStreamSourceChannel = null;
     }
 
     @Override
@@ -204,7 +204,7 @@ public class Http2ServerConnection extends ServerConnection {
 
     @Override
     public void addCloseListener(final CloseListener listener) {
-        requestChannel.getHttp2Channel().addCloseTask(new ChannelListener<Http2Channel>() {
+        channel.addCloseTask(new ChannelListener<Http2Channel>() {
             @Override
             public void handleEvent(Http2Channel channel) {
                 listener.closed(Http2ServerConnection.this);
@@ -253,7 +253,9 @@ public class Http2ServerConnection extends ServerConnection {
 
     @Override
     protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
-        requestChannel.setMaxStreamSize(exchange.getMaxEntitySize());
+        if(requestChannel != null) {
+            requestChannel.setMaxStreamSize(exchange.getMaxEntitySize());
+        }
     }
 
     @Override

@@ -26,10 +26,9 @@ import java.io.OutputStream;
 import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpHandler;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.SpdyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -45,8 +44,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class HttpContinueAcceptingHandlerTestCase {
 
     private static volatile boolean accept = false;

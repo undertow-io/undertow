@@ -76,10 +76,20 @@ public class HpackEncoder extends Hpack {
     }
 
     /**
+     * the table size, not used at the moment cause this implementation does not use indexing yet
+     */
+    private int tableSize;
+
+    /**
      * If a buffer does not have space to put some bytes we decrease its position by one, and store the bits here.
      * When a new
      */
     private int extraData;
+
+
+    public HpackEncoder(int tableSize) {
+        this.tableSize = tableSize;
+    }
 
     /**
      * Encodes the headers into a buffer.
@@ -92,7 +102,6 @@ public class HpackEncoder extends Hpack {
      * @param headers
      * @param target
      */
-
     public State encode(HeaderMap headers, ByteBuffer target) {
         if (target.remaining() < 3) {
             return State.UNDERFLOW;

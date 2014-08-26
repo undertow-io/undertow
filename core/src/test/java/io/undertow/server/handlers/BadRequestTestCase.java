@@ -23,9 +23,9 @@ import java.net.Socket;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.HttpOneOnly;
+
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -35,8 +35,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class BadRequestTestCase {
 
     @BeforeClass

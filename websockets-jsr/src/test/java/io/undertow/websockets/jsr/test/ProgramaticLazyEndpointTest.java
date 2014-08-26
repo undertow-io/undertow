@@ -22,9 +22,8 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.websockets.jsr.DefaultWebSocketClientSslProvider;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
@@ -52,8 +51,7 @@ import java.util.concurrent.TimeUnit;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class ProgramaticLazyEndpointTest {
 
     private static ServerWebSocketContainer deployment;

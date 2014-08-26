@@ -48,7 +48,7 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
             this.label = label;
             String ctx = ALLOCATION_CONTEXT.get();
             ALLOCATION_CONTEXT.remove();
-            allocationPoint = new RuntimeException(ctx == null ? "[NO_CONTEXT]" : ctx);
+            allocationPoint = new RuntimeException(delegate.getResource() + (ctx == null ? "[NO_CONTEXT]" : ctx));
             BUFFERS.add(this);
         }
 

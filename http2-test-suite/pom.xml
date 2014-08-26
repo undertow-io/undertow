@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ JBoss, Home of Professional Open Source.
-  ~ Copyright 2012 Red Hat, Inc., and individual contributors
+  ~ Copyright 2014 Red Hat, Inc., and individual contributors
   ~ as indicated by the @author tags.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -10,11 +10,11 @@
   ~
   ~     http://www.apache.org/licenses/LICENSE-2.0
   ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -29,10 +29,10 @@
     </parent>
 
     <groupId>io.undertow</groupId>
-    <artifactId>undertow-core</artifactId>
+    <artifactId>undertow-http2-test-suite</artifactId>
     <version>1.1.0.Beta7-SNAPSHOT</version>
 
-    <name>Undertow Core</name>
+    <name>Undertow HTTP2 test suite</name>
 
     <properties>
         <test.level>INFO</test.level>
@@ -47,8 +47,7 @@
 
         <dependency>
             <groupId>io.undertow</groupId>
-            <artifactId>undertow-parser-generator</artifactId>
-            <scope>provided</scope>
+            <artifactId>undertow-core</artifactId>
         </dependency>
 
         <dependency>
@@ -85,6 +84,11 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>compile</scope>
+        </dependency>
         <!-- Test dependencies -->
 
         <dependency>
@@ -93,11 +97,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
         
         <dependency>
             <groupId>org.apache.directory.server</groupId>
@@ -306,7 +305,7 @@
                                 </configuration>
                             </execution>
                             <execution>
-                                <id>proxy-h2</id>
+                                <id>proxy-http2</id>
                                 <phase>test</phase>
                                 <goals>
                                     <goal>test</goal>
@@ -316,30 +315,7 @@
                                     <runOrder>reversealphabetical</runOrder>
                                     <systemPropertyVariables>
                                         <test.proxy>true</test.proxy>
-                                        <test.h2>true</test.h2>
-                                        <test.dump>${dump}</test.dump>
-                                        <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
-                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
-                                        </java.util.logging.manager>
-                                        <test.level>${test.level}</test.level>
-                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                    </systemPropertyVariables>
-                                    <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>proxy-h2c</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>test</goal>
-                                </goals>
-                                <configuration>
-                                    <enableAssertions>true</enableAssertions>
-                                    <runOrder>reversealphabetical</runOrder>
-                                    <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
-                                        <test.h2c>true</test.h2c>
+                                        <test.http2>true</test.http2>
                                         <test.dump>${dump}</test.dump>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>

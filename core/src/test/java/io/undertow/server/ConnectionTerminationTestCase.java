@@ -18,22 +18,21 @@
 
 package io.undertow.server;
 
-import io.undertow.testutils.AjpIgnore;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.SpdyIgnore;
-import io.undertow.util.FileUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.IoUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.IoUtils;
+
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.ProxyIgnore;
+import io.undertow.util.FileUtils;
 
 /**
  * Tests abnormal connection termination
@@ -41,9 +40,8 @@ import java.util.concurrent.TimeUnit;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
 @ProxyIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class ConnectionTerminationTestCase {
 
     private volatile boolean completionListenerCalled = false;

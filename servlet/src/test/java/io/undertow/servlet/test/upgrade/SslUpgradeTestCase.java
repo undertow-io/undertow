@@ -31,16 +31,14 @@ import org.junit.runner.RunWith;
 
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 
 /**
  * @author Stuart Douglas
  */
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 @RunWith(DefaultServer.class)
 public class SslUpgradeTestCase {
 

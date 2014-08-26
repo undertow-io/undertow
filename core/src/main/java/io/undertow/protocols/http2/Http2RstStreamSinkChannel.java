@@ -41,7 +41,6 @@ class Http2RstStreamSinkChannel extends Http2NoDataStreamSinkChannel {
     @Override
     protected SendFrameHeader createFrameHeader() {
         ByteBuffer buf = ByteBuffer.allocate(13);
-
         Http2ProtocolUtils.putInt(buf, HEADER_FIRST_LINE);
         buf.put((byte)0);
         Http2ProtocolUtils.putInt(buf, streamId);

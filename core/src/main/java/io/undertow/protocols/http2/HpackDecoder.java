@@ -19,7 +19,6 @@
 package io.undertow.protocols.http2;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 
 import io.undertow.util.HttpString;
 
@@ -29,10 +28,6 @@ import io.undertow.util.HttpString;
  * @author Stuart Douglas
  */
 public class HpackDecoder extends Hpack {
-
-    private static final Charset US_ASCII = Charset.forName("US-ASCII");
-
-    public static final int DEFAULT_TABLE_SIZE = 4096;
 
     /**
      * The object that receives the headers that are emitted from this decoder

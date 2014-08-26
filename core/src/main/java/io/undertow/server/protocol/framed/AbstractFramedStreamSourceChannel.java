@@ -177,7 +177,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     public void setMaxStreamSize(long maxStreamSize) {
         this.maxStreamSize = maxStreamSize;
         if(maxStreamSize > 0) {
-            if(maxStreamSize > currentStreamSize) {
+            if(maxStreamSize < currentStreamSize) {
                 handleStreamTooLarge();
             }
         }
@@ -270,6 +270,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         if(data == null && pendingFrameData.isEmpty() && frameDataRemaining == 0) {
             state |= STATE_DONE | STATE_CLOSED;
             getFramedChannel().notifyFrameReadComplete(this);
+            getFramedChannel().notifyClosed(this);
         }
     }
 
@@ -513,6 +514,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                     if (pendingFrameData.isEmpty()) {
                         if (anyAreSet(state, STATE_LAST_FRAME)) {
                             state |= STATE_DONE;
+                            getFramedChannel().notifyClosed(this);
                             complete();
                         } else {
                             waitingForFrame = true;
@@ -540,6 +542,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         state |= STATE_CLOSED;
         if (allAreClear(state, STATE_DONE | STATE_LAST_FRAME)) {
             state |= STATE_STREAM_BROKEN;
+            getFramedChannel().notifyClosed(this);
             channelForciblyClosed();
         }
         if (data != null) {

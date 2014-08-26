@@ -23,13 +23,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- *
+ * Marks a test as only applicable to HTTP 1, so it will be ignored for other transports
  *
  * @author Stuart Douglas
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-public @interface SpdyIgnore {
+public @interface HttpOneOnly {
 
     String value() default "";
 }

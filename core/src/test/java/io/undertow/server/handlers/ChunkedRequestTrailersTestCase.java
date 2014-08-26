@@ -23,11 +23,10 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.SpdyIgnore;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import org.junit.AfterClass;
@@ -46,9 +45,8 @@ import java.net.Socket;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
 @ProxyIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class ChunkedRequestTrailersTestCase {
 
     private static volatile HttpServerConnection connection;

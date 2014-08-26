@@ -32,19 +32,17 @@ import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.SpdyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 
 /**
  * @author Stuart Douglas
  */
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 @ProxyIgnore
 @RunWith(DefaultServer.class)
 public class MaxRequestSizeTestCase {

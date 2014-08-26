@@ -138,6 +138,7 @@ public class ComplexSSLTestCase {
             HttpResponse resultList = client.execute(post);
             Assert.assertEquals(200, resultList.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(resultList);
+            Assert.assertEquals(message.length(), response.length());
             Assert.assertEquals(message, response);
 
             generateMessage(100000);

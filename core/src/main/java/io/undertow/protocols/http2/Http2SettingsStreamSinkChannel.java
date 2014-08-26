@@ -61,7 +61,6 @@ public class Http2SettingsStreamSinkChannel extends Http2StreamSinkChannel {
             currentBuffer.put((byte) 0); //flags
             Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
             for (Http2Setting setting : settings) {
-
                 currentBuffer.put((byte) ((setting.getId() >> 8) & 0xFF));
                 currentBuffer.put((byte) (setting.getId() & 0xFF));
 
