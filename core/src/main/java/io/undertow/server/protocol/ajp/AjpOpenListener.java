@@ -65,6 +65,7 @@ public class AjpOpenListener implements OpenListener {
         parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, UTF_8), undertowOptions.get(DECODE_URL, true));
     }
 
+    @Override
     public void handleEvent(final StreamConnection channel) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
@@ -74,22 +75,22 @@ public class AjpOpenListener implements OpenListener {
         try {
             Integer readTimeout = channel.getOption(Options.READ_TIMEOUT);
             Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
-            if((readTimeout == null || readTimeout <= 0) && idleTimeout != null) {
+            if ((readTimeout == null || readTimeout <= 0) && idleTimeout != null) {
                 readTimeout = idleTimeout;
-            } else if(readTimeout != null && idleTimeout != null && idleTimeout > 0) {
+            } else if (readTimeout != null && idleTimeout != null && idleTimeout > 0) {
                 readTimeout = Math.min(readTimeout, idleTimeout);
             }
             if (readTimeout != null && readTimeout > 0) {
-                channel.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(channel.getSourceChannel().getConduit(), channel));
+                channel.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(channel.getSourceChannel().getConduit(), channel, readTimeout));
             }
             Integer writeTimeout = channel.getOption(Options.WRITE_TIMEOUT);
-            if((writeTimeout == null || writeTimeout <= 0) && idleTimeout != null) {
+            if ((writeTimeout == null || writeTimeout <= 0) && idleTimeout != null) {
                 writeTimeout = idleTimeout;
-            } else if(writeTimeout != null && idleTimeout != null && idleTimeout > 0) {
+            } else if (writeTimeout != null && idleTimeout != null && idleTimeout > 0) {
                 writeTimeout = Math.min(writeTimeout, idleTimeout);
             }
             if (writeTimeout != null && writeTimeout > 0) {
-                channel.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(channel.getSinkChannel().getConduit(), channel));
+                channel.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(channel.getSinkChannel().getConduit(), channel, writeTimeout));
             }
         } catch (IOException e) {
             IoUtils.safeClose(channel);
@@ -104,18 +105,22 @@ public class AjpOpenListener implements OpenListener {
         readListener.handleEvent(channel.getSourceChannel());
     }
 
+    @Override
     public HttpHandler getRootHandler() {
         return rootHandler;
     }
 
+    @Override
     public void setRootHandler(final HttpHandler rootHandler) {
         this.rootHandler = rootHandler;
     }
 
+    @Override
     public OptionMap getUndertowOptions() {
         return undertowOptions;
     }
 
+    @Override
     public void setUndertowOptions(final OptionMap undertowOptions) {
         if (undertowOptions == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
