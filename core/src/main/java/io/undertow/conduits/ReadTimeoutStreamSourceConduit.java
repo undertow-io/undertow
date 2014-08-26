@@ -21,7 +21,6 @@ package io.undertow.conduits;
 import io.undertow.UndertowLogger;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.Options;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
@@ -45,6 +44,7 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
     private XnioExecutor.Key handle;
     private final StreamConnection connection;
     private volatile long expireTime = -1;
+    private final Integer timeout;
 
     private static final int FUZZ_FACTOR = 50; //we add 50ms to the timeout to make sure the underlying channel has actually timed out
 
@@ -52,11 +52,11 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
         @Override
         public void run() {
             handle = null;
-            if(expireTime == -1) {
+            if (expireTime == -1) {
                 return;
             }
             long current = System.currentTimeMillis();
-            if(current  < expireTime) {
+            if (current  < expireTime) {
                 //timeout has been bumped, re-schedule
                 handle = connection.getIoThread().executeAfter(timeoutCommand, (expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
                 return;
@@ -66,38 +66,38 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
             if (connection.getSourceChannel().isReadResumed()) {
                 ChannelListeners.invokeChannelListener(connection.getSourceChannel(), connection.getSourceChannel().getReadListener());
             }
-            if(connection.getSinkChannel().isWriteResumed()) {
+            if (connection.getSinkChannel().isWriteResumed()) {
                 ChannelListeners.invokeChannelListener(connection.getSinkChannel(), connection.getSinkChannel().getWriteListener());
             }
         }
     };
 
-    public ReadTimeoutStreamSourceConduit(final StreamSourceConduit delegate, StreamConnection connection) {
+    public ReadTimeoutStreamSourceConduit(final StreamSourceConduit delegate, StreamConnection connection, Integer timeout) {
         super(delegate);
         this.connection = connection;
+        this.timeout = timeout;
     }
 
     private void handleReadTimeout(final long ret) throws IOException {
-        if(!connection.isOpen()) {
+        if (!connection.isOpen()) {
             return;
         }
-        if(ret == 0 && handle != null) {
+        if (ret == 0 && handle != null) {
             return;
         }
-        long idleTimeout = connection.getSourceChannel().getOption(Options.READ_TIMEOUT);
-        if(idleTimeout <= 0) {
+        if (timeout == null || timeout <= 0) {
             return;
         }
         long currentTime = System.currentTimeMillis();
         long expireTimeVar = expireTime;
-        if(expireTimeVar != -1 && currentTime > expireTimeVar) {
+        if (expireTimeVar != -1 && currentTime > expireTimeVar) {
             IoUtils.safeClose(connection);
             throw new ClosedChannelException();
         }
-        expireTime = currentTime + idleTimeout;
+        expireTime = currentTime + timeout;
         XnioExecutor.Key key = handle;
         if (key == null) {
-            handle = connection.getIoThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
+            handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -131,7 +131,6 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
 
     @Override
     public void awaitReadable() throws IOException {
-        Integer timeout = connection.getOption(Options.READ_TIMEOUT);
         if (timeout != null && timeout > 0) {
             super.awaitReadable(timeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
         } else {
@@ -141,7 +140,6 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
 
     @Override
     public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
-        Integer timeout = connection.getOption(Options.READ_TIMEOUT);
         if (timeout != null && timeout > 0) {
             long millis = timeUnit.toMillis(time);
             super.awaitReadable(Math.min(millis, timeout + FUZZ_FACTOR), TimeUnit.MILLISECONDS);
