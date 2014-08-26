@@ -57,8 +57,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
 
 import static io.undertow.client.UndertowClientMessages.MESSAGES;
