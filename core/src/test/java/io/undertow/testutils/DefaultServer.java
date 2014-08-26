@@ -482,7 +482,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        if(spdy || spdyPlain || h2 || h2c) {
+        if(spdy || spdyPlain || h2 || h2c || ajp) {
             HttpOneOnly httpOneOnly = method.getAnnotation(HttpOneOnly.class);
             if(httpOneOnly == null) {
                 httpOneOnly = method.getMethod().getDeclaringClass().getAnnotation(HttpOneOnly.class);
