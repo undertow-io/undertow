@@ -109,16 +109,26 @@ public final class ProxyHandler implements HttpHandler {
     private final HttpHandler next;
 
     private final boolean rewriteHostHeader;
+    private final boolean reuseXForwarded;
 
     public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next) {
-        this(proxyClient, maxRequestTime, next, false);
+        this(proxyClient, maxRequestTime, next, false, false);
     }
 
-    public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next, boolean rewriteHostHeader) {
+  /**
+   *
+   * @param proxyClient the client to use to make the proxy call
+   * @param maxRequestTime the maximum amount of time to allow the request to be processed
+   * @param next the next handler in line
+   * @param rewriteHostHeader should the HOST header be rewritten to use the target host of the call.
+   * @param reuseXForwarded should any existing X-Forwarded-For header be used or should it be overwritten.
+   */
+    public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next, boolean rewriteHostHeader, boolean reuseXForwarded) {
         this.proxyClient = proxyClient;
         this.maxRequestTime = maxRequestTime;
         this.next = next;
         this.rewriteHostHeader = rewriteHostHeader;
+        this.reuseXForwarded = reuseXForwarded;
     }
 
 
@@ -246,7 +256,7 @@ public final class ProxyHandler implements HttpHandler {
         @Override
         public void completed(HttpServerExchange exchange, ProxyConnection result) {
             exchange.putAttachment(CONNECTION, result);
-            exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(result, exchange, requestHeaders, rewriteHostHeader));
+            exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(result, exchange, requestHeaders, rewriteHostHeader, reuseXForwarded));
         }
 
         @Override
@@ -266,12 +276,15 @@ public final class ProxyHandler implements HttpHandler {
         private final HttpServerExchange exchange;
         private final Map<HttpString, ExchangeAttribute> requestHeaders;
         private final boolean rewriteHostHeader;
+        private final boolean reuseXForwarded;
 
-        public ProxyAction(final ProxyConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders, boolean rewriteHostHeader) {
+        public ProxyAction(final ProxyConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders,
+                           boolean rewriteHostHeader, boolean reuseXForwarded) {
             this.clientConnection = clientConnection;
             this.exchange = exchange;
             this.requestHeaders = requestHeaders;
             this.rewriteHostHeader = rewriteHostHeader;
+            this.reuseXForwarded = reuseXForwarded;
         }
 
         @Override
@@ -339,19 +352,42 @@ public final class ProxyHandler implements HttpHandler {
                     outboundRequestHeaders.put(entry.getKey(), headerValue.replace('\n', ' '));
                 }
             }
-            SocketAddress address = exchange.getConnection().getPeerAddress();
-            if (address instanceof InetSocketAddress) {
-                request.putAttachment(ProxiedRequestAttachments.REMOTE_HOST, ((InetSocketAddress) address).getHostString());
-            } else {
-                request.putAttachment(ProxiedRequestAttachments.REMOTE_HOST, "localhost");
-            }
-            request.putAttachment(ProxiedRequestAttachments.IS_SSL, exchange.getRequestScheme().equals("https"));
-            request.putAttachment(ProxiedRequestAttachments.SERVER_NAME, exchange.getHostName());
-            request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, exchange.getConnection().getLocalAddress(InetSocketAddress.class).getPort());
 
-            if (exchange.getRequestScheme().equals("https")) {
-                request.putAttachment(ProxiedRequestAttachments.IS_SSL, true);
+            final SocketAddress address = exchange.getConnection().getPeerAddress();
+            final String remoteHost = (address != null && address instanceof InetSocketAddress) ? ((InetSocketAddress) address).getHostString() : "localhost";
+            request.putAttachment(ProxiedRequestAttachments.REMOTE_HOST, remoteHost);
+
+            if (reuseXForwarded && request.getRequestHeaders().contains(Headers.X_FORWARDED_FOR)) {
+                // We have an existing header so we shall simply append the host to the existing list
+                final String current = request.getRequestHeaders().getFirst(Headers.X_FORWARDED_FOR);
+                if (current == null || current.isEmpty()) {
+                    // It was empty so just add it
+                    request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, remoteHost);
+                }
+                else {
+                    // Add the new entry and reset the existing header
+                    request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, current + "," + remoteHost);
+                }
             }
+            else {
+                // No existing header or not allowed to reuse the header so set it here
+                request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, remoteHost);
+            }
+
+            // Set the protocol header and attachment
+            final String proto = exchange.getRequestScheme().equals("https") ? "https" : "http";
+            request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, proto);
+            request.putAttachment(ProxiedRequestAttachments.IS_SSL, proto.equals("https"));
+
+            // Set the server name
+            final String hostName = exchange.getHostName();
+            request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, hostName);
+            request.putAttachment(ProxiedRequestAttachments.SERVER_NAME, hostName);
+
+            // Set the port
+            int port = exchange.getConnection().getLocalAddress(InetSocketAddress.class).getPort();
+            request.getRequestHeaders().put(Headers.X_FORWARDED_PORT, port);
+            request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, port);
 
             SSLSessionInfo sslSessionInfo = exchange.getConnection().getSslSessionInfo();
             if (sslSessionInfo != null) {
