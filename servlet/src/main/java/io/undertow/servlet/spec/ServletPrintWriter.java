@@ -228,7 +228,7 @@ public class ServletPrintWriter {
                 if (ok) {
                     return;
                 }
-                final CharBuffer cb = CharBuffer.wrap(buf, off + i, off + len);
+                final CharBuffer cb = CharBuffer.wrap(buf, i, len - (i - off));
                 write(cb);
                 return;
             } catch (IOException e) {
@@ -278,7 +278,8 @@ public class ServletPrintWriter {
                 if (ok) {
                     return;
                 }
-                final CharBuffer cb = CharBuffer.wrap(s, off + i, off + len);
+                //wrap(String, off, len) acts wrong in the presence of multi byte characters
+                final CharBuffer cb = CharBuffer.wrap(s.toCharArray(), i, len - (i - off));
                 write(cb);
                 return;
             } catch (IOException e) {

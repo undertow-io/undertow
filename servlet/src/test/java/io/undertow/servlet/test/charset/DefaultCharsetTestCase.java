@@ -18,12 +18,12 @@
 
 package io.undertow.servlet.test.charset;
 
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
+import static io.undertow.servlet.Servlets.servlet;
+
+import java.io.IOException;
+import java.util.Collections;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
@@ -34,12 +34,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import java.io.IOException;
-import java.util.Collections;
-
-import static io.undertow.servlet.Servlets.servlet;
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 
 /**
  * @author Stuart Douglas
@@ -51,11 +51,11 @@ public class DefaultCharsetTestCase {
     @BeforeClass
     public static void setup() throws ServletException {
         DeploymentUtils.setupServlet(new ServletExtension() {
-            @Override
-            public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
-                deploymentInfo.setDefaultEncoding("UTF-8");
-            }
-        },
+                                         @Override
+                                         public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
+                                             deploymentInfo.setDefaultEncoding("UTF-8");
+                                         }
+                                     },
                 servlet("servlet", DefaultCharsetServlet.class)
                         .addMapping("/writer"),
                 servlet("form", DefaultCharsetFormParserServlet.class)
@@ -80,6 +80,13 @@ public class DefaultCharsetTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             byte[] response = HttpClientUtils.readRawResponse(result);
+            Assert.assertArrayEquals(UTF8, response);
+
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/writer?array=true");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readRawResponse(result);
             Assert.assertArrayEquals(UTF8, response);
         } finally {
             client.getConnectionManager().shutdown();

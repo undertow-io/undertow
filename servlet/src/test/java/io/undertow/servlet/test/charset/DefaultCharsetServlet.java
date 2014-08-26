@@ -33,7 +33,11 @@ public class DefaultCharsetServlet extends HttpServlet {
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         PrintWriter writer = resp.getWriter();
-        writer.write("\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A");
+        if(req.getParameter("array") != null) {
+            writer.write("abc\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A".toCharArray(), 3, 7);
+        } else {
+            writer.write("abc\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A", 3, 7);
+        }
         writer.close();
     }
 
