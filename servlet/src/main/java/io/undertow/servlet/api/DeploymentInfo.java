@@ -94,6 +94,7 @@ public class DeploymentInfo implements Cloneable {
     private SessionConfigWrapper sessionConfigWrapper = null;
     private boolean eagerFilterInit = false;
     private boolean disableCachingForSecuredPages = true;
+    private boolean escapeErrorMessage = true;
     private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
     private final Map<String, FilterInfo> filters = new HashMap<>();
@@ -1033,6 +1034,21 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public boolean isEscapeErrorMessage() {
+        return escapeErrorMessage;
+    }
+
+    /**
+     * Set if if the message passed to {@link javax.servlet.http.HttpServletResponse#sendError(int, String)} should be escaped.
+     *
+     * If this is false applications must be careful not to use user provided data (such as the URI) in the message
+     *
+     * @param escapeErrorMessage If the error message should be escaped
+     */
+    public void setEscapeErrorMessage(boolean escapeErrorMessage) {
+        this.escapeErrorMessage = escapeErrorMessage;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1105,6 +1121,7 @@ public class DeploymentInfo implements Cloneable {
         info.eagerFilterInit = eagerFilterInit;
         info.disableCachingForSecuredPages = disableCachingForSecuredPages;
         info.exceptionHandler = exceptionHandler;
+        info.escapeErrorMessage = escapeErrorMessage;
         this.lifecycleInterceptors.addAll(lifecycleInterceptors);
         return info;
     }

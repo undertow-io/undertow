@@ -134,7 +134,12 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             }
         } else if (msg != null) {
             setContentType("text/html");
-            getWriter().write("<html><head><title>Error</title></head><body>" + msg + "</body></html>");
+            setCharacterEncoding("UTF-8");
+            if(servletContext.getDeployment().getDeploymentInfo().isEscapeErrorMessage()) {
+                getWriter().write("<html><head><title>Error</title></head><body>" + escapeHtml(msg) + "</body></html>");
+            } else {
+                getWriter().write("<html><head><title>Error</title></head><body>" + msg + "</body></html>");
+            }
             getWriter().close();
         }
         responseDone();
@@ -748,5 +753,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         NONE,
         STREAM,
         WRITER
+    }
+
+    private static String escapeHtml(String msg) {
+        return msg.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;");
     }
 }
