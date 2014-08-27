@@ -818,7 +818,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         //if this was a clean shutdown there should not be any senders
                         channel.markBroken();
                     }
-                    
                     for(AbstractFramedStreamSourceChannel<C, R, S> r : new ArrayList<>(receivers)) {
                         IoUtils.safeClose(r);
                     }
