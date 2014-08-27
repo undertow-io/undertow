@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -817,7 +818,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         //if this was a clean shutdown there should not be any senders
                         channel.markBroken();
                     }
-                    for(AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
+                    
+                    for(AbstractFramedStreamSourceChannel<C, R, S> r : new ArrayList<>(receivers)) {
                         IoUtils.safeClose(r);
                     }
                 }
