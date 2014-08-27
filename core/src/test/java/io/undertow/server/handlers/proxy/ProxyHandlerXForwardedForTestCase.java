@@ -6,6 +6,8 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import org.apache.http.HttpResponse;
@@ -28,7 +30,9 @@ import static io.undertow.Handlers.path;
  * Created by ivannagy on 8/26/14.
  */
 @RunWith(DefaultServer.class)
-public class ProxyHandlerTestCase {
+@HttpOneOnly
+@ProxyIgnore
+public class ProxyHandlerXForwardedForTestCase {
 
     protected static Undertow server;
     protected static int port;
