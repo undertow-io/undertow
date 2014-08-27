@@ -40,6 +40,7 @@ import org.apache.http.params.HttpParams;
 import org.apache.http.params.SyncBasicHttpParams;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,6 +53,9 @@ public class FileHandlerSymlinksTestCase {
 
     @Before
     public void createSymlinksScenario() throws IOException, URISyntaxException {
+        Assume.assumeFalse(System.getProperty("os.name").toLowerCase().contains("windows"));
+
+
         /**
          * Creating following structure for test:
          *
