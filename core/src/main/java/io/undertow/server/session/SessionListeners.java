@@ -1,7 +1,6 @@
 package io.undertow.server.session;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -38,7 +37,7 @@ public class SessionListeners {
 
     public void sessionDestroyed(final Session session, final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
         // We need to create our own snapshot to safely iterate over a concurrent list in reverse
-        List<SessionListener> listeners = new ArrayList<>(sessionListeners);
+        List<SessionListener> listeners = new ArrayList<SessionListener>(sessionListeners);
         ListIterator<SessionListener> iterator = listeners.listIterator(listeners.size());
         while (iterator.hasPrevious()) {
             iterator.previous().sessionDestroyed(session, exchange, reason);
