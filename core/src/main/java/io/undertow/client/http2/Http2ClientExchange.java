@@ -45,6 +45,7 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
     private final ClientConnection clientConnection;
     private final Http2StreamSinkChannel request;
     private final ClientRequest clientRequest;
+    private IOException failedReason;
 
     public Http2ClientExchange(ClientConnection clientConnection, Http2StreamSinkChannel request, ClientRequest clientRequest) {
         this.clientConnection = clientConnection;
@@ -56,6 +57,9 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
     @Override
     public void setResponseListener(ClientCallback<ClientExchange> responseListener) {
         this.responseListener = responseListener;
+        if(failedReason != null) {
+            responseListener.failed(failedReason);
+        }
     }
 
     @Override
@@ -97,6 +101,7 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
     }
 
     void failed(final IOException e) {
+        failedReason = e;
         if(responseListener != null) {
             responseListener.failed(e);
         }
