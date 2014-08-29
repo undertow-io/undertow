@@ -26,16 +26,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ConnectionPoolManager;
-import io.undertow.server.handlers.proxy.ProxyCallback;
-import io.undertow.server.handlers.proxy.ProxyClient;
-import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.server.handlers.proxy.ProxyConnectionPool;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -486,17 +482,6 @@ class Node {
         @Override
         public int getMaxQueueSize() {
             return nodeConfig.getRequestQueueSize();
-        }
-
-        // @Override
-        public void queuedConnectionFailed(ProxyClient.ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeoutMills) {
-            final ModClusterProxyTarget target = (ModClusterProxyTarget) proxyTarget;
-            final Context context = target.resolveContext(exchange);
-            if(context == null || context.getNode() == Node.this) {
-                callback.queuedRequestFailed(exchange);
-                return;
-            }
-            context.handleRequest(target, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS, false);
         }
 
         @Override
