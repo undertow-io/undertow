@@ -79,7 +79,7 @@ public class LoadBalancingProxyAJPTestCase extends AbstractLoadBalancingProxyTes
         server2.start();
 
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
-                .setConnectionsPerThread(1)
+                .setConnectionsPerThread(16)
                 .addHost(new URI("ajp", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
                 .addHost(new URI("ajp", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
                 , 10000, ResponseCodeHandler.HANDLE_404));
