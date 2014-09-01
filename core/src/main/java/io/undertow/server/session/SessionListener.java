@@ -38,9 +38,9 @@ public interface SessionListener {
 
     /**
      * Called when a session is destroyed
-     * @param session The new session
-     * @param exchange The {@link HttpServerExchange} that destroyed the session, or null if the session timed out
-     * @param expired If the session expired
+     * @param session   The new session
+     * @param exchange  The {@link HttpServerExchange} that destroyed the session, or null if the session timed out
+     * @param reason    The reason why the session was expired
      */
     void sessionDestroyed(final Session session,  final HttpServerExchange exchange, SessionDestroyedReason reason);
 
