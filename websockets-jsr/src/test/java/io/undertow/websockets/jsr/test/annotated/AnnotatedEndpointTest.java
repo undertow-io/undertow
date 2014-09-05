@@ -173,7 +173,10 @@ public class AnnotatedEndpointTest {
 
     @Test
     public void testErrorHandling() throws Exception {
-        AnnotatedClientEndpoint c = new AnnotatedClientEndpoint();
+        //make a sub class
+        AnnotatedClientEndpoint c = new AnnotatedClientEndpoint() {
+
+        };
 
         Session session = deployment.connectToServer(c, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/error"));
         Assert.assertEquals("hi", ErrorEndpoint.getMessage());

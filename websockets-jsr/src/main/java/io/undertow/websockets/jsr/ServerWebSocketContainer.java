@@ -452,7 +452,15 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
 
-    public ConfiguredClientEndpoint getClientEndpoint(final Class<?> type) {
+    public ConfiguredClientEndpoint getClientEndpoint(final Class<?> endpointType) {
+        Class<?> type = endpointType;
+        while (type != Object.class && type != null && !type.isAnnotationPresent(ClientEndpoint.class)) {
+            type = type.getSuperclass();
+        }
+        if(type == Object.class || type == null) {
+            return null;
+        }
+
         ConfiguredClientEndpoint existing = clientEndpoints.get(type);
         if (existing != null) {
             return existing;
