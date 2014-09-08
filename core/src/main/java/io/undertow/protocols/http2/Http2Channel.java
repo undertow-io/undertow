@@ -194,7 +194,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         try {
             stream.shutdownWrites();
             if (!stream.flush()) {
-                stream.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
+                stream.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, writeExceptionHandler()));
                 stream.resumeWrites();
             }
         } catch (IOException e) {
@@ -622,12 +622,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             Http2RstStreamSinkChannel channel = new Http2RstStreamSinkChannel(this, streamId, statusCode);
             channel.shutdownWrites();
             if (!channel.flush()) {
-                channel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<AbstractHttp2StreamSinkChannel>() {
-                    @Override
-                    public void handleException(AbstractHttp2StreamSinkChannel channel, IOException exception) {
-                        markWritesBroken(exception);
-                    }
-                }));
+                channel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, writeExceptionHandler()));
                 channel.resumeWrites();
             }
         } catch (IOException e) {

@@ -36,6 +36,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.xnio.Buffers;
+import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
@@ -56,6 +57,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.util.ReferenceCountedPooled;
 import io.undertow.websockets.core.WebSocketLogger;
+import org.xnio.channels.SuspendableWriteChannel;
 
 /**
  * A {@link org.xnio.channels.ConnectedChannel} which can be used to send and receive Frames.
@@ -864,5 +866,16 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     protected StreamConnection getUnderlyingConnection() {
         return channel;
+    }
+
+
+
+    protected ChannelExceptionHandler<SuspendableWriteChannel> writeExceptionHandler() {
+        return new ChannelExceptionHandler<SuspendableWriteChannel>() {
+            @Override
+            public void handleException(SuspendableWriteChannel channel, IOException exception) {
+                markWritesBroken(exception);
+            }
+        };
     }
 }
