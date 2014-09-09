@@ -23,6 +23,8 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcurrentDirectDeque;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -211,7 +213,23 @@ public class InMemorySessionManager implements SessionManager {
 
         private final InMemorySessionManager sessionManager;
 
-        private static volatile AtomicReferenceFieldUpdater<SessionImpl, Object> evictionTokenUpdater = AtomicReferenceFieldUpdater.newUpdater(SessionImpl.class, Object.class, "evictionToken");
+        static volatile AtomicReferenceFieldUpdater<SessionImpl, Object> evictionTokenUpdater;
+        static {
+            //this is needed in case there is unprivileged code on the stack
+            //it needs to delegate to the createTokenUpdater() method otherwise the creation will fail
+            //as the inner class cannot access the member
+            evictionTokenUpdater = AccessController.doPrivileged(new PrivilegedAction<AtomicReferenceFieldUpdater<SessionImpl, Object>>() {
+                @Override
+                public AtomicReferenceFieldUpdater<SessionImpl, Object> run() {
+                    return createTokenUpdater();
+                }
+            });
+        }
+
+        private static AtomicReferenceFieldUpdater<SessionImpl, Object> createTokenUpdater() {
+            return AtomicReferenceFieldUpdater.newUpdater(SessionImpl.class, Object.class, "evictionToken");
+        }
+
 
         private String sessionId;
         private volatile Object evictionToken;
