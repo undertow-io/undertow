@@ -20,8 +20,6 @@ package io.undertow.server.handlers.proxy.mod_cluster;
 
 import java.io.IOException;
 import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.client.UndertowClient;
@@ -52,7 +50,6 @@ public class ModCluster {
     private final XnioWorker xnioWorker;
     private final ModClusterContainer container;
     private final HttpHandler proxyHandler;
-    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
     private final String serverID = UUID.randomUUID().toString(); // TODO
 
@@ -118,14 +115,7 @@ public class ModCluster {
      * Start
      */
     public synchronized void start() {
-        if (healthCheckInterval > 0) {
-            executorService.scheduleAtFixedRate(new Runnable() {
-                @Override
-                public void run() {
-                    container.checkHealth();
-                }
-            }, healthCheckInterval, healthCheckInterval, TimeUnit.MILLISECONDS);
-        }
+
     }
 
     /**
@@ -146,7 +136,7 @@ public class ModCluster {
      * Stop
      */
     public synchronized void stop() {
-        executorService.shutdownNow();
+
     }
 
     public static Builder builder(final XnioWorker worker) {
@@ -175,7 +165,7 @@ public class ModCluster {
 
         private int maxRequestTime = -1;
 
-        private NodeHealthChecker healthChecker = NodeHealthChecker.OK;
+        private NodeHealthChecker healthChecker = NodeHealthChecker.NO_CHECK;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
         private long removeBrokenNodes = TimeUnit.MINUTES.toMillis(1);
 

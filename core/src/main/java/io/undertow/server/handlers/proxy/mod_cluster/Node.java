@@ -130,6 +130,10 @@ class Node {
         return connectionPool;
     }
 
+    XnioIoThread getIoThread() {
+        return ioThread;
+    }
+
     public Status getStatus() {
         final int status = this.state;
         if (anyAreSet(status, ERROR)) {
@@ -189,6 +193,14 @@ class Node {
         return Collections.unmodifiableCollection(contexts);
     }
 
+    void resetLbStatus() {
+        if (allAreClear(state, ERROR)) {
+            if (lbStatus.update()) {
+                return;
+            }
+        }
+    }
+
     /**
      * Check the health of the node and try to ping it if necessary.
      *
@@ -199,11 +211,6 @@ class Node {
         final int state = this.state;
         if (anyAreSet(state, REMOVED | ACTIVE_PING)) {
             return;
-        }
-        if (allAreClear(state, ERROR)) {
-            if (lbStatus.update()) {
-                return;
-            }
         }
         healthCheckPing(threshold, healthChecker);
     }
@@ -230,11 +237,16 @@ class Node {
 
             @Override
             public void failed() {
-                try {
-                    if (healthCheckFailed() == threshold) {
-                        container.removeNode(Node.this);
-                    }
-                } finally {
+                if (healthCheckFailed() == threshold) {
+                    // Remove using the executor task pool
+                    ioThread.getWorker().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            container.removeNode(Node.this, true);
+                            clearActivePing();
+                        }
+                    });
+                } else {
                     clearActivePing();
                 }
             }
