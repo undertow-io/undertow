@@ -56,7 +56,7 @@ import java.util.zip.Inflater;
  */
 public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSourceChannel, SpdyStreamSinkChannel> implements Attachable {
 
-    static final int DEFAULT_INITIAL_WINDOW_SIZE = 64 * 1024 * 0124;
+    static final int DEFAULT_INITIAL_WINDOW_SIZE = 64 * 1024;
 
     static final int SYN_STREAM = 1;
     static final int SYN_REPLY = 2;
