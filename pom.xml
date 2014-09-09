@@ -92,6 +92,7 @@
         <version.io.undertow.build.checkstyle-config>1.0.0.Final</version.io.undertow.build.checkstyle-config>
 
         <version.org.mortbay.jetty.alpn>7.0.0.v20140317</version.org.mortbay.jetty.alpn>
+        <version.org.mortbay.jetty.alpn.jdk8>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8>
         <version.org.eclipse.jetty.alpn>1.0.0</version.org.eclipse.jetty.alpn>
     </properties>
 
@@ -435,6 +436,15 @@
     </pluginRepositories>
 
     <profiles>
+        <profile>
+            <id>jdk8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <properties>
+                <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8}</version.org.mortbay.jetty.alpn>
+            </properties>
+        </profile>
         <profile>
             <id>dist</id>
             <activation>
