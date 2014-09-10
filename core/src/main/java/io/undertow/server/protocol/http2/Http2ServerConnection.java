@@ -50,7 +50,6 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
-import io.undertow.util.StatusCodes;
 
 /**
  * A server connection. There is one connection per request
@@ -62,7 +61,6 @@ import io.undertow.util.StatusCodes;
 public class Http2ServerConnection extends ServerConnection {
 
     private static final HttpString STATUS = new HttpString(":status");
-    private static final HttpString VERSION = new HttpString(":version");
 
     private final Http2Channel channel;
     private final Http2StreamSourceChannel requestChannel;
@@ -230,9 +228,7 @@ public class Http2ServerConnection extends ServerConnection {
     @Override
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
         HeaderMap headers = responseChannel.getHeaders();
-
-        headers.add(STATUS, exchange.getResponseCode() + " " + StatusCodes.getReason(exchange.getResponseCode()));
-        headers.add(VERSION, exchange.getProtocol().toString());
+        headers.add(STATUS, exchange.getResponseCode());
         Connectors.flattenCookies(exchange);
         return originalSinkConduit;
     }

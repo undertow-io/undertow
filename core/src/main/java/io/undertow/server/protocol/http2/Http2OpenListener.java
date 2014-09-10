@@ -51,7 +51,7 @@ import io.undertow.util.ImmediatePooled;
  */
 public final class Http2OpenListener implements ChannelListener<StreamConnection>, OpenListener {
 
-    //private static final String PROTOCOL_KEY = Http2OpenListener.class.getName() + ".protocol";
+    private static final String PROTOCOL_KEY = Http2OpenListener.class.getName() + ".protocol";
 
     private static final String HTTP2 = "h2-14";
     private static final String HTTP_1_1 = "http/1.1";
@@ -89,27 +89,47 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         final PotentialHttp2Connection potentialConnection = new PotentialHttp2Connection(channel);
         channel.getSourceChannel().setReadListener(potentialConnection);
         final SSLEngine sslEngine = JsseXnioSsl.getSslEngine((SslConnection) channel);
-        ALPN.put(sslEngine, new ALPN.ServerProvider() {
-            @Override
-            public void unsupported() {
-                potentialConnection.selected = HTTP_1_1;
-            }
-
-            @Override
-            public String select(List<String> strings) {
-                ALPN.remove(sslEngine);
-                for (String s : strings) {
-                    if (s.equals(HTTP2)) {
-                        potentialConnection.selected = s;
-                        return s;
-                    }
+        String existing = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
+        //resuming an existing session, no need for ALPN
+        if (existing != null) {
+            UndertowLogger.REQUEST_LOGGER.debug("Resuming existing session, not doing NPN negotiation");
+            if (existing.equals(HTTP2)) {
+                Http2Channel sc = new Http2Channel(channel, bufferPool, new ImmediatePooled<>(ByteBuffer.wrap(new byte[0])), false, false, undertowOptions);
+                sc.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize));
+                sc.resumeReceives();
+            } else {
+                if (delegate == null) {
+                    UndertowLogger.REQUEST_IO_LOGGER.couldNotInitiateHttp2Connection();
+                    IoUtils.safeClose(channel);
+                    return;
                 }
-                potentialConnection.selected = HTTP_1_1;
-                return HTTP_1_1;
+                channel.getSourceChannel().setReadListener(null);
+                delegate.handleEvent(channel);
             }
-        });
-        potentialConnection.handleEvent(channel.getSourceChannel());
+        } else {
+            ALPN.put(sslEngine, new ALPN.ServerProvider() {
+                @Override
+                public void unsupported() {
+                    potentialConnection.selected = HTTP_1_1;
+                }
 
+                @Override
+                public String select(List<String> strings) {
+                    ALPN.remove(sslEngine);
+                    for (String s : strings) {
+                        if (s.equals(HTTP2)) {
+                            potentialConnection.selected = s;
+                            sslEngine.getSession().putValue(PROTOCOL_KEY, s);
+                            return s;
+                        }
+                    }
+                    sslEngine.getSession().putValue(PROTOCOL_KEY, HTTP_1_1);
+                    potentialConnection.selected = HTTP_1_1;
+                    return HTTP_1_1;
+                }
+            });
+            potentialConnection.handleEvent(channel.getSourceChannel());
+        }
     }
 
     @Override

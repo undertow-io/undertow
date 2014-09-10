@@ -61,6 +61,7 @@ public class HpackEncoder extends Hpack {
     private int currentBitPos;
 
     private long headersIterator = -1;
+    private boolean firstPass = true;
 
     private HeaderMap currentHeaders;
 
@@ -125,41 +126,58 @@ public class HpackEncoder extends Hpack {
         }
         while (it != -1) {
             HeaderValues values = headers.fiCurrent(it);
-            //initial super crappy implementation: just write everything out as literal header field never indexed
-            //makes things much simpler
-            for (int i = 0; i < values.size(); ++i) {
-
-                int required = 11 + values.getHeaderName().length(); //we use 11 to make sure we have enough room for the variable length itegers
-
-                StaticTableEntry staticTable = ENCODING_STATIC_TABLE.get(values.getHeaderName());
-
-                String val = values.get(i);
-                required += (1 + val.length());
-
-                if (target.remaining() < required) {
-                    this.headersIterator = it;
-                    this.currentBitPos = 0; //we don't use huffman yet
-                    return State.UNDERFLOW;
+            boolean skip = false;
+            if(firstPass) {
+                if(values.getHeaderName().byteAt(0) != ':') {
+                    skip = true;
                 }
-                if(staticTable == null) {
-                    target.put((byte) 0);
+            } else {
+                if(values.getHeaderName().byteAt(0) == ':') {
+                    skip = true;
+                }
+            }
+            if(!skip) {
+                //initial super crappy implementation: just write everything out as literal header field never indexed
+                //makes things much simpler
+                for (int i = 0; i < values.size(); ++i) {
+
+                    int required = 11 + values.getHeaderName().length(); //we use 11 to make sure we have enough room for the variable length itegers
+
+                    StaticTableEntry staticTable = ENCODING_STATIC_TABLE.get(values.getHeaderName());
+
+                    String val = values.get(i);
+                    required += (1 + val.length());
+
+                    if (target.remaining() < required) {
+                        this.headersIterator = it;
+                        this.currentBitPos = 0; //we don't use huffman yet
+                        return State.UNDERFLOW;
+                    }
+                    if (staticTable == null) {
+                        target.put((byte) 0);
+                        target.put((byte) 0); //to use encodeInteger we need to place the first byte in the buffer.
+                        encodeInteger(target, values.getHeaderName().length(), 7);
+                        values.getHeaderName().appendTo(target);
+                    } else {
+                        target.put((byte) 0);
+                        encodeInteger(target, staticTable.pos, 4);
+                    }
                     target.put((byte) 0); //to use encodeInteger we need to place the first byte in the buffer.
-                    encodeInteger(target, values.getHeaderName().length(), 7);
-                    values.getHeaderName().appendTo(target);
-                } else {
-                    target.put((byte) 0);
-                    encodeInteger(target, staticTable.pos, 4);
-                }
-                target.put((byte) 0); //to use encodeInteger we need to place the first byte in the buffer.
-                encodeInteger(target, val.length(), 7);
-                for (int j = 0; j < val.length(); ++j) {
-                    target.put((byte) val.charAt(j));
-                }
+                    encodeInteger(target, val.length(), 7);
+                    for (int j = 0; j < val.length(); ++j) {
+                        target.put((byte) val.charAt(j));
+                    }
 
+                }
             }
             it = headers.fiNext(it);
+            if(it == -1 && firstPass) {
+                firstPass = false;
+                it = headers.fastIterate();
+            }
         }
         headersIterator = -1;
+        firstPass = true;
         return State.COMPLETE;
     }
 

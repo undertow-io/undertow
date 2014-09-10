@@ -176,6 +176,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
         if(clientSide) {
             sendPreface();
+            prefaceCount = PREFACE_BYTES.length;
         }
         sendSettings();
     }

@@ -761,7 +761,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static boolean isProxy() {
-        return proxy;
+        return proxy || spdy || https;
     }
 
     public static boolean isSpdy() {
