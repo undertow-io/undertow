@@ -19,11 +19,13 @@
 package io.undertow.server.handlers.proxy.mod_cluster;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.client.UndertowClient;
@@ -35,6 +37,7 @@ import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
 import io.undertow.util.PathMatcher;
 import org.xnio.Pool;
+import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
 
@@ -55,6 +58,10 @@ class ModClusterContainer {
 
     // Map of removed jvmRoutes to failover domain
     private final LRUCache<String, String> failoverDomains = new LRUCache<>(100, 5 * 60 * 1000);
+
+    // The health check tasks
+    private final ConcurrentMap<XnioIoThread, HealthCheckTask> healthChecks = new CopyOnWriteMap<>();
+    private final UpdateLoadTask updateLoadTask = new UpdateLoadTask();
 
     private final XnioSsl xnioSsl;
     private final UndertowClient client;
@@ -174,6 +181,12 @@ class ModClusterContainer {
         }
         final Node node = new Node(config, balancer, ioThread, bufferPool, this);
         nodes.put(jvmRoute, node);
+        // Schedule the health check
+        scheduleHealthCheck(node, ioThread);
+        // Reset the load factor periodically
+        if (updateLoadTask.cancelKey == null) {
+            updateLoadTask.cancelKey = ioThread.executeAtInterval(updateLoadTask, modCluster.getHealthCheckInterval(), TimeUnit.MILLISECONDS);
+        }
         // Remove from the failover groups
         failoverDomains.remove(node.getJvmRoute());
         UndertowLogger.ROOT_LOGGER.infof("registering node %s, connection: %s", jvmRoute, config.getConnectionURI());
@@ -245,12 +258,22 @@ class ModClusterContainer {
         return node;
     }
 
-    protected synchronized void removeNode(final Node node) {
+    protected void removeNode(final Node node) {
+        removeNode(node, false);
+    }
+
+    protected synchronized void removeNode(final Node node, boolean onlyInError) {
+        if (onlyInError && !node.isInErrorState()) {
+            return;
+        }
         final String jvmRoute = node.getJvmRoute();
         node.markRemoved();
         if (nodes.remove(jvmRoute, node)) {
             UndertowLogger.ROOT_LOGGER.infof("removing node %s", jvmRoute);
             node.markRemoved();
+            // Remove the health check
+            removeHealthCheck(node, node.getIoThread());
+            // Remove the contexts, if any
             for (final Context context : node.getContexts()) {
                 removeContext(context.getPath(), node, context.getVirtualHosts());
             }
@@ -265,6 +288,11 @@ class ModClusterContainer {
                 }
             }
             balancers.remove(balancerName);
+        }
+        if (nodes.size() == 0) {
+            // In case there are no nodes registered unschedule the task
+            updateLoadTask.cancelKey.remove();
+            updateLoadTask.cancelKey = null;
         }
     }
 
@@ -343,15 +371,6 @@ class ModClusterContainer {
             }
         }
         return true;
-    }
-
-    /**
-     * Check the health of all registered nodes
-     */
-    void checkHealth() {
-        for (final Node node : nodes.values()) {
-            node.checkHealth(removeBrokenNodesThreshold, healthChecker);
-        }
     }
 
     /**
@@ -492,6 +511,30 @@ class ModClusterContainer {
         return elected;
     }
 
+    void scheduleHealthCheck(final Node node, XnioIoThread ioThread) {
+        assert Thread.holdsLock(this);
+        HealthCheckTask task = healthChecks.get(ioThread);
+        if (task == null) {
+            task = new HealthCheckTask(removeBrokenNodesThreshold, healthChecker);
+            healthChecks.put(ioThread, task);
+            task.cancelKey = ioThread.executeAtInterval(task, modCluster.getHealthCheckInterval(), TimeUnit.MILLISECONDS);
+        }
+        task.nodes.add(node);
+    }
+
+    void removeHealthCheck(final Node node, XnioIoThread ioThread) {
+        assert Thread.holdsLock(this);
+        final HealthCheckTask task = healthChecks.get(ioThread);
+        if (task == null) {
+            return;
+        }
+        task.nodes.remove(node);
+        if (task.nodes.size() == 0) {
+            healthChecks.remove(ioThread);
+            task.cancelKey.remove();
+        }
+    }
+
     static long removeThreshold(final long healthChecks, final long removeBrokenNodes) {
         if (healthChecks > 0 && removeBrokenNodes > 0) {
             final long threshold = removeBrokenNodes / healthChecks;
@@ -504,6 +547,38 @@ class ModClusterContainer {
             }
         } else {
             return -1;
+        }
+    }
+
+    static class HealthCheckTask implements Runnable {
+
+        private final long threshold;
+        private final NodeHealthChecker healthChecker;
+        private final ArrayList<Node> nodes = new ArrayList<>();
+        private volatile XnioExecutor.Key cancelKey;
+
+        HealthCheckTask(long threshold, NodeHealthChecker healthChecker) {
+            this.threshold = threshold;
+            this.healthChecker = healthChecker;
+        }
+
+        @Override
+        public void run() {
+            for (final Node node : nodes) {
+                node.checkHealth(threshold, healthChecker);
+            }
+        }
+    }
+
+    class UpdateLoadTask implements Runnable {
+
+        private volatile XnioExecutor.Key cancelKey;
+
+        @Override
+        public void run() {
+            for (final Node node : nodes.values()) {
+                node.resetLbStatus();
+            }
         }
     }
 

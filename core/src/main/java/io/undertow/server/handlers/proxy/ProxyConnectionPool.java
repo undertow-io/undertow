@@ -277,7 +277,7 @@ public class ProxyConnectionPool implements Closeable {
         if (!data.availableConnections.isEmpty()) {
             return AvailabilityType.AVAILABLE;
         }
-        if (data.awaitingConnections.size() >= maxConnections) {
+        if (data.awaitingConnections.size() >= maxRequestQueueSize) {
             return AvailabilityType.FULL_QUEUE;
         }
         return AvailabilityType.FULL;

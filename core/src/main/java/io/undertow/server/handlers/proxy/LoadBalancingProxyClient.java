@@ -68,6 +68,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
      * The number of connections to create per thread
      */
     private volatile int connectionsPerThread = 10;
+    private volatile int maxQueueSize = 0;
 
     /**
      * The hosts list.
@@ -127,6 +128,15 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     public LoadBalancingProxyClient setConnectionsPerThread(int connectionsPerThread) {
         this.connectionsPerThread = connectionsPerThread;
+        return this;
+    }
+
+    public int getMaxQueueSize() {
+        return maxQueueSize;
+    }
+
+    public LoadBalancingProxyClient setMaxQueueSize(int maxQueueSize) {
+        this.maxQueueSize = maxQueueSize;
         return this;
     }
 
@@ -290,7 +300,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
                 return selected;
             } else if (available == FULL && full == null) {
                 full = selected;
-            } else if (available == PROBLEM && problem == null) {
+            } else if ((available == PROBLEM || available == FULL_QUEUE) && problem == null) {
                 problem = selected;
             }
             host = (host + 1) % hosts.length;
@@ -339,11 +349,6 @@ public class LoadBalancingProxyClient implements ProxyClient {
             this.ssl = ssl;
         }
 
-        // @Override
-        public void queuedConnectionFailed(ProxyTarget proxyTarget, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeoutMills) {
-            getConnection(proxyTarget, exchange, callback, timeoutMills, TimeUnit.MILLISECONDS);
-        }
-
         @Override
         public int getProblemServerRetry() {
             return problemServerRetry;
@@ -371,7 +376,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
         @Override
         public int getMaxQueueSize() {
-            return 0;
+            return maxQueueSize;
         }
     }
 

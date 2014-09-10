@@ -141,8 +141,9 @@ public final class ProxyHandler implements HttpHandler {
             next.handleRequest(exchange);
             return;
         }
+        final int maxRetryAttempts = 0; // TODO make this configurable, or just take from the error policy?
         final long timeout = maxRequestTime > 0 ? System.currentTimeMillis() + maxRequestTime : 0;
-        final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, 1);
+        final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, maxRetryAttempts);
         if (timeout > 0) {
             final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
@@ -235,14 +236,14 @@ public final class ProxyHandler implements HttpHandler {
         private int tries;
 
         private final long timeout;
-        private final int maxAttempts;
+        private final int maxRetryAttempts;
         private final HttpServerExchange exchange;
         private ProxyClient.ProxyTarget target;
 
-        ProxyClientHandler(HttpServerExchange exchange, ProxyClient.ProxyTarget target, long timeout, int maxAttempts) {
+        ProxyClientHandler(HttpServerExchange exchange, ProxyClient.ProxyTarget target, long timeout, int maxRetryAttempts) {
             this.exchange = exchange;
             this.timeout = timeout;
-            this.maxAttempts = maxAttempts;
+            this.maxRetryAttempts = maxRetryAttempts;
             this.target = target;
         }
 
@@ -260,15 +261,17 @@ public final class ProxyHandler implements HttpHandler {
         @Override
         public void failed(final HttpServerExchange exchange) {
             final long time = System.currentTimeMillis();
-            if (timeout > 0 && timeout > time) {
-                cancel(exchange);
-            } else if (tries++ < maxAttempts) {
-                target = proxyClient.findTarget(exchange);
-                if (target != null) {
-                    final long remaining = timeout > 0 ? timeout - time : -1;
-                    proxyClient.getConnection(target, exchange, this, remaining, TimeUnit.MILLISECONDS);
+            if (tries++ < maxRetryAttempts) {
+                if (timeout > 0 && time > timeout) {
+                    cancel(exchange);
                 } else {
-                    couldNotResolveBackend(exchange); // The context was registered when we started, so return 503
+                    target = proxyClient.findTarget(exchange);
+                    if (target != null) {
+                        final long remaining = timeout > 0 ? timeout - time : -1;
+                        proxyClient.getConnection(target, exchange, this, remaining, TimeUnit.MILLISECONDS);
+                    } else {
+                        couldNotResolveBackend(exchange); // The context was registered when we started, so return 503
+                    }
                 }
             } else {
                 couldNotResolveBackend(exchange);
