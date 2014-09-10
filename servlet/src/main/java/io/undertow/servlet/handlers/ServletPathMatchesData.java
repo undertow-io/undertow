@@ -74,10 +74,8 @@ class ServletPathMatchesData {
                 if (match != null) {
                     return handleMatch(path, match, extensionPos);
                 }
-            } else if (c == '.') {
-                if (extensionPos == -1) {
+            } else if (c == '.' && extensionPos == -1) {
                     extensionPos = i;
-                }
             }
         }
         //this should never happen
@@ -88,20 +86,17 @@ class ServletPathMatchesData {
     private ServletPathMatch handleMatch(final String path, final PathMatch match, final int extensionPos) {
         if (match.extensionMatches.isEmpty()) {
             return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
-        } else {
-            if (extensionPos == -1) {
-                return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
-            } else {
-                final String ext;
-                ext = path.substring(extensionPos + 1, path.length());
-                ServletChain handler = match.extensionMatches.get(ext);
-                if (handler != null) {
-                    return new ServletPathMatch(handler, path, handler.getManagedServlet().getServletInfo().isRequireWelcomeFileMapping());
-                } else {
-                    return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
-                }
-            }
         }
+        if (extensionPos == -1) {
+            return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
+        }
+        final String ext;
+        ext = path.substring(extensionPos + 1, path.length());
+        ServletChain handler = match.extensionMatches.get(ext);
+        if (handler != null) {
+            return new ServletPathMatch(handler, path, handler.getManagedServlet().getServletInfo().isRequireWelcomeFileMapping());
+        }
+        return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
     }
 
     public static Builder builder() {
