@@ -169,12 +169,15 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 throw new RuntimeException(e);
             }
         }
-        sendPreface();
-        sendSettings();
         encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
         enablePush = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
         this.decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         this.encoder = new HpackEncoder(encoderHeaderTableSize);
+
+        if(clientSide) {
+            sendPreface();
+        }
+        sendSettings();
     }
 
     private void sendSettings() {
@@ -248,9 +251,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 break;
             }
             case FRAME_TYPE_SETTINGS: {
-                if (!Bits.anyAreSet(frameParser.flags, SETTINGS_FLAG_ACK)) {
+                    if (!Bits.anyAreSet(frameParser.flags, SETTINGS_FLAG_ACK)) {
                     updateSettings(((Http2SettingsParser) frameParser.parser).getSettings());
-                } else {
                     sendSettingsAck();
                 }
                 channel = new Http2SettingsStreamSourceChannel(this, frameData, frameParser.getFrameLength(), ((Http2SettingsParser) frameParser.parser).getSettings());

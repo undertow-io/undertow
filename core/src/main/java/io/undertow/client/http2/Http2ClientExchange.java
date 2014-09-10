@@ -115,7 +115,7 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
         if (status != null && status.length() > 3) {
             statusCode = Integer.parseInt(status.substring(0, 3));
         }
-        headers.remove(Http2ClientConnection.VERSION);
+        headers.remove(Http2ClientConnection.AUTHORITY);
         headers.remove(Http2ClientConnection.STATUS);
         clientResponse = new ClientResponse(statusCode, status != null ? status.substring(3) : "", clientRequest.getProtocol(), headers);
         if (responseListener != null) {

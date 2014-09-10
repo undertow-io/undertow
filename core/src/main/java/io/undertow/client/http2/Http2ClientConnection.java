@@ -63,8 +63,7 @@ public class Http2ClientConnection implements ClientConnection {
     static final HttpString METHOD = new HttpString(":method");
     static final HttpString PATH = new HttpString(":path");
     static final HttpString SCHEME = new HttpString(":scheme");
-    static final HttpString VERSION = new HttpString(":version");
-    static final HttpString HOST = new HttpString(":host");
+    static final HttpString AUTHORITY = new HttpString(":authority");
     static final HttpString STATUS = new HttpString(":status");
 
     private final Http2Channel http2Channel;
@@ -91,9 +90,9 @@ public class Http2ClientConnection implements ClientConnection {
     public void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
         request.getRequestHeaders().put(PATH, request.getPath());
         request.getRequestHeaders().put(SCHEME, "https");
-        request.getRequestHeaders().put(VERSION, request.getProtocol().toString());
+        request.getRequestHeaders().put(AUTHORITY, request.getProtocol().toString());
         request.getRequestHeaders().put(METHOD, request.getMethod().toString());
-        request.getRequestHeaders().put(HOST, request.getRequestHeaders().getFirst(Headers.HOST));
+        request.getRequestHeaders().put(AUTHORITY, request.getRequestHeaders().getFirst(Headers.HOST));
         request.getRequestHeaders().remove(Headers.HOST);
 
 

@@ -20,6 +20,8 @@ package io.undertow.server.protocol.http2;
 
 import java.io.IOException;
 import javax.net.ssl.SSLSession;
+
+import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -52,8 +54,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private static final HttpString METHOD = new HttpString(":method");
     private static final HttpString PATH = new HttpString(":path");
     private static final HttpString SCHEME = new HttpString(":scheme");
-    private static final HttpString VERSION = new HttpString(":version");
-    private static final HttpString HOST = new HttpString(":host");
+    private static final HttpString AUTHORITY = new HttpString(":authority");
 
     private final HttpHandler rootHandler;
     private final long maxEntitySize;
@@ -96,9 +97,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
                 final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
                 dataChannel.setMaxStreamSize(maxEntitySize);
                 exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
-                exchange.setProtocol(new HttpString(exchange.getRequestHeaders().getFirst(VERSION)));
+                exchange.setProtocol(Protocols.HTTP_1_1);
                 exchange.setRequestMethod(new HttpString(exchange.getRequestHeaders().getFirst(METHOD)));
-                exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(HOST));
+                exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
                 final String path = exchange.getRequestHeaders().getFirst(PATH);
                 setRequestPath(exchange, path, encoding, allowEncodingSlash, decodeBuffer);
 
