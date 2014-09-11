@@ -42,6 +42,7 @@ import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.server.session.SessionListener;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.DefaultAuthorizationManager;
@@ -114,6 +115,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
     private final Map<String, AuthenticationMechanismFactory> authenticationMechanisms = new HashMap<>();
     private final List<LifecycleInterceptor> lifecycleInterceptors = new ArrayList<>();
+    private final List<SessionListener> sessionListeners = new ArrayList<>();
 
     /**
      * additional servlet extensions
@@ -1049,6 +1051,16 @@ public class DeploymentInfo implements Cloneable {
         this.escapeErrorMessage = escapeErrorMessage;
     }
 
+
+    public DeploymentInfo addSessionListener(SessionListener sessionListener) {
+        this.sessionListeners.add(sessionListener);
+        return this;
+    }
+
+    public List<SessionListener> getSessionListeners() {
+        return Collections.unmodifiableList(sessionListeners);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1122,6 +1134,7 @@ public class DeploymentInfo implements Cloneable {
         info.disableCachingForSecuredPages = disableCachingForSecuredPages;
         info.exceptionHandler = exceptionHandler;
         info.escapeErrorMessage = escapeErrorMessage;
+        this.sessionListeners.addAll(sessionListeners);
         this.lifecycleInterceptors.addAll(lifecycleInterceptors);
         return info;
     }

@@ -40,6 +40,7 @@ import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.form.FormEncodedDataDefinition;
 import io.undertow.server.handlers.form.FormParserFactory;
+import io.undertow.server.session.SessionListener;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletLogger;
@@ -153,6 +154,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
         deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
+        for(SessionListener listener : deploymentInfo.getSessionListeners()) {
+            deployment.getSessionManager().registerSessionListener(listener);
+        }
 
         final List<ThreadSetupAction> setup = new ArrayList<>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
