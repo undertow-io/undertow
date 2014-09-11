@@ -50,6 +50,7 @@ public class SpdySynStreamStreamSourceChannel extends SpdyStreamSourceChannel {
         this.deflater = deflater;
         this.headers = headers;
         this.streamId = streamId;
+        this.flowControlWindow = framedChannel.getInitialWindowSize();
     }
 
     public SpdySynReplyStreamSinkChannel getResponseChannel() {
