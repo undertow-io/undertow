@@ -29,8 +29,11 @@ import io.undertow.util.Headers;
 import io.undertow.util.MalformedMessageException;
 import io.undertow.util.MultipartParser;
 import io.undertow.util.SameThreadExecutor;
+import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
+import org.xnio.Pooled;
+import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -124,7 +127,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         this.maxIndividualFileSize = maxIndividualFileSize;
     }
 
-    private final class MultiPartUploadHandler implements FormDataParser, Runnable, MultipartParser.PartHandler {
+    private final class MultiPartUploadHandler implements FormDataParser, MultipartParser.PartHandler {
 
         private final HttpServerExchange exchange;
         private final FormData data;
@@ -141,6 +144,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         private HeaderMap headers;
         private HttpHandler handler;
         private long currentFileSize;
+        private final MultipartParser.ParseState parser;
 
 
         private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary, final long maxIndividualFileSize, final String defaultEncoding) {
@@ -149,6 +153,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             this.maxIndividualFileSize = maxIndividualFileSize;
             this.defaultEncoding = defaultEncoding;
             this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
+            this.parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes(), exchange.getRequestCharset());
         }
 
 
@@ -161,10 +166,15 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             this.handler = handler;
             //we need to delegate to a thread pool
             //as we parse with blocking operations
+
+            StreamSourceChannel requestChannel = exchange.getRequestChannel();
+            if (requestChannel == null) {
+                throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
+            }
             if (executor == null) {
-                exchange.dispatch(this);
+                exchange.dispatch(new NonBlockingParseTask(exchange.getConnection().getWorker(), requestChannel));
             } else {
-                exchange.dispatch(executor, this);
+                exchange.dispatch(executor, new NonBlockingParseTask(executor, requestChannel));
             }
         }
 
@@ -199,18 +209,6 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 throw new IOException(e);
             }
             return exchange.getAttachment(FORM_DATA);
-        }
-
-        @Override
-        public void run() {
-            try {
-                parseBlocking();
-                exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
-            } catch (Throwable e) {
-                UndertowLogger.REQUEST_LOGGER.debug("Exception parsing data", e);
-                exchange.setResponseCode(500);
-                exchange.endExchange();
-            }
         }
 
         @Override
@@ -310,6 +308,70 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         public void setCharacterEncoding(final String encoding) {
             this.defaultEncoding = encoding;
         }
-    }
+
+        private final class NonBlockingParseTask implements Runnable {
+
+            private final Executor executor;
+            private final StreamSourceChannel requestChannel;
+
+            private NonBlockingParseTask(Executor executor, StreamSourceChannel requestChannel) {
+                this.executor = executor;
+                this.requestChannel = requestChannel;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    final FormData existing = exchange.getAttachment(FORM_DATA);
+                    if (existing != null) {
+                        exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
+                    }
+                    Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
+                    try {
+                        while (true) {
+                            int c = requestChannel.read(pooled.getResource());
+                            if(c == 0) {
+                                requestChannel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+                                    @Override
+                                    public void handleEvent(StreamSourceChannel channel) {
+                                        executor.execute(NonBlockingParseTask.this);
+                                    }
+                                });
+                                requestChannel.resumeReads();
+                                return;
+                            } else if (c == -1) {
+                                if (parser.isComplete()) {
+                                    exchange.putAttachment(FORM_DATA, data);
+                                    exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
+                                } else {
+                                    UndertowLogger.REQUEST_IO_LOGGER.ioException(UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData());
+                                    exchange.setResponseCode(500);
+                                    exchange.endExchange();
+                                }
+                                return;
+                            } else {
+                                pooled.getResource().flip();
+                                parser.parse(pooled.getResource());
+                                pooled.getResource().compact();
+                            }
+                        }
+                    } catch (MalformedMessageException e) {
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                        exchange.setResponseCode(500);
+                        exchange.endExchange();
+                    } finally {
+                        pooled.free();
+                    }
+
+                } catch (Throwable e) {
+                    UndertowLogger.REQUEST_IO_LOGGER.debug("Exception parsing data", e);
+                    exchange.setResponseCode(500);
+                    exchange.endExchange();
+                }
+            }
+        }
+     }
+
+
 
 }
