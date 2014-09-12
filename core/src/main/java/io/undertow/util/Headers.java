@@ -124,7 +124,7 @@ public final class Headers {
     public static final HttpString CONTENT_LANGUAGE = new HttpString(CONTENT_LANGUAGE_STRING, 14);
     public static final HttpString CONTENT_LENGTH = new HttpString(CONTENT_LENGTH_STRING, 15);
     public static final HttpString CONTENT_LOCATION = new HttpString(CONTENT_LOCATION_STRING, 16);
-    public static final HttpString CONTENT_MD5 = new HttpString(CONTENT_MD5_STRING,17);
+    public static final HttpString CONTENT_MD5 = new HttpString(CONTENT_MD5_STRING, 17);
     public static final HttpString CONTENT_RANGE = new HttpString(CONTENT_RANGE_STRING, 18);
     public static final HttpString CONTENT_TYPE = new HttpString(CONTENT_TYPE_STRING, 19);
     public static final HttpString COOKIE = new HttpString(COOKIE_STRING, 20);
@@ -232,7 +232,6 @@ public final class Headers {
     public static final HttpString USERNAME = new HttpString("username");
 
 
-
     /**
      * Extracts a token from a header that has a given key. For instance if the header is
      * <p/>
@@ -270,13 +269,43 @@ public final class Headers {
      * @return The token, or null if it was not found
      */
     public static String extractQuotedValueFromHeader(final String header, final String key) {
-        int pos = header.indexOf(key + '=');
+
+        int keypos = 0;
+        int pos = -1;
+        boolean inQuotes = false;
+        for (int i = 0; i < header.length() - 1; ++i) { //-1 because we need room for the = at the end
+            //TODO: a more efficient matching algorithm
+            char c = header.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    inQuotes = false;
+                }
+            } else {
+                if (key.charAt(keypos) == c) {
+                    keypos++;
+                } else if (c == '"') {
+                    keypos = 0;
+                    inQuotes = true;
+                } else {
+                    keypos = 0;
+                }
+                if (keypos == key.length()) {
+                    if (header.charAt(i + 1) == '=') {
+                        pos = i + 2;
+                        break;
+                    } else {
+                        keypos = 0;
+                    }
+                }
+            }
+
+        }
         if (pos == -1) {
             return null;
         }
 
         int end;
-        int start = pos + key.length() + 1;
+        int start = pos;
         if (header.charAt(start) == '"') {
             start++;
             for (end = start; end < header.length(); ++end) {
