@@ -54,6 +54,7 @@ import io.undertow.util.CanonicalPathUtils;
 
 import javax.annotation.security.DeclareRoles;
 import javax.annotation.security.RunAs;
+import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterRegistration;
 import javax.servlet.MultipartConfigElement;
@@ -80,6 +81,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
@@ -108,6 +110,7 @@ public class ServletContextImpl implements ServletContext {
     private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = new HashSet<>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
     private volatile SessionConfig sessionConfig;
     private volatile boolean initialized = false;
+    private int filterMappingInsertPosition = 0;
 
 
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
@@ -491,7 +494,7 @@ public class ServletContextImpl implements ServletContext {
             FilterInfo filter = new FilterInfo(filterName, (Class<? extends Filter>) deploymentInfo.getClassLoader().loadClass(className));
             deploymentInfo.addFilter(filter);
             deployment.getFilters().addFilter(filter);
-            return new FilterRegistrationImpl(filter, deployment);
+            return new FilterRegistrationImpl(filter, deployment, this);
         } catch (ClassNotFoundException e) {
             throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e);
         }
@@ -508,7 +511,7 @@ public class ServletContextImpl implements ServletContext {
         FilterInfo f = new FilterInfo(filterName, filter.getClass(), new ImmediateInstanceFactory<>(filter));
         deploymentInfo.addFilter(f);
         deployment.getFilters().addFilter(f);
-        return new FilterRegistrationImpl(f, deployment);
+        return new FilterRegistrationImpl(f, deployment, this);
 
     }
 
@@ -522,7 +525,7 @@ public class ServletContextImpl implements ServletContext {
         FilterInfo filter = new FilterInfo(filterName, filterClass);
         deploymentInfo.addFilter(filter);
         deployment.getFilters().addFilter(filter);
-        return new FilterRegistrationImpl(filter, deployment);
+        return new FilterRegistrationImpl(filter, deployment, this);
     }
 
     @Override
@@ -542,7 +545,7 @@ public class ServletContextImpl implements ServletContext {
         if (filterInfo == null) {
             return null;
         }
-        return new FilterRegistrationImpl(filterInfo, deployment);
+        return new FilterRegistrationImpl(filterInfo, deployment, this);
     }
 
     @Override
@@ -550,7 +553,7 @@ public class ServletContextImpl implements ServletContext {
         ensureNotProgramaticListener();
         final Map<String, FilterRegistration> ret = new HashMap<>();
         for (Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
-            ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deployment));
+            ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deployment, this));
         }
         return ret;
     }
@@ -811,5 +814,54 @@ public class ServletContextImpl implements ServletContext {
             }
             return null;
         }
+    }
+
+    void addMappingForServletNames(FilterInfo filterInfo, final EnumSet<DispatcherType> dispatcherTypes, final boolean isMatchAfter, final String... servletNames) {
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
+
+        for(final String servlet : servletNames){
+            if(isMatchAfter) {
+                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
+                    deploymentInfo.addFilterServletNameMapping(filterInfo.getName(), servlet, DispatcherType.REQUEST);
+                } else {
+                    for(final DispatcherType dispatcher : dispatcherTypes) {
+                        deploymentInfo.addFilterServletNameMapping(filterInfo.getName(), servlet, dispatcher);
+                    }
+                }
+            } else {
+                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
+                    deploymentInfo.insertFilterServletNameMapping(filterMappingInsertPosition++, filterInfo.getName(), servlet, DispatcherType.REQUEST);
+                } else {
+                    for(final DispatcherType dispatcher : dispatcherTypes) {
+                        deploymentInfo.insertFilterServletNameMapping(filterMappingInsertPosition++, filterInfo.getName(), servlet, dispatcher);
+                    }
+                }
+            }
+        }
+        deployment.getServletPaths().invalidate();
+    }
+
+    void addMappingForUrlPatterns(FilterInfo filterInfo, final EnumSet<DispatcherType> dispatcherTypes, final boolean isMatchAfter, final String... urlPatterns) {
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
+        for(final String url : urlPatterns){
+            if(isMatchAfter) {
+                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
+                    deploymentInfo.addFilterUrlMapping(filterInfo.getName(), url, DispatcherType.REQUEST);
+                } else {
+                    for(final DispatcherType dispatcher : dispatcherTypes) {
+                        deploymentInfo.addFilterUrlMapping(filterInfo.getName(), url, dispatcher);
+                    }
+                }
+            } else {
+                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
+                    deploymentInfo.insertFilterUrlMapping(filterMappingInsertPosition++, filterInfo.getName(), url, DispatcherType.REQUEST);
+                } else {
+                    for(final DispatcherType dispatcher : dispatcherTypes) {
+                        deploymentInfo.insertFilterUrlMapping(filterMappingInsertPosition++, filterInfo.getName(), url, dispatcher);
+                    }
+                }
+            }
+        }
+        deployment.getServletPaths().invalidate();
     }
 }
