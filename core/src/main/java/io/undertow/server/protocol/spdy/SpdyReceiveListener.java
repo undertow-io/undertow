@@ -20,6 +20,7 @@ package io.undertow.server.protocol.spdy;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.protocols.spdy.SpdyStreamStreamSourceChannel;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -115,9 +116,9 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                 if(!dataChannel.isOpen()) {
                     Connectors.terminateRequest(exchange);
                 } else {
-                    dataChannel.setCompletionListener(new ChannelListener<SpdySynStreamStreamSourceChannel>() {
+                    dataChannel.setCompletionListener(new ChannelListener<SpdyStreamStreamSourceChannel>() {
                         @Override
-                        public void handleEvent(SpdySynStreamStreamSourceChannel channel) {
+                        public void handleEvent(SpdyStreamStreamSourceChannel channel) {
                             Connectors.terminateRequest(exchange);
                         }
                     });

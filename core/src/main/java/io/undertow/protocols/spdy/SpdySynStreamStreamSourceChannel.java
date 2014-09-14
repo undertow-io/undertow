@@ -19,163 +19,30 @@
 package io.undertow.protocols.spdy;
 
 import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.Pooled;
-import org.xnio.channels.StreamSinkChannel;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.zip.Deflater;
 
 /**
  * @author Stuart Douglas
  */
-public class SpdySynStreamStreamSourceChannel extends SpdyStreamSourceChannel {
+public class SpdySynStreamStreamSourceChannel extends SpdyStreamStreamSourceChannel {
 
-
-    private boolean rst = false;
-    private final Deflater deflater;
-    private final HeaderMap headers;
-    private final int streamId;
-    private HeaderMap newHeaders = null;
     private SpdySynReplyStreamSinkChannel synResponse;
-    private int flowControlWindow;
-    private ChannelListener<SpdySynStreamStreamSourceChannel> completionListener;
+    private final Deflater deflater;
 
     SpdySynStreamStreamSourceChannel(SpdyChannel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, Deflater deflater, HeaderMap headers, int streamId) {
-        super(framedChannel, data, frameDataRemaining);
+        super(framedChannel, data, frameDataRemaining, headers, streamId);
         this.deflater = deflater;
-        this.headers = headers;
-        this.streamId = streamId;
-        this.flowControlWindow = framedChannel.getInitialWindowSize();
     }
 
     public SpdySynReplyStreamSinkChannel getResponseChannel() {
         if(synResponse != null) {
             return synResponse;
         }
-        synResponse = new SpdySynReplyStreamSinkChannel(getSpdyChannel(), streamId, deflater);
+        synResponse = new SpdySynReplyStreamSinkChannel(getSpdyChannel(), getStreamId(), deflater);
         getSpdyChannel().registerStreamSink(synResponse);
         return synResponse;
-    }
-
-    @Override
-    public int read(ByteBuffer dst) throws IOException {
-        handleNewHeaders();
-        int read = super.read(dst);
-        updateFlowControlWindow(read);
-        return read;
-    }
-
-    @Override
-    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        handleNewHeaders();
-        long read = super.read(dsts, offset, length);
-        updateFlowControlWindow((int) read);
-        return read;
-    }
-
-    @Override
-    public long read(ByteBuffer[] dsts) throws IOException {
-        handleNewHeaders();
-        long read = super.read(dsts);
-        updateFlowControlWindow((int) read);
-        return read;
-    }
-
-    @Override
-    public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel streamSinkChannel) throws IOException {
-        handleNewHeaders();
-        long read = super.transferTo(count, throughBuffer, streamSinkChannel);
-        updateFlowControlWindow((int) read);
-        return read;
-    }
-
-    @Override
-    public long transferTo(long position, long count, FileChannel target) throws IOException {
-        handleNewHeaders();
-        long read = super.transferTo(position, count, target);
-        updateFlowControlWindow((int) read);
-        return read;
-    }
-
-    /**
-     * Merge any new headers from HEADERS blocks into the exchange.
-     */
-    private synchronized void handleNewHeaders() {
-        if (newHeaders != null) {
-            for (HeaderValues header : newHeaders) {
-                headers.addAll(header.getHeaderName(), header);
-            }
-            newHeaders = null;
-        }
-    }
-
-    synchronized void addNewHeaders(HeaderMap headers) {
-        if (newHeaders != null) {
-            newHeaders = headers;
-        } else {
-            for (HeaderValues header : headers) {
-                newHeaders.addAll(header.getHeaderName(), header);
-            }
-        }
-    }
-
-    private void updateFlowControlWindow(final int read) {
-        if(read <= 0) {
-            return;
-        }
-        flowControlWindow -= read;
-        //TODO: RST stream if flow control limits are exceeded?
-        //TODO: make this configurable, we should be able to set the policy that is used to determine when to update the window size
-        SpdyChannel spdyChannel = getSpdyChannel();
-        spdyChannel.updateReceiveFlowControlWindow(read);
-        int initialWindowSize = spdyChannel.getInitialWindowSize();
-        if(flowControlWindow < (initialWindowSize / 2)) {
-            int delta = initialWindowSize - flowControlWindow;
-            flowControlWindow += delta;
-            spdyChannel.sendUpdateWindowSize(streamId, delta);
-        }
-    }
-
-    @Override
-    protected void complete() throws IOException {
-        super.complete();
-        if(completionListener != null) {
-            ChannelListeners.invokeChannelListener(this, completionListener);
-        }
-    }
-
-    public HeaderMap getHeaders() {
-        return headers;
-    }
-
-    public ChannelListener<SpdySynStreamStreamSourceChannel> getCompletionListener() {
-        return completionListener;
-    }
-
-    public void setCompletionListener(ChannelListener<SpdySynStreamStreamSourceChannel> completionListener) {
-        this.completionListener = completionListener;
-    }
-
-    @Override
-    void rstStream() {
-        if(rst) {
-            return;
-        }
-        rst = true;
-        markStreamBroken();
-        getSpdyChannel().sendRstStream(streamId, SpdyChannel.RST_STATUS_CANCEL);
-    }
-
-    @Override
-    protected void channelForciblyClosed() {
-        if(completionListener != null) {
-            completionListener.handleEvent(this);
-        }
-        rstStream();
     }
 }
