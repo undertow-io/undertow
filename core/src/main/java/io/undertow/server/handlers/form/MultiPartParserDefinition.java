@@ -325,6 +325,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     final FormData existing = exchange.getAttachment(FORM_DATA);
                     if (existing != null) {
                         exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
+                        return;
                     }
                     Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
                     try {
@@ -334,6 +335,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                                 requestChannel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                                     @Override
                                     public void handleEvent(StreamSourceChannel channel) {
+                                        channel.suspendReads();
                                         executor.execute(NonBlockingParseTask.this);
                                     }
                                 });
