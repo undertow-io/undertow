@@ -446,23 +446,27 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(fullyFlushed || anyAreSet(state, STATE_CLOSED)) {
             return;
         }
-        state |= STATE_CLOSED;
-        buffer.free();
-        buffer = null;
-        if(header != null && header.getByteBuffer() != null) {
-            header.getByteBuffer().free();
+        try {
+            state |= STATE_CLOSED;
+            buffer.free();
+            buffer = null;
+            if (header != null && header.getByteBuffer() != null) {
+                header.getByteBuffer().free();
+            }
+            if (trailer != null) {
+                trailer.free();
+            }
+            if (anyAreSet(state, STATE_FIRST_DATA_WRITTEN)) {
+                channelForciblyClosed();
+            }
+            //we need to wake up/invoke the write listener
+            if (isWriteResumed()) {
+                ChannelListeners.invokeChannelListener(getIoThread(), this, (ChannelListener) getWriteListener());
+            }
+            wakeupWrites();
+        } finally {
+            wakeupWaiters();
         }
-        if(trailer != null) {
-            trailer.free();
-        }
-        if(anyAreSet(state, STATE_FIRST_DATA_WRITTEN)) {
-            channelForciblyClosed();
-        }
-        //we need to wake up/invoke the write listener
-        if(isWriteResumed()) {
-            ChannelListeners.invokeChannelListener(getIoThread(), this, (ChannelListener)getWriteListener());
-        }
-        wakeupWrites();
     }
 
     /**
