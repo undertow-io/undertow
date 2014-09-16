@@ -233,6 +233,8 @@ public class Http2ClientProvider implements ClientProvider {
                 sslConnection.getSourceChannel().resumeReads();
             } catch (IOException e) {
                 listener.failed(e);
+            } catch (Throwable e) {
+                listener.failed(new IOException(e));
             }
         }
 

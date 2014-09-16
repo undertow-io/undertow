@@ -125,7 +125,6 @@
         <dependency>
             <groupId>org.jboss.logmanager</groupId>
             <artifactId>jboss-logmanager</artifactId>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -141,7 +140,7 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-                <filtering>true</filtering>
+                <filtering>false</filtering>
             </resource>
         </resources>
         <testResources>
@@ -186,151 +185,20 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <testClassesDirectory>${project.build.directory}/classes</testClassesDirectory>
                     <enableAssertions>true</enableAssertions>
                     <runOrder>reversealphabetical</runOrder>
                     <systemPropertyVariables>
-                        <test.ajp>${ajp}</test.ajp>
-                        <test.proxy>${proxy}</test.proxy>
-                        <test.dump>${dump}</test.dump>
-                        <test.https>${https}</test.https>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                     </systemPropertyVariables>
-                    <argLine>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar} ${jacoco.agent.argLine}</argLine>
+                    <argLine>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</argLine>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 
-    <profiles>
-        <profile>
-            <id>proxy</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>proxy</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>test</goal>
-                                </goals>
-                                <configuration>
-                                    <enableAssertions>true</enableAssertions>
-                                    <runOrder>reversealphabetical</runOrder>
-                                    <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
-                                        <test.dump>${dump}</test.dump>
-                                        <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
-                                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                                        <test.level>${test.level}</test.level>
-                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                    </systemPropertyVariables>
-                                    <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>proxy-ajp</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>test</goal>
-                                </goals>
-                                <configuration>
-                                    <enableAssertions>true</enableAssertions>
-                                    <runOrder>reversealphabetical</runOrder>
-                                    <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
-                                        <test.ajp>true</test.ajp>
-                                        <test.dump>${dump}</test.dump>
-                                        <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
-                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
-                                        </java.util.logging.manager>
-                                        <test.level>${test.level}</test.level>
-                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                    </systemPropertyVariables>
-                                    <reportsDirectory>${project.build.directory}/surefire-ajp-reports</reportsDirectory>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>proxy-spdy</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>test</goal>
-                                </goals>
-                                <configuration>
-                                    <enableAssertions>true</enableAssertions>
-                                    <runOrder>reversealphabetical</runOrder>
-                                    <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
-                                        <test.spdy>true</test.spdy>
-                                        <test.dump>${dump}</test.dump>
-                                        <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
-                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
-                                        </java.util.logging.manager>
-                                        <test.level>${test.level}</test.level>
-                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                    </systemPropertyVariables>
-                                    <reportsDirectory>${project.build.directory}/surefire-spdy-reports</reportsDirectory>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>proxy-https</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>test</goal>
-                                </goals>
-                                <configuration>
-                                    <enableAssertions>true</enableAssertions>
-                                    <runOrder>reversealphabetical</runOrder>
-                                    <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
-                                        <test.https>true</test.https>
-                                        <test.dump>${dump}</test.dump>
-                                        <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
-                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
-                                        </java.util.logging.manager>
-                                        <test.level>${test.level}</test.level>
-                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                    </systemPropertyVariables>
-                                    <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>proxy-http2</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>test</goal>
-                                </goals>
-                                <configuration>
-                                    <enableAssertions>true</enableAssertions>
-                                    <runOrder>reversealphabetical</runOrder>
-                                    <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
-                                        <test.http2>true</test.http2>
-                                        <test.dump>${dump}</test.dump>
-                                        <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
-                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
-                                        </java.util.logging.manager>
-                                        <test.level>${test.level}</test.level>
-                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                    </systemPropertyVariables>
-                                    <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
