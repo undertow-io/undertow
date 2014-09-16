@@ -151,12 +151,20 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             } else if (data != null && data.getResource().hasRemaining()) {
                 int old = data.getResource().limit();
                 try {
-                    throughBuffer.position(throughBuffer.limit());
                     if (count < data.getResource().remaining()) {
                         data.getResource().limit((int) (data.getResource().position() + count));
                     }
                     int written = streamSinkChannel.write(data.getResource());
                     frameDataRemaining -= written;
+                    if(data.getResource().hasRemaining()) {
+                        //we can still add more data
+                        //stick it it throughbuffer, otherwise transfer code will continue to attempt to use this method
+                        throughBuffer.clear();
+                        Buffers.copy(throughBuffer, data.getResource());
+                        throughBuffer.flip();
+                    } else {
+                        throughBuffer.position(throughBuffer.limit());
+                    }
                     return written;
                 } finally {
                     data.getResource().limit(old);
