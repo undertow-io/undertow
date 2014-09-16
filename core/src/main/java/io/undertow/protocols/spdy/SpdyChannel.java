@@ -90,7 +90,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     private final Deflater deflater = new Deflater(6);
 
     private SpdyFrameParser frameParser;
-    private final Map<Integer, SpdyStreamSourceChannel> incomingStreams = new ConcurrentHashMap<>();
+    private final Map<Integer, SpdyStreamStreamSourceChannel> incomingStreams = new ConcurrentHashMap<>();
     private final Map<Integer, SpdyStreamStreamSinkChannel> outgoingStreams = new ConcurrentHashMap<>();
 
     private volatile int initialWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
@@ -141,7 +141,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                 channel = new SpdySynStreamStreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), deflater, parser.getHeaderMap(), parser.streamId);
                 lastGoodStreamId = parser.streamId;
                 if (!Bits.anyAreSet(frameParser.flags, FLAG_FIN)) {
-                    incomingStreams.put(parser.streamId, channel);
+                    incomingStreams.put(parser.streamId, (SpdyStreamStreamSourceChannel) channel);
                 }
                 break;
             }
@@ -150,7 +150,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                 channel = new SpdySynReplyStreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), parser.getHeaderMap(), parser.streamId);
                 lastGoodStreamId = parser.streamId;
                 if (!Bits.anyAreSet(frameParser.flags, FLAG_FIN)) {
-                    incomingStreams.put(parser.streamId, channel);
+                    incomingStreams.put(parser.streamId, (SpdyStreamStreamSourceChannel) channel);
                 }
                 break;
             }
@@ -246,7 +246,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     @Override
     protected void closeSubChannels() {
-        for (Map.Entry<Integer, SpdyStreamSourceChannel> e : incomingStreams.entrySet()) {
+        for (Map.Entry<Integer, SpdyStreamStreamSourceChannel> e : incomingStreams.entrySet()) {
             SpdyStreamSourceChannel receiver = e.getValue();
             if (receiver.isReadResumed()) {
                 ChannelListeners.invokeChannelListener(receiver.getIoThread(), receiver, ((ChannelListener.SimpleSetter) receiver.getReadSetter()).get());

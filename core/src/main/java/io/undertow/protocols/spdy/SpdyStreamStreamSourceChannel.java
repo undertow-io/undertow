@@ -18,6 +18,7 @@
 
 package io.undertow.protocols.spdy;
 
+import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import org.xnio.ChannelListener;
@@ -87,6 +88,15 @@ public class SpdyStreamStreamSourceChannel extends SpdyStreamSourceChannel {
         long read = super.transferTo(position, count, target);
         updateFlowControlWindow((int) read);
         return read;
+    }
+    @Override
+    protected void handleHeaderData(FrameHeaderData headerData) {
+        super.handleHeaderData(headerData);
+
+        SpdyChannel.SpdyFrameParser data = (SpdyChannel.SpdyFrameParser) headerData;
+        if(data.parser instanceof SpdyHeadersParser) {
+            addNewHeaders(((SpdyHeadersParser)data.parser).getHeaderMap());
+        }
     }
 
     /**
