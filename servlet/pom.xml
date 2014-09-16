@@ -305,7 +305,7 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                     </systemPropertyVariables>
-                                    <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
+                                    <reportsDirectory>${project.build.directory}/surefire-h2-reports</reportsDirectory>
                                 </configuration>
                             </execution>
                             <execution>
@@ -328,7 +328,7 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                     </systemPropertyVariables>
-                                    <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
+                                    <reportsDirectory>${project.build.directory}/surefire-h2c-reports</reportsDirectory>
                                 </configuration>
                             </execution>
                         </executions>

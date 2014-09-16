@@ -548,6 +548,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             if(h2) {
                 sb.append("{http2}");
             }
+            if(h2c) {
+                sb.append("{http2-clear}");
+            }
             return sb.toString();
         }
     }
