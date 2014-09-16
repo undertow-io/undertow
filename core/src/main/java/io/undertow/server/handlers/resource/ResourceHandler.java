@@ -40,6 +40,7 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.server.handlers.encoding.ContentEncodedResource;
 import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
+import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
@@ -59,6 +60,12 @@ public class ResourceHandler implements HttpHandler {
      * If directory listing is enabled.
      */
     private volatile boolean directoryListingEnabled = false;
+
+    /**
+     * If the canonical version of paths should be passed into the resource manager.
+     */
+    private volatile boolean canonicalizePaths = true;
+
     /**
      * The mime mappings that are used to determine the content type.
      */
@@ -153,7 +160,7 @@ public class ResourceHandler implements HttpHandler {
             public void run() {
                 Resource resource = null;
                 try {
-                    resource = resourceManager.getResource(exchange.getRelativePath());
+                    resource = resourceManager.getResource(canonicalize(exchange.getRelativePath()));
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     exchange.setResponseCode(500);
@@ -269,12 +276,19 @@ public class ResourceHandler implements HttpHandler {
             realBase = base + "/";
         }
         for (String possibility : possible) {
-            Resource index = resourceManager.getResource(realBase + possibility);
+            Resource index = resourceManager.getResource(canonicalize(realBase + possibility));
             if (index != null) {
                 return index;
             }
         }
         return null;
+    }
+
+    private String canonicalize(String s) {
+        if(canonicalizePaths) {
+            return CanonicalPathUtils.canonicalize(s);
+        }
+        return s;
     }
 
     public boolean isDirectoryListingEnabled() {
@@ -351,7 +365,21 @@ public class ResourceHandler implements HttpHandler {
         return this;
     }
 
+    public boolean isCanonicalizePaths() {
+        return canonicalizePaths;
+    }
 
+    /**
+     * If this handler should use canonicalized paths.
+     *
+     * WARNING: If this is not true and {@link io.undertow.server.handlers.CanonicalPathHandler} is not installed in
+     * the handler chain then is may be possible to perform a directory traversal attack. If you set this to false make
+     * sure you have some kind of check in place to control the path.
+     * @param canonicalizePaths If paths should be canonicalized
+     */
+    public void setCanonicalizePaths(boolean canonicalizePaths) {
+        this.canonicalizePaths = canonicalizePaths;
+    }
 
     public static class Builder implements HandlerBuilder {
 

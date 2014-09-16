@@ -27,6 +27,7 @@ import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
@@ -298,7 +299,6 @@ public class DefaultServlet extends HttpServlet {
         if (request.getDispatcherType() == DispatcherType.INCLUDE && request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI) != null) {
             pathInfo = (String) request.getAttribute(RequestDispatcher.INCLUDE_PATH_INFO);
             servletPath = (String) request.getAttribute(RequestDispatcher.INCLUDE_SERVLET_PATH);
-
         } else {
             pathInfo = request.getPathInfo();
             servletPath = request.getServletPath();
@@ -307,7 +307,9 @@ public class DefaultServlet extends HttpServlet {
         if (result == null) {
             result = servletPath;
         } else if(resolveAgainstContextRoot) {
-            result = servletPath + pathInfo;
+            result = servletPath + CanonicalPathUtils.canonicalize(pathInfo);
+        } else {
+            result = CanonicalPathUtils.canonicalize(result);
         }
         if ((result == null) || (result.equals(""))) {
             result = "/";
