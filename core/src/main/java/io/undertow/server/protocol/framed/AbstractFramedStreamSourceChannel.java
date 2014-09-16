@@ -160,7 +160,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                         //we can still add more data
                         //stick it it throughbuffer, otherwise transfer code will continue to attempt to use this method
                         throughBuffer.clear();
-                        Buffers.copy(throughBuffer, data.getResource());
+                        frameDataRemaining -= Buffers.copy(throughBuffer, data.getResource());
                         throughBuffer.flip();
                     } else {
                         throughBuffer.position(throughBuffer.limit());
