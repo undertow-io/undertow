@@ -104,7 +104,7 @@ public class DebuggingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
             try {
                 Buffers.dump(ByteBuffer.wrap(data.get(i)), sb, 0, 20);
             } catch (IOException e) {
-                new RuntimeException(e);
+                throw new RuntimeException(e);
             }
             System.out.println(sb);
             System.out.println();
