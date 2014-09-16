@@ -120,7 +120,7 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel streamSinkChannel) throws IOException {
         handleNewHeaders();
         long read = super.transferTo(count, throughBuffer, streamSinkChannel);
-        updateFlowControlWindow((int) read);
+        updateFlowControlWindow((int) read + throughBuffer.remaining());
         return read;
     }
 
