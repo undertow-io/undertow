@@ -40,6 +40,7 @@ import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
 
 import org.jboss.logging.Logger;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
@@ -792,11 +793,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     private static boolean isAlpnEnabled() {
-        try {
-            Class c = Class.forName("org.eclipse.jetty.alpn.ALPN");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return !System.getProperty("alpn-boot-string", "").isEmpty();
+    }
+
+    public static void assumeAlpnEnabled() {
+        Assume.assumeTrue(isAlpnEnabled());
     }
 }

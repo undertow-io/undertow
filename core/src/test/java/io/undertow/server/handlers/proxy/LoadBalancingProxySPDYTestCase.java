@@ -23,6 +23,8 @@ import static io.undertow.Handlers.path;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
@@ -100,4 +102,9 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
                 , 10000, ResponseCodeHandler.HANDLE_404));
     }
 
+
+    @Before
+    public void requireAlpn() {
+        DefaultServer.assumeAlpnEnabled();
+    }
 }
