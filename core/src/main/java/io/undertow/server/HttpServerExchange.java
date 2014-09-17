@@ -1748,12 +1748,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         private void invokeListener() {
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelListeners.invokeChannelListener(WriteDispatchChannel.this, writeSetter.get());
-                }
-            });
+            if(writeSetter != null) {
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        ChannelListeners.invokeChannelListener(WriteDispatchChannel.this, writeSetter.get());
+                    }
+                });
+            }
         }
 
         @Override
@@ -1825,12 +1827,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         private void invokeListener() {
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelListeners.invokeChannelListener(ReadDispatchChannel.this, readSetter.get());
-                }
-            });
+            if(readSetter != null) {
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        ChannelListeners.invokeChannelListener(ReadDispatchChannel.this, readSetter.get());
+                    }
+                });
+            }
         }
 
         public void requestDone() {
