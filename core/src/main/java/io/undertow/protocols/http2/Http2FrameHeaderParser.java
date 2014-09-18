@@ -26,10 +26,12 @@ import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_PUSH_PROMISE;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_RST_STREAM;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_SETTINGS;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_WINDOW_UPDATE;
+import static io.undertow.protocols.http2.Http2Channel.HEADERS_FLAG_END_HEADERS;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.xnio.Bits;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
@@ -49,12 +51,14 @@ class Http2FrameHeaderParser implements FrameHeaderData {
     int streamId;
 
     Http2PushBackParser parser = null;
+    Http2HeadersParser continuationParser = null;
 
     private static final int SECOND_RESERVED_MASK = ~(1 << 7);
     private Http2Channel http2Channel;
 
-    public Http2FrameHeaderParser(Http2Channel http2Channel) {
+    public Http2FrameHeaderParser(Http2Channel http2Channel, Http2HeadersParser continuationParser) {
         this.http2Channel = http2Channel;
+        this.continuationParser = continuationParser;
     }
 
     public boolean handle(final ByteBuffer byteBuffer) throws IOException {
@@ -68,7 +72,10 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_HEADERS: {
-                    parser = new Http2HeadersParser( length, http2Channel.getDecoder());
+                    parser = new Http2HeadersParser(length, http2Channel.getDecoder());
+                    if(allAreClear(flags, Http2Channel.HEADERS_FLAG_END_HEADERS)) {
+                        continuationParser = (Http2HeadersParser) parser;
+                    }
                     break;
                 }
                 case FRAME_TYPE_RST_STREAM: {
@@ -76,8 +83,13 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_CONTINUATION: {
-                    //parser = new Http2HeadersParser(http2Channel.getBufferPool(), http2Channel, length, inflater);
-                    throw new RuntimeException("NYI"); //TODO: continuations
+                    if(continuationParser == null) {
+                        http2Channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
+                        throw UndertowMessages.MESSAGES.http2ContinuationFrameNotExpected();
+                    }
+                    parser = continuationParser;
+                    continuationParser.moreData(length);
+                    break;
                 }
                 case FRAME_TYPE_PUSH_PROMISE: {
                     throw new RuntimeException("NYI"); //TODO: push promise
@@ -111,6 +123,11 @@ class Http2FrameHeaderParser implements FrameHeaderData {
             }
         }
         parser.parse(byteBuffer, this);
+        if(continuationParser != null) {
+            if(anyAreSet(flags, HEADERS_FLAG_END_HEADERS)) {
+                continuationParser = null;
+            }
+        }
         return parser.isFinished();
     }
 
@@ -145,16 +162,24 @@ class Http2FrameHeaderParser implements FrameHeaderData {
     @Override
     public AbstractFramedStreamSourceChannel<?, ?, ?> getExistingChannel() {
         if (type == FRAME_TYPE_DATA ||
-                type == FRAME_TYPE_HEADERS ||
                 type == Http2Channel.FRAME_TYPE_CONTINUATION ||
                 type == Http2Channel.FRAME_TYPE_PRIORITY) {
-
-            if (Bits.anyAreSet(flags, Http2Channel.DATA_FLAG_END_STREAM)) {
+            if (anyAreSet(flags, Http2Channel.DATA_FLAG_END_STREAM)) {
                 return http2Channel.getIncomingStreams().remove(streamId);
+            } else if (type == FRAME_TYPE_CONTINUATION) {
+                Http2StreamSourceChannel channel = http2Channel.getIncomingStreams().get(streamId);
+                if(channel != null && channel.isHeadersEndStream() && anyAreSet(flags, Http2Channel.CONTINUATION_FLAG_END_HEADERS)) {
+                    http2Channel.getIncomingStreams().remove(streamId);
+                }
+                return channel;
             } else {
                 return http2Channel.getIncomingStreams().get(streamId);
             }
         }
         return null;
+    }
+
+    public Http2HeadersParser getContinuationParser() {
+        return continuationParser;
     }
 }

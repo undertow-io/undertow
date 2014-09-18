@@ -29,7 +29,6 @@ import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
 
 /**
  * @author Stuart Douglas
@@ -44,7 +43,6 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
     private boolean rst = false;
     private final HeaderMap headers;
     private final int streamId;
-    private HeaderMap newHeaders = null;
     private Http2HeadersStreamSinkChannel response;
     private int flowControlWindow;
     private ChannelListener<Http2StreamSourceChannel> completionListener;
@@ -58,7 +56,8 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
 
     @Override
     protected void handleHeaderData(FrameHeaderData headerData) {
-        handleFinalFrame((Http2FrameHeaderParser) headerData);
+        Http2FrameHeaderParser data = (Http2FrameHeaderParser) headerData;
+        handleFinalFrame(data);
     }
 
     void handleFinalFrame(Http2FrameHeaderParser headerData) {
@@ -94,7 +93,6 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
-        handleNewHeaders();
         int read = super.read(dst);
         updateFlowControlWindow(read);
         return read;
@@ -102,7 +100,6 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
 
     @Override
     public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        handleNewHeaders();
         long read = super.read(dsts, offset, length);
         updateFlowControlWindow((int) read);
         return read;
@@ -110,7 +107,6 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
 
     @Override
     public long read(ByteBuffer[] dsts) throws IOException {
-        handleNewHeaders();
         long read = super.read(dsts);
         updateFlowControlWindow((int) read);
         return read;
@@ -118,7 +114,6 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
 
     @Override
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel streamSinkChannel) throws IOException {
-        handleNewHeaders();
         long read = super.transferTo(count, throughBuffer, streamSinkChannel);
         updateFlowControlWindow((int) read + throughBuffer.remaining());
         return read;
@@ -126,32 +121,9 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
 
     @Override
     public long transferTo(long position, long count, FileChannel target) throws IOException {
-        handleNewHeaders();
         long read = super.transferTo(position, count, target);
         updateFlowControlWindow((int) read);
         return read;
-    }
-
-    /**
-     * Merge any new headers from HEADERS blocks into the exchange.
-     */
-    private synchronized void handleNewHeaders() {
-        if (newHeaders != null) {
-            for (HeaderValues header : newHeaders) {
-                headers.addAll(header.getHeaderName(), header);
-            }
-            newHeaders = null;
-        }
-    }
-
-    synchronized void addNewHeaders(HeaderMap headers) {
-        if (newHeaders != null) {
-            newHeaders = headers;
-        } else {
-            for (HeaderValues header : headers) {
-                newHeaders.addAll(header.getHeaderName(), header);
-            }
-        }
     }
 
     private void updateFlowControlWindow(final int read) {
@@ -211,5 +183,9 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
 
     public int getStreamId() {
         return streamId;
+    }
+
+    boolean isHeadersEndStream() {
+        return headersEndStream;
     }
 }

@@ -72,25 +72,40 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel {
             firstBuffer.put((byte) 0);
             firstBuffer.put((byte) 0);
             firstBuffer.put((byte) 0);
-
             firstBuffer.put((byte) frameType); //type
-            firstBuffer.put((byte) ((isWritesShutdown() && !getBuffer().hasRemaining() ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | Http2Channel.HEADERS_FLAG_END_HEADERS)); //flags
-
+            firstBuffer.put((byte) 0); //back fill the flags
             Http2ProtocolUtils.putInt(firstBuffer, getStreamId());
 
             HpackEncoder.State result = encoder.encode(headers, firstBuffer);
             Pooled<ByteBuffer> current = firstHeaderBuffer;
-            int length = firstBuffer.position() - 9;
+            int headerFrameLength = firstBuffer.position() - 9;
+            firstBuffer.put(0, (byte) ((headerFrameLength >> 16) & 0xFF));
+            firstBuffer.put(1, (byte) ((headerFrameLength >> 8) & 0xFF));
+            firstBuffer.put(2, (byte) (headerFrameLength & 0xFF));
+            firstBuffer.put(4, (byte) ((isWritesShutdown() && !getBuffer().hasRemaining() ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ))); //flags
             while (result != HpackEncoder.State.COMPLETE) {
                 //todo: add some kind of limit here
+
                 allHeaderBuffers = allocateAll(allHeaderBuffers, current);
                 current = allHeaderBuffers[allHeaderBuffers.length - 1];
-                result = encoder.encode(headers, current.getResource());
-                length += current.getResource().position();
+                //continuation frame
+                //note that if the buffers are small we may not actually need a continuation here
+                //but it greatly reduces the code complexity
+                //back fill the length
+                ByteBuffer currentBuffer = current.getResource();
+                currentBuffer.put((byte) 0);
+                currentBuffer.put((byte) 0);
+                currentBuffer.put((byte) 0);
+                currentBuffer.put((byte) Http2Channel.FRAME_TYPE_CONTINUATION); //type
+                currentBuffer.put((byte) 0); //back fill the flags
+                Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
+                result = encoder.encode(headers, currentBuffer);
+                int contFrameLength = currentBuffer.position() - 9;
+                currentBuffer.put(0, (byte) ((contFrameLength >> 16) & 0xFF));
+                currentBuffer.put(1, (byte) ((contFrameLength >> 8) & 0xFF));
+                currentBuffer.put(2, (byte) (contFrameLength & 0xFF));
+                currentBuffer.put(4, (byte) (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 )); //flags
             }
-            firstBuffer.put(0, (byte) ((length >> 16) & 0xFF));
-            firstBuffer.put(1, (byte) ((length >> 8) & 0xFF));
-            firstBuffer.put(2, (byte) (length & 0xFF));
         }
 
         Pooled<ByteBuffer> currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];

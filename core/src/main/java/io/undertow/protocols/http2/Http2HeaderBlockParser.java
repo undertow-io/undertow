@@ -81,4 +81,10 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     public void emitHeader(HttpString name, String value, boolean neverIndex) {
         headerMap.add(name, value);
     }
+
+    @Override
+    protected void moreData(int data) {
+        super.moreData(data);
+        frameRemaining += data;
+    }
 }

@@ -137,10 +137,18 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
             ret = new Pooled[2];
             ret[0] = currentBuffer;
             ret[1] = getChannel().getBufferPool().allocate();
+            ByteBuffer newBuffer = ret[1].getResource();
+            if(newBuffer.remaining() > getChannel().getSendMaxFrameSize()) {
+                newBuffer.limit(newBuffer.position() + getChannel().getSendMaxFrameSize()); //make sure the buffers are not too large to go over the max frame size
+            }
         } else {
             ret = new Pooled[allHeaderBuffers.length + 1];
             System.arraycopy(allHeaderBuffers, 0, ret, 0, allHeaderBuffers.length);
             ret[ret.length - 1] = getChannel().getBufferPool().allocate();
+            ByteBuffer newBuffer = ret[ret.length - 1].getResource();
+            if(newBuffer.remaining() > getChannel().getSendMaxFrameSize()) {
+                newBuffer.limit(newBuffer.position() + getChannel().getSendMaxFrameSize());
+            }
         }
         return ret;
     }

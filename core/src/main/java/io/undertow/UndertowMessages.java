@@ -338,4 +338,10 @@ public interface UndertowMessages {
 
     @Message(id = 104, value = "Incorrect HTTP2 preface")
     IOException incorrectHttp2Preface();
+
+    @Message(id = 105, value = "HTTP2 frame to large")
+    IOException http2FrameTooLarge();
+
+    @Message(id = 106, value = "HTTP2 continuation frame received without a corresponding headers or push promise frame")
+    IOException http2ContinuationFrameNotExpected();
 }

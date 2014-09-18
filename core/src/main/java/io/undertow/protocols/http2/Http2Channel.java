@@ -111,9 +111,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,
             0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
             0x0d, 0x0a, 0x53, 0x4d, 0x0d, 0x0a, 0x0d, 0x0a};
+    public static final int DEFAULT_MAX_FRAME_SIZE = 16777215;
 
     private Http2FrameHeaderParser frameParser;
-    private final Map<Integer, AbstractHttp2StreamSourceChannel> incomingStreams = new ConcurrentHashMap<>();
+    private final Map<Integer, Http2StreamSourceChannel> incomingStreams = new ConcurrentHashMap<>();
     private final Map<Integer, Http2StreamSinkChannel> outgoingStreams = new ConcurrentHashMap<>();
 
 
@@ -123,7 +124,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private volatile int initialSendWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
     private volatile int initialReceiveWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
     private int maxConcurrentStreams = -1;
-    private int maxFrameSize = 16777215;
+    private int sendMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private int receiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int maxHeaderListSize = -1;
 
     /**
@@ -147,6 +149,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private int prefaceCount;
     private boolean initialSettingsReceived; //settings frame must be the first frame we relieve
+    private Http2HeadersParser continuationParser = null; //state for continuation frames
 
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
@@ -161,7 +164,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if(initialOtherSideSettings != null) {
             Http2SettingsParser parser = new Http2SettingsParser(initialOtherSideSettings.remaining());
             try {
-                parser.parse(initialOtherSideSettings, new Http2FrameHeaderParser(this));
+                parser.parse(initialOtherSideSettings, new Http2FrameHeaderParser(this, null));
                 updateSettings(parser.getSettings());
             } catch (IOException e) {
                 IoUtils.safeClose(connectedStreamChannel);
@@ -171,6 +174,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
         encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
         enablePush = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
+        receiveMaxFrameSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_FRAME_SIZE, DEFAULT_MAX_FRAME_SIZE);
+
         this.decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         this.encoder = new HpackEncoder(encoderHeaderTableSize);
 
@@ -185,6 +190,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         List<Http2Setting> settings = new ArrayList<>();
         settings.add(new Http2Setting(Http2Setting.SETTINGS_HEADER_TABLE_SIZE, encoderHeaderTableSize));
         settings.add(new Http2Setting(Http2Setting.SETTINGS_ENABLE_PUSH, enablePush ? 1 : 0));
+        settings.add(new Http2Setting(Http2Setting.SETTINGS_MAX_FRAME_SIZE, receiveMaxFrameSize));
         Http2SettingsStreamSinkChannel stream = new Http2SettingsStreamSinkChannel(this, settings);
         flushChannel(stream);
     }
@@ -232,12 +238,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         //note that not all frame types are covered here, as some are only relevant to already active streams
         //if which case they are handled by the existing channel support
         switch (frameParser.type) {
+            case FRAME_TYPE_CONTINUATION:
             case FRAME_TYPE_HEADERS: {
                 Http2HeadersParser parser = (Http2HeadersParser) frameParser.parser;
                 channel = new Http2StreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), parser.getHeaderMap(), frameParser.streamId);
                 lastGoodStreamId = Math.max(lastGoodStreamId, frameParser.streamId);
-                incomingStreams.put(frameParser.streamId, channel);
-                if (Bits.anyAreSet(frameParser.flags, HEADERS_FLAG_END_STREAM)) {
+                incomingStreams.put(frameParser.streamId, (Http2StreamSourceChannel) channel);
+                if (parser.isHeadersEndStream() && Bits.allAreSet(frameParser.flags, HEADERS_FLAG_END_HEADERS)) {
                     channel.lastFrame();
                 }
                 break;
@@ -299,7 +306,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
         Http2FrameHeaderParser frameParser = this.frameParser;
         if (frameParser == null) {
-            this.frameParser = frameParser = new Http2FrameHeaderParser(this);
+            this.frameParser = frameParser = new Http2FrameHeaderParser(this, continuationParser);
+            this.continuationParser = null;
         }
         if (!frameParser.handle(data)) {
             return null;
@@ -313,6 +321,14 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             }
         }
         this.frameParser = null;
+        if(frameParser.getFrameLength() > receiveMaxFrameSize) {
+            sendGoAway(ERROR_FRAME_SIZE_ERROR);
+            throw UndertowMessages.MESSAGES.http2FrameTooLarge();
+        }
+        if(frameParser.getContinuationParser() != null) {
+            this.continuationParser = frameParser.getContinuationParser();
+            return null;
+        }
         return frameParser;
 
     }
@@ -364,7 +380,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     @Override
     protected void closeSubChannels() {
 
-        for (Map.Entry<Integer, AbstractHttp2StreamSourceChannel> e : incomingStreams.entrySet()) {
+        for (Map.Entry<Integer, Http2StreamSourceChannel> e : incomingStreams.entrySet()) {
             AbstractHttp2StreamSourceChannel receiver = e.getValue();
             if (receiver.isReadResumed()) {
                 ChannelListeners.invokeChannelListener(receiver.getIoThread(), receiver, ((ChannelListener.SimpleSetter) receiver.getReadSetter()).get());
@@ -395,6 +411,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 initialSendWindowSize = setting.getValue();
                 int difference = old - initialSendWindowSize;
                 sendWindowSize += difference;
+            } else if(setting.getId() == Http2Setting.SETTINGS_MAX_FRAME_SIZE) {
+                sendMaxFrameSize = setting.getValue();
             }
             //ignore the rest for now
         }
@@ -538,6 +556,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
      */
     synchronized int grabFlowControlBytes(int bytesToGrab) {
         int min = Math.min(bytesToGrab, sendWindowSize);
+        min = Math.min(sendMaxFrameSize, min);
         sendWindowSize -= min;
         return min;
     }
@@ -550,7 +569,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         outgoingStreams.remove(streamId);
     }
 
-    Map<Integer, AbstractHttp2StreamSourceChannel> getIncomingStreams() {
+    Map<Integer, Http2StreamSourceChannel> getIncomingStreams() {
         return incomingStreams;
     }
 
@@ -668,5 +687,11 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
     }
 
+    public int getReceiveMaxFrameSize() {
+        return receiveMaxFrameSize;
+    }
 
+    public int getSendMaxFrameSize() {
+        return sendMaxFrameSize;
+    }
 }

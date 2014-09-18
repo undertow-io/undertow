@@ -39,14 +39,15 @@ public abstract class Http2PushBackParser {
     public void parse(ByteBuffer data, Http2FrameHeaderParser headerParser) throws IOException {
         int used = 0;
         ByteBuffer dataToParse = data;
-        int oldLimit = dataToParse.limit();
+        int oldLimit = data.limit();
         try {
             if (pushedBackData != null) {
-                dataToParse = ByteBuffer.wrap(new byte[pushedBackData.length + data.remaining()]);
+                int toCopy = Math.min(remainingData - pushedBackData.length, data.remaining());
+                dataToParse = ByteBuffer.wrap(new byte[pushedBackData.length + toCopy]);
                 dataToParse.put(pushedBackData);
+                data.limit(data.position() + toCopy);
                 dataToParse.put(data);
                 dataToParse.flip();
-                oldLimit = dataToParse.limit();
             }
             if (dataToParse.remaining() > remainingData) {
                 dataToParse.limit(dataToParse.position() + remainingData);
@@ -59,7 +60,7 @@ public abstract class Http2PushBackParser {
             //it is possible that we finished the parsing without using up all the data
             //and the rest is to be consumed by the stream itself
             if (finished) {
-                dataToParse.limit(oldLimit);
+                data.limit(oldLimit);
                 return;
             }
             int leftOver = dataToParse.remaining();
@@ -69,7 +70,7 @@ public abstract class Http2PushBackParser {
             } else {
                 pushedBackData = null;
             }
-            dataToParse.limit(oldLimit);
+            data.limit(oldLimit);
             remainingData -= used;
             if (remainingData == 0) {
                 finished = true;
@@ -85,5 +86,10 @@ public abstract class Http2PushBackParser {
 
     protected void finish() {
         finished = true;
+    }
+
+    protected void moreData(int data) {
+        finished = false;
+        this.remainingData += data;
     }
 }

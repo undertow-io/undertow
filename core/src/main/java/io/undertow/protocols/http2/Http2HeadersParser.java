@@ -32,6 +32,7 @@ class Http2HeadersParser extends Http2HeaderBlockParser {
     private int paddingLength = 0;
     private int dependentStreamId = 0;
     private int weight;
+    private boolean headersEndStream = false;
 
     public Http2HeadersParser(int frameLength, HpackDecoder hpackDecoder) {
         super(frameLength, hpackDecoder);
@@ -41,6 +42,7 @@ class Http2HeadersParser extends Http2HeaderBlockParser {
     protected boolean handleBeforeHeader(ByteBuffer resource, Http2FrameHeaderParser headerParser) {
         boolean hasPadding = Bits.anyAreSet(headerParser.flags, Http2Channel.HEADERS_FLAG_PADDED);
         boolean hasPriority = Bits.anyAreSet(headerParser.flags, Http2Channel.HEADERS_FLAG_PRIORITY);
+        headersEndStream = Bits.allAreSet(headerParser.flags, Http2Channel.HEADERS_FLAG_END_STREAM);
         int reqLength = (hasPadding ? 1 : 0) + (hasPriority ? 5 : 0);
         if (reqLength == 0) {
             return true;
@@ -74,5 +76,9 @@ class Http2HeadersParser extends Http2HeaderBlockParser {
 
     int getWeight() {
         return weight;
+    }
+
+    boolean isHeadersEndStream() {
+        return headersEndStream;
     }
 }
