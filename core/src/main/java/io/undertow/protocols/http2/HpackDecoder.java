@@ -29,6 +29,8 @@ import io.undertow.util.HttpString;
  */
 public class HpackDecoder extends Hpack {
 
+    private static final int DEFAULT_RING_BUFFER_SIZE = 10;
+
     /**
      * The object that receives the headers that are emitted from this decoder
      */
@@ -65,11 +67,7 @@ public class HpackDecoder extends Hpack {
 
     public HpackDecoder(int maxMemorySize) {
         this.maxMemorySize = maxMemorySize;
-        //as each entry takes up at least 32
-        //we make sure the table is as big as we may need
-        //todo: SCRAP THIS APPROACH AND ALLOW RESIZES
-        int tableSize = maxMemorySize / 32;
-        headerTable = new HeaderField[tableSize];
+        headerTable = new HeaderField[DEFAULT_RING_BUFFER_SIZE];
     }
 
     public HpackDecoder() {
@@ -285,6 +283,7 @@ public class HpackDecoder extends Hpack {
             filledTableSlots = 0;
             return;
         }
+        resizeIfRequired();
         int newTableSlots = filledTableSlots + 1;
         int tableLength = headerTable.length;
         int index = (firstSlotPosition + filledTableSlots) % tableLength;
@@ -303,6 +302,17 @@ public class HpackDecoder extends Hpack {
         }
         this.filledTableSlots = newTableSlots;
         currentMemorySize = newSize;
+    }
+
+    private void resizeIfRequired() {
+        if(filledTableSlots == headerTable.length) {
+            HeaderField[] newArray = new HeaderField[headerTable.length + 10]; //we only grow slowly
+            for(int i = 0; i < headerTable.length; ++i) {
+                newArray[i] = headerTable[(firstSlotPosition + i) % headerTable.length];
+            }
+            firstSlotPosition = 0;
+            headerTable = newArray;
+        }
     }
 
 
