@@ -39,14 +39,14 @@ package io.undertow.protocols.http2;
  *  limitations under the License.
  */
 
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.HttpString;
+
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.HttpString;
 
 /**
  * Encoder for HPACK frames.
@@ -65,13 +65,21 @@ public class HpackEncoder extends Hpack {
 
     private HeaderMap currentHeaders;
 
-    private static final Map<HttpString, StaticTableEntry> ENCODING_STATIC_TABLE;
+    private static final Map<HttpString, StaticTableEntry[]> ENCODING_STATIC_TABLE;
 
     static {
-        Map<HttpString, StaticTableEntry> map = new HashMap<>();
+        Map<HttpString, StaticTableEntry[]> map = new HashMap<>();
         for (int i = 1; i < STATIC_TABLE.length; ++i) {
             HeaderField m = STATIC_TABLE[i];
-            map.put(m.name, new StaticTableEntry(m.value, i));
+            StaticTableEntry[] existing = map.get(m.name);
+            if (existing == null) {
+                map.put(m.name, new StaticTableEntry[]{new StaticTableEntry(m.value, i)});
+            } else {
+                StaticTableEntry[] newEntry = new StaticTableEntry[existing.length + 1];
+                System.arraycopy(existing, 0, newEntry, 0, existing.length);
+                newEntry[existing.length] = new StaticTableEntry(m.value, i);
+                map.put(m.name, newEntry);
+            }
         }
         ENCODING_STATIC_TABLE = Collections.unmodifiableMap(map);
     }
@@ -127,23 +135,23 @@ public class HpackEncoder extends Hpack {
         while (it != -1) {
             HeaderValues values = headers.fiCurrent(it);
             boolean skip = false;
-            if(firstPass) {
-                if(values.getHeaderName().byteAt(0) != ':') {
+            if (firstPass) {
+                if (values.getHeaderName().byteAt(0) != ':') {
                     skip = true;
                 }
             } else {
-                if(values.getHeaderName().byteAt(0) == ':') {
+                if (values.getHeaderName().byteAt(0) == ':') {
                     skip = true;
                 }
             }
-            if(!skip) {
+            if (!skip) {
                 //initial super crappy implementation: just write everything out as literal header field never indexed
                 //makes things much simpler
                 for (int i = 0; i < values.size(); ++i) {
 
                     int required = 11 + values.getHeaderName().length(); //we use 11 to make sure we have enough room for the variable length itegers
 
-                    StaticTableEntry staticTable = ENCODING_STATIC_TABLE.get(values.getHeaderName());
+                    StaticTableEntry[] staticTable = ENCODING_STATIC_TABLE.get(values.getHeaderName());
 
                     String val = values.get(i);
                     required += (1 + val.length());
@@ -159,8 +167,20 @@ public class HpackEncoder extends Hpack {
                         encodeInteger(target, values.getHeaderName().length(), 7);
                         values.getHeaderName().appendTo(target);
                     } else {
+                        boolean found = false;
+                        for(StaticTableEntry st : staticTable) {
+                            if(st.value != null && st.value.equals(val)) { //todo: some form of lookup?
+                                target.put((byte) (1 << 7));
+                                encodeInteger(target, st.pos, 7);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if(found) {
+                            continue; //value was in static table, no need to encode
+                        }
                         target.put((byte) 0);
-                        encodeInteger(target, staticTable.pos, 4);
+                        encodeInteger(target, staticTable[0].pos, 4);
                     }
                     target.put((byte) 0); //to use encodeInteger we need to place the first byte in the buffer.
                     encodeInteger(target, val.length(), 7);
@@ -171,7 +191,7 @@ public class HpackEncoder extends Hpack {
                 }
             }
             it = headers.fiNext(it);
-            if(it == -1 && firstPass) {
+            if (it == -1 && firstPass) {
                 firstPass = false;
                 it = headers.fastIterate();
             }
