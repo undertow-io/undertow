@@ -78,6 +78,9 @@ public class VirtualHost {
                 }
             }
         }
+        if(defaultHandler.contexts.isEmpty()) {
+            return new PathMatcher.PathMatch<>(path, null);
+        }
         return new PathMatcher.PathMatch<>(path, defaultHandler);
     }
 

@@ -442,7 +442,11 @@ class ModClusterContainer {
             if (host == null) {
                 return null;
             }
-            return host.match(context);
+            PathMatcher.PathMatch<VirtualHost.HostEntry> result =  host.match(context);
+            if(result.getValue() == null) {
+                return null;
+            }
+            return result;
         }
         return null;
     }
