@@ -342,7 +342,7 @@ public abstract class HttpRequestParser {
         boolean urlDecodeRequired = state.urlDecodeRequired;
 
         while (buffer.hasRemaining()) {
-            char next = (char) buffer.get();
+            char next = (char) (buffer.get() & 0xFF);
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
@@ -373,7 +373,7 @@ public abstract class HttpRequestParser {
                 return;
             } else {
 
-                if (decode && (next == '+' || next == '%')) {
+                if (decode && (next == '+' || next == '%' || next > 127)) {
                     urlDecodeRequired = true;
                 } else if (next == ':' && parseState == START) {
                     parseState = FIRST_COLON;
@@ -468,7 +468,7 @@ public abstract class HttpRequestParser {
         //we encounter an encoded character
 
         while (buffer.hasRemaining()) {
-            char next = (char) buffer.get();
+            char next = (char) (buffer.get() & 0xFF);
             if (next == ' ' || next == '\t') {
                 final String queryString = stringBuilder.toString();
                 exchange.setQueryString(queryString);
@@ -489,7 +489,7 @@ public abstract class HttpRequestParser {
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else {
-                if (decode && (next == '+' || next == '%')) {
+                if (decode && (next == '+' || next == '%' || next > 127)) {
                     urlDecodeRequired = true;
                 } else if (next == '=' && nextQueryParam == null) {
                     nextQueryParam = decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true);
@@ -548,7 +548,7 @@ public abstract class HttpRequestParser {
         //we encounter an encoded character
 
         while (buffer.hasRemaining()) {
-            char next = (char) buffer.get();
+            char next = (char) (buffer.get() & 0xFF);
             if (next == ' ' || next == '\t' || next == '?') {
                 if (nextQueryParam == null) {
                     if (queryParamPos != stringBuilder.length()) {
@@ -573,7 +573,7 @@ public abstract class HttpRequestParser {
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else {
-                if (decode && (next == '+' || next == '%')) {
+                if (decode && (next == '+' || next == '%' || next > 127)) {
                     urlDecodeRequired = true;
                 }
                 if (next == '=' && nextQueryParam == null) {
@@ -655,7 +655,7 @@ public abstract class HttpRequestParser {
             } else if (next == ' ' || next == '\t') {
                 parseState = WHITESPACE;
             } else {
-                stringBuilder.append((char) next);
+                stringBuilder.append((char) (next & 0xFF));
             }
         }
 
@@ -670,7 +670,7 @@ public abstract class HttpRequestParser {
                     } else if (next == ' ' || next == '\t') {
                         parseState = WHITESPACE;
                     } else {
-                        stringBuilder.append((char) next);
+                        stringBuilder.append((char) (next & 0xFF));
                     }
                     break;
                 }
@@ -684,7 +684,7 @@ public abstract class HttpRequestParser {
                         if (stringBuilder.length() > 0) {
                             stringBuilder.append(' ');
                         }
-                        stringBuilder.append((char) next);
+                        stringBuilder.append((char) (next & 0xFF));
                         parseState = NORMAL;
                     }
                     break;

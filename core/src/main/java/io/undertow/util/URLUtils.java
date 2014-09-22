@@ -170,6 +170,21 @@ public class URLUtils {
                 default:
                     buffer.append(c);
                     i++;
+                    if(c > 127 && !needToChange) {
+                        //we have non-ascii data in our URL, which sucks
+                        //its hard to know exactly what to do with this, but we assume that because this data
+                        //has not been properly encoded none of the other data is either
+                        try {
+                            char[] carray = s.toCharArray();
+                            byte[] buf = new byte[carray.length];
+                            for(int l = 0;l < buf.length; ++l) {
+                                buf[l] = (byte) carray[l];
+                            }
+                            return new String(buf, enc);
+                        } catch (UnsupportedEncodingException e) {
+                            throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc);
+                        }
+                    }
                     break;
             }
         }
