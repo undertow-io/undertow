@@ -20,6 +20,7 @@ package io.undertow.protocols.http2;
 
 import java.nio.ByteBuffer;
 
+import io.undertow.UndertowMessages;
 import io.undertow.util.HttpString;
 
 /**
@@ -28,6 +29,7 @@ import io.undertow.util.HttpString;
 public class Hpack {
 
     public static final int DEFAULT_TABLE_SIZE = 4096;
+    private static final int MAX_INTEGER_OCTETS = 8; //not sure what a good value for this is, but the spec says we need to provide an upper bound
 
     /**
      * table that contains powers of two,
@@ -144,11 +146,11 @@ public class Hpack {
      * @param n      The encoding prefix length
      * @return The encoded integer, or -1 if there was not enough data
      */
-    protected static int decodeInteger(ByteBuffer source, int n) {
+    protected static int decodeInteger(ByteBuffer source, int n) throws HpackException {
         if (source.remaining() == 0) {
             return -1;
         }
-
+        int count = 1;
         int sp = source.position();
         int mask = PREFIX_TABLE[n];
 
@@ -159,6 +161,9 @@ public class Hpack {
         } else {
             int m = 0;
             do {
+                if(count++ > MAX_INTEGER_OCTETS) {
+                    throw UndertowMessages.MESSAGES.integerEncodedOverTooManyOctets(MAX_INTEGER_OCTETS);
+                }
                 if (source.remaining() == 0) {
                     //we have run out of data
                     //reset

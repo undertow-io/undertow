@@ -20,6 +20,7 @@ package io.undertow.protocols.http2;
 
 import java.nio.ByteBuffer;
 
+import io.undertow.UndertowMessages;
 import io.undertow.util.HttpString;
 
 /**
@@ -92,6 +93,8 @@ public class HpackDecoder extends Hpack {
                 if (index == -1) {
                     buffer.position(originalPos);
                     return;
+                } else if(index == 0) {
+                    throw UndertowMessages.MESSAGES.zeroNotValidHeaderTableIndex();
                 }
                 handleIndex(index);
             } else if ((b & 0b01000000) != 0) {
@@ -145,7 +148,7 @@ public class HpackDecoder extends Hpack {
         }
     }
 
-    private boolean handleMaxMemorySizeChange(ByteBuffer buffer, int originalPos) {
+    private boolean handleMaxMemorySizeChange(ByteBuffer buffer, int originalPos) throws HpackException {
         buffer.position(buffer.position() - 1); //unget the byte
         int size = decodeInteger(buffer, 5);
         if (size == -1) {
@@ -212,7 +215,7 @@ public class HpackDecoder extends Hpack {
         return ret;
     }
 
-    private String readHuffmanString(int length, ByteBuffer buffer) {
+    private String readHuffmanString(int length, ByteBuffer buffer) throws HpackException {
         HPackHuffman.decode(buffer, length, stringBuilder);
         String ret = stringBuilder.toString();
         stringBuilder.setLength(0);

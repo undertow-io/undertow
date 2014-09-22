@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
 import io.undertow.predicate.PredicateBuilder;
+import io.undertow.protocols.http2.HpackException;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
@@ -344,4 +345,13 @@ public interface UndertowMessages {
 
     @Message(id = 106, value = "HTTP2 continuation frame received without a corresponding headers or push promise frame")
     IOException http2ContinuationFrameNotExpected();
+
+    @Message(id = 107, value = "Huffman encoded value in HPACK headers did not end with EOS padding")
+    HpackException huffmanEncodedHpackValueDidNotEndWithEOS();
+
+    @Message(id = 108, value = "HPACK variable length integer encoded over too many octects, max is %s")
+    HpackException integerEncodedOverTooManyOctets(int maxIntegerOctets);
+
+    @Message(id = 109, value = "Zero is not a valid header table index")
+    HpackException zeroNotValidHeaderTableIndex();
 }

@@ -18,6 +18,8 @@
 
 package io.undertow.protocols.http2;
 
+import io.undertow.UndertowMessages;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -372,21 +374,24 @@ public class HPackHuffman {
      * @param length The data length
      * @param target The target for the decompressed data
      */
-    public static void decode(ByteBuffer data, int length, StringBuilder target) {
+    public static void decode(ByteBuffer data, int length, StringBuilder target) throws HpackException {
         assert data.remaining() >= length;
         int treePos = 0;
+        boolean eosBits = true;
         for (int i = 0; i < length; ++i) {
             byte b = data.get();
             int bitPos = 7;
             while (bitPos >= 0) {
                 int val = DECODING_TABLE[treePos];
                 if (((1 << bitPos) & b) == 0) {
+                    eosBits = false;
                     //bit not set, we want the lower part of the tree
                     if ((val & LOW_TERMINAL_BIT) == 0) {
                         treePos = val & LOW_MASK;
                     } else {
                         target.append((char) (val & LOW_MASK));
                         treePos = 0;
+                        eosBits = true;
                     }
                 } else {
                     //bit not set, we want the lower part of the tree
@@ -395,10 +400,14 @@ public class HPackHuffman {
                     } else {
                         target.append((char) ((val >> 16) & LOW_MASK));
                         treePos = 0;
+                        eosBits = true;
                     }
                 }
                 bitPos--;
             }
+        }
+        if(!eosBits) {
+            throw UndertowMessages.MESSAGES.huffmanEncodedHpackValueDidNotEndWithEOS();
         }
     }
 
