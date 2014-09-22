@@ -9,17 +9,22 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
+ * The mod_cluster balancer config.
+ *
  * @author Stuart Douglas
+ * @author Emanuel Muckenhuber
  */
 public class Balancer {
 
@@ -29,42 +34,47 @@ public class Balancer {
     private final String name;
 
     /**
-     * Yes: use JVMRoute to stick a request to a node, No: ignore JVMRoute.
-     * Default: "Yes"
+     * {@code true}: use JVMRoute to stick a request to a node, {@code false}: ignore JVMRoute. Default: {@code true}
      */
     private final boolean stickySession;
+
     /**
-     * Name of the cookie containing the sessionid. Max size: 30 Default:
-     * "JSESSIONID"
+     * Name of the cookie containing the session-id. Max size: 30 Default: "JSESSIONID"
      */
     private final String stickySessionCookie;
+
     /**
-     * Name of the parametre containing the sessionid. Max size: 30. Default:
-     * "jsessionid"
+     * Name of the parameter containing the session-id. Max size: 30. Default: "jsessionid"
      */
     private final String stickySessionPath;
+
     /**
-     * Yes: remove the sessionid (cookie or parameter) when the request can't be
-     * routed to the right node. No: send it anyway. Default: "No"
+     * {@code true}: remove the session-id (cookie or parameter) when the request can't be
+     * routed to the right node. {@code false}: send it anyway. Default: {@code false}
      */
     private final boolean stickySessionRemove;
+
     /**
-     * Yes: Return an error if the request can't be routed according to
-     * JVMRoute, No: Route it to another node. Default: "Yes"
+     * {@code true}: Return an error if the request can't be routed according to
+     * JVMRoute, {@code false}: Route it to another node. Default: {@code true}
      */
     private final boolean stickySessionForce;
+
     /**
-     * value in seconds: time to wait for an available worker. Default: "0" no
-     * wait.
+     * value in seconds: time to wait for an available worker. Default: "0" no wait.
      */
     private final int waitWorker;
+
     /**
-     * value: number of attempts to send the request to the backend server.
-     * Default: "1"
+     * value: number of attempts to send the request to the backend server. Default: "1"
      */
     private final int maxattempts;
 
+    private final int id;
+    private static final AtomicInteger idGen = new AtomicInteger();
+
     Balancer(BalancerBuilder b) {
+        this.id = idGen.incrementAndGet();
         this.name = b.getName();
         this.stickySession = b.isStickySession();
         this.stickySessionCookie = b.getStickySessionCookie();
@@ -73,6 +83,10 @@ public class Balancer {
         this.stickySessionForce = b.isStickySessionForce();
         this.waitWorker = b.getWaitWorker();
         this.maxattempts = b.getMaxattempts();
+    }
+
+    public int getId() {
+        return id;
     }
 
     /**
@@ -164,7 +178,7 @@ public class Balancer {
 
     public static final class BalancerBuilder {
 
-        private String name;
+        private String name = "mycluster";
         private boolean stickySession = true;
         private String stickySessionCookie = "JSESSIONID";
         private String stickySessionPath = "jsessionid";
@@ -177,68 +191,76 @@ public class Balancer {
             return name;
         }
 
-        public void setName(String name) {
+        public BalancerBuilder setName(String name) {
             this.name = name;
+            return this;
         }
 
         public boolean isStickySession() {
             return stickySession;
         }
 
-        public void setStickySession(boolean stickySession) {
+        public BalancerBuilder setStickySession(boolean stickySession) {
             this.stickySession = stickySession;
+            return this;
         }
 
         public String getStickySessionCookie() {
             return stickySessionCookie;
         }
 
-        public void setStickySessionCookie(String stickySessionCookie) {
+        public BalancerBuilder setStickySessionCookie(String stickySessionCookie) {
             if (stickySessionCookie != null && stickySessionCookie.length() > 30) {
                 this.stickySessionCookie = stickySessionCookie.substring(0, 30);
             } else {
                 this.stickySessionCookie = stickySessionCookie;
             }
+            return this;
         }
 
         public String getStickySessionPath() {
             return stickySessionPath;
         }
 
-        public void setStickySessionPath(String stickySessionPath) {
+        public BalancerBuilder setStickySessionPath(String stickySessionPath) {
             this.stickySessionPath = stickySessionPath;
+            return this;
         }
 
         public boolean isStickySessionRemove() {
             return stickySessionRemove;
         }
 
-        public void setStickySessionRemove(boolean stickySessionRemove) {
+        public BalancerBuilder setStickySessionRemove(boolean stickySessionRemove) {
             this.stickySessionRemove = stickySessionRemove;
+            return this;
         }
 
         public boolean isStickySessionForce() {
             return stickySessionForce;
         }
 
-        public void setStickySessionForce(boolean stickySessionForce) {
+        public BalancerBuilder setStickySessionForce(boolean stickySessionForce) {
             this.stickySessionForce = stickySessionForce;
+            return this;
         }
 
         public int getWaitWorker() {
             return waitWorker;
         }
 
-        public void setWaitWorker(int waitWorker) {
+        public BalancerBuilder setWaitWorker(int waitWorker) {
             this.waitWorker = waitWorker;
+            return this;
         }
 
         public int getMaxattempts() {
             return maxattempts;
         }
 
-        public void setMaxattempts(int maxattempts) {
+        public BalancerBuilder setMaxattempts(int maxattempts) {
             this.maxattempts = maxattempts;
+            return this;
         }
 
         public Balancer build() {

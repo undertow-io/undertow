@@ -41,36 +41,17 @@ public class FilterRegistrationImpl implements FilterRegistration, FilterRegistr
 
     private final FilterInfo filterInfo;
     private final Deployment deployment;
+    private final ServletContextImpl servletContext;
 
-    public FilterRegistrationImpl(final FilterInfo filterInfo, final Deployment deployment) {
+    public FilterRegistrationImpl(final FilterInfo filterInfo, final Deployment deployment, ServletContextImpl servletContext) {
         this.filterInfo = filterInfo;
         this.deployment = deployment;
+        this.servletContext = servletContext;
     }
 
     @Override
     public void addMappingForServletNames(final EnumSet<DispatcherType> dispatcherTypes, final boolean isMatchAfter, final String... servletNames) {
-        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
-
-        for(final String servlet : servletNames){
-            if(isMatchAfter) {
-                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
-                    deploymentInfo.addFilterServletNameMapping(filterInfo.getName(), servlet, DispatcherType.REQUEST);
-                } else {
-                    for(final DispatcherType dispatcher : dispatcherTypes) {
-                        deploymentInfo.addFilterServletNameMapping(filterInfo.getName(), servlet, dispatcher);
-                    }
-                }
-            } else {
-                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
-                    deploymentInfo.insertFilterServletNameMapping(0, filterInfo.getName(), servlet, DispatcherType.REQUEST);
-                } else {
-                    for(final DispatcherType dispatcher : dispatcherTypes) {
-                        deploymentInfo.insertFilterServletNameMapping(0, filterInfo.getName(), servlet, dispatcher);
-                    }
-                }
-            }
-        }
-        deployment.getServletPaths().invalidate();
+        servletContext.addMappingForServletNames(filterInfo, dispatcherTypes, isMatchAfter, servletNames);
     }
 
     @Override
@@ -89,27 +70,7 @@ public class FilterRegistrationImpl implements FilterRegistration, FilterRegistr
 
     @Override
     public void addMappingForUrlPatterns(final EnumSet<DispatcherType> dispatcherTypes, final boolean isMatchAfter, final String... urlPatterns) {
-        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
-        for(final String url : urlPatterns){
-            if(isMatchAfter) {
-                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
-                    deploymentInfo.addFilterUrlMapping(filterInfo.getName(), url, DispatcherType.REQUEST);
-                } else {
-                    for(final DispatcherType dispatcher : dispatcherTypes) {
-                        deploymentInfo.addFilterUrlMapping(filterInfo.getName(), url, dispatcher);
-                    }
-                }
-            } else {
-                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
-                    deploymentInfo.insertFilterUrlMapping(0, filterInfo.getName(), url, DispatcherType.REQUEST);
-                } else {
-                    for(final DispatcherType dispatcher : dispatcherTypes) {
-                        deploymentInfo.insertFilterUrlMapping(0, filterInfo.getName(), url, dispatcher);
-                    }
-                }
-            }
-        }
-        deployment.getServletPaths().invalidate();
+        servletContext.addMappingForUrlPatterns(filterInfo, dispatcherTypes, isMatchAfter, urlPatterns);
     }
 
     @Override

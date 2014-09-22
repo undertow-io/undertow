@@ -22,8 +22,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.Servlets;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -34,6 +39,7 @@ import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
+import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -51,7 +57,14 @@ public class MultiPartTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-        DeploymentUtils.setupServlet(
+        DeploymentUtils.setupServlet(new ServletExtension() {
+            @Override
+            public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
+                deploymentInfo.addListener(Servlets.listener(AddMultipartServetListener.class));
+                deploymentInfo.setExceptionHandler(LoggingExceptionHandler.builder().add(RuntimeException.class, "io.undertow", Logger.Level.DEBUG).build());
+
+            }
+        },
                 servlet("mp0", MultiPartServlet.class)
                         .addMapping("/0"),
                 servlet("mp1", MultiPartServlet.class)
@@ -91,6 +104,41 @@ public class MultiPartTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext/1";
+            HttpPost post = new HttpPost(uri);
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("PARAMS:\n" +
+                    "name: formValue\n" +
+                    "filename: null\n" +
+                    "content-type: null\n" +
+                    "Content-Disposition: form-data; name=\"formValue\"\n" +
+                    "size: 7\n" +
+                    "content: myValue\n" +
+                    "name: file\n" +
+                    "filename: uploadfile.txt\n" +
+                    "content-type: application/octet-stream\n" +
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\n" +
+                    "Content-Type: application/octet-stream\n" +
+                    "size: 13\n" +
+                    "content: file contents\n", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testMultiPartRequestWithAddedServlet() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/added";
             HttpPost post = new HttpPost(uri);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 

@@ -38,7 +38,11 @@ public class QueryStringAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        return exchange.getQueryString();
+        String qs = exchange.getQueryString();
+        if(qs.isEmpty()) {
+            return qs;
+        }
+        return '?' + qs;
     }
 
     @Override

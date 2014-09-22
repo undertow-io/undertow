@@ -19,8 +19,10 @@
 package io.undertow.server.handlers;
 
 import io.undertow.UndertowLogger;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -28,6 +30,9 @@ import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A handler that performs reverse DNS lookup to resolve a peer address
@@ -96,7 +101,45 @@ public class PeerNameResolvingHandler implements HttpHandler {
     public static enum ResolveType {
         FORWARD,
         REVERSE,
-        FORWARD_AND_REVERSE;
+        FORWARD_AND_REVERSE
 
     }
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "resolve-peer-name";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper();
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new PeerNameResolvingHandler(handler);
+        }
+    }
+
+
 }

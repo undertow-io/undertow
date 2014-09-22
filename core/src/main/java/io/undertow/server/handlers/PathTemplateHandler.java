@@ -56,8 +56,7 @@ public class PathTemplateHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         PathTemplateMatcher.PathMatchResult<HttpHandler> match = pathTemplateMatcher.match(exchange.getRelativePath());
         if (match == null) {
-            exchange.setResponseCode(404);
-            exchange.endExchange();
+            ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
             return;
         }
         exchange.putAttachment(PATH_TEMPLATE_MATCH, new PathTemplateMatch(match.getMatchedTemplate(), match.getParameters()));

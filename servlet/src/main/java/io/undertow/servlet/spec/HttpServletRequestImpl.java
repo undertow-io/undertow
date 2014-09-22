@@ -75,6 +75,7 @@ import java.security.AccessController;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.Enumeration;
@@ -397,10 +398,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 throw UndertowServletMessages.MESSAGES.authenticationFailed();
             }
         } else {
-            // Not authenticated and response already sent.
-            HttpServletResponseImpl responseImpl = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalResponse();
-            responseImpl.closeStreamAndWriter();
-            return false;
+            if(exchange.isResponseStarted()) {
+                //the auth mechanism commited the response, so we return false
+                return false;
+            } else {
+                //as the response was not commited we throw an exception as per the javadoc
+                throw UndertowServletMessages.MESSAGES.authenticationFailed();
+            }
         }
     }
 
@@ -586,6 +590,19 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             servletInputStream = new ServletInputStreamImpl(this);
         }
         servletInputStream.close();
+    }
+
+    /**
+     * Frees any resources (namely buffers) that may be associated with this request.
+     *
+     */
+    public void freeResources() throws IOException {
+        if(reader != null) {
+            reader.close();
+        }
+        if(servletInputStream != null) {
+            servletInputStream.close();
+        }
     }
 
     @Override
@@ -835,6 +852,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public Enumeration<Locale> getLocales() {
         final List<String> acceptLanguage = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
         List<Locale> ret = LocaleUtils.getLocalesFromHeader(acceptLanguage);
+        if(ret.isEmpty()) {
+            return new IteratorEnumeration<>(Collections.singletonList(Locale.getDefault()).iterator());
+        }
         return new IteratorEnumeration<>(ret.iterator());
     }
 

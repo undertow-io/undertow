@@ -23,6 +23,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
+import io.undertow.client.http2.Http2ClientProvider;
 import io.undertow.client.spdy.SpdyClientProvider;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
@@ -129,6 +130,17 @@ public class HttpClientProvider implements ClientProvider {
         if (options.get(UndertowOptions.ENABLE_SPDY, false) && connection instanceof SslConnection && SpdyClientProvider.isEnabled()) {
             try {
                 SpdyClientProvider.handlePotentialSpdyConnection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
+                    @Override
+                    public void handleEvent(SslConnection channel) {
+                        listener.completed(new HttpClientConnection(connection, options, bufferPool));
+                    }
+                });
+            } catch (Exception e) {
+                listener.failed(new IOException(e));
+            }
+        } else if (options.get(UndertowOptions.ENABLE_HTTP2, false) && connection instanceof SslConnection && Http2ClientProvider.isEnabled()) {
+            try {
+                Http2ClientProvider.handlePotentialHttp2Connection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
                     @Override
                     public void handleEvent(SslConnection channel) {
                         listener.completed(new HttpClientConnection(connection, options, bufferPool));

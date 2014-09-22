@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
+ * Utility methods for getting the locale from a request.
+ *
  * @author Stuart Douglas
  */
 public class LocaleUtils {
@@ -42,13 +44,32 @@ public class LocaleUtils {
         }
     }
 
+    /**
+     * Parse a header string and return the list of locales that were found.
+     *
+     * If the header is empty or null then an empty list will be returned.
+     *
+     * @param acceptLanguage The Accept-Language header
+     * @return The list of locales, in order of preference
+     */
     public static List<Locale> getLocalesFromHeader(final String acceptLanguage) {
+        if(acceptLanguage == null) {
+            return Collections.emptyList();
+        }
         return getLocalesFromHeader(Collections.singletonList(acceptLanguage));
     }
 
+    /**
+     * Parse a header string and return the list of locales that were found.
+     *
+     * If the header is empty or null then an empty list will be returned.
+     *
+     * @param acceptLanguage The Accept-Language header
+     * @return The list of locales, in order of preference
+     */
     public static List<Locale> getLocalesFromHeader(final List<String> acceptLanguage) {
         if (acceptLanguage == null || acceptLanguage.isEmpty()) {
-            return Collections.singletonList(Locale.getDefault());
+            return Collections.emptyList();
         }
         final List<Locale> ret = new ArrayList<>();
         final List<List<QValueParser.QValueResult>> parsedResults = QValueParser.parse(acceptLanguage);

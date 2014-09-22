@@ -272,6 +272,10 @@ public abstract class AbstractServerConnection  extends ServerConnection {
         throw UndertowMessages.MESSAGES.upgradeNotSupported();
     }
 
+    @Override
+    protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
+    }
+
     private class CloseSetter implements ChannelListener.Setter<ServerConnection>, ChannelListener<StreamConnection> {
 
         private ChannelListener<? super ServerConnection> listener;

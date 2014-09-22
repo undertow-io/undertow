@@ -9,16 +9,15 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.undertow.server.handlers.proxy.mod_cluster;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
  * {@code SessionId}
@@ -40,7 +39,7 @@ public class SessionId implements Serializable {
     /**
       * Date last updated.
       */
-    private volatile Date updateTime;
+    private volatile long updateTime;
 
     public SessionId(String sessionId, String jmvRoute) {
         this.sessionId = sessionId;
@@ -55,12 +54,8 @@ public class SessionId implements Serializable {
         return jmvRoute;
     }
 
-    public Date getUpdateTime() {
+    public long getUpdateTime() {
         return updateTime;
-    }
-
-    public void setUpdateTime(Date updateTime) {
-        this.updateTime = updateTime;
     }
 
 }

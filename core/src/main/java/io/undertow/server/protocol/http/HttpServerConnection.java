@@ -126,6 +126,11 @@ public final class HttpServerConnection extends AbstractServerConnection {
         return newExchange;
     }
 
+    @Override
+    public void terminateRequestChannel(HttpServerExchange exchange) {
+
+    }
+
     /**
      * Pushes back the given data. This should only be used by transfer coding handlers that have read past
      * the end of the request when handling pipelined requests

@@ -18,8 +18,8 @@
 
 package io.undertow.conduits;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
@@ -154,14 +154,10 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
                 if (exchange.getMaxEntitySize() > 0 && exchange.getMaxEntitySize() < (state & MASK_COUNT)) {
                     //max entity size is exceeded
                     //we need to forcibly close the read side
-                    try {
-                        next.terminateReads();
-                    } catch (IOException e) {
-                        UndertowLogger.REQUEST_LOGGER.debug("Exception terminating reads due to exceeding max size", e);
-                    }
-                    finishListener.handleEvent(this);
-                    state |= FLAG_FINISHED | FLAG_CLOSED;
+                    Connectors.terminateRequest(exchange);
                     exchange.setPersistent(false);
+                    finishListener.handleEvent(this);
+                    this.state |= FLAG_FINISHED | FLAG_CLOSED;
                     throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
                 }
             }

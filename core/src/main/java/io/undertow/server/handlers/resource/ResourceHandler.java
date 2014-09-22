@@ -18,21 +18,29 @@
 
 package io.undertow.server.handlers.resource;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.server.handlers.encoding.ContentEncodedResource;
 import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
+import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
@@ -52,6 +60,12 @@ public class ResourceHandler implements HttpHandler {
      * If directory listing is enabled.
      */
     private volatile boolean directoryListingEnabled = false;
+
+    /**
+     * If the canonical version of paths should be passed into the resource manager.
+     */
+    private volatile boolean canonicalizePaths = true;
+
     /**
      * The mime mappings that are used to determine the content type.
      */
@@ -146,7 +160,7 @@ public class ResourceHandler implements HttpHandler {
             public void run() {
                 Resource resource = null;
                 try {
-                    resource = resourceManager.getResource(exchange.getRelativePath());
+                    resource = resourceManager.getResource(canonicalize(exchange.getRelativePath()));
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     exchange.setResponseCode(500);
@@ -204,10 +218,13 @@ public class ResourceHandler implements HttpHandler {
                 //todo: handle range requests
                 //we are going to proceed. Set the appropriate headers
                 final String contentType = resource.getContentType(mimeMappings);
-                if (contentType != null) {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
-                } else {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/octet-stream");
+
+                if(!exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
+                    if (contentType != null) {
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
+                    } else {
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/octet-stream");
+                    }
                 }
                 if (lastModified != null) {
                     exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, resource.getLastModifiedString());
@@ -259,12 +276,19 @@ public class ResourceHandler implements HttpHandler {
             realBase = base + "/";
         }
         for (String possibility : possible) {
-            Resource index = resourceManager.getResource(realBase + possibility);
+            Resource index = resourceManager.getResource(canonicalize(realBase + possibility));
             if (index != null) {
                 return index;
             }
         }
         return null;
+    }
+
+    private String canonicalize(String s) {
+        if(canonicalizePaths) {
+            return CanonicalPathUtils.canonicalize(s);
+        }
+        return s;
     }
 
     public boolean isDirectoryListingEnabled() {
@@ -339,5 +363,72 @@ public class ResourceHandler implements HttpHandler {
     public ResourceHandler setContentEncodedResourceManager(ContentEncodedResourceManager contentEncodedResourceManager) {
         this.contentEncodedResourceManager = contentEncodedResourceManager;
         return this;
+    }
+
+    public boolean isCanonicalizePaths() {
+        return canonicalizePaths;
+    }
+
+    /**
+     * If this handler should use canonicalized paths.
+     *
+     * WARNING: If this is not true and {@link io.undertow.server.handlers.CanonicalPathHandler} is not installed in
+     * the handler chain then is may be possible to perform a directory traversal attack. If you set this to false make
+     * sure you have some kind of check in place to control the path.
+     * @param canonicalizePaths If paths should be canonicalized
+     */
+    public void setCanonicalizePaths(boolean canonicalizePaths) {
+        this.canonicalizePaths = canonicalizePaths;
+    }
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "resource";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put("location", String.class);
+            params.put("allow-listing", boolean.class);
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("location");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "location";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper((String)config.get("location"), (Boolean) config.get("allow-listing"));
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final String location;
+        private final boolean allowDirectoryListing;
+
+        private Wrapper(String location, boolean allowDirectoryListing) {
+            this.location = location;
+            this.allowDirectoryListing = allowDirectoryListing;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            ResourceManager rm = new FileResourceManager(new File(location), 1024);
+            ResourceHandler resourceHandler = new ResourceHandler(rm);
+            resourceHandler.setDirectoryListingEnabled(allowDirectoryListing);
+            return resourceHandler;
+        }
     }
 }

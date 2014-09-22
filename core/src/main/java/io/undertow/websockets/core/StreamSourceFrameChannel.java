@@ -18,7 +18,8 @@
 
 package io.undertow.websockets.core;
 
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -26,8 +27,8 @@ import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.server.protocol.framed.FrameHeaderData;
 
 /**
  * Base class for processes Frame bases StreamSourceChannels.
@@ -121,5 +122,11 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         this.finalFragment = true;
     }
 
-
+    @Override
+    protected void handleHeaderData(FrameHeaderData headerData) {
+        super.handleHeaderData(headerData);
+        if (((WebSocketFrame) headerData).isFinalFragment()) {
+            finalFrame();
+        }
+    }
 }

@@ -17,14 +17,17 @@
  */
 package io.undertow.websockets.jsr.test.annotated;
 
+import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.AjpIgnore;
+import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.HttpsIgnore;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.UndertowSession;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
@@ -43,13 +46,13 @@ import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 import java.net.URI;
+import java.util.Set;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class AnnotatedEndpointTest {
 
     private static ServerWebSocketContainer deployment;
@@ -61,7 +64,8 @@ public class AnnotatedEndpointTest {
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(AnnotatedEndpointTest.class.getClassLoader())
-                .setContextPath("/")
+                .setContextPath("/ws")
+                .setResourceManager(new TestResourceLoader(AnnotatedEndpointTest.class))
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
@@ -72,7 +76,11 @@ public class AnnotatedEndpointTest {
                                 .addEndpoint(AnnotatedClientEndpointWithConfigurator.class)
                                 .addEndpoint(IncrementEndpoint.class)
                                 .addEndpoint(EncodingEndpoint.class)
+                                .addEndpoint(EncodingGenericsEndpoint.class)
                                 .addEndpoint(TimeoutEndpoint.class)
+                                .addEndpoint(ErrorEndpoint.class)
+                                .addEndpoint(RootContextEndpoint.class)
+                                .addEndpoint(ThreadSafetyEndpoint.class)
                                 .addEndpoint(RequestUriEndpoint.class)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override
@@ -88,7 +96,7 @@ public class AnnotatedEndpointTest {
         manager.deploy();
 
 
-        DefaultServer.setRootHandler(manager.start());
+        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", manager.start()));
     }
 
     @AfterClass
@@ -101,17 +109,31 @@ public class AnnotatedEndpointTest {
         final byte[] payload = "hello".getBytes();
         final FutureResult latch = new FutureResult();
 
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Stuart"));
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
 
+
+    @Test
+    public void testWebSocketInRootContext() throws Exception {
+        final byte[] payload = "hello".getBytes();
+        final FutureResult latch = new FutureResult();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws"));
+        client.connect();
+        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello".getBytes(), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+
+
     @Test
     public void testAnnotatedClientEndpoint() throws Exception {
         AnnotatedClientEndpoint.reset();
-        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Bob"));
 
         Assert.assertEquals("hi Bob (protocol=foo)", AnnotatedClientEndpoint.message());
 
@@ -123,7 +145,7 @@ public class AnnotatedEndpointTest {
     public void testCloseReason() throws Exception {
         MessageEndpoint.reset();
 
-        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Bob"));
 
         Assert.assertEquals("hi Bob (protocol=foo)", AnnotatedClientEndpoint.message());
 
@@ -139,7 +161,7 @@ public class AnnotatedEndpointTest {
     public void testAnnotatedClientEndpointWithConfigurator() throws Exception {
 
 
-        Session session = deployment.connectToServer(AnnotatedClientEndpointWithConfigurator.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
+        Session session = deployment.connectToServer(AnnotatedClientEndpointWithConfigurator.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Bob"));
 
         Assert.assertEquals("hi Bob (protocol=configured-proto)", AnnotatedClientEndpointWithConfigurator.message());
         Assert.assertEquals("foo, bar, configured-proto", ClientConfigurator.sentSubProtocol);
@@ -150,11 +172,35 @@ public class AnnotatedEndpointTest {
     }
 
     @Test
+    public void testErrorHandling() throws Exception {
+        //make a sub class
+        AnnotatedClientEndpoint c = new AnnotatedClientEndpoint() {
+
+        };
+
+        Session session = deployment.connectToServer(c, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/error"));
+        Assert.assertEquals("hi", ErrorEndpoint.getMessage());
+        session.getAsyncRemote().sendText("app-error");
+        Assert.assertEquals("app-error", ErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.lang.RuntimeException", ErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+
+        session.getBasicRemote().sendText("io-error");
+        Assert.assertEquals("io-error", ErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.io.IOException", ErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+        ((UndertowSession)session).forceClose();
+        Assert.assertEquals("CLOSED", ErrorEndpoint.getMessage());
+
+    }
+
+
+    @Test
     public void testImplicitIntegerConversion() throws Exception {
         final byte[] payload = "12".getBytes();
         final FutureResult latch = new FutureResult();
 
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/increment/2"));
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/increment/2"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "14".getBytes(), latch));
         latch.getIoFuture().get();
@@ -167,7 +213,19 @@ public class AnnotatedEndpointTest {
         final byte[] payload = "hello".getBytes();
         final FutureResult latch = new FutureResult();
 
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/encoding/Stuart"));
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encoding/Stuart"));
+        client.connect();
+        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+
+    @Test
+    public void testEncodingWithGenericSuperclass() throws Exception {
+        final byte[] payload = "hello".getBytes();
+        final FutureResult latch = new FutureResult();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encodingGenerics/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
         latch.getIoFuture().get();
@@ -179,21 +237,36 @@ public class AnnotatedEndpointTest {
         final byte[] payload = "hello".getBytes();
         final FutureResult latch = new FutureResult();
 
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/request?a=b"));
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/request?a=b"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/request?a=b".getBytes(), latch));
+        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/ws/request?a=b".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
 
     @Test
+    @HttpsIgnore("The SSL engine closes when it receives the first FIN, and as a result the web socket close frame can't be properly echoed over the proxy when the server initates the close")
     public void testTimeoutCloseReason() throws Exception {
         TimeoutEndpoint.reset();
 
-        Session session = deployment.connectToServer(DoNothingEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/timeout"));
+        Session session = deployment.connectToServer(DoNothingEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/timeout"));
 
         Assert.assertEquals(CloseReason.CloseCodes.GOING_AWAY, TimeoutEndpoint.getReason().getCloseCode());
     }
+
+    @Test
+    public void testThreadSafeSend() throws Exception {
+        AnnotatedClientEndpoint.reset();
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/threads"));
+        Set<String> expected = ThreadSafetyEndpoint.expected();
+        long end = System.currentTimeMillis() + 10000;
+        while (!expected.isEmpty() && System.currentTimeMillis() < end) {
+            expected.remove(AnnotatedClientEndpoint.message());
+        }
+        session.close();
+        Assert.assertEquals(0, expected.size());
+    }
+
 
     @ClientEndpoint
     public static class DoNothingEndpoint {}

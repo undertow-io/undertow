@@ -57,7 +57,9 @@ public class ServletPathMappingTestCase {
                 new ServletInfo("*.jsp", PathMappingServlet.class)
                         .addMapping("*.jsp"),
                 new ServletInfo("contextRoot", PathMappingServlet.class)
-                        .addMapping(""));
+                        .addMapping(""),
+                new ServletInfo("foo", PathMappingServlet.class)
+                        .addMapping("foo.html"));
 
     }
 
@@ -121,6 +123,12 @@ public class ServletPathMappingTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("/a/* - /a - /bob.jsp", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo.html");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("foo - /foo.html - null", response);
 
         } finally {
             client.getConnectionManager().shutdown();

@@ -73,6 +73,7 @@ public class ChunkedRequestTransferCodingTestCase {
                     final OutputStream outputStream = exchange.getOutputStream();
                     final InputStream inputStream = exchange.getInputStream();
                     String m = HttpClientUtils.readResponse(inputStream);
+                    Assert.assertEquals(message.length(), m.length());
                     Assert.assertEquals(message, m);
                     inputStream.close();
                     outputStream.close();
@@ -102,7 +103,7 @@ public class ChunkedRequestTransferCodingTestCase {
             HttpClientUtils.readResponse(result);
 
             final Random random = new Random();
-            final int seed = random.nextInt();
+            final int seed =  -964339432;
             System.out.print("Using Seed " + seed);
             random.setSeed(seed);
 

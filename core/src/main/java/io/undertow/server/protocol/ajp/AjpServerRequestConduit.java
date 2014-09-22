@@ -134,6 +134,15 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
     }
 
     @Override
+    public void terminateReads() throws IOException {
+        if(exchange.isPersistent()) {
+            state |= STATE_FINISHED;
+            return;
+        }
+        super.terminateReads();
+    }
+
+    @Override
     public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
         long total = 0;
         for (int i = offset; i < length; ++i) {
@@ -158,6 +167,13 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
             return -1;
         } else if (anyAreSet(state, STATE_SEND_REQUIRED)) {
             state = this.state = (state & STATE_MASK) | STATE_READING;
+            if(ajpResponseConduit.isWriteShutdown()) {
+                this.state = STATE_FINISHED;
+                if (finishListener != null) {
+                    finishListener.handleEvent(this);
+                }
+                return -1;
+            }
             if (!ajpResponseConduit.doGetRequestBodyChunk(READ_BODY_CHUNK.duplicate(), this)) {
                 return 0;
             }
@@ -218,9 +234,9 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
             chunkRemaining = this.state & STATE_MASK;
         }
 
-        int limit = dst.limit();
+        int limit = dst.remaining();
         try {
-            if (limit > chunkRemaining) {
+            if (dst.remaining() > chunkRemaining) {
                 dst.limit((int) (dst.position() + chunkRemaining));
             }
             int read = next.read(dst);

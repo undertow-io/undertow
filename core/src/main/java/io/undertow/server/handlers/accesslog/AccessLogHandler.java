@@ -19,12 +19,18 @@
 package io.undertow.server.handlers.accesslog;
 
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.attribute.SubstituteEmptyWrapper;
 import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * Access log handler. This handler will generate access log messages based on the provided format string,
@@ -46,8 +52,7 @@ import io.undertow.server.HttpServerExchange;
  * <li><b>%l</b> - Remote logical username from identd (always returns '-')
  * <li><b>%m</b> - Request method
  * <li><b>%p</b> - Local port
- * <li><b>%q</b> - Query string (prepended with a '?' if it exists, otherwise
- * an empty string
+ * <li><b>%q</b> - Query string (excluding the '?' character)
  * <li><b>%r</b> - First line of the request
  * <li><b>%s</b> - HTTP status code of the response
  * <li><b>%t</b> - Date and time, in Common Log Format format
@@ -130,4 +135,48 @@ public class AccessLogHandler implements HttpHandler {
                 '}';
     }
 
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "access-log";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.<String, Class<?>>singletonMap("format", String.class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("format");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "format";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper((String) config.get("format"));
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final String format;
+
+        private Wrapper(String format) {
+            this.format = format;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new AccessLogHandler(handler, new JBossLoggingAccessLogReceiver(), format, Wrapper.class.getClassLoader());
+        }
+    }
 }

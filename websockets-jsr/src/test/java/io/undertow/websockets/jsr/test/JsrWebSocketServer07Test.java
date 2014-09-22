@@ -17,6 +17,44 @@
  */
 package io.undertow.websockets.jsr.test;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.MessageHandler;
+import javax.websocket.SendHandler;
+import javax.websocket.SendResult;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpointConfig;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.ByteBufferSlicePool;
+import org.xnio.FutureResult;
+import org.xnio.IoFuture;
+
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -26,52 +64,21 @@ import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.SpdyIgnore;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.NetworkUtils;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.UndertowSession;
+import io.undertow.websockets.jsr.test.annotated.AnnotatedClientEndpoint;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
-import org.junit.Assert;
-import org.junit.runner.RunWith;
-import org.xnio.ByteBufferSlicePool;
-import org.xnio.FutureResult;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
-import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpointConfig;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class JsrWebSocketServer07Test {
 
     @org.junit.Test
@@ -91,19 +98,13 @@ public class JsrWebSocketServer07Test {
                         ByteBuffer buf = ByteBuffer.allocate(message.remaining());
                         buf.put(message);
                         buf.flip();
-                        try {
-                            session.getBasicRemote().sendBinary(buf);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            cause.set(e);
-                            latch.setException(e);
-                        }
+                        session.getAsyncRemote().sendBinary(buf);
                     }
                 });
             }
         }
 
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -129,18 +130,12 @@ public class JsrWebSocketServer07Test {
                 session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                     @Override
                     public void onMessage(byte[] message) {
-                        try {
-                            session.getBasicRemote().sendBinary(ByteBuffer.wrap(message.clone()));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            cause.set(e);
-                            latch.setException(e);
-                        }
+                        session.getAsyncRemote().sendBinary(ByteBuffer.wrap(message.clone()));
                     }
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
@@ -167,18 +162,12 @@ public class JsrWebSocketServer07Test {
                 session.addMessageHandler(new MessageHandler.Whole<String>() {
                     @Override
                     public void onMessage(String message) {
-                        try {
-                            session.getBasicRemote().sendText(message);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            cause.set(e);
-                            latch.setException(e);
-                        }
+                        session.getAsyncRemote().sendText(message);
                     }
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
@@ -223,7 +212,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -271,7 +260,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
@@ -313,7 +302,7 @@ public class JsrWebSocketServer07Test {
             }
 
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -347,7 +336,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
@@ -373,22 +362,28 @@ public class JsrWebSocketServer07Test {
                 connected.set(true);
                 session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                     @Override
-                    public void onMessage(byte[] message) {
-                        try {
-                            OutputStream out = session.getBasicRemote().getSendStream();
-                            out.write(message);
-                            out.flush();
-                            out.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            cause.set(e);
-                            latch.setException(e);
-                        }
+                    public void onMessage(final byte[] message) {
+                        DefaultServer.getWorker().execute(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                try {
+                                    OutputStream out = session.getBasicRemote().getSendStream();
+                                    out.write(message);
+                                    out.flush();
+                                    out.close();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    cause.set(e);
+                                    latch.setException(e);
+                                }
+                            }
+                        });
                     }
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
@@ -415,21 +410,26 @@ public class JsrWebSocketServer07Test {
                 connected.set(true);
                 session.addMessageHandler(new MessageHandler.Whole<String>() {
                     @Override
-                    public void onMessage(String message) {
-                        try {
-                            Writer writer = session.getBasicRemote().getSendWriter();
-                            writer.write(message);
-                            writer.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            cause.set(e);
-                            latch.setException(e);
-                        }
+                    public void onMessage(final String message) {
+                        DefaultServer.getWorker().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Writer writer = session.getBasicRemote().getSendWriter();
+                                    writer.write(message);
+                                    writer.close();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    cause.set(e);
+                                    latch.setException(e);
+                                }
+                            }
+                        });
                     }
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -455,7 +455,7 @@ public class JsrWebSocketServer07Test {
                 connected.set(true);
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -496,7 +496,7 @@ public class JsrWebSocketServer07Test {
                 clientLatch.countDown();
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -541,7 +541,7 @@ public class JsrWebSocketServer07Test {
                 clientLatch.countDown();
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -549,6 +549,9 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new CloseWebSocketFrame(code, null), new FrameChecker(CloseWebSocketFrame.class, payload.array(), latch));
+        if(latch.getIoFuture().await(10, TimeUnit.SECONDS) != IoFuture.Status.DONE) {
+            Assert.fail();
+        }
         latch.getIoFuture().get();
         clientLatch.await();
         Assert.assertEquals(code, reason.get().getCloseCode().getCode());
@@ -575,19 +578,13 @@ public class JsrWebSocketServer07Test {
                         ByteBuffer buf = ByteBuffer.allocate(message.remaining());
                         buf.put(message);
                         buf.flip();
-                        try {
-                            session.getBasicRemote().sendBinary(buf);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            cause.set(e);
-                            latch.setException(e);
-                        }
+                        session.getAsyncRemote().sendBinary(buf);
 
                     }
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -617,21 +614,15 @@ public class JsrWebSocketServer07Test {
                     @Override
                     public void onMessage(String message, boolean last) {
                         sb.append(message);
-                        if(!last) {
+                        if (!last) {
                             return;
                         }
-                        try {
-                            session.getBasicRemote().sendText(sb.toString());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            cause.set(e);
-                            latch.setException(e);
-                        }
+                        session.getAsyncRemote().sendText(sb.toString());
                     }
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -644,11 +635,39 @@ public class JsrWebSocketServer07Test {
         client.destroy();
     }
 
+
+    @Test
+    public void testErrorHandling() throws Exception {
+
+
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST), false, false);
+
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(ProgramaticErrorEndpoint.class, "/").configurator(new InstanceConfigurator(new ProgramaticErrorEndpoint())).build());
+        deployServlet(builder);
+
+        AnnotatedClientEndpoint c = new AnnotatedClientEndpoint();
+
+        Session session = ContainerProvider.getWebSocketContainer().connectToServer(c, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        Assert.assertEquals("hi", ProgramaticErrorEndpoint.getMessage());
+        session.getAsyncRemote().sendText("app-error");
+        Assert.assertEquals("app-error", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.lang.RuntimeException", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+
+        session.getBasicRemote().sendText("io-error");
+        Assert.assertEquals("io-error", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.lang.RuntimeException", ProgramaticErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+        ((UndertowSession)session).forceClose();
+        Assert.assertEquals("CLOSED", ProgramaticErrorEndpoint.getMessage());
+
+    }
+
     protected WebSocketVersion getVersion() {
         return WebSocketVersion.V07;
     }
 
-    private void deployServlet(final ServerWebSocketContainer deployment) throws ServletException {
+    private ServletContext deployServlet(final ServerWebSocketContainer deployment) throws ServletException {
 
         final DeploymentInfo builder;
         builder = new DeploymentInfo()
@@ -667,6 +686,7 @@ public class JsrWebSocketServer07Test {
         root.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(root);
+        return manager.getDeployment().getServletContext();
     }
 
     private static class InstanceConfigurator extends ServerEndpointConfig.Configurator {

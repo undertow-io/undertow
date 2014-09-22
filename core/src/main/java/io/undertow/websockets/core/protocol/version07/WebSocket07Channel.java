@@ -22,12 +22,15 @@ import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketException;
+import io.undertow.websockets.core.WebSocketFrame;
 import io.undertow.websockets.core.WebSocketFrameCorruptedException;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.function.ChannelFunction;
+
+import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
@@ -99,6 +102,11 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     @Override
+    protected void closeSubChannels() {
+        IoUtils.safeClose(fragmentedChannel);
+    }
+
+    @Override
     protected StreamSinkFrameChannel createStreamSinkChannel(WebSocketFrameType type, long payloadSize) {
         switch (type) {
             case TEXT:
@@ -116,7 +124,7 @@ public class WebSocket07Channel extends WebSocketChannel {
         }
     }
 
-    class WebSocketFrameHeader implements PartialFrame {
+    class WebSocketFrameHeader implements WebSocketFrame {
 
         private boolean frameFinalFlag;
         private int frameRsv;
@@ -459,11 +467,17 @@ public class WebSocket07Channel extends WebSocketChannel {
                 StreamSourceFrameChannel ret = fragmentedChannel;
                 if(frameFinalFlag) {
                     fragmentedChannel = null;
-                    ret.finalFrame(); //TODO: should  be in handle header data, maybe
                 }
                 return ret;
             }
             return null;
         }
+
+        @Override
+        public boolean isFinalFragment() {
+            return frameFinalFlag;
+        }
     }
+
+
 }

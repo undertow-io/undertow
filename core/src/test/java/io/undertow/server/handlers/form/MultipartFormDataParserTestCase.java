@@ -35,7 +35,6 @@ import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
@@ -46,9 +45,8 @@ import org.xnio.IoUtils;
 @RunWith(DefaultServer.class)
 public class MultipartFormDataParserTestCase {
 
-    @BeforeClass
-    public static void setup() {
-        HttpHandler fd = new HttpHandler() {
+    private static HttpHandler createHandler() {
+        return new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 System.out.println("In handler");
@@ -78,11 +76,11 @@ public class MultipartFormDataParserTestCase {
                 }
             }
         };
-        DefaultServer.setRootHandler(new BlockingHandler(fd));
     }
 
     @Test
     public void testFileUpload() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createHandler()));
         TestHttpClient client = new TestHttpClient();
         try {
 
@@ -105,4 +103,27 @@ public class MultipartFormDataParserTestCase {
     }
 
 
+    @Test
+    public void testFileUploadWithEagerParsing() throws Exception {
+        DefaultServer.setRootHandler(new EagerFormParsingHandler().setNext(createHandler()));
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            //post.setHeader(Headers.CONTENT_TYPE, MultiPartHandler.MULTIPART_FORM_DATA);
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }

@@ -18,11 +18,20 @@
 
 package io.undertow.server;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.ConduitFactory;
 import org.xnio.conduits.StreamSinkConduit;
 
 /**
+ *
+ * Handler that appends the JVM route to the session id.
+ *
  * @author Stuart Douglas
  */
 public class JvmRouteHandler implements HttpHandler {
@@ -66,6 +75,57 @@ public class JvmRouteHandler implements HttpHandler {
                 sessionId.setValue(sb.toString());
             }
             return factory.create();
+        }
+    }
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "jvm-route";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put("value", String.class);
+            params.put("session-cookie-name", String.class);
+
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("value");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "value";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            String sessionCookieName = (String) config.get("session-cookie-name");
+
+            return new Wrapper((String)config.get("value"), sessionCookieName == null ? "JSESSIONID" : sessionCookieName);
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final String value;
+        private final String sessionCookieName;
+
+        private Wrapper(String value, String sessionCookieName) {
+            this.value = value;
+            this.sessionCookieName = sessionCookieName;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new JvmRouteHandler(handler, sessionCookieName, value);
         }
     }
 }

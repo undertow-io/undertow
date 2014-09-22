@@ -22,8 +22,10 @@ import io.undertow.UndertowMessages;
 
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -144,6 +146,29 @@ public class PathTemplateMatcher<T> {
     public synchronized PathTemplateMatcher<T> add(final String pathTemplate, final T value) {
         final PathTemplate template = PathTemplate.create(pathTemplate);
         return add(template, value);
+    }
+
+    public synchronized PathTemplateMatcher<T> addAll(PathTemplateMatcher<T> pathTemplateMatcher) {
+        for (Entry<String, Set<PathTemplateHolder>> entry : pathTemplateMatcher.getPathTemplateMap().entrySet()) {
+            for (PathTemplateHolder pathTemplateHolder : entry.getValue()) {
+                add(pathTemplateHolder.template, pathTemplateHolder.value);
+            }
+        }
+        return this;
+    }
+
+    Map<String, Set<PathTemplateHolder>> getPathTemplateMap() {
+        return pathTemplateMap;
+    }
+
+    public Set<PathTemplate> getPathTemplates() {
+        Set<PathTemplate> templates = new HashSet<>();
+        for (Set<PathTemplateHolder> holders : pathTemplateMap.values()) {
+            for (PathTemplateHolder holder: holders) {
+                templates.add(holder.template);
+            }
+        }
+        return templates;
     }
 
     public synchronized PathTemplateMatcher<T> remove(final String pathTemplate) {

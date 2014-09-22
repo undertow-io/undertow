@@ -24,22 +24,26 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
-
-import io.undertow.Handlers;
-import io.undertow.UndertowLogger;
-import io.undertow.server.DefaultResponseListener;
-import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.util.Headers;
 import org.jboss.logging.Logger;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
+
+import io.undertow.Handlers;
+import io.undertow.UndertowLogger;
+import io.undertow.server.DefaultResponseListener;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.Headers;
 
 /**
  * Handler that serves up a file from disk to serve as an error page.
@@ -166,5 +170,54 @@ public class FileErrorPageHandler implements HttpHandler {
     public FileErrorPageHandler setFile(final File file) {
         this.file = file;
         return this;
+    }
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "error-file";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put("file", String.class);
+            params.put("response-codes", Integer[].class);
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return new HashSet<>(Arrays.asList(new String[]{"file", "response-codes"}));
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper((String)config.get("file"), (Integer[]) config.get("response-codes"));
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final String file;
+        private final Integer[] responseCodes;
+
+        private Wrapper(String file, Integer[] responseCodes) {
+            this.file = file;
+            this.responseCodes = responseCodes;
+        }
+
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new FileErrorPageHandler(new File(file), responseCodes);
+        }
     }
 }

@@ -18,8 +18,14 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * A handler which limits the maximum number of concurrent requests.  Requests beyond the limit will
@@ -66,8 +72,8 @@ public final class RequestLimitingHandler implements HttpHandler {
      * Construct a new instance. This version takes a {@link RequestLimit} directly which may be shared with other
      * handlers.
      *
-     * @param requestLimit              the request limit information.
-     * @param nextHandler               the next handler
+     * @param requestLimit the request limit information.
+     * @param nextHandler  the next handler
      */
     public RequestLimitingHandler(RequestLimit requestLimit, HttpHandler nextHandler) {
         if (nextHandler == null) {
@@ -83,5 +89,49 @@ public final class RequestLimitingHandler implements HttpHandler {
 
     public RequestLimit getRequestLimit() {
         return requestLimit;
+    }
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "request-limit";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.<String, Class<?>>singletonMap("requests", int.class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("requests");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "requests";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper((Integer) config.get("requests"));
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final int requests;
+
+        private Wrapper(int requests) {
+            this.requests = requests;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new RequestLimitingHandler(requests, handler);
+        }
     }
 }

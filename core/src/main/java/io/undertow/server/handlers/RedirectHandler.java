@@ -18,11 +18,18 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeParser;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
 
 /**
@@ -47,11 +54,63 @@ public class RedirectHandler implements HttpHandler {
         attribute = parser.parse(location);
     }
 
+    public RedirectHandler(ExchangeAttribute attribute) {
+        this.attribute = attribute;
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.setResponseCode(302);
         exchange.getResponseHeaders().put(Headers.LOCATION, attribute.readAttribute(exchange));
         exchange.endExchange();
+    }
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "redirect";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put("value", ExchangeAttribute.class);
+
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("value");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "value";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+
+            return new Wrapper((ExchangeAttribute)config.get("value"));
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final ExchangeAttribute value;
+
+        private Wrapper(ExchangeAttribute value) {
+            this.value = value;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new RedirectHandler(value);
+        }
     }
 
 }

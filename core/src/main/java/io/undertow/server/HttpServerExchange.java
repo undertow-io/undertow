@@ -498,6 +498,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         return this;
     }
 
+    /**
+     *
+     * @return The query string, without the leading ?
+     */
     public String getQueryString() {
         return queryString;
     }
@@ -1384,6 +1388,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     public HttpServerExchange endExchange() {
         final int state = this.state;
         if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+            if(blockingHttpExchange != null) {
+                //we still have to close the blocking exchange in this case,
+                IoUtils.safeClose(blockingHttpExchange);
+            }
             return this;
         }
         if(defaultResponseListeners != null) {
@@ -1404,6 +1412,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
+        if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
+            connection.terminateRequestChannel(this);
+        }
+
         if (blockingHttpExchange != null) {
             try {
                 //TODO: can we end up in this situation in a IO thread?
@@ -1416,7 +1428,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         //417 means that we are rejecting the request
         //so the client should not actually send any data
-        //TODO: how
         if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
 
             //not really sure what the best thing to do here is
@@ -1571,6 +1582,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
         this.maxEntitySize = maxEntitySize;
+        connection.maxEntitySizeUpdated(this);
         return this;
     }
 
@@ -1736,12 +1748,30 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         private void invokeListener() {
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelListeners.invokeChannelListener(WriteDispatchChannel.this, writeSetter.get());
-                }
-            });
+            if(writeSetter != null) {
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        ChannelListeners.invokeChannelListener(WriteDispatchChannel.this, writeSetter.get());
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void awaitWritable() throws IOException {
+            if(Thread.currentThread() == getIoThread()) {
+                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+            }
+            super.awaitWritable();
+        }
+
+        @Override
+        public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
+            if(Thread.currentThread() == getIoThread()) {
+                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+            }
+            super.awaitWritable(time, timeUnit);
         }
     }
 
@@ -1797,17 +1827,24 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         private void invokeListener() {
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelListeners.invokeChannelListener(ReadDispatchChannel.this, readSetter.get());
-                }
-            });
+            if(readSetter != null) {
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        ChannelListeners.invokeChannelListener(ReadDispatchChannel.this, readSetter.get());
+                    }
+                });
+            }
         }
 
         public void requestDone() {
-            delegate.setReadListener(null);
-            delegate.setCloseListener(null);
+            if(delegate instanceof ConduitStreamSourceChannel) {
+                ((ConduitStreamSourceChannel)delegate).setReadListener(null);
+                ((ConduitStreamSourceChannel)delegate).setCloseListener(null);
+            } else {
+                delegate.getReadSetter().set(null);
+                delegate.getCloseSetter().set(null);
+            }
         }
 
         @Override
@@ -1821,6 +1858,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void awaitReadable() throws IOException {
+            if(Thread.currentThread() == getIoThread()) {
+                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+            }
             Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 super.awaitReadable();
@@ -1875,6 +1915,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
+            if(Thread.currentThread() == getIoThread()) {
+                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+            }
             Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 super.awaitReadable(time, timeUnit);

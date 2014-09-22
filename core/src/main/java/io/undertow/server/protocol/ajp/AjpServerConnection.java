@@ -81,6 +81,11 @@ public final class AjpServerConnection extends AbstractServerConnection {
     }
 
     @Override
+    public void terminateRequestChannel(HttpServerExchange exchange) {
+        //todo: terminate
+    }
+
+    @Override
     public void restoreChannel(ConduitState state) {
         super.restoreChannel(state);
         channel.getSinkChannel().getConduit().setWriteReadyHandler(writeReadyHandler);

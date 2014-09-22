@@ -159,7 +159,9 @@ public class ServletOutputStreamTestCase {
                 builder.append(message);
             }
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(builder.toString(), response);
+            String expected = builder.toString();
+            Assert.assertEquals(expected.length(), response.length());
+            Assert.assertEquals(expected, response);
         } finally {
             client.getConnectionManager().shutdown();
         }

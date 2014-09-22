@@ -45,10 +45,8 @@ public class EarlyCloseServlet extends HttpServlet {
         HttpServletRequestImpl request = ServletRequestContext.requireCurrent().getOriginalRequest();
         if(connection == null) {
             connection = request.getExchange().getConnection();
-        } else {
-            if(connection != request.getExchange().getConnection()) {
-                throw new RuntimeException("Connection not persistent");
-            }
+        } else if(!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != request.getExchange().getConnection()) {
+            throw new RuntimeException("Connection not persistent");
         }
     }
 }

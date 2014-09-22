@@ -48,7 +48,13 @@ class PathPrefixPredicate implements Predicate {
     public boolean resolve(final HttpServerExchange value) {
         final String relativePath = value.getRelativePath();
         PathMatcher.PathMatch<Boolean> result = pathMatcher.match(relativePath);
-        return result.getValue() == Boolean.TRUE;
+
+        boolean matches = result.getValue() == Boolean.TRUE;
+        if(matches) {
+            Map<String, Object> context = value.getAttachment(PREDICATE_CONTEXT);
+            context.put("remaining", result.getRemaining());
+        }
+        return matches;
     }
 
     public static class Builder implements PredicateBuilder {

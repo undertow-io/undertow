@@ -18,8 +18,8 @@
 
 package io.undertow.conduits;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpServerConnection;
@@ -118,15 +118,10 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         remainingAllowed -= written;
         if (remainingAllowed < 0) {
             //max entity size is exceeded
-            //we need to forcibly close the read side
-            try {
-                next.terminateReads();
-            } catch (IOException e) {
-                UndertowLogger.REQUEST_LOGGER.debug("Exception terminating reads due to exceeding max size", e);
-            }
+            Connectors.terminateRequest(exchange);
             closed = true;
-            finishListener.handleEvent(this);
             exchange.setPersistent(false);
+            finishListener.handleEvent(this);
             throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
         }
     }

@@ -302,4 +302,46 @@ public interface UndertowMessages {
 
     @Message(id = 92, value = "A SPDY header was too large to fit in a response buffer, if you want to support larger headers please increase the buffer size")
     IllegalStateException headersTooLargeToFitInHeapBuffer();
+
+    @Message(id = 93, value = "A SPDY stream was reset by the remote endpoint")
+    IOException spdyStreamWasReset();
+
+    @Message(id = 94, value = "Blocking await method called from IO thread. Blocking IO must be dispatched to a worker thread or deadlocks will result.")
+    IOException awaitCalledFromIoThread();
+
+    @Message(id = 95, value = "Recursive call to flushSenders()")
+    RuntimeException recursiveCallToFlushingSenders();
+
+    @Message(id = 96, value = "More data was written to the channel than specified in the content-length")
+    IllegalStateException fixedLengthOverflow();
+
+    @Message(id = 97, value = "AJP request already in progress")
+    IllegalStateException ajpRequestAlreadyInProgress();
+
+    @Message(id = 98, value = "HTTP ping data must be 8 bytes in length")
+    IllegalArgumentException httpPingDataMustBeLength8();
+
+    @Message(id = 99, value = "Received a ping of size other than 8")
+    String invalidPingSize();
+
+    @Message(id = 100, value = "stream id must be zero for frame type %s")
+    String streamIdMustBeZeroForFrameType(int frameType);
+
+    @Message(id = 101, value = "stream id must not be zero for frame type %s")
+    String streamIdMustNotBeZeroForFrameType(int frameType);
+
+    @Message(id = 102, value = "RST_STREAM received for idle stream")
+    String rstStreamReceivedForIdleStream();
+
+    @Message(id = 103, value = "Http2 stream was reset")
+    IOException http2StreamWasReset();
+
+    @Message(id = 104, value = "Incorrect HTTP2 preface")
+    IOException incorrectHttp2Preface();
+
+    @Message(id = 105, value = "HTTP2 frame to large")
+    IOException http2FrameTooLarge();
+
+    @Message(id = 106, value = "HTTP2 continuation frame received without a corresponding headers or push promise frame")
+    IOException http2ContinuationFrameNotExpected();
 }

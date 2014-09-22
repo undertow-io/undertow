@@ -115,6 +115,9 @@ public class BufferedTextMessage {
                         channel.getReadSetter().set(new ChannelListener<StreamSourceFrameChannel>() {
                             @Override
                             public void handleEvent(StreamSourceFrameChannel channel) {
+                                if(complete ) {
+                                    return;
+                                }
                                 Pooled<ByteBuffer> pooled = channel.getWebSocketChannel().getBufferPool().allocate();
                                 final ByteBuffer buffer = pooled.getResource();
                                 try {

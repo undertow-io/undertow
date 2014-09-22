@@ -166,7 +166,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         }
         try {
             if (writer == null) {
-                writer = new BufferedWriter(new FileWriter(defaultLogFile));
+                writer = new BufferedWriter(new FileWriter(defaultLogFile, true));
             }
             for (String message : messages) {
                 writer.write(message);

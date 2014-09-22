@@ -26,6 +26,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ErrorPage;
+import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletStackTraces;
@@ -35,6 +36,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -67,6 +69,13 @@ public class ErrorPageTestCase {
         builder1.addErrorPage(new ErrorPage("/parentException", ParentException.class));
         builder1.addErrorPage(new ErrorPage("/childException", ChildException.class));
         builder1.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
+        builder1.setExceptionHandler(LoggingExceptionHandler.builder()
+                .add(ParentException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(ChildException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(RuntimeException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(ServletException.class, "io.undertow", Logger.Level.DEBUG)
+                .build());
+
 
         builder1.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(ErrorPageTestCase.class.getClassLoader())
@@ -92,6 +101,12 @@ public class ErrorPageTestCase {
         builder2.addErrorPage(new ErrorPage("/parentException", ParentException.class));
         builder2.addErrorPage(new ErrorPage("/childException", ChildException.class));
         builder2.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
+        builder2.setExceptionHandler(LoggingExceptionHandler.builder()
+                .add(ParentException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(ChildException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(RuntimeException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(ServletException.class, "io.undertow", Logger.Level.DEBUG)
+                .build());
 
         builder2.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(ErrorPageTestCase.class.getClassLoader())
@@ -123,6 +138,13 @@ public class ErrorPageTestCase {
                 .setContextPath("/servletContext3")
                 .setServletStackTraces(ServletStackTraces.NONE)
                 .setDeploymentName("servletContext3.war");
+
+        builder3.setExceptionHandler(LoggingExceptionHandler.builder()
+                .add(ParentException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(ChildException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(RuntimeException.class, "io.undertow", Logger.Level.DEBUG)
+                .add(ServletException.class, "io.undertow", Logger.Level.DEBUG)
+                .build());
 
         final DeploymentManager manager3 = container.addDeployment(builder3);
         manager3.deploy();

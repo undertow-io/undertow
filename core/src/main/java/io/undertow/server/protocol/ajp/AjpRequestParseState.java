@@ -18,15 +18,15 @@
 
 package io.undertow.server.protocol.ajp;
 
-import io.undertow.server.BasicSSLSessionInfo;
-import io.undertow.util.HttpString;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.Map;
+
+import io.undertow.server.BasicSSLSessionInfo;
+import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas
@@ -92,15 +92,16 @@ class AjpRequestParseState extends AbstractAjpParseState {
     }
 
     InetSocketAddress createPeerAddress() {
-        if(remoteAddress == null) {
+        if (remoteAddress == null) {
             return null;
         }
         String portString = attributes.get(AJP_REMOTE_PORT);
         int port = 0;
-        if(portString != null) {
+        if (portString != null) {
             try {
                 port = Integer.parseInt(portString);
-            } catch (IllegalArgumentException e) {}
+            } catch (IllegalArgumentException e) {
+            }
         }
         try {
             InetAddress address = InetAddress.getByName(remoteAddress);
@@ -111,14 +112,9 @@ class AjpRequestParseState extends AbstractAjpParseState {
     }
 
     InetSocketAddress createDestinationAddress() {
-        if(serverAddress == null) {
+        if (serverAddress == null) {
             return null;
         }
-        try {
-            InetAddress address = InetAddress.getByName(serverAddress);
-            return new InetSocketAddress(address, serverPort);
-        } catch (UnknownHostException e) {
-            return null;
-        }
+        return InetSocketAddress.createUnresolved(serverAddress, serverPort);
     }
 }

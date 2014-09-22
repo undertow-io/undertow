@@ -18,6 +18,19 @@
 
 package io.undertow.server.handlers.proxy;
 
+import static io.undertow.Handlers.jvmRoute;
+import static io.undertow.Handlers.path;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.ssl.JsseXnioSsl;
+
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
@@ -28,18 +41,6 @@ import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
-import org.eclipse.jetty.npn.NextProtoNego;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.ssl.JsseXnioSsl;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
 
 /**
  * Tests the load balancing proxy
@@ -51,7 +52,6 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
 
     @BeforeClass
     public static void setup() throws URISyntaxException {
-        NextProtoNego.debug = true;
         final SessionCookieConfig sessionConfig = new SessionCookieConfig();
         int port = DefaultServer.getHostPort("default");
         final JvmRouteHandler handler1 = jvmRoute("JSESSIONID", "s1", path()
@@ -102,4 +102,9 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
                 , 10000, ResponseCodeHandler.HANDLE_404));
     }
 
+
+    @Before
+    public void requireAlpn() {
+        DefaultServer.assumeAlpnEnabled();
+    }
 }

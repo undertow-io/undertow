@@ -377,6 +377,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     channel.shutdownWrites();
                     state |= FLAG_DELEGATE_SHUTDOWN;
                     channel.flush();
+                    if(pooledBuffer != null) {
+                        pooledBuffer.free();
+                        buffer = null;
+                        pooledBuffer = null;
+                    }
                 }
             }
         }
@@ -496,7 +501,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             long res;
             do {
                 res = channel.write(buffer);
-                written += res;
             } while (buffer.hasRemaining() && res != 0);
             if (!buffer.hasRemaining()) {
                 channel.flush();
@@ -788,6 +792,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     }
                 } while (written < toWrite);
                 buffersToWrite = null;
+                buffer.clear();
             }
             if (pendingFile != null) {
                 try {

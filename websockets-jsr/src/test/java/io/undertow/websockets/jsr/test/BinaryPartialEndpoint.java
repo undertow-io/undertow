@@ -26,6 +26,8 @@ import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
+import io.undertow.testutils.DefaultServer;
+
 /**
  * @author Andrej Golovnin
  */
@@ -56,14 +58,19 @@ public final class BinaryPartialEndpoint extends Endpoint {
                 }
             }
 
-            private void onRequest(byte[] bytes) {
+            private void onRequest(final byte[] bytes) {
                 // Just return the received bytes for the test
-                try {
-                    session.getBasicRemote().sendBinary(
-                        ByteBuffer.wrap(bytes));
-                } catch (IOException e) {
-                    throw new IllegalStateException(e);
-                }
+                DefaultServer.getWorker().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            session.getBasicRemote().sendBinary(
+                                    ByteBuffer.wrap(bytes));
+                        } catch (IOException e) {
+                            throw new IllegalStateException(e);
+                        }
+                    }
+                });
             }
 
             private void buffer(byte[] data) {

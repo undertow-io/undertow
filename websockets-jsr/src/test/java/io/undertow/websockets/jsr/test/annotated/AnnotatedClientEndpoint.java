@@ -18,14 +18,14 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.OnClose;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author Stuart Douglas
@@ -35,6 +35,8 @@ public class AnnotatedClientEndpoint {
 
     private static final BlockingDeque<String> MESSAGES = new LinkedBlockingDeque<>();
 
+    private volatile boolean open = false;
+
     public static String message() throws InterruptedException {
         return MESSAGES.pollFirst(3, TimeUnit.SECONDS);
     }
@@ -42,6 +44,7 @@ public class AnnotatedClientEndpoint {
     @OnOpen
     public void onOpen(final Session session) {
         session.getAsyncRemote().sendText("hi");
+        this.open = true;
     }
 
     @OnMessage
@@ -51,10 +54,16 @@ public class AnnotatedClientEndpoint {
 
     @OnClose
     public void onClose() {
+        this.open = false;
         MESSAGES.add("CLOSED");
+    }
+
+    public boolean isOpen() {
+        return open;
     }
 
     public static void reset() {
         MESSAGES.clear();
     }
+
 }

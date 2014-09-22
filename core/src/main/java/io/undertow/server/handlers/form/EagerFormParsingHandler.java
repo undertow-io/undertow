@@ -55,7 +55,12 @@ public class EagerFormParsingHandler implements HttpHandler {
             next.handleRequest(exchange);
             return;
         }
-        parser.parse(next);
+        if(exchange.isBlocking()) {
+            exchange.putAttachment(FormDataParser.FORM_DATA, parser.parseBlocking());
+            next.handleRequest(exchange);
+        } else {
+            parser.parse(next);
+        }
     }
 
     public HttpHandler getNext() {

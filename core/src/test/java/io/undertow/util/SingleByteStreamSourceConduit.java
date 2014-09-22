@@ -55,6 +55,7 @@ public class SingleByteStreamSourceConduit extends AbstractStreamSourceConduit<S
         }
 
         if (state++ % 2 == 0) {
+            wakeupIfSsl();
             return 0;
         } else {
             if (dst.remaining() == 0) {
@@ -63,10 +64,21 @@ public class SingleByteStreamSourceConduit extends AbstractStreamSourceConduit<S
             int limit = dst.limit();
             try {
                 dst.limit(dst.position() + 1);
-                return next.read(dst);
+                int read = next.read(dst);
+                if(read != -1) {
+                    wakeupIfSsl();
+                }
+                return read;
             } finally {
                 dst.limit(limit);
             }
+        }
+    }
+
+    private void wakeupIfSsl() {
+        //todo: work around a bug in the SSL channel where the read listener will not be invoked if there is more data in the buffer
+        if(isReadResumed() && next.getClass().getSimpleName().startsWith("Jsse")) {
+            wakeupReads();
         }
     }
 

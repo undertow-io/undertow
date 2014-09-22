@@ -146,8 +146,8 @@ public interface UndertowLogger extends BasicLogger {
     void couldNotInitiateSpdyConnection();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5026, value = "Jetty NPN support not found, SPDY client will not be available.")
-    void jettyNpnNotFound();
+    @Message(id = 5026, value = "Jetty ALPN support not found on boot class path, %s client will not be available.")
+    void jettyALPNNotFound(String protocol);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5027, value = "Timing out request to %s")
@@ -165,4 +165,15 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5031, value = "Proxy request to %s could not connect to backend server %s")
     void proxyFailedToConnectToBackend(String requestURI, URI uri);
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5032, value = "Listener not making progress on framed channel, closing channel to prevent infinite loop")
+    void listenerNotProgressing();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5033, value = "Failed to initiate HTTP2 connection")
+    void couldNotInitiateHttp2Connection();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5034, value = "Remote endpoint failed to send initial settings frame in HTTP2 connection")
+    void remoteEndpointFailedToSendInitialSettings();
 }

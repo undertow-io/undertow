@@ -42,6 +42,7 @@ import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.server.session.SessionListener;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.DefaultAuthorizationManager;
@@ -94,6 +95,8 @@ public class DeploymentInfo implements Cloneable {
     private SessionConfigWrapper sessionConfigWrapper = null;
     private boolean eagerFilterInit = false;
     private boolean disableCachingForSecuredPages = true;
+    private boolean escapeErrorMessage = true;
+    private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
     private final Map<String, FilterInfo> filters = new HashMap<>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<>();
@@ -112,6 +115,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
     private final Map<String, AuthenticationMechanismFactory> authenticationMechanisms = new HashMap<>();
     private final List<LifecycleInterceptor> lifecycleInterceptors = new ArrayList<>();
+    private final List<SessionListener> sessionListeners = new ArrayList<>();
 
     /**
      * additional servlet extensions
@@ -1014,6 +1018,49 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(lifecycleInterceptors);
     }
 
+    /**
+     * Returns the exception handler that is used by this deployment. By default this will simply
+     * log unhandled exceptions
+     */
+    public ExceptionHandler getExceptionHandler() {
+        return exceptionHandler;
+    }
+
+    /**
+     * Sets the default exception handler for this deployment
+     * @param exceptionHandler The exception handler
+     * @return
+     */
+    public DeploymentInfo setExceptionHandler(ExceptionHandler exceptionHandler) {
+        this.exceptionHandler = exceptionHandler;
+        return this;
+    }
+
+    public boolean isEscapeErrorMessage() {
+        return escapeErrorMessage;
+    }
+
+    /**
+     * Set if if the message passed to {@link javax.servlet.http.HttpServletResponse#sendError(int, String)} should be escaped.
+     *
+     * If this is false applications must be careful not to use user provided data (such as the URI) in the message
+     *
+     * @param escapeErrorMessage If the error message should be escaped
+     */
+    public void setEscapeErrorMessage(boolean escapeErrorMessage) {
+        this.escapeErrorMessage = escapeErrorMessage;
+    }
+
+
+    public DeploymentInfo addSessionListener(SessionListener sessionListener) {
+        this.sessionListeners.add(sessionListener);
+        return this;
+    }
+
+    public List<SessionListener> getSessionListeners() {
+        return Collections.unmodifiableList(sessionListeners);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1085,6 +1132,9 @@ public class DeploymentInfo implements Cloneable {
         info.sessionConfigWrapper = sessionConfigWrapper;
         info.eagerFilterInit = eagerFilterInit;
         info.disableCachingForSecuredPages = disableCachingForSecuredPages;
+        info.exceptionHandler = exceptionHandler;
+        info.escapeErrorMessage = escapeErrorMessage;
+        this.sessionListeners.addAll(sessionListeners);
         this.lifecycleInterceptors.addAll(lifecycleInterceptors);
         return info;
     }

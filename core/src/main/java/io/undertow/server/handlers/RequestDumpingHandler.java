@@ -18,15 +18,19 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.LocaleUtils;
@@ -143,5 +147,43 @@ public class RequestDumpingHandler implements HttpHandler {
 
         // Perform the exchange
         next.handleRequest(exchange);
+    }
+
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "dump-request";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper();
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new RequestDumpingHandler(handler);
+        }
     }
 }

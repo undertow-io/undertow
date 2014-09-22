@@ -63,6 +63,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         parser = HttpRequestParser.instance(undertowOptions);
     }
 
+    @Override
     public void handleEvent(final StreamConnection channel) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
@@ -72,22 +73,22 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         try {
             Integer readTimeout = channel.getOption(Options.READ_TIMEOUT);
             Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
-            if((readTimeout == null || readTimeout <= 0) && idleTimeout != null) {
+            if ((readTimeout == null || readTimeout <= 0) && idleTimeout != null) {
                 readTimeout = idleTimeout;
-            } else if(readTimeout != null && idleTimeout != null && idleTimeout > 0) {
+            } else if (readTimeout != null && idleTimeout != null && idleTimeout > 0) {
                 readTimeout = Math.min(readTimeout, idleTimeout);
             }
             if (readTimeout != null && readTimeout > 0) {
-                channel.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(channel.getSourceChannel().getConduit(), channel));
+                channel.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(channel.getSourceChannel().getConduit(), channel, this));
             }
             Integer writeTimeout = channel.getOption(Options.WRITE_TIMEOUT);
-            if((writeTimeout == null || writeTimeout <= 0) && idleTimeout != null) {
+            if ((writeTimeout == null || writeTimeout <= 0) && idleTimeout != null) {
                 writeTimeout = idleTimeout;
-            } else if(writeTimeout != null && idleTimeout != null && idleTimeout > 0) {
+            } else if (writeTimeout != null && idleTimeout != null && idleTimeout > 0) {
                 writeTimeout = Math.min(writeTimeout, idleTimeout);
             }
             if (writeTimeout != null && writeTimeout > 0) {
-                channel.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(channel.getSinkChannel().getConduit(), channel));
+                channel.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(channel.getSinkChannel().getConduit(), channel, this));
             }
         } catch (IOException e) {
             IoUtils.safeClose(channel);

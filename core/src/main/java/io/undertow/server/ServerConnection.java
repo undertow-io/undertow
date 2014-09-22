@@ -19,6 +19,7 @@
 package io.undertow.server;
 
 import io.undertow.util.AbstractAttachable;
+
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -72,6 +73,17 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      * @param exchange The current exchange
      */
     public abstract HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange);
+
+    /**
+     * Invoked when the exchange is complete, and there is still data in the request channel. Some implementations
+     * (such as SPDY and HTTP2) have more efficient ways to drain the request than simply reading all data
+     * (e.g. RST_STREAM).
+     *
+     * After this method is invoked the stream will be drained normally.
+     *
+     * @param exchange           The current exchange.
+     */
+    public abstract void terminateRequestChannel(HttpServerExchange exchange);
 
     /**
      *
@@ -165,6 +177,10 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      */
     protected abstract StreamSinkConduit getSinkConduit(HttpServerExchange exchange, final StreamSinkConduit conduit);
 
+    /**
+     *
+     * @return true if this connection supports HTTP upgrade
+     */
     protected abstract boolean isUpgradeSupported();
 
     /**
@@ -173,6 +189,13 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
     protected abstract void exchangeComplete(HttpServerExchange exchange);
 
     protected abstract void setUpgradeListener(HttpUpgradeListener upgradeListener);
+
+    /**
+     * Callback that is invoked if the max entity size is updated.
+     *
+     * @param exchange The current exchange
+     */
+    protected abstract void maxEntitySizeUpdated(HttpServerExchange exchange);
 
     public interface CloseListener {
 

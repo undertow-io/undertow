@@ -32,6 +32,7 @@ public class ReferenceCountedPooled<T> implements Pooled<T> {
     @SuppressWarnings("unused")
     private volatile int referenceCount;
     private volatile boolean discard = false;
+    boolean mainFreed = false;
 
     private static final AtomicIntegerFieldUpdater<ReferenceCountedPooled> referenceCountUpdater = AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedPooled.class, "referenceCount");
 
@@ -51,6 +52,13 @@ public class ReferenceCountedPooled<T> implements Pooled<T> {
 
     @Override
     public void free() {
+        if(mainFreed) {
+            throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
+        }
+        mainFreed = true;
+        freeInternal();
+    }
+    public void freeInternal() {
         if(referenceCountUpdater.decrementAndGet(this) == 0) {
             if(discard) {
                 underlying.discard();
@@ -80,7 +88,7 @@ public class ReferenceCountedPooled<T> implements Pooled<T> {
             public void discard() {
                 if(!free) {
                     free = true;
-                    ReferenceCountedPooled.this.discard();
+                    ReferenceCountedPooled.this.freeInternal();
                 }
             }
 
@@ -89,7 +97,7 @@ public class ReferenceCountedPooled<T> implements Pooled<T> {
                 //make sure that a given view can only be freed once
                 if(!free) {
                     free = true;
-                    ReferenceCountedPooled.this.free();
+                    ReferenceCountedPooled.this.freeInternal();
                 }
             }
 

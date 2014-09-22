@@ -199,4 +199,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10051, value = "Deployment %s has stopped")
     ServletException deploymentStopped(String deployment);
+
+    @Message(id = 10052, value = "Header name was null")
+    NullPointerException headerNameWasNull();
 }

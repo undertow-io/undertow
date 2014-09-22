@@ -40,6 +40,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
+import io.undertow.servlet.core.ManagedServlet;
 
 import static javax.servlet.annotation.ServletSecurity.TransportGuarantee.CONFIDENTIAL;
 
@@ -49,10 +50,12 @@ import static javax.servlet.annotation.ServletSecurity.TransportGuarantee.CONFID
 public class ServletRegistrationImpl implements ServletRegistration, ServletRegistration.Dynamic {
 
     private final ServletInfo servletInfo;
+    private final ManagedServlet managedServlet;
     private final Deployment deployment;
 
-    public ServletRegistrationImpl(final ServletInfo servletInfo, final Deployment deployment) {
+    public ServletRegistrationImpl(final ServletInfo servletInfo, ManagedServlet managedServlet, final Deployment deployment) {
         this.servletInfo = servletInfo;
+        this.managedServlet = managedServlet;
         this.deployment = deployment;
     }
 
@@ -111,6 +114,7 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
     @Override
     public void setMultipartConfig(final MultipartConfigElement multipartConfig) {
         servletInfo.setMultipartConfig(multipartConfig);
+        managedServlet.setupMultipart(deployment.getServletContext());
     }
 
     @Override

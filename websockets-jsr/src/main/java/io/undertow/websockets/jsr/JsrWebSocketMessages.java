@@ -136,4 +136,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3034, value = "Server provided extension %s which was not in client supported extensions %s")
     IOException extensionWasNotPresentInClientHandshake(String e, List<WebSocketExtension> supportedExtensions);
+
+    @Message(id = 3035, value = "Connection timed out")
+    IOException connectionTimedOut();
 }

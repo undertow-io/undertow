@@ -18,6 +18,8 @@
 
 package io.undertow.websockets.jsr;
 
+import io.undertow.servlet.api.ClassIntrospecter;
+import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.util.DefaultClassIntrospector;
@@ -49,6 +51,8 @@ public class UndertowContainerProvider extends ContainerProvider {
 
     private static volatile WebSocketContainer defaultContainer;
     private static volatile boolean defaultContainerDisabled = false;
+
+    private static final SwitchableClassIntrospector defaultIntrospector = new SwitchableClassIntrospector();
 
     @Override
     protected WebSocketContainer getContainer() {
@@ -85,7 +89,7 @@ public class UndertowContainerProvider extends ContainerProvider {
                     //todo: what options should we use here?
                     XnioWorker worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
                     Pool<ByteBuffer> buffers = new ByteBufferSlicePool(1024, 10240);
-                    defaultContainer = new ServerWebSocketContainer(DefaultClassIntrospector.INSTANCE, UndertowContainerProvider.class.getClassLoader(), worker, buffers, new CompositeThreadSetupAction(Collections.<ThreadSetupAction>emptyList()), false);
+                    defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), worker, buffers, new CompositeThreadSetupAction(Collections.<ThreadSetupAction>emptyList()), false);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -108,10 +112,32 @@ public class UndertowContainerProvider extends ContainerProvider {
         webSocketContainers.remove(classLoader);
     }
 
+    public void setDefaultClassIntrospector(ClassIntrospecter classIntrospector) {
+        if(classIntrospector == null) {
+            throw new IllegalArgumentException();
+        }
+        defaultIntrospector.setIntrospecter(classIntrospector);
+    }
+
     public static void disableDefaultContainer() {
         if(System.getSecurityManager() != null) {
             AccessController.checkPermission(PERMISSION);
         }
         defaultContainerDisabled = true;
+    }
+
+
+    private static class SwitchableClassIntrospector implements ClassIntrospecter {
+
+        private volatile ClassIntrospecter introspecter = DefaultClassIntrospector.INSTANCE;
+
+        @Override
+        public <T> InstanceFactory<T> createInstanceFactory(Class<T> clazz) throws NoSuchMethodException {
+            return introspecter.createInstanceFactory(clazz);
+        }
+
+        public void setIntrospecter(ClassIntrospecter introspecter) {
+            this.introspecter = introspecter;
+        }
     }
 }

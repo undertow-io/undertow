@@ -23,6 +23,7 @@ import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
 
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
@@ -172,5 +173,35 @@ public class Servlets {
 
     public static LoginConfig loginConfig(String mechanismName, final String realmName) {
         return new LoginConfig(mechanismName, realmName);
+    }
+
+    /**
+     * Create an ErrorPage instance for a given exception type
+     * @param location      The location to redirect to
+     * @param exceptionType The exception type
+     * @return              The error page definition
+     */
+    public static ErrorPage errorPage(String location, Class<? extends Throwable> exceptionType) {
+        return new ErrorPage(location, exceptionType);
+    }
+
+    /**
+     * Create an ErrorPage instance for a given response code
+     * @param location      The location to redirect to
+     * @param statusCode    The status code
+     * @return              The error page definition
+     */
+    public static ErrorPage errorPage(String location, int statusCode) {
+        return new ErrorPage(location, statusCode);
+    }
+
+    /**
+     * Create an ErrorPage that corresponds to the default error page
+     *
+     * @param location The error page location
+     * @return The error page instance
+     */
+    public static ErrorPage errorPage(String location) {
+        return new ErrorPage(location);
     }
 }

@@ -18,12 +18,16 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Handler that sets the peer address to the value of the X-Forwarded-For header.
@@ -52,14 +56,66 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             } else {
                 value = forwardedFor.substring(0, index);
             }
-            InetAddress address = InetAddress.getByName(value);
             //we have no way of knowing the port
-            exchange.setSourceAddress(new InetSocketAddress(address, 0));
+            exchange.setSourceAddress(InetSocketAddress.createUnresolved(value, 0));
         }
         String forwardedProto = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PROTO);
         if (forwardedProto != null) {
             exchange.setRequestScheme(forwardedProto);
         }
+        String forwardedHost = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_HOST);
+        String forwardedPort = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PORT);
+        if (forwardedHost != null) {
+            int index = forwardedHost.indexOf(',');
+            final String value;
+            if (index == -1) {
+                value = forwardedHost;
+            } else {
+                value = forwardedHost.substring(0, index);
+            }
+            int port = 0;
+            if(forwardedPort != null) {
+                port = Integer.parseInt(forwardedPort);
+            }
+            exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
+        }
         next.handleRequest(exchange);
+    }
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "proxy-peer-address";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper();
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new ProxyPeerAddressHandler(handler);
+        }
     }
 }

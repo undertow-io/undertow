@@ -51,7 +51,7 @@ public class HttpContinue {
      * @return <code>true</code> if the server needs to send a continue response
      */
     public static boolean requiresContinueResponse(final HttpServerExchange exchange) {
-        if (!exchange.isHttp11()) {
+        if (!exchange.isHttp11() || exchange.isResponseStarted()) {
             return false;
         }
         if (exchange.getConnection() instanceof HttpServerConnection) {
@@ -161,13 +161,12 @@ public class HttpContinue {
         try {
             responseChannel.shutdownWrites();
             if (!responseChannel.flush()) {
-                exchange.dispatch();
                 responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
                         new ChannelListener<StreamSinkChannel>() {
                             @Override
                             public void handleEvent(StreamSinkChannel channel) {
-                                callback.onComplete(exchange, null);
                                 channel.suspendWrites();
+                                callback.onComplete(exchange, null);
                             }
                         }, new ChannelExceptionHandler<Channel>() {
                             @Override

@@ -22,10 +22,9 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.protocol.http.HttpAttachments;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.SpdyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -51,8 +50,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
-@SpdyIgnore
+@HttpOneOnly
 public class ChunkedResponseTrailersTestCase {
 
     private static final String MESSAGE = "My HTTP Request!";

@@ -23,6 +23,9 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +33,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.websocket.Decoder;
 import javax.websocket.DeploymentException;
 import javax.websocket.Encoder;
@@ -53,7 +55,7 @@ public class EncodingFactory {
     /**
      * An encoding factory that can deal with primitive types.
      */
-    public static final EncodingFactory DEFAULT = new EncodingFactory(Collections.EMPTY_MAP, Collections.EMPTY_MAP,Collections.EMPTY_MAP,Collections.EMPTY_MAP);
+    public static final EncodingFactory DEFAULT = new EncodingFactory(Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
 
     private final Map<Class<?>, List<InstanceFactory<? extends Encoder>>> binaryEncoders;
     private final Map<Class<?>, List<InstanceFactory<? extends Decoder>>> binaryDecoders;
@@ -94,7 +96,7 @@ public class EncodingFactory {
 
     public Encoding createEncoding(final EndpointConfig endpointConfig) {
         try {
-            Map<Class<?>, List<InstanceHandle<? extends Encoder>>> binaryEncoders = this.binaryEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() :  new HashMap<Class<?>, List<InstanceHandle<? extends Encoder>>>();
+            Map<Class<?>, List<InstanceHandle<? extends Encoder>>> binaryEncoders = this.binaryEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Encoder>>>();
             Map<Class<?>, List<InstanceHandle<? extends Decoder>>> binaryDecoders = this.binaryDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Decoder>>>();
             Map<Class<?>, List<InstanceHandle<? extends Encoder>>> textEncoders = this.textEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Encoder>>>();
             Map<Class<?>, List<InstanceHandle<? extends Decoder>>> textDecoders = this.textDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Decoder>>>();
@@ -179,7 +181,7 @@ public class EncodingFactory {
             } else if (Decoder.Text.class.isAssignableFrom(decoder)) {
                 try {
                     Method method = decoder.getMethod("decode", String.class);
-                    final Class<?> type = method.getReturnType();
+                    final Class<?> type = resolveReturnType(method, decoder);
                     List<InstanceFactory<? extends Decoder>> list = textDecoders.get(type);
                     if (list == null) {
                         textDecoders.put(type, list = new ArrayList<>());
@@ -237,6 +239,49 @@ public class EncodingFactory {
             }
         }
         return new EncodingFactory(binaryEncoders, binaryDecoders, textEncoders, textDecoders);
+    }
+
+    private static Class<?> resolveReturnType(Method method, Class<? extends Decoder> decoder) {
+        Type genericReturnType = method.getGenericReturnType();
+        if (genericReturnType instanceof Class) {
+            return (Class<?>) genericReturnType;
+        } else if (genericReturnType instanceof TypeVariable) {
+            TypeVariable type = ((TypeVariable) genericReturnType);
+            List<Class> classes = new ArrayList<>();
+            Class c = decoder;
+            while (c != method.getDeclaringClass() && c != null) {
+                classes.add(c);
+                c = c.getSuperclass();
+            }
+            Collections.reverse(classes);
+
+            String currentName = type.getName();
+            int currentPos = -1;
+            for (Class clz : classes) {
+                for (int i = 0; i < clz.getSuperclass().getTypeParameters().length; ++i) {
+                    TypeVariable<? extends Class<?>> param = clz.getSuperclass().getTypeParameters()[i];
+                    if (param.getName().equals(currentName)) {
+                        currentPos = i;
+                        break;
+                    }
+                }
+                Type gs = clz.getGenericSuperclass();
+                if (gs instanceof ParameterizedType) {
+                    ParameterizedType pt = (ParameterizedType) gs;
+                    Type at = pt.getActualTypeArguments()[currentPos];
+                    if (at instanceof Class) {
+                        return (Class<?>) at;
+                    } else if (at instanceof TypeVariable) {
+                        TypeVariable tv = (TypeVariable) at;
+                        currentName = tv.getName();
+                    }
+                }
+            }
+            //todo: should we throw an exception here? It should never actually be reached
+            return method.getReturnType();
+        } else {
+            return method.getReturnType();
+        }
     }
 
     private static <T> InstanceFactory<? extends T> createInstanceFactory(final ClassIntrospecter classIntrospecter, final Class<? extends T> decoder) throws DeploymentException {

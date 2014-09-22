@@ -28,14 +28,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.util.CompletionLatchHandler;
-import io.undertow.util.FileUtils;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.After;
@@ -43,6 +35,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.CompletionLatchHandler;
+import io.undertow.util.FileUtils;
 
 /**
  * Tests writing the access log to a file
@@ -103,7 +103,7 @@ public class AccessLogFileTestCase {
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latchHandler.await();
             logReceiver.awaitWrittenForTest();
-            Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header single-val -\n", FileUtils.readFile(logFileName));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header single-val -\n", FileUtils.readFile(logFileName));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -182,12 +182,12 @@ public class AccessLogFileTestCase {
             latchHandler.await();
             latchHandler.reset();
             logReceiver.awaitWrittenForTest();
-            Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header v1\n", FileUtils.readFile(logFileName));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1\n", FileUtils.readFile(logFileName));
             logReceiver.rotate();
             logReceiver.awaitWrittenForTest();
             Assert.assertFalse(logFileName.exists());
             File firstLogRotate = new File(logDirectory, "server_" + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + ".log");
-            Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header v1\n", FileUtils.readFile(firstLogRotate));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1\n", FileUtils.readFile(firstLogRotate));
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.addHeader("test-header", "v2");
@@ -197,12 +197,12 @@ public class AccessLogFileTestCase {
             latchHandler.await();
             latchHandler.reset();
             logReceiver.awaitWrittenForTest();
-            Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header v2\n", FileUtils.readFile(logFileName));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2\n", FileUtils.readFile(logFileName));
             logReceiver.rotate();
             logReceiver.awaitWrittenForTest();
             Assert.assertFalse(logFileName.exists());
             File secondLogRotate = new File(logDirectory, "server_" + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "-1.log");
-            Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header v2\n", FileUtils.readFile(secondLogRotate));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2\n", FileUtils.readFile(secondLogRotate));
 
         } finally {
             client.getConnectionManager().shutdown();

@@ -29,22 +29,48 @@ public class SendFrameHeader {
 
     private final int reminingInBuffer;
     private final Pooled<ByteBuffer> byteBuffer;
+    private final boolean anotherFrameRequired;
+
+    public SendFrameHeader(int reminingInBuffer, Pooled<ByteBuffer> byteBuffer, boolean anotherFrameRequired) {
+        this.byteBuffer = byteBuffer;
+        this.reminingInBuffer = reminingInBuffer;
+        this.anotherFrameRequired = anotherFrameRequired;
+    }
 
     public SendFrameHeader(int reminingInBuffer, Pooled<ByteBuffer> byteBuffer) {
         this.byteBuffer = byteBuffer;
         this.reminingInBuffer = reminingInBuffer;
+        this.anotherFrameRequired = false;
     }
 
     public SendFrameHeader(Pooled<ByteBuffer> byteBuffer) {
         this.byteBuffer = byteBuffer;
         this.reminingInBuffer = 0;
+        this.anotherFrameRequired = false;
     }
 
+    /**
+     *
+     * @return The header byte buffer
+     */
     public Pooled<ByteBuffer> getByteBuffer() {
         return byteBuffer;
     }
 
-    public int getReminingInBuffer() {
+    /**
+     *
+     * @return
+     */
+    public int getRemainingInBuffer() {
         return reminingInBuffer;
+    }
+
+    /**
+     * Returns true if another frame is required after this one. Note that returning false
+     * does not mean that this is the last frame. This is used for protocols that require a trailing packet
+     * after all data has been written.
+     */
+    public boolean isAnotherFrameRequired() {
+        return anotherFrameRequired;
     }
 }

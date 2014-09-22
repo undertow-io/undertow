@@ -25,6 +25,7 @@ import javax.servlet.ServletException;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.TestClassIntrospector;
@@ -33,6 +34,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -77,6 +79,11 @@ public class AsyncListenerOnErrorTest {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .addServlets(f, a1, a2, a3);
+
+        builder.setExceptionHandler(LoggingExceptionHandler.builder()
+                .add(IllegalStateException.class, "io.undertow", Logger.Level.DEBUG)
+                .build());
+
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

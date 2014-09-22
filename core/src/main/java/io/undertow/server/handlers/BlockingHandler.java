@@ -18,8 +18,14 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * A {@link HttpHandler} that initiates a blocking request. If the thread is currently running
@@ -58,5 +64,42 @@ public final class BlockingHandler implements HttpHandler {
     public BlockingHandler setRootHandler(final HttpHandler rootHandler) {
         this.handler = rootHandler;
         return this;
+    }
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "blocking";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper();
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new BlockingHandler(handler);
+        }
     }
 }

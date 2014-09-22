@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>1.1.0.Beta4-SNAPSHOT</version>
+        <version>1.1.0.Beta9-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-core</artifactId>
-    <version>1.1.0.Beta4-SNAPSHOT</version>
+    <version>1.1.0.Beta9-SNAPSHOT</version>
 
     <name>Undertow Core</name>
 
@@ -39,6 +39,8 @@
         <ajp>false</ajp>
         <proxy>false</proxy>
         <dump>false</dump>
+        <https>false</https>
+        <test.ipv6>false</test.ipv6>
     </properties>
 
     <dependencies>
@@ -72,14 +74,8 @@
         </dependency>
 
         <dependency>
-            <groupId>org.mortbay.jetty.npn</groupId>
-            <artifactId>npn-boot</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.eclipse.jetty.npn</groupId>
-            <artifactId>npn-api</artifactId>
+            <groupId>org.eclipse.jetty.alpn</groupId>
+            <artifactId>alpn-api</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -191,12 +187,15 @@
                         <test.ajp>${ajp}</test.ajp>
                         <test.proxy>${proxy}</test.proxy>
                         <test.dump>${dump}</test.dump>
+                        <test.https>${https}</test.https>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
+                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                     </systemPropertyVariables>
-                    <argLine>-Xbootclasspath/p:${org.mortbay.jetty.npn:npn-boot:jar} ${jacoco.agent.argLine}</argLine>
+                    <argLine>${alpn-boot-string} ${jacoco.agent.argLine}</argLine>
                 </configuration>
             </plugin>
         </plugins>
@@ -227,6 +226,8 @@
                                         <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
                                 </configuration>
@@ -249,8 +250,106 @@
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-ajp-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>proxy-spdy</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <systemPropertyVariables>
+                                        <test.proxy>true</test.proxy>
+                                        <test.spdy>true</test.spdy>
+                                        <test.dump>${dump}</test.dump>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-spdy-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>proxy-https</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <systemPropertyVariables>
+                                        <test.proxy>true</test.proxy>
+                                        <test.https>true</test.https>
+                                        <test.dump>${dump}</test.dump>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>proxy-h2</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <systemPropertyVariables>
+                                        <test.proxy>true</test.proxy>
+                                        <test.h2>true</test.h2>
+                                        <test.dump>${dump}</test.dump>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-h2-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>proxy-h2c</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <systemPropertyVariables>
+                                        <test.proxy>true</test.proxy>
+                                        <test.h2c>true</test.h2c>
+                                        <test.dump>${dump}</test.dump>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-h2c-reports</reportsDirectory>
                                 </configuration>
                             </execution>
                         </executions>

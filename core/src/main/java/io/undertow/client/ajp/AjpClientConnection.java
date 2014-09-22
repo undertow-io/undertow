@@ -18,33 +18,13 @@
 
 package io.undertow.client.ajp;
 
-import io.undertow.UndertowLogger;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.ClientResponse;
-import io.undertow.client.UndertowClientMessages;
-import io.undertow.conduits.ConduitListener;
-import io.undertow.util.AbstractAttachable;
-import io.undertow.util.Protocols;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.Option;
-import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
-import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.PushBackStreamSourceConduit;
-import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.StreamSourceConduit;
+import static io.undertow.util.Headers.CLOSE;
+import static io.undertow.util.Headers.CONNECTION;
+import static io.undertow.util.Headers.CONTENT_LENGTH;
+import static io.undertow.util.Headers.TRANSFER_ENCODING;
+import static io.undertow.util.Headers.UPGRADE;
+import static org.xnio.Bits.anyAreSet;
+import static org.xnio.IoUtils.safeClose;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -52,45 +32,58 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.Option;
+import org.xnio.OptionMap;
+import org.xnio.Pool;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.channels.Channels;
+import org.xnio.channels.StreamSinkChannel;
 
-import static io.undertow.client.UndertowClientMessages.MESSAGES;
-import static io.undertow.util.Headers.CLOSE;
-import static io.undertow.util.Headers.CONNECTION;
-import static io.undertow.util.Headers.CONTENT_LENGTH;
-import static io.undertow.util.Headers.TRANSFER_ENCODING;
-import static io.undertow.util.Headers.UPGRADE;
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreSet;
-import static org.xnio.IoUtils.safeClose;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientExchange;
+import io.undertow.client.ClientRequest;
+import io.undertow.client.ClientResponse;
+import io.undertow.client.UndertowClientMessages;
+import io.undertow.protocols.ajp.AbstractAjpClientStreamSourceChannel;
+import io.undertow.protocols.ajp.AjpClientChannel;
+import io.undertow.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
+import io.undertow.protocols.ajp.AjpClientResponseStreamSourceChannel;
+import io.undertow.util.AbstractAttachable;
+import io.undertow.util.Protocols;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 class AjpClientConnection extends AbstractAttachable implements Closeable, ClientConnection {
 
-    public final ConduitListener<StreamSinkConduit> requestFinishListener = new ConduitListener<StreamSinkConduit>() {
+    public final ChannelListener<AjpClientRequestClientStreamSinkChannel> requestFinishListener = new ChannelListener<AjpClientRequestClientStreamSinkChannel>() {
         @Override
-        public void handleEvent(StreamSinkConduit channel) {
+        public void handleEvent(AjpClientRequestClientStreamSinkChannel channel) {
             currentRequest.terminateRequest();
         }
     };
-    public final ConduitListener<StreamSourceConduit> responseFinishedListener = new ConduitListener<StreamSourceConduit>() {
+    public final ChannelListener<AjpClientResponseStreamSourceChannel> responseFinishedListener = new ChannelListener<AjpClientResponseStreamSourceChannel>() {
         @Override
-        public void handleEvent(StreamSourceConduit channel) {
+        public void handleEvent(AjpClientResponseStreamSourceChannel channel) {
             currentRequest.terminateResponse();
         }
     };
 
     private final Deque<AjpClientExchange> pendingQueue = new ArrayDeque<>();
     private AjpClientExchange currentRequest;
-    private AjpResponseBuilder pendingResponse;
 
     private final OptionMap options;
-    private final StreamConnection connection;
-    private final PushBackStreamSourceConduit pushBackStreamSourceConduit;
+    private final AjpClientChannel connection;
 
     private final Pool<ByteBuffer> bufferPool;
-    private final StreamSinkConduit originalSinkConduit;
 
     private static final int UPGRADED = 1 << 28;
     private static final int UPGRADE_REQUESTED = 1 << 29;
@@ -100,22 +93,21 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private int state;
 
     private final ChannelListener.SimpleSetter<AjpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
-    private final ClientReadListener clientReadListener = new ClientReadListener();
+    private final ClientReceiveListener clientReceiveListener = new ClientReceiveListener();
 
-    AjpClientConnection(final StreamConnection connection, final OptionMap options, final Pool<ByteBuffer> bufferPool) {
+    AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final Pool<ByteBuffer> bufferPool) {
         this.options = options;
         this.connection = connection;
-        this.pushBackStreamSourceConduit = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
-        this.connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
         this.bufferPool = bufferPool;
-        this.originalSinkConduit = connection.getSinkChannel().getConduit();
 
-        connection.getCloseSetter().set(new ChannelListener<StreamConnection>() {
-
-            public void handleEvent(StreamConnection channel) {
+        connection.addCloseTask(new ChannelListener<AjpClientChannel>() {
+            @Override
+            public void handleEvent(AjpClientChannel channel) {
                 ChannelListeners.invokeChannelListener(AjpClientConnection.this, closeSetter.get());
             }
         });
+        connection.getReceiveSetter().set(new ClientReceiveListener());
+        connection.resumeReceives();
     }
 
     @Override
@@ -127,10 +119,6 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     @Override
     public SocketAddress getPeerAddress() {
         return connection.getPeerAddress();
-    }
-
-    StreamConnection getConnection() {
-        return connection;
     }
 
     @Override
@@ -205,7 +193,6 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     private void initiateRequest(AjpClientExchange AjpClientExchange) {
         currentRequest = AjpClientExchange;
-        pendingResponse = new AjpResponseBuilder();
         ClientRequest request = AjpClientExchange.getRequest();
 
         String connectionString = request.getRequestHeaders().getFirst(CONNECTION);
@@ -220,13 +207,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             state |= UPGRADE_REQUESTED;
         }
 
-        //setup the client request conduits
-        final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
-        sourceChannel.setReadListener(clientReadListener);
-        sourceChannel.resumeReads();
-
         long length = 0;
-        ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
         String fixedLengthString = request.getRequestHeaders().getFirst(CONTENT_LENGTH);
         String transferEncodingString = request.getRequestHeaders().getLast(TRANSFER_ENCODING);
 
@@ -235,9 +216,9 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         } else if (transferEncodingString != null) {
             length = -1;
         }
-        final AjpClientRequestConduit ajpClientRequestConduit = new AjpClientRequestConduit(originalSinkConduit, bufferPool, currentRequest, requestFinishListener, length);
-        currentRequest.setAjpClientRequestConduit(ajpClientRequestConduit);
-        sinkChannel.setConduit(ajpClientRequestConduit);
+
+        AjpClientRequestClientStreamSinkChannel sinkChannel = connection.sendRequest(request.getMethod(), request.getPath(), request.getProtocol(), request.getRequestHeaders(), request, requestFinishListener);
+        currentRequest.setRequestChannel(sinkChannel);
 
         AjpClientExchange.invokeReadReadyCallback(AjpClientExchange);
         if (length == 0) {
@@ -246,38 +227,22 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             try {
                 sinkChannel.shutdownWrites();
                 if (!sinkChannel.flush()) {
-                    sinkChannel.setWriteListener(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<ConduitStreamSinkChannel>() {
-                        @Override
-                        public void handleException(ConduitStreamSinkChannel channel, IOException exception) {
-                            handleError(exception);
-                        }
-                    }));
-                }
-            } catch (IOException e) {
-                handleError(e);
-            }
-        } else if (!sinkChannel.isWriteResumed()) {
-            try {
-                //TODO: this needs some more thought
-                if (!sinkChannel.flush()) {
-                    sinkChannel.setWriteListener(new ChannelListener<ConduitStreamSinkChannel>() {
-                        @Override
-                        public void handleEvent(ConduitStreamSinkChannel channel) {
-                            try {
-                                if (channel.flush()) {
-                                    channel.suspendWrites();
-                                }
-                            } catch (IOException e) {
-                                handleError(e);
-                            }
-                        }
-                    });
-                    sinkChannel.resumeWrites();
+                    handleFailedFlush(sinkChannel);
                 }
             } catch (IOException e) {
                 handleError(e);
             }
         }
+    }
+
+    private void handleFailedFlush(AjpClientRequestClientStreamSinkChannel sinkChannel) {
+        sinkChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<StreamSinkChannel>() {
+            @Override
+            public void handleException(StreamSinkChannel channel, IOException exception) {
+                handleError(exception);
+            }
+        }));
+        sinkChannel.resumeWrites();
     }
 
     private void handleError(IOException exception) {
@@ -286,14 +251,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     }
 
     public StreamConnection performUpgrade() throws IOException {
-
-        // Upgrade the connection
-        // Set the upgraded flag already to prevent new requests after this one
-        if (allAreSet(state, UPGRADED | CLOSE_REQ | CLOSED)) {
-            throw new IOException(UndertowClientMessages.MESSAGES.connectionClosed());
-        }
-        state |= UPGRADED;
-        return connection;
+        throw UndertowMessages.MESSAGES.upgradeNotSupported();
     }
 
     public void close() throws IOException {
@@ -308,28 +266,18 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
      * Notification that the current request is finished
      */
     public void requestDone() {
-
-        connection.getSinkChannel().setConduit(originalSinkConduit);
-        connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
-        connection.getSinkChannel().suspendWrites();
-        connection.getSinkChannel().setWriteListener(null);
+        currentRequest = null;
 
         if (anyAreSet(state, CLOSE_REQ)) {
-            currentRequest = null;
             safeClose(connection);
         } else if (anyAreSet(state, UPGRADE_REQUESTED)) {
-            connection.getSourceChannel().suspendReads();
-            currentRequest = null;
+            safeClose(connection); //we don't support upgrade, just close the connection to be safe
             return;
         }
-        currentRequest = null;
 
         AjpClientExchange next = pendingQueue.poll();
 
-        if (next == null) {
-            connection.getSourceChannel().setReadListener(clientReadListener);
-            connection.getSourceChannel().resumeReads();
-        } else {
+        if (next != null) {
             initiateRequest(next);
         }
     }
@@ -338,219 +286,36 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         state |= CLOSE_REQ;
     }
 
-    public void installReadBodyListener() {
-        connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
-        connection.getSourceChannel().setReadListener(new ResponseReceivedReadListener());
-        connection.getSourceChannel().resumeReads();
-    }
 
-    class ClientReadListener implements ChannelListener<StreamSourceChannel> {
+    class ClientReceiveListener implements ChannelListener<AjpClientChannel> {
 
-        public void handleEvent(StreamSourceChannel channel) {
-
-            AjpResponseBuilder builder = pendingResponse;
-            final Pooled<ByteBuffer> pooled = bufferPool.allocate();
-            final ByteBuffer buffer = pooled.getResource();
-            buffer.clear();
-            boolean free = true;
-
+        public void handleEvent(AjpClientChannel channel) {
             try {
-                if (builder == null) {
-                    //read ready when no request pending
-                    buffer.clear();
-                    try {
-                        int res = channel.read(buffer);
-                        if (res == -1) {
-                            UndertowLogger.CLIENT_LOGGER.debugf("Connection to %s was closed by the target server", connection.getPeerAddress());
-                            safeClose(AjpClientConnection.this);
-                        } else if (res != 0) {
-                            UndertowLogger.CLIENT_LOGGER.debugf("Target server %s sent unexpected data when no request pending, closing connection", connection.getPeerAddress());
-                            safeClose(AjpClientConnection.this);
-                        }
-                        //otherwise it is a spurious notification
-                    } catch (IOException e) {
-                        if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException");
-                        }
-                        safeClose(connection);
-                    }
+                AbstractAjpClientStreamSourceChannel result = channel.receive();
+                if(result == null) {
                     return;
                 }
-                final AjpResponseParseState state = builder.getParseState();
-                int res;
-                do {
-                    try {
-                        res = channel.read(buffer);
-                    } catch (IOException e) {
-                        if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException");
-                        }
-                        safeClose(channel);
-                        currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
-                        return;
-                    }
 
-                    buffer.flip();
-
-                    if (res == 0 && !buffer.hasRemaining()) {
-                        if (!channel.isReadResumed()) {
-                            channel.getReadSetter().set(this);
-                            channel.resumeReads();
-                        }
-                        return;
-                    } else if (res == -1 && !buffer.hasRemaining()) {
-                        channel.suspendReads();
-                        safeClose(AjpClientConnection.this);
-                        try {
-                            final StreamSinkChannel requestChannel = connection.getSinkChannel();
-                            requestChannel.shutdownWrites();
-                            // will return false if there's a response queued ahead of this one, so we'll set up a listener then
-                            if (!requestChannel.flush()) {
-                                requestChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
-                                requestChannel.resumeWrites();
-                            }
-                            // Cancel the current active request
-                            currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
-                        } catch (IOException e) {
-                            if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
-                                UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
-                            }
-                            // Cancel the current active request
-                            currentRequest.setFailed(e);
-                            safeClose(channel);
-                            return;
-                        }
-                        return;
-                    }
-
-                    AjpResponseParser.INSTANCE.parse(buffer, state, builder);
-
-                    //this is a bit hacky
-                    //if the state=6 it is a ready body chunk response and not headers
-                    //in which case we notify the conduit and reset the state
-                    if (state.isComplete()) {
-                        if (state.prefix == 6) {
-                            currentRequest.getAjpClientRequestConduit().setBodyChunkRequested(state.currentIntegerPart);
-                            state.reset();
-                            buffer.compact();
-                        } else if (buffer.hasRemaining()) {
-                            free = false;
-                            pushBackStreamSourceConduit.pushBack(pooled);
-                        }
+                if(result instanceof AjpClientResponseStreamSourceChannel) {
+                    AjpClientResponseStreamSourceChannel response = (AjpClientResponseStreamSourceChannel) result;
+                    response.setFinishListener(responseFinishedListener);
+                    ClientResponse cr = new ClientResponse(response.getStatusCode(), response.getReasonPhrase(), currentRequest.getRequest().getProtocol(), response.getHeaders());
+                    if (response.getStatusCode() == 100) {
+                        currentRequest.setContinueResponse(cr);
                     } else {
-                        buffer.clear();
+                        currentRequest.setResponseChannel(response);
+                        currentRequest.setResponse(cr);
                     }
-
-                } while (!state.isComplete());
-
-                final ClientResponse response = builder.build();
-
-                //check if an updated worked
-                if (anyAreSet(AjpClientConnection.this.state, UPGRADE_REQUESTED)) {
-                    String connectionString = response.getResponseHeaders().getFirst(CONNECTION);
-                    if (connectionString == null || !UPGRADE.equalToString(connectionString)) {
-                        //just unset the upgrade requested flag
-                        AjpClientConnection.this.state &= ~UPGRADE_REQUESTED;
-                    }
-                }
-
-                if (builder.getStatusCode() == 100) {
-                    pendingResponse = new AjpResponseBuilder();
-                    currentRequest.setContinueResponse(response);
                 } else {
-                    connection.getSourceChannel().setConduit(new AjpClientResponseConduit(connection.getSourceChannel().getConduit(), AjpClientConnection.this, currentRequest.getAjpClientRequestConduit(), responseFinishedListener));
-                    channel.getReadSetter().set(null);
-                    channel.suspendReads();
-                    pendingResponse = null;
-                    currentRequest.setResponse(response);
+                    //TODO: ping, pong ETC
+                    Channels.drain(result, Long.MAX_VALUE);
                 }
 
-
             } catch (Exception e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
                 safeClose(connection);
-                currentRequest.setFailed( e instanceof  IOException ? (IOException) e : new IOException(e));
-            } finally {
-                if (free) pooled.free();
+                currentRequest.setFailed(e instanceof IOException ? (IOException) e : new IOException(e));
             }
         }
     }
-
-    /**
-     * Listener that only listens for read body chunk messages, as even after the response is done the server
-     * can still be reading the request.
-     */
-    class ResponseReceivedReadListener implements ChannelListener<StreamSourceChannel> {
-
-        private AjpResponseBuilder builder = new AjpResponseBuilder();
-
-        public void handleEvent(StreamSourceChannel channel) {
-
-            final Pooled<ByteBuffer> pooled = bufferPool.allocate();
-            final ByteBuffer buffer = pooled.getResource();
-            buffer.clear();
-            boolean free = true;
-
-            try {
-                final AjpResponseParseState state = builder.getParseState();
-                int res;
-                do {
-                    try {
-                        res = channel.read(buffer);
-                    } catch (IOException e) {
-                        if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException");
-                        }
-                        safeClose(channel);
-                        currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
-                        return;
-                    }
-
-                    buffer.flip();
-
-                    if (res == 0 && !buffer.hasRemaining()) {
-                        if (!channel.isReadResumed()) {
-                            channel.getReadSetter().set(this);
-                            channel.resumeReads();
-                        }
-                        return;
-                    } else if (res == -1 && !buffer.hasRemaining()) {
-                        channel.suspendReads();
-                        safeClose(connection);
-                        currentRequest.setFailed(new IOException(UndertowClientMessages.MESSAGES.connectionClosed()));
-                        return;
-                    }
-
-                    AjpResponseParser.INSTANCE.parse(buffer, state, builder);
-
-                    //this is a bit hacky
-                    //if the state=6 it is a ready body chunk response and not headers
-                    //in which case we notify the conduit and reset the state
-                    if (state.isComplete()) {
-                        if (state.prefix == 6) {
-                            currentRequest.getAjpClientRequestConduit().setBodyChunkRequested(state.currentIntegerPart);
-                            state.reset();
-                            buffer.compact();
-                        } else {
-                            //todo: ping?
-                            UndertowLogger.CLIENT_LOGGER.debugf("Received invalid AJP response code %s with no request active, closing connection", state.prefix);
-                            //invalid, at this point read body chunk is all the server should be sending
-                            safeClose(connection);
-                            currentRequest.setFailed(UndertowClientMessages.MESSAGES.receivedInvalidChunk(state.prefix));
-                        }
-                    } else {
-                        buffer.clear();
-                    }
-
-                } while (!state.isComplete());
-
-            } catch (Exception e) {
-                UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
-                safeClose(connection);
-            } finally {
-                if (free) pooled.free();
-            }
-        }
-    }
-
 }

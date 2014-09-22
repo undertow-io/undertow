@@ -24,7 +24,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
-import io.undertow.servlet.ExceptionLog;
+import io.undertow.servlet.api.ExceptionHandler;
+import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.ApplicationListeners;
@@ -38,8 +39,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
-import org.jboss.logging.BasicLogger;
-import org.jboss.logging.Logger;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
@@ -75,6 +74,8 @@ import java.util.concurrent.Executor;
  */
 public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
+    private static final String HTTP2_UPGRADE_PREFIX = "h2";
+
     private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.servlet.CREATE_INITIAL_HANDLER");
 
     private final HttpHandler next;
@@ -88,6 +89,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     private final ServletPathMatches paths;
 
+    private final ExceptionHandler exceptionHandler;
+
     public ServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
         this.next = next;
         this.setupAction = setupAction;
@@ -99,6 +102,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             //we need to make sure this is not abused
             AccessController.checkPermission(PERMISSION);
         }
+        ExceptionHandler handler = servletContext.getDeployment().getDeploymentInfo().getExceptionHandler();
+        if(handler != null) {
+             this.exceptionHandler = handler;
+        } else {
+            this.exceptionHandler = LoggingExceptionHandler.DEFAULT;
+        }
     }
 
     @Override
@@ -109,7 +118,14 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             return;
         }
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
-        if (info.getType() == ServletPathMatch.Type.REDIRECT) {
+        //https://issues.jboss.org/browse/WFLY-3439
+        //if the request is an upgrade request then we don't want to redirect
+        //as there is a good chance the web socket client won't understand the redirect
+        //we make an exception for HTTP2 upgrade requests, as this would have already be handled at
+        //the connector level if it was going to be handled.
+        String upgradeString = exchange.getRequestHeaders().getFirst(Headers.UPGRADE);
+        boolean isUpgradeRequest = upgradeString != null && !upgradeString.startsWith(HTTP2_UPGRADE_PREFIX);
+        if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
             exchange.setResponseCode(302);
@@ -244,34 +260,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 //
             } catch (Throwable t) {
 
-                ExceptionLog log = t.getClass().getAnnotation(ExceptionLog.class);
-                if(log != null) {
-                    Logger.Level level = log.value();
-                    Logger.Level stackTraceLevel = log.stackTraceLevel();
-                    String category = log.category();
-                    BasicLogger logger = UndertowLogger.REQUEST_LOGGER;
-                    if(!category.isEmpty()) {
-                        logger = Logger.getLogger(category);
-                    }
-                    boolean stackTrace = true;
-                    if(stackTraceLevel.ordinal() > level.ordinal()) {
-                        if(!logger.isEnabled(stackTraceLevel)) {
-                            stackTrace = false;
-                        }
-                    }
-                    if(stackTrace) {
-                        logger.logf(level, t, "Exception handling request to %s", exchange.getRequestURI());
-                    } else {
-                        logger.logf(level, "Exception handling request to %s: %s", exchange.getRequestURI(), t.getMessage());
-                    }
-                } else if(t instanceof IOException) {
-                    //we log IOExceptions at a lower level
-                    //because they can be easily caused by malicious remote clients in at attempt to DOS the server by filling the logs
-                    UndertowLogger.REQUEST_IO_LOGGER.debugf(t, "Exception handling request to %s", exchange.getRequestURI());
-                } else {
-                    UndertowLogger.REQUEST_LOGGER.exceptionHandlingRequest(t, exchange.getRequestURI());
-                }
-                if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
+                //by default this will just log the exception
+                boolean handled = exceptionHandler.handleThrowable(exchange, request, response, t);
+
+                if(handled) {
+                    exchange.endExchange();
+                } else if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
                     exchange.unDispatch();
                     servletRequestContext.getOriginalRequest().getAsyncContextInternal().handleError(t);
                 } else {
@@ -351,6 +345,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         @Override
         public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
             throw new IllegalStateException();
+        }
+
+        @Override
+        public void terminateRequestChannel(HttpServerExchange exchange) {
+
         }
 
         @Override
@@ -458,6 +457,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         @Override
         protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
             //ignore
+        }
+
+        @Override
+        protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
         }
     }
 

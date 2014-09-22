@@ -23,12 +23,12 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>14</version>
+        <version>15</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parent</artifactId>
-    <version>1.1.0.Beta4-SNAPSHOT</version>
+    <version>1.1.0.Beta9-SNAPSHOT</version>
 
     <name>Undertow</name>
     <description>Undertow</description>
@@ -50,9 +50,6 @@
     </scm>
 
     <properties>
-        <!-- Build configuration -->
-        <maven.compiler.source>1.7</maven.compiler.source>
-        <maven.compiler.target>1.7</maven.compiler.target>
         <!--
             Dependency versions. Please keep alphabetical.
 
@@ -80,7 +77,7 @@
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.0.0.Final</version.org.jboss.spec.javax.websockets>
-        <version.xnio>3.3.0.Beta1</version.xnio>
+        <version.xnio>3.3.0.Beta3</version.xnio>
         
         <!-- jacoco -->
         <version.org.jacoco>0.7.1.201405082137</version.org.jacoco>
@@ -93,8 +90,11 @@
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.0.Final</version.io.undertow.build.checkstyle-config>
-        <version.org.mortbay.jetty.npn>1.1.7.v20140316</version.org.mortbay.jetty.npn>
-        <version.org.eclipse.jetty.npn>1.1.0.v20120525</version.org.eclipse.jetty.npn>
+        <version.org.mortbay.jetty.alpn.jdk7>7.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk7>
+        <version.org.mortbay.jetty.alpn.jdk8>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8>
+        <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk7}</version.org.mortbay.jetty.alpn>
+        <version.org.eclipse.jetty.alpn>1.0.0</version.org.eclipse.jetty.alpn>
+        <alpn-boot-string></alpn-boot-string>
     </properties>
 
     <modules>
@@ -280,9 +280,10 @@
             </dependency>
 
             <dependency>
-                <groupId>org.eclipse.jetty.npn</groupId>
-                <artifactId>npn-api</artifactId>
-                <version>${version.org.eclipse.jetty.npn}</version>
+                <groupId>org.eclipse.jetty.alpn</groupId>
+                <artifactId>alpn-api</artifactId>
+                <version>${version.org.eclipse.jetty.alpn}</version>
+                <scope>provided</scope>
             </dependency>
 
             <dependency>
@@ -381,9 +382,10 @@
             </dependency>
 
             <dependency>
-                <groupId>org.mortbay.jetty.npn</groupId>
-                <artifactId>npn-boot</artifactId>
-                <version>${version.org.mortbay.jetty.npn}</version>
+                <groupId>org.mortbay.jetty.alpn</groupId>
+                <artifactId>alpn-boot</artifactId>
+                <version>${version.org.mortbay.jetty.alpn}</version>
+                <scope>test</scope>
             </dependency>
 
             <dependency>
@@ -436,6 +438,45 @@
     </pluginRepositories>
 
     <profiles>
+        <profile>
+            <id>jdk8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <properties>
+                <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8}</version.org.mortbay.jetty.alpn>
+                <alpn-boot-string>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</alpn-boot-string>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mortbay.jetty.alpn</groupId>
+                    <artifactId>alpn-boot</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <modules>
+                <module>http2-test-suite</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>jdk7</id>
+            <activation>
+                <jdk>1.7</jdk>
+            </activation>
+            <properties>
+                <alpn-boot-string>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</alpn-boot-string>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mortbay.jetty.alpn</groupId>
+                    <artifactId>alpn-boot</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <modules>
+                <module>http2-test-suite</module>
+            </modules>
+        </profile>
         <profile>
             <id>dist</id>
             <activation>
