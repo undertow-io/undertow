@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
 import io.undertow.UndertowOptions;
@@ -242,6 +243,17 @@ public class SimpleParserTestCase {
         Assert.assertEquals("OK;devil=3", result.getQueryParameters().get("test").getFirst());
         Assert.assertEquals("666", result.getQueryParameters().get("777").getFirst());
         Assert.assertEquals("44", result.getQueryParameters().get(";?").getFirst());
+    }
+    @Test
+    public void testNonEncodedAsciiCharacters() throws UnsupportedEncodingException {
+        byte[] in = "GET /bÃ¥r HTTP/1.1\r\n\r\n".getBytes("ISO-8859-1");
+
+        final ParseState context = new ParseState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/bår", result.getRequestPath());
+        Assert.assertEquals("/bÃ¥r", result.getRequestURI()); //not decoded
     }
 
     private void runTest(final byte[] in) {
