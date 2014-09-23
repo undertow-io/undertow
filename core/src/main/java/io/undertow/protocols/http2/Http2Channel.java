@@ -413,6 +413,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 sendWindowSize += difference;
             } else if(setting.getId() == Http2Setting.SETTINGS_MAX_FRAME_SIZE) {
                 sendMaxFrameSize = setting.getValue();
+            } else if(setting.getId() == Http2Setting.SETTINGS_HEADER_TABLE_SIZE) {
+                encoder.setMaxTableSize(setting.getValue());
             }
             //ignore the rest for now
         }

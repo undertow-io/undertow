@@ -45,17 +45,15 @@ public class HpackEncoder extends Hpack {
         }
     };
 
-    /**
-     * current bit pos for Huffman
-     */
-    private int currentBitPos;
-
     private long headersIterator = -1;
     private boolean firstPass = true;
 
     private HeaderMap currentHeaders;
 
     private int entryPositionCounter;
+
+    private int newMaxHeaderSize = -1; //if the max header size has been changed
+    private int minNewMaxHeeaderSize = -1; //records the smallest value of newMaxHeaderSize, as per section 4.1
 
     private static final Map<HttpString, TableEntry[]> ENCODING_STATIC_TABLE;
 
@@ -89,12 +87,6 @@ public class HpackEncoder extends Hpack {
      */
     private int currentTableSize;
 
-    /**
-     * If a buffer does not have space to put some bytes we decrease its position by one, and store the bits here.
-     * When a new
-     */
-    private int extraData;
-
     private final IndexFunction indexFunction = DEFAULT_INDEX_FUNCTION;
 
     public HpackEncoder(int maxTableSize) {
@@ -103,22 +95,18 @@ public class HpackEncoder extends Hpack {
 
     /**
      * Encodes the headers into a buffer.
-     * <p/>
-     * Note that as it looks like the reference set will be dropped the first instruction that is encoded
-     * in every case in an instruction to clear the reference set.
-     * <p/>
      *
      * @param headers
      * @param target
      */
     public State encode(HeaderMap headers, ByteBuffer target) {
-        if (target.remaining() < 3) {
+        if (target.remaining() < 20) {
             return State.UNDERFLOW;
         }
         long it = headersIterator;
         if (headersIterator == -1) {
+            handleTableSizeChange(target);
             //new headers map
-            currentBitPos = 0;
             it = headers.fastIterate();
             currentHeaders = headers;
             //first push a reference set clear context update
@@ -126,10 +114,6 @@ public class HpackEncoder extends Hpack {
         } else {
             if (headers != currentHeaders) {
                 throw new IllegalStateException();
-            }
-            if (currentBitPos > 0) {
-                //put the extra bits into the new buffer
-                target.put((byte) extraData);
             }
         }
         while (it != -1) {
@@ -145,8 +129,6 @@ public class HpackEncoder extends Hpack {
                 }
             }
             if (!skip) {
-                //initial super crappy implementation: just write everything out as literal header field never indexed
-                //makes things much simpler
                 for (int i = 0; i < values.size(); ++i) {
 
                     HttpString headerName = values.getHeaderName();
@@ -159,7 +141,6 @@ public class HpackEncoder extends Hpack {
 
                     if (target.remaining() < required) {
                         this.headersIterator = it;
-                        this.currentBitPos = 0; //we don't use huffman yet
                         return State.UNDERFLOW;
                     }
                     boolean canIndex = indexFunction.shouldUseIndexing(headerName, val);
@@ -336,6 +317,31 @@ public class HpackEncoder extends Hpack {
                 return forThisByte;
             }
         }
+    }
+
+    public void setMaxTableSize(int newSize) {
+        this.newMaxHeaderSize = newSize;
+        if(minNewMaxHeeaderSize == -1) {
+           minNewMaxHeeaderSize = newSize;
+        } else {
+            minNewMaxHeeaderSize = Math.min(newSize, minNewMaxHeeaderSize);
+        }
+    }
+
+    private void handleTableSizeChange(ByteBuffer target) {
+        if(newMaxHeaderSize == -1) {
+            return;
+        }
+        if(minNewMaxHeeaderSize != newMaxHeaderSize) {
+            target.put((byte)(1 << 5));
+            encodeInteger(target, minNewMaxHeeaderSize, 5);
+        }
+        target.put((byte)(1 << 5));
+        encodeInteger(target, newMaxHeaderSize, 5);
+        maxTableSize = newMaxHeaderSize;
+        runEvictionIfRequired();
+        newMaxHeaderSize = -1;
+        minNewMaxHeeaderSize = -1;
     }
 
     public enum State {
