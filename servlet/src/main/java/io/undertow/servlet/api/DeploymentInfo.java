@@ -1134,8 +1134,8 @@ public class DeploymentInfo implements Cloneable {
         info.disableCachingForSecuredPages = disableCachingForSecuredPages;
         info.exceptionHandler = exceptionHandler;
         info.escapeErrorMessage = escapeErrorMessage;
-        this.sessionListeners.addAll(sessionListeners);
-        this.lifecycleInterceptors.addAll(lifecycleInterceptors);
+        info.sessionListeners.addAll(sessionListeners);
+        info.lifecycleInterceptors.addAll(lifecycleInterceptors);
         return info;
     }
 
