@@ -43,7 +43,10 @@ public class HttpContinueReadHandler implements HttpHandler {
     private static final ConduitWrapper<StreamSourceConduit> WRAPPER = new ConduitWrapper<StreamSourceConduit>() {
         @Override
         public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
-            return new ContinueConduit(factory.create(), exchange);
+            if(exchange.isRequestChannelAvailable() && !exchange.isResponseStarted()) {
+                return new ContinueConduit(factory.create(), exchange);
+            }
+            return factory.create();
         }
     };
 
