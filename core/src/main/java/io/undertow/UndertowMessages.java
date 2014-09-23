@@ -358,4 +358,7 @@ public interface UndertowMessages {
 
     @Message(id = 110, value = "Cannot send 100-Continue, getResponseChannel() has already been called")
     IOException cannotSendContinueResponse();
+
+    @Message(id = 111, value = "Parser did not make progress")
+    IOException parserDidNotMakeProgress();
 }

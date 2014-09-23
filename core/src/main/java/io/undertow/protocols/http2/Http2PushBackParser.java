@@ -18,6 +18,8 @@
 
 package io.undertow.protocols.http2;
 
+import io.undertow.UndertowMessages;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -55,6 +57,9 @@ public abstract class Http2PushBackParser {
             int rem = dataToParse.remaining();
             handleData(dataToParse, headerParser);
             used = rem - dataToParse.remaining();
+            if(remainingData > 0 && used == 0 && dataToParse.remaining() >= remainingData) {
+                throw UndertowMessages.MESSAGES.parserDidNotMakeProgress();
+            }
 
         } finally {
             //it is possible that we finished the parsing without using up all the data

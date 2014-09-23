@@ -160,7 +160,7 @@ public class HpackDecoder extends Hpack {
             int newTableSlots = filledTableSlots;
             int tableLength = headerTable.length;
             int newSize = currentMemorySize;
-            while (currentMemorySize > maxMemorySize) {
+            while (newSize > maxMemorySize) {
                 int clearIndex = firstSlotPosition;
                 firstSlotPosition++;
                 if (firstSlotPosition == tableLength) {
