@@ -80,7 +80,8 @@ public class HttpContinue {
      */
     public static void sendContinueResponse(final HttpServerExchange exchange, final IoCallback callback) {
         if (!exchange.isResponseChannelAvailable()) {
-            throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
+            callback.onException(exchange, null, UndertowMessages.MESSAGES.cannotSendContinueResponse());
+            return;
         }
         internalSendContinueResponse(exchange, callback);
     }
@@ -91,9 +92,9 @@ public class HttpContinue {
      * @param exchange The exchange
      * @return The response sender
      */
-    public static ContinueResponseSender createResponseSender(final HttpServerExchange exchange) {
+    public static ContinueResponseSender createResponseSender(final HttpServerExchange exchange) throws IOException {
         if (!exchange.isResponseChannelAvailable()) {
-            throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
+            throw UndertowMessages.MESSAGES.cannotSendContinueResponse();
         }
 
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
@@ -131,7 +132,7 @@ public class HttpContinue {
      */
     public static void sendContinueResponseBlocking(final HttpServerExchange exchange) throws IOException {
         if (!exchange.isResponseChannelAvailable()) {
-            throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
+            throw UndertowMessages.MESSAGES.cannotSendContinueResponse();
         }
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         newExchange.setResponseCode(100);

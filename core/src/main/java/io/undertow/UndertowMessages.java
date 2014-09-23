@@ -354,4 +354,8 @@ public interface UndertowMessages {
 
     @Message(id = 109, value = "Zero is not a valid header table index")
     HpackException zeroNotValidHeaderTableIndex();
+
+
+    @Message(id = 110, value = "Cannot send 100-Continue, getResponseChannel() has already been called")
+    IOException cannotSendContinueResponse();
 }
