@@ -93,7 +93,7 @@ public class SessionServer {
                 if (session == null)
                     session = sm.createSession(exchange, sessionConfig);
                 session.invalidate(exchange);
-                
+
                 exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
                 exchange.getResponseHeaders().put(Headers.LOCATION, "/");
                 exchange.getResponseSender().close();
@@ -113,7 +113,7 @@ public class SessionServer {
         sessionAttachmentHandler.setNext(pathHandler);
 
         System.out
-                .println("Access and fill the form to add attributes to the session");
+                .println("Open the url and fill the form to add attributes into the session");
         Undertow server = Undertow.builder().addHttpListener(8080, "localhost")
                 .setHandler(sessionAttachmentHandler).build();
         server.start();
