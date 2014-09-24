@@ -19,3 +19,4 @@ io.undertow.server.handlers.RequestDumpingHandler$Builder
 io.undertow.server.handlers.RequestLimitingHandler$Builder
 io.undertow.server.handlers.resource.ResourceHandler$Builder
 io.undertow.server.handlers.SSLHeaderHandler$Builder
+io.undertow.server.handlers.ResponseRateLimitingHandler$Builder

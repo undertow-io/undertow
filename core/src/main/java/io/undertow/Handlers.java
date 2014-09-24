@@ -45,6 +45,7 @@ import io.undertow.server.handlers.RequestDumpingHandler;
 import io.undertow.server.handlers.RequestLimit;
 import io.undertow.server.handlers.RequestLimitingHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.ResponseRateLimitingHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
@@ -57,6 +58,7 @@ import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Utility class with convenience methods for dealing with handlers
@@ -498,6 +500,19 @@ public class Handlers {
      */
     public static ExceptionHandler exceptionHandler(final HttpHandler next) {
         return new ExceptionHandler(next);
+    }
+
+    /**
+     *
+     * A handler that limits the download speed to a set number of bytes/period
+     *
+     * @param next The next handler
+     * @param bytes The number of bytes per time period
+     * @param time The time period
+     * @param timeUnit The units of the time period
+     */
+    public static ResponseRateLimitingHandler responseRateLimitingHandler(HttpHandler next, int bytes,long time, TimeUnit timeUnit) {
+        return new ResponseRateLimitingHandler(next, bytes, time, timeUnit);
     }
 
     private Handlers() {
