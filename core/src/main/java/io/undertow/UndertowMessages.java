@@ -361,4 +361,7 @@ public interface UndertowMessages {
 
     @Message(id = 111, value = "Parser did not make progress")
     IOException parserDidNotMakeProgress();
+
+    @Message(id = 112, value = "Only client side can call createStream, if you wish to send a PUSH_PROMISE frame use createPushPromiseStream instead")
+    IOException headersStreamCanOnlyBeCreatedByClient();
 }
