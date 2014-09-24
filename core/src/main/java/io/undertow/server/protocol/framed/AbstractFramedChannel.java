@@ -129,6 +129,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         if (readData != null) {
             this.readData = new ReferenceCountedPooled<>(readData, 1);
         }
+        if(bufferPool == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("bufferPool");
+        }
+        if(connectedStreamChannel == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("connectedStreamChannel");
+        }
         IdleTimeoutConduit idle = createIdleTimeoutChannel(connectedStreamChannel);
         connectedStreamChannel.getSourceChannel().setConduit(idle);
         connectedStreamChannel.getSinkChannel().setConduit(idle);
