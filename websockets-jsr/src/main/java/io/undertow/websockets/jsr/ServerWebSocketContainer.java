@@ -512,6 +512,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
     }
 
+    public Pool<ByteBuffer> getBufferPool() {
+        return bufferPool;
+    }
+
+    public XnioWorker getXnioWorker() {
+        return xnioWorker;
+    }
+
     private static final class ServerInstanceFactoryConfigurator extends ServerEndpointConfig.Configurator {
 
         private final InstanceFactory<?> factory;
