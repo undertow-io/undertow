@@ -316,20 +316,28 @@ class FrameHandler extends AbstractReceiveListener {
         return Buffers.take(payload, 0, payload.length);
     }
 
+    public final void addHandler(Class<?> messageType, MessageHandler handler) {
+        addHandlerInternal(handler, messageType, handler instanceof MessageHandler.Partial);
+    }
     public final void addHandler(MessageHandler handler) {
         Map<Class<?>, Boolean> types = ClassUtils.getHandlerTypes(handler.getClass());
         for (Entry<Class<?>, Boolean> e : types.entrySet()) {
             Class<?> type = e.getKey();
-            verify(type, handler);
+            boolean partial = e.getValue();
+            addHandlerInternal(handler, type, partial);
+        }
+    }
 
-            HandlerWrapper handlerWrapper = createHandlerWrapper(type, handler, e.getValue());
+    private void addHandlerInternal(MessageHandler handler, Class<?> type, boolean partial) {
+        verify(type, handler);
 
-            if (handlers.containsKey(handlerWrapper.getFrameType())) {
+        HandlerWrapper handlerWrapper = createHandlerWrapper(type, handler, partial);
+
+        if (handlers.containsKey(handlerWrapper.getFrameType())) {
+            throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
+        } else {
+            if (handlers.putIfAbsent(handlerWrapper.getFrameType(), handlerWrapper) != null) {
                 throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
-            } else {
-                if (handlers.putIfAbsent(handlerWrapper.getFrameType(), handlerWrapper) != null) {
-                    throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
-                }
             }
         }
     }

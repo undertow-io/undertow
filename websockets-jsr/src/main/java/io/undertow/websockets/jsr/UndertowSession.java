@@ -129,6 +129,16 @@ public final class UndertowSession implements Session {
         frameHandler.addHandler(messageHandler);
     }
 
+    @Override
+    public <T> void addMessageHandler(Class<T> clazz, MessageHandler.Whole<T> handler) {
+        frameHandler.addHandler(clazz, handler);
+    }
+
+    @Override
+    public <T> void addMessageHandler(Class<T> clazz, MessageHandler.Partial<T> handler) {
+        frameHandler.addHandler(clazz, handler);
+    }
+
     @SuppressWarnings("rawtypes")
     @Override
     public synchronized Set<MessageHandler> getMessageHandlers() {

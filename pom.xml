@@ -76,7 +76,7 @@
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.0.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
-        <version.org.jboss.spec.javax.websockets>1.0.0.Final</version.org.jboss.spec.javax.websockets>
+        <version.org.jboss.spec.javax.websockets>1.1.0.Final</version.org.jboss.spec.javax.websockets>
         <version.xnio>3.3.0.Beta3</version.xnio>
         
         <!-- jacoco -->
@@ -359,7 +359,7 @@
 
             <dependency>
                 <groupId>org.jboss.spec.javax.websocket</groupId>
-                <artifactId>jboss-websocket-api_1.0_spec</artifactId>
+                <artifactId>jboss-websocket-api_1.1_spec</artifactId>
                 <version>${version.org.jboss.spec.javax.websockets}</version>
             </dependency>
 
