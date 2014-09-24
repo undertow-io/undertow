@@ -454,9 +454,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk7</id>
@@ -473,9 +470,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>dist</id>
