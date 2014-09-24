@@ -73,8 +73,12 @@ public interface JsrWebSocketLogger extends BasicLogger {
     @Message(id = 26008, value = "Could not close endpoint on undeploy.")
     void couldNotCloseOnUndeploy(@Cause Exception e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 26009, value = "XNIO worker was not set on WebSocketDeploymentInfo, web socket client will not be available.")
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 26009, value = "XNIO worker was not set on WebSocketDeploymentInfo, the default worker will be used")
     void xnioWorkerWasNull();
+
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 26010, value = "Buffer pool was not set on WebSocketDeploymentInfo, the default pool will be used")
+    void bufferPoolWasNull();
 
 }

@@ -25,15 +25,19 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ContextClassLoaderSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
+import org.xnio.Pool;
+import org.xnio.XnioWorker;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import javax.websocket.ContainerProvider;
 import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -52,14 +56,22 @@ public class Bootstrap implements ServletExtension {
         if (info == null) {
             return;
         }
-        if(info.getWorker() == null) {
+        XnioWorker worker = info.getWorker();
+        if(worker == null) {
             JsrWebSocketLogger.ROOT_LOGGER.xnioWorkerWasNull();
+            worker = ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).getXnioWorker();
         }
+        Pool<ByteBuffer> buffers = info.getBuffers();
+        if(buffers == null) {
+            JsrWebSocketLogger.ROOT_LOGGER.bufferPoolWasNull();
+            buffers = ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).getBufferPool();
+        }
+
         final List<ThreadSetupAction> setup = new ArrayList<>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
         setup.addAll(deploymentInfo.getThreadSetupActions());
         final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
-        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), info.getWorker(), info.getBuffers(), threadSetupAction, info.isDispatchToWorkerThread());
+        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, threadSetupAction, info.isDispatchToWorkerThread());
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);
