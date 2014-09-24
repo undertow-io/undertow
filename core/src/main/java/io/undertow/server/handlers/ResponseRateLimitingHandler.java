@@ -118,7 +118,7 @@ public class ResponseRateLimitingHandler implements HttpHandler {
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-            return new RequestDumpingHandler(handler);
+            return new ResponseRateLimitingHandler(handler, bytes, time, TimeUnit.MILLISECONDS);
         }
     }
 }
