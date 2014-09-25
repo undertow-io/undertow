@@ -300,7 +300,11 @@ public class AsyncContextImpl implements AsyncContext {
                 //at all other times the dispatch is desirable
                 HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                 response.responseDone();
-                IoUtils.safeClose(exchange.getInputStream());
+                try {
+                    servletRequestContext.getOriginalRequest().closeAndDrainRequest();
+                } catch (IOException e) {
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                }
             } else {
                 doDispatch(new Runnable() {
                     @Override
@@ -308,7 +312,11 @@ public class AsyncContextImpl implements AsyncContext {
 
                         HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                         response.responseDone();
-                        IoUtils.safeClose(exchange.getInputStream());
+                        try {
+                            servletRequestContext.getOriginalRequest().closeAndDrainRequest();
+                        } catch (IOException e) {
+                            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                        }
                     }
                 });
             }
