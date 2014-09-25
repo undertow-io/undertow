@@ -320,7 +320,7 @@ public interface UndertowMessages {
     IllegalStateException ajpRequestAlreadyInProgress();
 
     @Message(id = 98, value = "HTTP ping data must be 8 bytes in length")
-    IllegalArgumentException httpPingDataMustBeLength8();
+    String httpPingDataMustBeLength8();
 
     @Message(id = 99, value = "Received a ping of size other than 8")
     String invalidPingSize();
@@ -364,4 +364,7 @@ public interface UndertowMessages {
 
     @Message(id = 112, value = "Only client side can call createStream, if you wish to send a PUSH_PROMISE frame use createPushPromiseStream instead")
     IOException headersStreamCanOnlyBeCreatedByClient();
+
+    @Message(id = 113, value = "Only the server side can send a push promise stream")
+    IOException pushPromiseCanOnlyBeCreatedByServer();
 }

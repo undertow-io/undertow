@@ -18,8 +18,11 @@
 
 package io.undertow.protocols.http2;
 
+import io.undertow.UndertowMessages;
+
 import static io.undertow.protocols.http2.Http2Channel.PING_FRAME_LENGTH;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -36,7 +39,13 @@ class Http2PingParser extends Http2PushBackParser {
     }
 
     @Override
-    protected void handleData(ByteBuffer resource, Http2FrameHeaderParser parser) {
+    protected void handleData(ByteBuffer resource, Http2FrameHeaderParser parser) throws IOException {
+        if(parser.length != PING_FRAME_LENGTH) {
+            throw new IOException(UndertowMessages.MESSAGES.httpPingDataMustBeLength8());
+        }
+        if(parser.streamId != 0) {
+            throw new IOException(UndertowMessages.MESSAGES.streamIdMustBeZeroForFrameType(Http2Channel.FRAME_TYPE_PING));
+        }
         if (resource.remaining() < PING_FRAME_LENGTH) {
             return;
         }

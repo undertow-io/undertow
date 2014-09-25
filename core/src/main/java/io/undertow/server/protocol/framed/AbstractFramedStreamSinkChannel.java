@@ -589,6 +589,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             }
             if(buffer != null) {
                 buffer.free();
+                buffer = null;
             }
         }
     }
@@ -607,5 +608,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     public C getChannel() {
         return channel;
+    }
+
+    public boolean isBroken() {
+        return broken;
     }
 }

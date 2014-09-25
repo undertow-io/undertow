@@ -22,6 +22,12 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
+import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
+import io.undertow.server.HttpHandler;
+import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.OptionMap;
@@ -72,12 +78,14 @@ public class Http2ServerConnection extends ServerConnection {
     private final OptionMap undertowOptions;
     private final int bufferSize;
     private SSLSessionInfo sessionInfo;
+    private final HttpHandler rootHandler;
 
-    public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize) {
+    public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
         this.requestChannel = requestChannel;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
+        this.rootHandler = rootHandler;
         responseChannel = requestChannel.getResponseChannel();
         originalSinkConduit = new StreamSinkChannelWrappingConduit(responseChannel);
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
@@ -90,9 +98,11 @@ public class Http2ServerConnection extends ServerConnection {
      * @param channel
      * @param undertowOptions
      * @param bufferSize
+     * @param rootHandler
      */
-    public Http2ServerConnection(Http2Channel channel, Http2DataStreamSinkChannel sinkChannel, OptionMap undertowOptions, int bufferSize) {
+    public Http2ServerConnection(Http2Channel channel, Http2DataStreamSinkChannel sinkChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
+        this.rootHandler = rootHandler;
         this.requestChannel = null;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
@@ -277,5 +287,40 @@ public class Http2ServerConnection extends ServerConnection {
     @Override
     public <T> T getAttachment(AttachmentKey<T> key) {
         return channel.getAttachment(key);
+    }
+
+    @Override
+    public boolean isPushSupported() {
+        return channel.isPushEnabled();
+    }
+
+    @Override
+    public boolean pushResource(String path, HttpString method, HeaderMap requestHeaders, HttpServerExchange associatedRequest) {
+        HeaderMap responseHeaders = new HeaderMap();
+        try {
+            requestHeaders.put(Http2ReceiveListener.METHOD, method.toString());
+            requestHeaders.put(Http2ReceiveListener.PATH, path.toString());
+            requestHeaders.put(Http2ReceiveListener.AUTHORITY, associatedRequest.getHostAndPort());
+            requestHeaders.put(Http2ReceiveListener.SCHEME, associatedRequest.getRequestScheme());
+
+            Http2HeadersStreamSinkChannel sink = channel.sendPushPromise(responseChannel.getStreamId(), requestHeaders, responseHeaders);
+            Http2ServerConnection newConnection = new Http2ServerConnection(channel, sink, getUndertowOptions(), getBufferSize(), rootHandler);
+            final HttpServerExchange exchange = new HttpServerExchange(newConnection, requestHeaders, responseHeaders, getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE));
+            exchange.setRequestMethod(method);
+            exchange.setProtocol(Protocols.HTTP_1_1);
+            Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, "UTF-8"), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false), new StringBuilder());
+
+            Connectors.terminateRequest(exchange);
+            getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    Connectors.executeRootHandler(rootHandler, exchange);
+                }
+            });
+            return true;
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            return false;
+        }
     }
 }

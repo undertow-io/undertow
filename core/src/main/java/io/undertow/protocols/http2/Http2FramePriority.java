@@ -38,6 +38,9 @@ class Http2FramePriority implements FramePriority<Http2Channel, AbstractHttp2Str
     public boolean insertFrame(AbstractHttp2StreamSinkChannel newFrame, List<AbstractHttp2StreamSinkChannel> pendingFrames) {
         //first deal with flow control
         if (newFrame instanceof Http2StreamSinkChannel) {
+            if(newFrame.isBroken()) {
+                return true; //just quietly drop the frame
+            }
             SendFrameHeader header = ((Http2StreamSinkChannel) newFrame).generateSendFrameHeader();
             //if no header is generated then flow control means we can't send anything
             if (header.getByteBuffer() == null) {

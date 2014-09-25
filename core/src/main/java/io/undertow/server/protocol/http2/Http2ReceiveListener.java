@@ -40,7 +40,6 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.URLUtils;
 
 /**
  * The recieve listener for a Http2 connection.
@@ -51,10 +50,10 @@ import io.undertow.util.URLUtils;
  */
 public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
-    private static final HttpString METHOD = new HttpString(":method");
-    private static final HttpString PATH = new HttpString(":path");
-    private static final HttpString SCHEME = new HttpString(":scheme");
-    private static final HttpString AUTHORITY = new HttpString(":authority");
+    static final HttpString METHOD = new HttpString(":method");
+    static final HttpString PATH = new HttpString(":path");
+    static final HttpString SCHEME = new HttpString(":scheme");
+    static final HttpString AUTHORITY = new HttpString(":authority");
 
     private final HttpHandler rootHandler;
     private final long maxEntitySize;
@@ -91,7 +90,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             if (frame instanceof Http2StreamSourceChannel) {
                 //we have a request
                 final Http2StreamSourceChannel dataChannel = (Http2StreamSourceChannel) frame;
-                final Http2ServerConnection connection = new Http2ServerConnection(channel, dataChannel, undertowOptions, bufferSize);
+                final Http2ServerConnection connection = new Http2ServerConnection(channel, dataChannel, undertowOptions, bufferSize, rootHandler);
 
 
                 final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
@@ -101,8 +100,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
                 exchange.setRequestMethod(new HttpString(exchange.getRequestHeaders().getFirst(METHOD)));
                 exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
                 final String path = exchange.getRequestHeaders().getFirst(PATH);
-                setRequestPath(exchange, path, encoding, allowEncodingSlash, decodeBuffer);
-
+                Connectors.setExchangeRequestPath(exchange, path, encoding,decode, allowEncodingSlash, decodeBuffer);
                 SSLSession session = channel.getSslSession();
                 if(session != null) {
                     connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
@@ -143,7 +141,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         //we have a request
         Http2HeadersStreamSinkChannel sink = channel.createInitialUpgradeResponseStream();
-        final Http2ServerConnection connection = new Http2ServerConnection(channel, sink, undertowOptions, bufferSize);
+        final Http2ServerConnection connection = new Http2ServerConnection(channel, sink, undertowOptions, bufferSize, rootHandler);
 
         HeaderMap requestHeaders = new HeaderMap();
         for(HeaderValues hv : initial.getRequestHeaders()) {
@@ -153,7 +151,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setRequestScheme(initial.getRequestScheme());
         exchange.setProtocol(initial.getProtocol());
         exchange.setRequestMethod(initial.getRequestMethod());
-        setRequestPath(exchange, initial.getRequestURI(), encoding, allowEncodingSlash, decodeBuffer);
+        Connectors.setExchangeRequestPath(exchange, initial.getRequestURI(), encoding, decode, allowEncodingSlash, decodeBuffer);
 
         SSLSession session = channel.getSslSession();
         if(session != null) {
@@ -167,71 +165,6 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             }
         });
         Connectors.executeRootHandler(rootHandler, exchange);
-    }
-
-    /**
-     * Sets the request path and query parameters, decoding to the requested charset.
-     *
-     * @param exchange    The exchange
-     * @param encodedPath        The encoded path
-     * @param charset     The charset
-     */
-    private void setRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, final boolean allowEncodedSlash, StringBuilder decodeBuffer) {
-        boolean requiresDecode = false;
-        for (int i = 0; i < encodedPath.length(); ++i) {
-            char c = encodedPath.charAt(i);
-            if (c == '?') {
-                String part;
-                String encodedPart = encodedPath.substring(0, i);
-                if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, decodeBuffer);
-                } else {
-                    part = encodedPart;
-                }
-                exchange.setRequestPath(part);
-                exchange.setRelativePath(part);
-                exchange.setRequestURI(encodedPart);
-                final String qs = encodedPath.substring(i + 1);
-                exchange.setQueryString(qs);
-                URLUtils.parseQueryString(qs, exchange, encoding, decode);
-                return;
-            } else if(c == ';') {
-                String part;
-                String encodedPart = encodedPath.substring(0, i);
-                if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, decodeBuffer);
-                } else {
-                    part = encodedPart;
-                }
-                exchange.setRequestPath(part);
-                exchange.setRelativePath(part);
-                exchange.setRequestURI(encodedPart);
-                for(int j = i; j < encodedPath.length(); ++j) {
-                    if (encodedPath.charAt(j) == '?') {
-                        String pathParams = encodedPath.substring(i + 1, j);
-                        URLUtils.parsePathParms(pathParams, exchange, encoding, decode);
-                        String qs = encodedPath.substring(j + 1);
-                        exchange.setQueryString(qs);
-                        URLUtils.parseQueryString(qs, exchange, encoding, decode);
-                        return;
-                    }
-                }
-                URLUtils.parsePathParms(encodedPath.substring(i + 1), exchange, encoding, decode);
-                return;
-            } else if(c == '%' || c == '+') {
-                requiresDecode = true;
-            }
-        }
-
-        String part;
-        if (requiresDecode) {
-            part = URLUtils.decode(encodedPath, charset, allowEncodedSlash, decodeBuffer);
-        } else {
-            part = encodedPath;
-        }
-        exchange.setRequestPath(part);
-        exchange.setRelativePath(part);
-        exchange.setRequestURI(encodedPath);
     }
 
 }

@@ -20,6 +20,8 @@ package io.undertow.server;
 
 import io.undertow.util.AbstractAttachable;
 
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -196,6 +198,27 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      * @param exchange The current exchange
      */
     protected abstract void maxEntitySizeUpdated(HttpServerExchange exchange);
+
+    /**
+     * Attempts to push a resource if this connection supports server push. Otherwise the request is ignored.
+     *
+     * Note that push is always done on a best effort basis, even if this method returns true it is possible that
+     * the remote endpoint will reset the stream
+     *
+     *
+     * @param path The path of the resource
+     * @param method The request method
+     * @param requestHeaders The request headers
+     * @param associatedRequest The associated request that initiated the push
+     * @return <code>true</code> if the server attempted the push, false otherwise
+     */
+    public boolean pushResource(final String path, final HttpString method, final HeaderMap requestHeaders, HttpServerExchange associatedRequest) {
+        return false;
+    }
+
+    public boolean isPushSupported() {
+        return false;
+    }
 
     public interface CloseListener {
 

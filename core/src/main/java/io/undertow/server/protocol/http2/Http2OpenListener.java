@@ -89,7 +89,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         final PotentialHttp2Connection potentialConnection = new PotentialHttp2Connection(channel);
         channel.getSourceChannel().setReadListener(potentialConnection);
         final SSLEngine sslEngine = JsseXnioSsl.getSslEngine((SslConnection) channel);
-        String existing = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
+        String existing = null;// (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
         //resuming an existing session, no need for ALPN
         if (existing != null) {
             UndertowLogger.REQUEST_LOGGER.debug("Resuming existing session, not doing NPN negotiation");

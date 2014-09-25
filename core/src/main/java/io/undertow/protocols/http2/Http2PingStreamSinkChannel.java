@@ -31,8 +31,7 @@ import io.undertow.util.ImmediatePooled;
  */
 class Http2PingStreamSinkChannel extends Http2NoDataStreamSinkChannel {
 
-    public static final int HEADER_NO_ACK = (PING_FRAME_LENGTH << 8) | (Http2Channel.FRAME_TYPE_PING);
-    public static final int HEADER_ACK = (PING_FRAME_LENGTH << 16) | (Http2Channel.FRAME_TYPE_PING << 8) | Http2Channel.PING_FLAG_ACK;
+    public static final int HEADER = (PING_FRAME_LENGTH << 8) | (Http2Channel.FRAME_TYPE_PING);
     private final byte[] data;
     private final boolean ack;
 
@@ -47,14 +46,14 @@ class Http2PingStreamSinkChannel extends Http2NoDataStreamSinkChannel {
 
     @Override
     protected SendFrameHeader createFrameHeader() {
-        ByteBuffer buf = ByteBuffer.allocate(16);
-        int firstInt = ack ? HEADER_ACK : HEADER_NO_ACK;
-        Http2ProtocolUtils.putInt(buf, firstInt);
-        buf.put((byte) 0);
+        ByteBuffer buf = ByteBuffer.allocate(17);
+        Http2ProtocolUtils.putInt(buf, HEADER);
+        buf.put((byte) (ack ? Http2Channel.PING_FLAG_ACK : 0));
         Http2ProtocolUtils.putInt(buf, 0); //stream id, must be zero
         for (int i = 0; i < PING_FRAME_LENGTH; ++i) {
             buf.put(data[i]);
         }
+        buf.flip();
         return new SendFrameHeader(new ImmediatePooled<>(buf));
     }
 

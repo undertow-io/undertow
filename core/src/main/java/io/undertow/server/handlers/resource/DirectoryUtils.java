@@ -25,6 +25,7 @@ import java.text.SimpleDateFormat;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
@@ -122,6 +123,11 @@ public class DirectoryUtils {
     }
 
     public static void renderDirectoryListing(HttpServerExchange exchange, Resource resource) {
+        if(exchange.getConnection().isPushSupported()) {
+            //try and push our resources to the remote endpoint
+            exchange.getConnection().pushResource(exchange.getRequestURI() + "?js", Methods.GET, new HeaderMap(), exchange);
+            exchange.getConnection().pushResource(exchange.getRequestURI() + "?css", Methods.GET, new HeaderMap(), exchange);
+        }
         String requestPath = exchange.getRequestPath();
         if (! requestPath.endsWith("/")) {
             exchange.setResponseCode(302);

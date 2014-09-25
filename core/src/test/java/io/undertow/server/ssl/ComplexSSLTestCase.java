@@ -58,7 +58,7 @@ public class ComplexSSLTestCase {
     private static volatile String message;
 
     @Test
-    public void complexSSLTestCase() throws IOException, GeneralSecurityException, URISyntaxException {
+    public void complexSSLTestCase() throws IOException, GeneralSecurityException, URISyntaxException, InterruptedException {
         final PathHandler pathHandler = new PathHandler();
         File rootPath = new File(FileHandlerTestCase.class.getResource("page.html").toURI()).getParentFile();
 

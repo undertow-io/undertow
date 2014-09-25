@@ -55,6 +55,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel {
 
     @Override
     protected SendFrameHeader createFrameHeaderImpl() {
+        //TODO: this is a mess WRT re-using between headers and push_promise, sort out a more reasonable abstraction
         final int fcWindow = grabFlowControlBytes(getBuffer().remaining());
         if (fcWindow == 0 && getBuffer().hasRemaining()) {
             //flow control window is exhausted
@@ -75,6 +76,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel {
             firstBuffer.put((byte) frameType); //type
             firstBuffer.put((byte) 0); //back fill the flags
             Http2ProtocolUtils.putInt(firstBuffer, getStreamId());
+            writeBeforeHeaderBlock(firstBuffer);
 
             HpackEncoder.State result = encoder.encode(headers, firstBuffer);
             Pooled<ByteBuffer> current = firstHeaderBuffer;
@@ -82,7 +84,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel {
             firstBuffer.put(0, (byte) ((headerFrameLength >> 16) & 0xFF));
             firstBuffer.put(1, (byte) ((headerFrameLength >> 8) & 0xFF));
             firstBuffer.put(2, (byte) (headerFrameLength & 0xFF));
-            firstBuffer.put(4, (byte) ((isWritesShutdown() && !getBuffer().hasRemaining() ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ))); //flags
+            firstBuffer.put(4, (byte) ((isWritesShutdown() && !getBuffer().hasRemaining() && frameType == Http2Channel.FRAME_TYPE_HEADERS ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ))); //flags
             while (result != HpackEncoder.State.COMPLETE) {
                 //todo: add some kind of limit here
 
@@ -170,6 +172,9 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel {
 
     }
 
+    protected void writeBeforeHeaderBlock(ByteBuffer buffer) {
+
+    }
 
     public HeaderMap getHeaders() {
         return headers;
