@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -38,7 +39,16 @@ public class ClassUtilsTest {
 
     @Test
     public void testExtractHandlerType() {
-        Map<Class<?>, Boolean> types = ClassUtils.getHandlerTypes(MessageHandlerImpl.class);
+
+        Map<Class<?>, Boolean>  types = ClassUtils.getHandlerTypes(FinalIm.class);
+        Assert.assertEquals(1, types.size());
+        Assert.assertTrue(types.containsKey(ByteBuffer.class));
+
+        types = ClassUtils.getHandlerTypes(ByteBufferFromSuperClassEncoder.class);
+        Assert.assertEquals(1, types.size());
+        Assert.assertTrue(types.containsKey(ByteBuffer.class));
+
+        types = ClassUtils.getHandlerTypes(MessageHandlerImpl.class);
         Assert.assertEquals(1, types.size());
         Assert.assertTrue(types.containsKey(ByteBuffer.class));
         Assert.assertFalse(types.get(ByteBuffer.class));
@@ -55,6 +65,7 @@ public class ClassUtilsTest {
         Assert.assertTrue(types.containsKey(String.class));
         Assert.assertTrue(types.get(String.class));
         Assert.assertFalse(types.containsKey(byte[].class));
+
     }
 
     @Test
@@ -103,6 +114,18 @@ public class ClassUtilsTest {
         }
 
     }
+    private static class ParamSuperclassEncoder<T> implements MessageHandler.Partial<T> {
+
+        @Override
+        public void onMessage(final T partialMessage, final boolean last) {
+
+        }
+    }
+
+
+    private static final class ByteBufferFromSuperClassEncoder extends ParamSuperclassEncoder<ByteBuffer> {
+
+    }
 
     private static final class BinaryEncoder implements Encoder.Binary<String> {
         @Override
@@ -120,6 +143,18 @@ public class ClassUtilsTest {
 
         }
     }
+
+    private static class Im1<R, T, X, YY> extends ParamSuperclassEncoder<X> {
+    }
+
+
+    private static class Im2<X, Z, Y, Foo, Bar extends Test> extends Im1<List<String>, Z, Y, Integer> {
+    }
+
+    private static final class FinalIm extends Im2<String, Integer, ByteBuffer, String, Test> {
+    }
+
+
 
     private static final class TextEncoder implements Encoder.Text<String> {
         @Override
