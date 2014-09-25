@@ -719,6 +719,9 @@ public abstract class HttpRequestParser {
                         state.stringBuilder.setLength(0);
                         if (next == '\r') {
                             parseState = AWAIT_DATA_END;
+                        } else if (next == '\n') {
+                            state.state = ParseState.PARSE_COMPLETE;
+                            return;
                         } else {
                             state.state = ParseState.HEADER;
                             state.parseState = 0;
