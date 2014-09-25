@@ -94,8 +94,6 @@ public final class ClassUtils {
                 i = i.getSuperclass();
             }
             Collections.reverse(parents);
-
-            System.out.println(parents);
             for(Class ptype : parents) {
                 Type type = ptype.getGenericSuperclass();
                 if(!(type instanceof ParameterizedType)) {
@@ -113,15 +111,13 @@ public final class ClassUtils {
                         }
                     }
                 }
-
-
                 var = pt.getActualTypeArguments()[tvpos];
                 if(var instanceof Class) {
                     return (Class<?>) var;
                 }
                 tvpos = -1;
             }
-            return null;
+            return (Class<?>) var;
         } else {
             throw JsrWebSocketMessages.MESSAGES.unknownHandlerType(actualClass);
         }
