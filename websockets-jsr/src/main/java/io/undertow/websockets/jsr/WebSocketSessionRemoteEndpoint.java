@@ -205,6 +205,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         public void sendBinary(final ByteBuffer data) throws IOException {
             assertNotInFragment();
             WebSockets.sendBinaryBlocking(data, webSocketChannel);
+            data.clear(); //for some reason the TCK expects this, might as well just match the RI behaviour
         }
 
         @Override
@@ -248,6 +249,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                     binaryFrameSender = null;
                 }
             }
+            partialByte.clear();
         }
 
         @Override
