@@ -204,18 +204,25 @@ public final class UndertowSession implements Session {
     public void close(CloseReason closeReason) throws IOException {
         if(closed.compareAndSet(false, true)) {
             try {
-                if(closeReason == null) {
-                    endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.NO_STATUS_CODE, null));
-                } else {
-                    endpoint.getInstance().onClose(this, closeReason);
-                }
-                if(!webSocketChannel.isCloseFrameReceived()) {
-                    //if we have already recieved a close frame then the close frame handler
-                    //will deal with sending back the reason message
-                    if (closeReason == null) {
-                        webSocketChannel.sendClose();
-                    } else {
-                        WebSockets.sendClose(new CloseMessage(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()).toByteBuffer(), webSocketChannel, null);
+                try {
+                    if (!webSocketChannel.isCloseFrameReceived()) {
+                        //if we have already recieved a close frame then the close frame handler
+                        //will deal with sending back the reason message
+                        if (closeReason == null) {
+                            webSocketChannel.sendClose();
+                        } else {
+                            WebSockets.sendClose(new CloseMessage(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()).toByteBuffer(), webSocketChannel, null);
+                        }
+                    }
+                } finally {
+                    try {
+                        if (closeReason == null) {
+                            endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.NO_STATUS_CODE, null));
+                        } else {
+                            endpoint.getInstance().onClose(this, closeReason);
+                        }
+                    } catch (Exception e) {
+                        endpoint.getInstance().onError(this, e);
                     }
                 }
             } finally {
