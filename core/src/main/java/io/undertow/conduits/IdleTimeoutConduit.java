@@ -46,7 +46,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     private volatile XnioExecutor.Key handle;
     private volatile long idleTimeout;
     private volatile long expireTime = -1;
-    private volatile boolean timedOut = true;
+    private volatile boolean timedOut = false;
 
     private final StreamSinkConduit sink;
     private final StreamSourceConduit source;
