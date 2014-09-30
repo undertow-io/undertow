@@ -142,6 +142,16 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             if (responseChallenge != null) {
                 header = NEGOTIATE_PREFIX + FlexBase64.encodeString(responseChallenge, false);
             }
+        } else {
+            Subject server = null;
+            try {
+                server = subjectFactory.getSubjectForHost(getHostName(exchange));
+            } catch (GeneralSecurityException e) {
+                // Deliberately ignore - no Subject so don't offer GSSAPI is our main concern here.
+            }
+            if (server == null) {
+                return new ChallengeResult(false);
+            }
         }
 
         exchange.getResponseHeaders().add(WWW_AUTHENTICATE, header);
