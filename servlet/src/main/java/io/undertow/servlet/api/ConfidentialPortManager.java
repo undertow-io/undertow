@@ -27,6 +27,12 @@ import io.undertow.server.HttpServerExchange;
  */
 public interface ConfidentialPortManager {
 
+    /**
+     * Obtain the port number to redirect the current request to to provide the transport guarantee of CONDIFENTIAL.
+     *
+     * @param exchange The current {@link HttpServerExchange} being redirected.
+     * @return The port to use in the redirection URI or {@code -1} if no configured port is available.
+     */
     int getConfidentialPort(final HttpServerExchange exchange);
 
 }
