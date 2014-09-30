@@ -202,4 +202,8 @@ public interface UndertowServletMessages {
 
     @Message(id = 10052, value = "Header name was null")
     NullPointerException headerNameWasNull();
+
+    @Message(id = 10053, value = "No confidential port is available to redirect the current request.")
+    IllegalStateException noConfidentialPortAvailable();
+
 }
