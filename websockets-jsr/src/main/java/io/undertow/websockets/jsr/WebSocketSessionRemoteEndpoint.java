@@ -308,7 +308,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            WebSockets.sendPingBlocking(applicationData, webSocketChannel);
+            WebSockets.sendPongBlocking(applicationData, webSocketChannel);
         }
     }
 }
