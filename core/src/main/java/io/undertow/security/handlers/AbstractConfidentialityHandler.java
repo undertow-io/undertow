@@ -49,7 +49,7 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
 
                 exchange.setResponseCode(302);
                 exchange.getResponseHeaders().put(Headers.LOCATION, redirectUri.toString());
-            } catch (URISyntaxException e) {
+            } catch (Exception e) {
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
                 exchange.setResponseCode(500);
             }

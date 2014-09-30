@@ -17,6 +17,8 @@
  */
 package io.undertow.servlet.handlers.security;
 
+import static io.undertow.servlet.UndertowServletMessages.MESSAGES;
+
 import io.undertow.security.handlers.SinglePortConfidentialityHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -72,7 +74,12 @@ public class ServletConfidentialityConstraintHandler extends SinglePortConfident
 
     @Override
     protected URI getRedirectURI(HttpServerExchange exchange) throws URISyntaxException {
-        return super.getRedirectURI(exchange, portManager.getConfidentialPort(exchange));
+        int port = portManager.getConfidentialPort(exchange);
+        if (port < 0) {
+            throw MESSAGES.noConfidentialPortAvailable();
+        }
+
+        return super.getRedirectURI(exchange, port);
     }
 
 }
