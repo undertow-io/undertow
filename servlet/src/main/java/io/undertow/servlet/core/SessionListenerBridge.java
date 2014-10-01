@@ -29,6 +29,7 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 
+import java.security.AccessController;
 import java.util.HashSet;
 
 /**
@@ -75,7 +76,16 @@ public class SessionListenerBridge implements SessionListener {
                 handle.tearDown();
             }
             ServletRequestContext current = SecurityActions.currentServletRequestContext();
-            if (current != null && current.getSession() != null && current.getSession().getSession() == session) {
+            Session underlying = null;
+            if(current != null && current.getSession() != null) {
+                if(System.getSecurityManager() == null) {
+                    underlying = current.getSession().getSession();
+                } else {
+                    underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(current.getSession()));
+                }
+            }
+
+            if (current != null && underlying == session) {
                 current.setSession(null);
             }
         }
