@@ -49,14 +49,16 @@ public final class SpdyPlainOpenListener implements ChannelListener<StreamConnec
 
     private volatile OptionMap undertowOptions;
 
-    public SpdyPlainOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final int bufferSize) {
-        this(pool, heapBufferPool, OptionMap.EMPTY, bufferSize);
+    public SpdyPlainOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool) {
+        this(pool, heapBufferPool, OptionMap.EMPTY);
     }
 
-    public SpdyPlainOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final OptionMap undertowOptions, final int bufferSize) {
+    public SpdyPlainOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final OptionMap undertowOptions) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
-        this.bufferSize = bufferSize;
+        Pooled<ByteBuffer> buf = pool.allocate();
+        this.bufferSize = buf.getResource().remaining();
+        buf.free();
         this.heapBufferPool = heapBufferPool;
         Pooled<ByteBuffer> buff = heapBufferPool.allocate();
         try {

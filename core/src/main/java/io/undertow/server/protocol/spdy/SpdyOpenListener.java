@@ -65,22 +65,24 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
     private volatile OptionMap undertowOptions;
     private final HttpOpenListener delegate;
 
-    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final int bufferSize) {
-        this(pool, heapBufferPool, OptionMap.EMPTY, bufferSize, null);
+    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool) {
+        this(pool, heapBufferPool, OptionMap.EMPTY, null);
     }
 
-    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final OptionMap undertowOptions, final int bufferSize) {
-        this(pool, heapBufferPool, undertowOptions, bufferSize, null);
+    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final OptionMap undertowOptions) {
+        this(pool, heapBufferPool, undertowOptions, null);
     }
 
-    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final int bufferSize, HttpOpenListener httpDelegate) {
-        this(pool, heapBufferPool, OptionMap.EMPTY, bufferSize, httpDelegate);
+    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool,  HttpOpenListener httpDelegate) {
+        this(pool, heapBufferPool, OptionMap.EMPTY, httpDelegate);
     }
 
-    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final OptionMap undertowOptions, final int bufferSize, HttpOpenListener httpDelegate) {
+    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final OptionMap undertowOptions, HttpOpenListener httpDelegate) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
-        this.bufferSize = bufferSize;
+        Pooled<ByteBuffer> buf = pool.allocate();
+        this.bufferSize = buf.getResource().remaining();
+        buf.free();
         this.delegate = httpDelegate;
         this.heapBufferPool = heapBufferPool;
         Pooled<ByteBuffer> buff = heapBufferPool.allocate();
