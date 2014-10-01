@@ -286,7 +286,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         .getMap();
                 DebuggingSlicePool pool = new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, 100 * BUFFER_SIZE));
                 if (ajp) {
-                    openListener = new AjpOpenListener(pool, BUFFER_SIZE);
+                    openListener = new AjpOpenListener(pool);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
                     if (!proxy) {
                         int port = 8888;
@@ -294,7 +294,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     } else {
                         server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
 
-                        proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                        proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                         proxyOpenListener.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000, HANDLE_404));
@@ -302,7 +302,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                     }
                 } else if (spdy && isAlpnEnabled()) {
-                    openListener = new SpdyOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
+                    openListener = new SpdyOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
@@ -311,7 +311,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     server = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
                     server.resumeAccepts();
 
-                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                     ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext), OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404);
@@ -321,7 +321,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
 
                 } else if (h2 && isAlpnEnabled()) {
-                    openListener = new Http2OpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false), BUFFER_SIZE);
+                    openListener = new Http2OpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
@@ -330,7 +330,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     server = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
                     server.resumeAccepts();
 
-                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                     ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 120000, HANDLE_404);
@@ -340,13 +340,13 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
 
                 } else if (h2c) {
-                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false), BUFFER_SIZE);
+                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
                     server = worker.createStreamConnectionServer(targetAddress, acceptListener, serverOptions);
 
-                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                     ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2c", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
@@ -355,13 +355,13 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
                 } else if (spdyPlain) {
-                    openListener = new SpdyPlainOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
+                    openListener = new SpdyPlainOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     server = worker.createStreamConnectionServer(new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
                     server.resumeAccepts();
 
-                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                     ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy-plain", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, null, OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404);
@@ -374,13 +374,13 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                     XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, getServerSslContext());
                     XnioSsl clientSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, createClientSslContext());
-                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
                     server = xnioSsl.createSslConnectionServer(worker, targetAddress, acceptListener, serverOptions);
 
-                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                     ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("https", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), clientSsl), 30000, HANDLE_404);
@@ -396,7 +396,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     if(spdy) {
                         log.error("SPDY selected but Netty ALPN was not on the boot class path");
                     }
-                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
                     if (!proxy) {
                         server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
@@ -404,7 +404,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
                         server = worker.createStreamConnectionServer(targetAddress, acceptListener, serverOptions);
 
-                        proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), BUFFER_SIZE);
+                        proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                         ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);

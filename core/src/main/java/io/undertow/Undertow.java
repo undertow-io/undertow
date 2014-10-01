@@ -125,7 +125,7 @@ public class Undertow {
 
             for (ListenerConfig listener : listeners) {
                 if (listener.type == ListenerType.AJP) {
-                    AjpOpenListener openListener = new AjpOpenListener(buffers, serverOptions, bufferSize);
+                    AjpOpenListener openListener = new AjpOpenListener(buffers, serverOptions);
                     openListener.setRootHandler(rootHandler);
                     ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                     AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
@@ -141,9 +141,9 @@ public class Undertow {
                         server.resumeAccepts();
                         channels.add(server);
                     } else if (listener.type == ListenerType.HTTPS) {
-                        OpenListener openListener = new HttpOpenListener(buffers, undertowOptions, bufferSize);
+                        OpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
                         if(serverOptions.get(UndertowOptions.ENABLE_SPDY, false)) {
-                            openListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions, bufferSize, (HttpOpenListener) openListener);
+                            openListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions, (HttpOpenListener) openListener);
                         }
                         openListener.setRootHandler(rootHandler);
                         ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);

@@ -30,6 +30,7 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
+import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 
 import java.io.IOException;
@@ -52,14 +53,26 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     private volatile HttpRequestParser parser;
 
+    @Deprecated
     public HttpOpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
-        this(pool, OptionMap.EMPTY, bufferSize);
+        this(pool, OptionMap.EMPTY);
     }
 
+    @Deprecated
     public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, final int bufferSize) {
+        this(pool, undertowOptions);
+    }
+
+    public HttpOpenListener(final Pool<ByteBuffer> pool) {
+        this(pool, OptionMap.EMPTY);
+    }
+
+    public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
-        this.bufferSize = bufferSize;
+        Pooled<ByteBuffer> buf = pool.allocate();
+        this.bufferSize = buf.getResource().remaining();
+        buf.free();
         parser = HttpRequestParser.instance(undertowOptions);
     }
 

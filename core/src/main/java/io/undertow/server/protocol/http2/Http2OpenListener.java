@@ -63,22 +63,24 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     private volatile OptionMap undertowOptions;
     private final HttpOpenListener delegate;
 
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
-        this(pool, OptionMap.EMPTY, bufferSize, null);
+    public Http2OpenListener(final Pool<ByteBuffer> pool) {
+        this(pool, OptionMap.EMPTY, null);
     }
 
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, final int bufferSize) {
-        this(pool, undertowOptions, bufferSize, null);
+    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+        this(pool, undertowOptions, null);
     }
 
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final int bufferSize, HttpOpenListener httpDelegate) {
-        this(pool, OptionMap.EMPTY, bufferSize, httpDelegate);
+    public Http2OpenListener(final Pool<ByteBuffer> pool, HttpOpenListener httpDelegate) {
+        this(pool, OptionMap.EMPTY, httpDelegate);
     }
 
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, final int bufferSize, HttpOpenListener httpDelegate) {
+    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, HttpOpenListener httpDelegate) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
-        this.bufferSize = bufferSize;
+        Pooled<ByteBuffer> buf = pool.allocate();
+        this.bufferSize = buf.getResource().remaining();
+        buf.free();
         this.delegate = httpDelegate;
     }
 

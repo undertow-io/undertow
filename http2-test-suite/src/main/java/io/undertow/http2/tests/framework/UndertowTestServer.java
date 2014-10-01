@@ -76,7 +76,7 @@ public class UndertowTestServer implements ServerController {
                     .set(Options.BALANCING_CONNECTIONS, 2)
                     .getMap();
 
-            openListener = new Http2OpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2 * BUFFER_SIZE, 100 * BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true), BUFFER_SIZE);
+            openListener = new Http2OpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2 * BUFFER_SIZE, 100 * BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
             acceptListener = ChannelListeners.openListenerAdapter(openListener);
 
             SSLContext serverContext = Http2TestRunner.getServerSslContext();

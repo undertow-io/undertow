@@ -29,6 +29,7 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
+import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 
 import java.io.IOException;
@@ -54,14 +55,25 @@ public class AjpOpenListener implements OpenListener {
 
     private final AjpRequestParser parser;
 
+    @Deprecated
     public AjpOpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
-        this(pool, OptionMap.EMPTY, bufferSize);
+        this(pool, OptionMap.EMPTY);
     }
 
+    @Deprecated
     public AjpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, final int bufferSize) {
+        this(pool, undertowOptions);
+    }
+    public AjpOpenListener(final Pool<ByteBuffer> pool) {
+        this(pool, OptionMap.EMPTY);
+    }
+
+    public AjpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
-        this.bufferSize = bufferSize;
+        Pooled<ByteBuffer> buf = pool.allocate();
+        this.bufferSize = buf.getResource().remaining();
+        buf.free();
         parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, UTF_8), undertowOptions.get(DECODE_URL, true));
     }
 
