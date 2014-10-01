@@ -220,8 +220,8 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
                 if(isLast) {
                     textFrameSender.shutdownWrites();
-                    Channels.flushBlocking(textFrameSender);
                 }
+                Channels.flushBlocking(textFrameSender);
             } finally {
                 if (isLast) {
                     textFrameSender = null;
@@ -242,8 +242,8 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 Channels.writeBlocking(binaryFrameSender, partialByte);
                 if(isLast) {
                     binaryFrameSender.shutdownWrites();
-                    Channels.flushBlocking(binaryFrameSender);
                 }
+                Channels.flushBlocking(binaryFrameSender);
             } finally {
                 if (isLast) {
                     binaryFrameSender = null;

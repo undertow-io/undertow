@@ -352,6 +352,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(anyAreSet(state, STATE_WRITES_SHUTDOWN)) {
             return false;
         }
+        if(buffer != null && buffer.getResource().position() > 0) {
+            handleBufferFull();
+            return !readyForFlush;
+        }
         return true;
     }
 

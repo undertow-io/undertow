@@ -58,6 +58,9 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     @Override
     protected void handleFlushComplete(boolean finalFrame) {
         dataWritten = true;
+        if(masker != null) {
+            masker.setMaskingKey(maskingKey);
+        }
     }
 
 
