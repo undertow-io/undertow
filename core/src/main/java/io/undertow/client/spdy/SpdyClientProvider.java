@@ -73,8 +73,8 @@ public class SpdyClientProvider implements ClientProvider {
     static {
         Method npnPutMethod;
         try {
-            Class<?> npnClass = SpdyClientProvider.class.getClassLoader().loadClass("org.eclipse.jetty.alpn.ALPN");
-            npnPutMethod = npnClass.getDeclaredMethod("put", SSLEngine.class, SpdyClientProvider.class.getClassLoader().loadClass("org.eclipse.jetty.alpn.ALPN$Provider"));
+            Class<?> npnClass = Class.forName("org.eclipse.jetty.alpn.ALPN", false, SpdyClientProvider.class.getClassLoader());
+            npnPutMethod = npnClass.getDeclaredMethod("put", SSLEngine.class, Class.forName("org.eclipse.jetty.alpn.ALPN$Provider", false, SpdyClientProvider.class.getClassLoader()));
         } catch (Exception e) {
             UndertowLogger.CLIENT_LOGGER.jettyALPNNotFound("SPDY");
             npnPutMethod = null;
