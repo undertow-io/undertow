@@ -70,8 +70,8 @@ public class Http2ClientProvider implements ClientProvider {
     static {
         Method npnPutMethod;
         try {
-            Class<?> npnClass = Http2ClientProvider.class.getClassLoader().loadClass("org.eclipse.jetty.alpn.ALPN");
-            npnPutMethod = npnClass.getDeclaredMethod("put", SSLEngine.class, Http2ClientProvider.class.getClassLoader().loadClass("org.eclipse.jetty.alpn.ALPN$Provider"));
+            Class<?> npnClass = Class.forName("org.eclipse.jetty.alpn.ALPN", false, Http2ClientProvider.class.getClassLoader());
+            npnPutMethod = npnClass.getDeclaredMethod("put", SSLEngine.class, Class.forName("org.eclipse.jetty.alpn.ALPN$Provider", false, Http2ClientProvider.class.getClassLoader()));
         } catch (Exception e) {
             UndertowLogger.CLIENT_LOGGER.jettyALPNNotFound("HTTP2");
             npnPutMethod = null;
