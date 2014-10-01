@@ -182,7 +182,7 @@ public abstract class HttpRequestParser {
 
     public static final HttpRequestParser instance(final OptionMap options) {
         try {
-            final Class<?> cls = HttpRequestParser.class.getClassLoader().loadClass(HttpRequestParser.class.getName() + "$$generated");
+            final Class<?> cls = Class.forName(HttpRequestParser.class.getName() + "$$generated", false, HttpRequestParser.class.getClassLoader());
 
             Constructor<?> ctor = cls.getConstructor(OptionMap.class);
             return (HttpRequestParser) ctor.newInstance(options);

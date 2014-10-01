@@ -110,7 +110,7 @@ abstract class HttpResponseParser {
 
     static {
         try {
-            final Class<?> cls = HttpResponseParser.class.getClassLoader().loadClass(HttpResponseParser.class.getName() + "$$generated");
+            final Class<?> cls = Class.forName(HttpResponseParser.class.getName() + "$$generated", false, HttpResponseParser.class.getClassLoader());
             INSTANCE = (HttpResponseParser) cls.newInstance();
         } catch (Exception e) {
             throw new RuntimeException(e);
