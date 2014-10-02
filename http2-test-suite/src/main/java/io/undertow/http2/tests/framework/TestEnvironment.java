@@ -40,7 +40,7 @@ public class TestEnvironment {
     }
 
     public static int getPort() {
-        return 7777;
+        return 7877;
     }
 
     public static String getHost() {
