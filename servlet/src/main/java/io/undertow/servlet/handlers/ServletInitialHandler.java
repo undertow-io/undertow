@@ -39,6 +39,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
+import io.undertow.util.StatusCodes;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
@@ -254,10 +255,14 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
             SecurityActions.setCurrentRequestContext(servletRequestContext);
+            servletRequestContext.setRunningInsideHandler(true);
             try {
                 listeners.requestInitialized(request);
                 next.handleRequest(exchange);
                 //
+                if(servletRequestContext.getErrorCode() > 0) {
+                    servletRequestContext.getOriginalResponse().doErrorDispatch(servletRequestContext.getErrorCode(), servletRequestContext.getErrorMessage());
+                }
             } catch (Throwable t) {
 
                 //by default this will just log the exception
@@ -288,18 +293,14 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                             if (servletRequestContext.displayStackTraces()) {
                                 ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, t);
                             } else {
-                                //TODO: we need a debug mode to generate a debug error page
-                                if (response instanceof HttpServletResponse) {
-                                    ((HttpServletResponse) response).sendError(500);
-                                } else {
-                                    servletRequestContext.getOriginalResponse().sendError(500);
-                                }
+                                servletRequestContext.getOriginalResponse().doErrorDispatch(500, StatusCodes.INTERNAL_SERVER_ERROR_STRING);
                             }
                         }
                     }
                 }
 
             } finally {
+                servletRequestContext.setRunningInsideHandler(false);
                 listeners.requestDestroyed(request);
             }
             //if it is not dispatched and is not a mock request
