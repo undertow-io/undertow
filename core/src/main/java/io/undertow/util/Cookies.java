@@ -292,7 +292,7 @@ public class Cookies {
 
     private static int createCookie(final String name, final String value, int maxCookies, int cookieCount,
             final Map<String, String> cookies, final Map<String, String> additional) {
-        if (name.charAt(0) == '$') {
+        if (!name.isEmpty() && name.charAt(0) == '$') {
             if(additional.containsKey(name)) {
                 return cookieCount;
             }

@@ -124,6 +124,20 @@ public class CookiesTestCase {
     }
 
     @Test
+    public void testEmptyCookieNames() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(4, false, Arrays.asList("=foo; CUSTOMER=WILE_E_COYOTE=THE_COYOTE; =foobar; SHIPPING=FEDEX; =bar"));
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        cookie = cookies.get("");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("foo", cookie.getValue());
+    }
+
+    @Test
     public void testEqualsInValueAllowed() {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(1, true, Arrays.asList("CUSTOMER=WILE_E_COYOTE=THE_COYOTE"));
         Cookie cookie = cookies.get("CUSTOMER");
