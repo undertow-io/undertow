@@ -110,6 +110,13 @@ public class ServletRequestContext {
 
     private ServletContextImpl currentServletContext;
 
+    /**
+     * If this is true the request is running inside the context of ServletInitialHandler
+     */
+    private boolean runningInsideHandler = false;
+    private int errorCode = -1;
+    private String errorMessage;
+
     public ServletRequestContext(final Deployment deployment, final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse, final ServletPathMatch originalServletPathMatch) {
         this.deployment = deployment;
         this.originalRequest = originalRequest;
@@ -233,5 +240,26 @@ public class ServletRequestContext {
             return !getExchange().getRequestHeaders().contains(Headers.X_FORWARDED_FOR);
         }
 
+    }
+
+    public void setError(int sc, String msg) {
+        this.errorCode = sc;
+        this.errorMessage = msg;
+    }
+
+    public int getErrorCode() {
+        return errorCode;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public boolean isRunningInsideHandler() {
+        return runningInsideHandler;
+    }
+
+    public void setRunningInsideHandler(boolean runningInsideHandler) {
+        this.runningInsideHandler = runningInsideHandler;
     }
 }

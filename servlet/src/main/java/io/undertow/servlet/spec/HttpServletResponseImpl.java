@@ -122,23 +122,33 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         writer = null;
         responseState = ResponseState.NONE;
         exchange.setResponseCode(sc);
-        //todo: is this the best way to handle errors?
+        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if(src.isRunningInsideHandler()) {
+            //all we do is set the error on the context, we handle it when the request is returned
+            src.setError(sc, msg);
+        } else {
+            //if the src is null there is no outer handler, as we are in an asnc request
+            doErrorDispatch(sc, msg);
+        }
+    }
+
+    public void doErrorDispatch(int sc, String error) throws IOException {
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
         if (location != null) {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
             final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
             try {
-                requestDispatcher.error(servletRequestContext, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet().getServletInfo().getName(), msg);
+                requestDispatcher.error(servletRequestContext, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet().getServletInfo().getName(), error);
             } catch (ServletException e) {
                 throw new RuntimeException(e);
             }
-        } else if (msg != null) {
+        } else if (error != null) {
             setContentType("text/html");
             setCharacterEncoding("UTF-8");
             if(servletContext.getDeployment().getDeploymentInfo().isEscapeErrorMessage()) {
-                getWriter().write("<html><head><title>Error</title></head><body>" + escapeHtml(msg) + "</body></html>");
+                getWriter().write("<html><head><title>Error</title></head><body>" + escapeHtml(error) + "</body></html>");
             } else {
-                getWriter().write("<html><head><title>Error</title></head><body>" + msg + "</body></html>");
+                getWriter().write("<html><head><title>Error</title></head><body>" + error + "</body></html>");
             }
             getWriter().close();
         }
