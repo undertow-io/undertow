@@ -239,7 +239,7 @@ public class Cookies {
                         cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
-                    } else if (c == '"') {
+                    } else if (c == '"' && start == i) { //only process the " if it is the first character
                         state = 3;
                         start = i + 1;
                     } else if (!allowEqualInValue && c == '=') {
