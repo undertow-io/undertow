@@ -205,6 +205,7 @@ public class Cookies {
         int state = 0;
         String name = null;
         int start = 0;
+        int braceBalance = 0;
         int cookieCount = parsedCookies.size();
         final Map<String, String> cookies = new HashMap<>();
         final Map<String, String> additional = new HashMap<>();
@@ -242,6 +243,10 @@ public class Cookies {
                     } else if (c == '"') {
                         state = 3;
                         start = i + 1;
+                    } else if (c == '{') {
+                        state = 5;
+                        start = i;
+                        braceBalance = 0;
                     } else if (!allowEqualInValue && c == '=') {
                         cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 4;
@@ -264,6 +269,20 @@ public class Cookies {
                         state = 0;
                     }
                     start = i + 1;
+                    break;
+                }
+                case 5: {
+                    //extract JSON value
+                    if (c == '{') {
+                       braceBalance += 1;
+                    }
+                    if (c == '}' && braceBalance == 0) {
+                        cookieCount = createCookie(name, cookie.substring(start, (i + 1)), maxCookies, cookieCount, cookies, additional);
+                        state = 0;
+                        start = i + 1;
+                    } else if (c == '}' && braceBalance > 0) {
+                        braceBalance -= 1;
+                    }
                     break;
                 }
             }

@@ -154,4 +154,54 @@ public class CookiesTestCase {
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
     }
+
+    @Test
+    public void testSimpleJSONObjectInRequestCookies() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList(
+                "CUSTOMER={\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"};"
+                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"));
+
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("{\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"}",
+               cookie.getValue());
+        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/", cookie.getPath());
+
+        cookie = cookies.get("SHIPPING");
+        Assert.assertEquals("SHIPPING", cookie.getName());
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/", cookie.getPath());
+    }
+
+    @Test
+    public void testComplexJSONObjectInRequestCookies() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList(
+                "CUSTOMER={ \"accounting\" : [ { \"firstName\" : \"John\", \"lastName\" : \"Doe\", \"age\" : 23 },"
+                + " { \"firstName\" : \"Mary\",  \"lastName\" : \"Smith\", \"age\" : 32 }], "
+                + "\"sales\" : [ { \"firstName\" : \"Sally\", \"lastName\" : \"Green\", \"age\" : 27 }, "
+                + "{ \"firstName\" : \"Jim\", \"lastName\" : \"Galley\", \"age\" : 41 } ] };"
+                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"));
+
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("{ \"accounting\" : [ { \"firstName\" : \"John\", \"lastName\" : \"Doe\", \"age\" : 23 },"
+                + " { \"firstName\" : \"Mary\",  \"lastName\" : \"Smith\", \"age\" : 32 }], "
+                + "\"sales\" : [ { \"firstName\" : \"Sally\", \"lastName\" : \"Green\", \"age\" : 27 }, "
+                + "{ \"firstName\" : \"Jim\", \"lastName\" : \"Galley\", \"age\" : 41 } ] }",
+               cookie.getValue());
+        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/", cookie.getPath());
+
+        cookie = cookies.get("SHIPPING");
+        Assert.assertEquals("SHIPPING", cookie.getName());
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/", cookie.getPath());
+    }
 }
