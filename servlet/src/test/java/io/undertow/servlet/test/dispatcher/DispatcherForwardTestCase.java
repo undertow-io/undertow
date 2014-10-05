@@ -19,6 +19,9 @@
 package io.undertow.servlet.test.dispatcher;
 
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.accesslog.AccessLogFileTestCase;
+import io.undertow.server.handlers.accesslog.AccessLogHandler;
+import io.undertow.server.handlers.accesslog.AccessLogReceiver;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
@@ -44,6 +47,8 @@ import org.junit.runner.RunWith;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Stuart Douglas
@@ -51,6 +56,19 @@ import java.io.IOException;
 @RunWith(DefaultServer.class)
 public class DispatcherForwardTestCase {
 
+    private static volatile String message;
+
+    private static volatile CountDownLatch latch = new CountDownLatch(1);
+
+
+    private static final AccessLogReceiver RECEIVER = new AccessLogReceiver() {
+
+        @Override
+        public void logMessage(final String msg) {
+            message = msg;
+            latch.countDown();
+        }
+    };
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -92,11 +110,12 @@ public class DispatcherForwardTestCase {
         manager.deploy();
         root.addPrefixPath(builder.getContextPath(), manager.start());
 
-        DefaultServer.setRootHandler(root);
+        DefaultServer.setRootHandler(new AccessLogHandler(root, RECEIVER, "%r %U %R", AccessLogFileTestCase.class.getClassLoader()));
     }
 
     @Test
-    public void testPathBasedInclude() throws IOException {
+    public void testPathBasedInclude() throws IOException, InterruptedException {
+        resetLatch();
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
@@ -105,9 +124,17 @@ public class DispatcherForwardTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Path!Name!forwarded", response);
+            latch.await(30, TimeUnit.SECONDS);
+            //UNDERTOW-327 make sure that the access log includes the original path
+            Assert.assertEquals("GET /servletContext/dispatch HTTP/1.1 /servletContext/dispatch /dispatch", message);
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    private void resetLatch() {
+        latch.countDown();
+        latch = new CountDownLatch(1);
     }
 
     @Test

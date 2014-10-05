@@ -70,5 +70,10 @@ public class RequestLineAttribute implements ExchangeAttribute {
             }
             return null;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

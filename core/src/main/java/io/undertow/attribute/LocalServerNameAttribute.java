@@ -61,5 +61,10 @@ public class LocalServerNameAttribute implements ExchangeAttribute {
             }
             return null;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

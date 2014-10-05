@@ -21,56 +21,64 @@ package io.undertow.servlet.attribute;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeBuilder;
 import io.undertow.attribute.ReadOnlyAttributeException;
+import io.undertow.attribute.RelativePathAttribute;
+import io.undertow.attribute.RequestURLAttribute;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
+import javax.servlet.RequestDispatcher;
+
 /**
- * An attribute in the servlet request
+ * The relative path
  *
  * @author Stuart Douglas
  */
-public class ServletRequestAttribute implements ExchangeAttribute {
+public class ServletRelativePathAttribute implements ExchangeAttribute {
 
-    private final String attributeName;
+    public static final String RELATIVE_PATH_SHORT = "%R";
+    public static final String RELATIVE_PATH = "%{RELATIVE_PATH}";
 
-    public ServletRequestAttribute(final String attributeName) {
-        this.attributeName = attributeName;
+    public static final ExchangeAttribute INSTANCE = new ServletRelativePathAttribute();
+
+    private ServletRelativePathAttribute() {
+
     }
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        if (context != null) {
-            Object result = context.getServletRequest().getAttribute(attributeName);
-            if (result != null) {
-                return result.toString();
-            }
+        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if(src == null) {
+            return RequestURLAttribute.INSTANCE.readAttribute(exchange);
         }
-        return null;
+        String path = (String) src.getServletRequest().getAttribute(RequestDispatcher.FORWARD_PATH_INFO);
+        String sp = (String) src.getServletRequest().getAttribute(RequestDispatcher.FORWARD_SERVLET_PATH);
+        if(path == null && sp == null) {
+            return RequestURLAttribute.INSTANCE.readAttribute(exchange);
+        }
+        if(sp == null) {
+            return path;
+        } else if(path == null) {
+            return sp;
+        } else {
+            return sp + path;
+        }
     }
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        if (context != null) {
-            context.getServletRequest().setAttribute(attributeName, newValue);
-        }
+        RelativePathAttribute.INSTANCE.writeAttribute(exchange, newValue);
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override
         public String name() {
-            return "Servlet request attribute";
+            return "Relative Path";
         }
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.startsWith("%{r,") && token.endsWith("}")) {
-                final String attributeName = token.substring(4, token.length() - 1);
-                return new ServletRequestAttribute(attributeName);
-            }
-            return null;
+            return token.equals(RELATIVE_PATH) || token.equals(RELATIVE_PATH_SHORT) ? INSTANCE : null;
         }
 
         @Override
