@@ -63,5 +63,10 @@ public class DateTimeAttribute implements ExchangeAttribute {
             }
             return null;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

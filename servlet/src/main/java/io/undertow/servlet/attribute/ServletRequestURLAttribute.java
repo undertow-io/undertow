@@ -21,61 +21,64 @@ package io.undertow.servlet.attribute;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeBuilder;
 import io.undertow.attribute.ReadOnlyAttributeException;
+import io.undertow.attribute.RequestURLAttribute;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
+import javax.servlet.RequestDispatcher;
+
 /**
- * An attribute in the servlet request
+ * The request URL
  *
  * @author Stuart Douglas
  */
-public class ServletRequestAttribute implements ExchangeAttribute {
+public class ServletRequestURLAttribute implements ExchangeAttribute {
 
-    private final String attributeName;
+    public static final String REQUEST_URL_SHORT = "%U";
+    public static final String REQUEST_URL = "%{REQUEST_URL}";
 
-    public ServletRequestAttribute(final String attributeName) {
-        this.attributeName = attributeName;
+    public static final ExchangeAttribute INSTANCE = new ServletRequestURLAttribute();
+
+    private ServletRequestURLAttribute() {
+
     }
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        if (context != null) {
-            Object result = context.getServletRequest().getAttribute(attributeName);
-            if (result != null) {
-                return result.toString();
-            }
+        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if(src == null) {
+            return RequestURLAttribute.INSTANCE.readAttribute(exchange);
         }
-        return null;
+        String uri = (String) src.getServletRequest().getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
+        if(uri == null) {
+            return RequestURLAttribute.INSTANCE.readAttribute(exchange);
+        }
+        return uri;
     }
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        if (context != null) {
-            context.getServletRequest().setAttribute(attributeName, newValue);
-        }
+        RequestURLAttribute.INSTANCE.writeAttribute(exchange, newValue);
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override
         public String name() {
-            return "Servlet request attribute";
+            return "Request URL";
         }
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.startsWith("%{r,") && token.endsWith("}")) {
-                final String attributeName = token.substring(4, token.length() - 1);
-                return new ServletRequestAttribute(attributeName);
+            if (token.equals(REQUEST_URL) || token.equals(REQUEST_URL_SHORT)) {
+                return ServletRequestURLAttribute.INSTANCE;
             }
             return null;
         }
 
         @Override
         public int priority() {
-            return 0;
+            return 1;
         }
     }
 }

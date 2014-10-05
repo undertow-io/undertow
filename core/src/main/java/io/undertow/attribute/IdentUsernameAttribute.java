@@ -59,5 +59,10 @@ public class IdentUsernameAttribute implements ExchangeAttribute {
             }
             return null;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

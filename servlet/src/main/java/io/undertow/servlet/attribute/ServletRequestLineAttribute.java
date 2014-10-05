@@ -16,58 +16,67 @@
  *  limitations under the License.
  */
 
-package io.undertow.attribute;
+package io.undertow.servlet.attribute;
 
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributeBuilder;
+import io.undertow.attribute.ReadOnlyAttributeException;
 import io.undertow.server.HttpServerExchange;
 
 /**
- * The query string
+ * The request line
  *
  * @author Stuart Douglas
  */
-public class QueryStringAttribute implements ExchangeAttribute {
+public class ServletRequestLineAttribute implements ExchangeAttribute {
 
-    public static final String QUERY_STRING_SHORT = "%q";
-    public static final String QUERY_STRING = "%{QUERY_STRING}";
+    public static final String REQUEST_LINE_SHORT = "%r";
+    public static final String REQUEST_LINE = "%{REQUEST_LINE}";
 
-    public static final ExchangeAttribute INSTANCE = new QueryStringAttribute();
+    public static final ExchangeAttribute INSTANCE = new ServletRequestLineAttribute();
 
-    private QueryStringAttribute() {
+    private ServletRequestLineAttribute() {
 
     }
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        String qs = exchange.getQueryString();
-        if(qs.isEmpty()) {
-            return qs;
+        StringBuilder sb = new StringBuilder()
+                .append(exchange.getRequestMethod().toString())
+                .append(' ')
+                .append(ServletRequestURLAttribute.INSTANCE.readAttribute(exchange));
+        if (!exchange.getQueryString().isEmpty()) {
+            sb.append('?');
+            sb.append(exchange.getQueryString());
         }
-        return '?' + qs;
+        sb.append(' ')
+                .append(exchange.getProtocol().toString()).toString();
+        return sb.toString();
     }
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        exchange.setQueryString(newValue);
+        throw new ReadOnlyAttributeException("Request line", newValue);
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override
         public String name() {
-            return "Query String";
+            return "Request line";
         }
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.equals(QUERY_STRING) || token.equals(QUERY_STRING_SHORT)) {
-                return QueryStringAttribute.INSTANCE;
+            if (token.equals(REQUEST_LINE) || token.equals(REQUEST_LINE_SHORT)) {
+                return ServletRequestLineAttribute.INSTANCE;
             }
             return null;
         }
 
         @Override
         public int priority() {
-            return 0;
+            return 1;
         }
     }
 }

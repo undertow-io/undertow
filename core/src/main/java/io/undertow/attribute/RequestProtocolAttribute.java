@@ -60,5 +60,10 @@ public class RequestProtocolAttribute implements ExchangeAttribute {
             }
             return null;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

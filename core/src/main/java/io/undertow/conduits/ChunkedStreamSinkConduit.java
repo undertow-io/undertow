@@ -100,8 +100,6 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private static final int FLAG_FIRST_DATA_WRITTEN = 1 << 4; //set on first flush or write call
     private static final int FLAG_FINISHED = 1 << 5;
 
-    int written = 0;
-
     /**
      * Construct a new instance.
      *
@@ -140,7 +138,6 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         int oldLimit = src.limit();
         if (chunkleft == 0 && !chunkingSepBuffer.hasRemaining()) {
             chunkingBuffer.clear();
-            written += src.remaining();
             putIntAsHexString(chunkingBuffer, src.remaining());
             chunkingBuffer.put(CRLF);
             chunkingBuffer.flip();

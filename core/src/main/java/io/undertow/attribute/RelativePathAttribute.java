@@ -72,5 +72,10 @@ public class RelativePathAttribute implements ExchangeAttribute {
         public ExchangeAttribute build(final String token) {
             return token.equals(RELATIVE_PATH) || token.equals(RELATIVE_PATH_SHORT) ? INSTANCE : null;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }
