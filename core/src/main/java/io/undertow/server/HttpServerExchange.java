@@ -268,8 +268,15 @@ public final class HttpServerExchange extends AbstractAttachable {
      * or the exchange will be ended.
      */
     private static final int FLAG_IN_CALL = 1 << 17;
+    /**
+     * Flag that indicates that reads should be resumed when the call stack returns.
+     */
     private static final int FLAG_SHOULD_RESUME_READS = 1 << 18;
-    private static final int FLAG_SHOLD_RESUME_WRITES = 1 << 19;
+
+    /**
+     * Flag that indicates that writes should be resumed when the call stack returns
+     */
+    private static final int FLAG_SHOULD_RESUME_WRITES = 1 << 19;
 
     /**
      * The source address for the request. If this is null then the actual source address from the channel is used
@@ -1604,7 +1611,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     boolean runResumeReadWrite() {
         boolean ret = false;
-        if(anyAreSet(state, FLAG_SHOLD_RESUME_WRITES)) {
+        if(anyAreSet(state, FLAG_SHOULD_RESUME_WRITES)) {
             responseChannel.runResume();
             ret = true;
         }
@@ -1612,7 +1619,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             requestChannel.runResume();
             ret = true;
         }
-        state &= ~(FLAG_SHOULD_RESUME_READS | FLAG_SHOLD_RESUME_WRITES);
+        state &= ~(FLAG_SHOULD_RESUME_READS | FLAG_SHOULD_RESUME_WRITES);
         return ret;
     }
 
@@ -1709,7 +1716,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 return;
             }
             if (isInCall()) {
-                state |= FLAG_SHOLD_RESUME_WRITES;
+                state |= FLAG_SHOULD_RESUME_WRITES;
             } else {
                 delegate.resumeWrites();
             }
@@ -1722,7 +1729,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             if (isInCall()) {
                 wakeup = true;
-                state |= FLAG_SHOLD_RESUME_WRITES;
+                state |= FLAG_SHOULD_RESUME_WRITES;
             } else {
                 delegate.wakeupWrites();
             }
@@ -1730,7 +1737,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public boolean isWriteResumed() {
-            return anyAreSet(state, FLAG_SHOLD_RESUME_WRITES) || super.isWriteResumed();
+            return anyAreSet(state, FLAG_SHOULD_RESUME_WRITES) || super.isWriteResumed();
         }
 
         public void runResume() {

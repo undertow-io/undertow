@@ -21,6 +21,7 @@ package io.undertow.server.protocol.http2;
 import java.io.IOException;
 import javax.net.ssl.SSLSession;
 
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -63,12 +64,14 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private final StringBuilder decodeBuffer = new StringBuilder();
     private final boolean allowEncodingSlash;
     private final int bufferSize;
+    private final ConnectorStatisticsImpl connectorStatistics;
 
 
-    public Http2ReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
+    public Http2ReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize, ConnectorStatisticsImpl connectorStatistics) {
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
+        this.connectorStatistics = connectorStatistics;
         this.maxEntitySize = undertowOptions.get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.allowEncodingSlash = undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
@@ -120,6 +123,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
                             Connectors.terminateRequest(exchange);
                         }
                     });
+                }
+                if(connectorStatistics != null) {
+                    connectorStatistics.setup(exchange);
                 }
 
                 Connectors.executeRootHandler(rootHandler, exchange);

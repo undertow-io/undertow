@@ -70,7 +70,7 @@ public class Http2UpgradeHandler implements HttpHandler {
                                 }
                                 next.handleRequest(exchange);
                             }
-                        }, undertowOptions, exchange.getConnection().getBufferSize());
+                        }, undertowOptions, exchange.getConnection().getBufferSize(), null);
                         channel.getReceiveSetter().set(receiveListener);
                         receiveListener.handleInitialRequest(exchange, channel);
                         channel.resumeReceives();

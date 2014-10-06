@@ -26,17 +26,46 @@ import org.xnio.StreamConnection;
 import java.nio.ByteBuffer;
 
 /**
+ * Interface that represents an open listener, aka a connector.
+ *
  * @author Stuart Douglas
  */
 public interface OpenListener extends ChannelListener<StreamConnection> {
 
+    /**
+     *
+     * @return The first handler that will be executed by requests on the connector
+     */
     HttpHandler getRootHandler();
 
+    /**
+     * Sets the root handler
+     *
+     * @param rootHandler The new root handler
+     */
     void setRootHandler(HttpHandler rootHandler);
 
+    /**
+     *
+     * @return The connector options
+     */
     OptionMap getUndertowOptions();
 
+    /**
+     *
+     * @param undertowOptions The connector options
+     */
     void setUndertowOptions(OptionMap undertowOptions);
 
+    /**
+     *
+     * @return The buffer pool in use by this connector
+     */
     Pool<ByteBuffer> getBufferPool();
+
+    /**
+     *
+     * @return The connector statistics, or null if statistics gathering is disabled.
+     */
+    ConnectorStatistics getConnectorStatistics();
 }

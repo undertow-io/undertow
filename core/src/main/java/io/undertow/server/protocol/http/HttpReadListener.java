@@ -21,6 +21,7 @@ package io.undertow.server.protocol.http;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ClosingChannelExceptionHandler;
@@ -63,16 +64,21 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     //0 = new request ok, reads resumed
     //1 = request running, new request not ok
     //2 = suspending/resuming in progress
+    @SuppressWarnings("unused")
     private volatile int requestState;
-
     private static final AtomicIntegerFieldUpdater<HttpReadListener> requestStateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpReadListener.class, "requestState");
 
-    HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser) {
+    private final ConnectorStatisticsImpl connectorStatistics;
+
+
+    HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser, ConnectorStatisticsImpl connectorStatistics) {
         this.connection = connection;
         this.parser = parser;
+        this.connectorStatistics = connectorStatistics;
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
+
     }
 
     public void newRequest() {
@@ -156,6 +162,9 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 Connectors.setRequestStartTime(httpServerExchange);
             }
             connection.setCurrentExchange(httpServerExchange);
+            if(connectorStatistics != null) {
+                connectorStatistics.setup(httpServerExchange);
+            }
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);

@@ -21,8 +21,12 @@ package io.undertow.server.protocol.ajp;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
+import io.undertow.server.ConnectorStatistics;
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import org.xnio.IoUtils;
@@ -55,6 +59,9 @@ public class AjpOpenListener implements OpenListener {
 
     private final AjpRequestParser parser;
 
+    private volatile boolean statisticsEnabled;
+    private final ConnectorStatisticsImpl connectorStatistics;
+
     @Deprecated
     public AjpOpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
         this(pool, OptionMap.EMPTY);
@@ -75,6 +82,8 @@ public class AjpOpenListener implements OpenListener {
         this.bufferSize = buf.getResource().remaining();
         buf.free();
         parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, UTF_8), undertowOptions.get(DECODE_URL, true));
+        connectorStatistics = new ConnectorStatisticsImpl();
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
     @Override
@@ -108,9 +117,13 @@ public class AjpOpenListener implements OpenListener {
             IoUtils.safeClose(channel);
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         }
+        if(statisticsEnabled) {
+            channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
+            channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.sentAccumulator()));
+        }
 
         AjpServerConnection connection = new AjpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        AjpReadListener readListener = new AjpReadListener(connection, scheme, parser);
+        AjpReadListener readListener = new AjpReadListener(connection, scheme, parser, statisticsEnabled ? connectorStatistics : null);
         connection.setAjpReadListener(readListener);
         readListener.startRequest();
         channel.getSourceChannel().setReadListener(readListener);
@@ -138,11 +151,20 @@ public class AjpOpenListener implements OpenListener {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
     @Override
     public Pool<ByteBuffer> getBufferPool() {
         return bufferPool;
+    }
+
+    @Override
+    public ConnectorStatistics getConnectorStatistics() {
+        if(statisticsEnabled) {
+            return connectorStatistics;
+        }
+        return null;
     }
 
     public String getScheme() {

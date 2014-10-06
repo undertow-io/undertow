@@ -19,6 +19,11 @@
 package io.undertow.server.protocol.spdy;
 
 import java.nio.ByteBuffer;
+
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
+import io.undertow.server.ConnectorStatistics;
+import io.undertow.server.ConnectorStatisticsImpl;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -48,6 +53,8 @@ public final class SpdyPlainOpenListener implements ChannelListener<StreamConnec
     private volatile HttpHandler rootHandler;
 
     private volatile OptionMap undertowOptions;
+    private volatile boolean statisticsEnabled;
+    private final ConnectorStatisticsImpl connectorStatistics;
 
     public SpdyPlainOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool) {
         this(pool, heapBufferPool, OptionMap.EMPTY);
@@ -68,6 +75,8 @@ public final class SpdyPlainOpenListener implements ChannelListener<StreamConnec
         } finally {
             buff.free();
         }
+        connectorStatistics = new ConnectorStatisticsImpl();
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
     public void handleEvent(final StreamConnection channel) {
@@ -79,9 +88,21 @@ public final class SpdyPlainOpenListener implements ChannelListener<StreamConnec
         if (idleTimeout != null && idleTimeout > 0) {
             spdy.setIdleTimeout(idleTimeout);
         }
-        spdy.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize));
+        if(statisticsEnabled) {
+            channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
+            channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.sentAccumulator()));
+        }
+        spdy.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize, statisticsEnabled ? connectorStatistics : null));
         spdy.resumeReceives();
 
+    }
+
+    @Override
+    public ConnectorStatistics getConnectorStatistics() {
+        if(statisticsEnabled) {
+            return connectorStatistics;
+        }
+        return null;
     }
 
     @Override
@@ -105,10 +126,12 @@ public final class SpdyPlainOpenListener implements ChannelListener<StreamConnec
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
     @Override
     public Pool<ByteBuffer> getBufferPool() {
         return bufferPool;
     }
+
 }

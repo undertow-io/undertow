@@ -21,6 +21,7 @@ package io.undertow.server.protocol.spdy;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.spdy.SpdyStreamStreamSourceChannel;
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -62,12 +63,14 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
     private final StringBuilder decodeBuffer = new StringBuilder();
     private final boolean allowEncodingSlash;
     private final int bufferSize;
+    private final ConnectorStatisticsImpl connectorStatistics;
 
 
-    public SpdyReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
+    public SpdyReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize, ConnectorStatisticsImpl connectorStatistics) {
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
+        this.connectorStatistics = connectorStatistics;
         this.maxEntitySize = undertowOptions.get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.allowEncodingSlash = undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
@@ -123,7 +126,9 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                         }
                     });
                 }
-
+                if(connectorStatistics != null) {
+                    connectorStatistics.setup(exchange);
+                }
                 Connectors.executeRootHandler(rootHandler, exchange);
             }
 

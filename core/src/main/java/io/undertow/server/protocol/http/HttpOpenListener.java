@@ -21,8 +21,12 @@ package io.undertow.server.protocol.http;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
+import io.undertow.server.ConnectorStatistics;
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import org.xnio.ChannelListener;
@@ -53,6 +57,9 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     private volatile HttpRequestParser parser;
 
+    private volatile boolean statisticsEnabled;
+    private final ConnectorStatisticsImpl connectorStatistics;
+
     @Deprecated
     public HttpOpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
         this(pool, OptionMap.EMPTY);
@@ -74,6 +81,8 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         this.bufferSize = buf.getResource().remaining();
         buf.free();
         parser = HttpRequestParser.instance(undertowOptions);
+        connectorStatistics = new ConnectorStatisticsImpl();
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
     @Override
@@ -110,7 +119,11 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
 
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        HttpReadListener readListener = new HttpReadListener(connection, parser);
+        HttpReadListener readListener = new HttpReadListener(connection, parser, statisticsEnabled ? connectorStatistics : null);
+        if(statisticsEnabled) {
+            channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
+            channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.sentAccumulator()));
+        }
 
         connection.setReadListener(readListener);
         readListener.newRequest();
@@ -140,10 +153,19 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         }
         this.undertowOptions = undertowOptions;
         this.parser = HttpRequestParser.instance(undertowOptions);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
     @Override
     public Pool<ByteBuffer> getBufferPool() {
         return bufferPool;
+    }
+
+    @Override
+    public ConnectorStatistics getConnectorStatistics() {
+        if(statisticsEnabled) {
+            return connectorStatistics;
+        }
+        return null;
     }
 }

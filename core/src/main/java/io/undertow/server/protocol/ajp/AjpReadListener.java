@@ -24,6 +24,7 @@ import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.EmptyStreamSourceConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -63,13 +64,15 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     private final int maxRequestSize;
     private final long maxEntitySize;
     private final AjpRequestParser parser;
+    private final ConnectorStatisticsImpl connectorStatistics;
     private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
 
 
-    AjpReadListener(final AjpServerConnection connection, final String scheme, AjpRequestParser parser) {
+    AjpReadListener(final AjpServerConnection connection, final String scheme, AjpRequestParser parser, ConnectorStatisticsImpl connectorStatistics) {
         this.connection = connection;
         this.scheme = scheme;
         this.parser = parser;
+        this.connectorStatistics = connectorStatistics;
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<>(connection.getChannel().getSinkChannel());
@@ -201,6 +204,9 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     Connectors.setRequestStartTime(httpServerExchange);
                 }
                 connection.setCurrentExchange(httpServerExchange);
+                if(connectorStatistics != null) {
+                    connectorStatistics.setup(httpServerExchange);
+                }
                 Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
 
             } catch (Throwable t) {

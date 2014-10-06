@@ -22,6 +22,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import javax.net.ssl.SSLEngine;
+
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
+import io.undertow.server.ConnectorStatistics;
+import io.undertow.server.ConnectorStatisticsImpl;
 import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -64,6 +69,8 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
 
     private volatile OptionMap undertowOptions;
     private final HttpOpenListener delegate;
+    private volatile boolean statisticsEnabled;
+    private final ConnectorStatisticsImpl connectorStatistics;
 
     public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool) {
         this(pool, heapBufferPool, OptionMap.EMPTY, null);
@@ -93,6 +100,8 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
         } finally {
             buff.free();
         }
+        connectorStatistics = new ConnectorStatisticsImpl();
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
     public void handleEvent(final StreamConnection channel) {
@@ -108,7 +117,7 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
             UndertowLogger.REQUEST_LOGGER.debug("Resuming existing session, not doing NPN negotiation");
             if (existing.equals(SPDY_3_1) || existing.equals(SPDY_3)) {
                 SpdyChannel sc = new SpdyChannel(channel, bufferPool, new ImmediatePooled<>(ByteBuffer.wrap(new byte[0])), heapBufferPool, false);
-                sc.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize));
+                sc.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize, statisticsEnabled ? connectorStatistics : null));
                 sc.resumeReceives();
             } else {
                 if (delegate == null) {
@@ -169,6 +178,7 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
     @Override
@@ -205,7 +215,12 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                             channel.setIdleTimeout(idleTimeout);
                         }
                         free = false;
-                        channel.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize));
+
+                        if(statisticsEnabled) {
+                            this.channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(this.channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
+                            this.channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(this.channel.getSourceChannel().getConduit(), connectorStatistics.sentAccumulator()));
+                        }
+                        channel.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics));
                         channel.resumeReceives();
                         return;
                     } else if (HTTP_1_1.equals(selected) || res > 0) {
@@ -238,5 +253,12 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
                 }
             }
         }
+    }
+    @Override
+    public ConnectorStatistics getConnectorStatistics() {
+        if(statisticsEnabled) {
+            return connectorStatistics;
+        }
+        return null;
     }
 }

@@ -167,6 +167,12 @@ public class UndertowOptions {
     public static final Option<Boolean> ENABLE_HTTP2 = Option.simple(UndertowOptions.class, "ENABLE_HTTP2", Boolean.class);
 
     /**
+     * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
+     * as bytes sent/recevied to be monitored.
+     */
+    public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = Option.simple(UndertowOptions.class, "ENABLE_CONNECTOR_STATISTICS", Boolean.class);
+
+    /**
      * The size of the header table that is used in the encoder
      */
     public static final Option<Integer> HTTP2_SETTINGS_HEADER_TABLE_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_HEADER_TABLE_SIZE", Integer.class);
