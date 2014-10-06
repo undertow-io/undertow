@@ -23,6 +23,8 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcurrentDirectDeque;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
@@ -31,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.xnio.XnioExecutor;
@@ -42,7 +45,7 @@ import org.xnio.XnioWorker;
  *
  * @author Stuart Douglas
  */
-public class InMemorySessionManager implements SessionManager {
+public class InMemorySessionManager implements SessionManager, SessionManagerStatistics {
 
     private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
@@ -60,6 +63,13 @@ public class InMemorySessionManager implements SessionManager {
     private final ConcurrentDirectDeque<String> evictionQueue;
 
     private final String deploymentName;
+
+    private final AtomicLong createdSessionCount = new AtomicLong();
+    private final AtomicLong expiredSessionCount = new AtomicLong();
+    private final AtomicLong averageSessionLifetime = new AtomicLong();
+    private final AtomicLong longestSessionLifetime = new AtomicLong();
+
+    private volatile long startTime;
 
     public InMemorySessionManager(String deploymentName, int maxSessions) {
         this.deploymentName = deploymentName;
@@ -83,7 +93,9 @@ public class InMemorySessionManager implements SessionManager {
 
     @Override
     public void start() {
-
+        createdSessionCount.set(0);
+        expiredSessionCount.set(0);
+        startTime = System.currentTimeMillis();
     }
 
     @Override
@@ -129,6 +141,7 @@ public class InMemorySessionManager implements SessionManager {
         } else {
             evictionToken = null;
         }
+        createdSessionCount.incrementAndGet();
         final SessionImpl session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken);
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
@@ -205,6 +218,49 @@ public class InMemorySessionManager implements SessionManager {
     public String toString() {
         return this.deploymentName;
     }
+
+
+
+    public long getCreatedSessionCount() {
+        return createdSessionCount.get();
+    }
+
+    @Override
+    public long getMaxActiveSessions() {
+        return maxSize;
+    }
+
+    @Override
+    public long getActiveSessionCount() {
+        return sessions.size();
+    }
+
+    @Override
+    public long getExpiredSessionCount() {
+        return expiredSessionCount.get();
+    }
+
+    @Override
+    public long getRejectedSessions() {
+        return 0; //at the moment we evict old sessions rather than rejecting new ones
+
+    }
+
+    @Override
+    public long getMaxSessionAliveTime() {
+        return longestSessionLifetime.get();
+    }
+
+    @Override
+    public long getAverageSessionAliveTime() {
+        return averageSessionLifetime.get();
+    }
+
+    @Override
+    public long getStartTime() {
+        return startTime;
+    }
+
 
     /**
      * session implementation for the in memory session manager
@@ -412,6 +468,25 @@ public class InMemorySessionManager implements SessionManager {
             }
             sessionManager.sessionListeners.sessionDestroyed(sess.session, exchange, reason);
             sessionManager.sessions.remove(sessionId);
+
+            long avg, newAvg;
+            do {
+                avg = sessionManager.averageSessionLifetime.get();
+                BigDecimal bd = new BigDecimal(avg);
+                bd.multiply(new BigDecimal(sessionManager.expiredSessionCount.get())).add(bd);
+                newAvg = bd.divide(new BigDecimal(sessionManager.expiredSessionCount.get() + 1), MathContext.DECIMAL64).longValue();
+            } while (!sessionManager.averageSessionLifetime.compareAndSet(avg, newAvg));
+
+
+            sessionManager.expiredSessionCount.incrementAndGet();
+            long life = System.currentTimeMillis() - sess.creationTime;
+            long existing = sessionManager.longestSessionLifetime.get();
+            while (life > existing) {
+                if(sessionManager.longestSessionLifetime.compareAndSet(existing, life)) {
+                    break;
+                }
+                existing = sessionManager.longestSessionLifetime.get();
+            }
             if (exchange != null) {
                 sessionCookieConfig.clearSession(exchange, this.getId());
             }
