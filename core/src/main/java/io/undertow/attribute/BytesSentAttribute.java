@@ -40,10 +40,10 @@ public class BytesSentAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         if (attribute.equals(BYTES_SENT_SHORT_LOWER))  {
-            long bytesSent = exchange.getResponseContentLength();
+            long bytesSent = exchange.getResponseBytesSent();
             return bytesSent == 0 ? "-" : Long.toString(bytesSent);
         } else {
-            return Long.toString(exchange.getResponseContentLength());
+            return Long.toString(exchange.getResponseBytesSent());
         }
     }
 
