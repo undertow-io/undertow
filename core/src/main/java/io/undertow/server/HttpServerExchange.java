@@ -216,6 +216,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private Executor dispatchExecutor;
 
+    /**
+     * The number of bytes that have been sent to the remote client. This does not include headers,
+     * only the entity body, and does not take any transfer or content encoding into account.
+     */
+    private long responseBytesSent = 0;
+
 
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
 
@@ -646,12 +652,28 @@ public final class HttpServerExchange extends AbstractAttachable {
         return anyAreSet(state, FLAG_PERSISTENT);
     }
 
+    /**
+     *
+     * @return <code>true</code> If the current thread in the IO thread for the exchange
+     */
     public boolean isInIoThread() {
         return getIoThread() == Thread.currentThread();
     }
 
+    /**
+     *
+     * @return True if this exchange represents an upgrade response
+     */
     public boolean isUpgrade() {
         return getResponseCode() == 101;
+    }
+
+    /**
+     *
+     * @return The number of bytes sent in the entity body
+     */
+    public long getResponseBytesSent() {
+        return responseBytesSent;
     }
 
     public HttpServerExchange setPersistent(final boolean persistent) {
@@ -1772,6 +1794,62 @@ public final class HttpServerExchange extends AbstractAttachable {
                 throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
             }
             super.awaitWritable(time, timeUnit);
+        }
+
+        @Override
+        public long transferFrom(FileChannel src, long position, long count) throws IOException {
+            long l = super.transferFrom(src, position, count);
+            responseBytesSent += l;
+            return l;
+        }
+
+        @Override
+        public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
+            long l = super.transferFrom(source, count, throughBuffer);
+            responseBytesSent += l;
+            return l;
+        }
+
+        @Override
+        public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+            long l = super.write(srcs, offset, length);
+            responseBytesSent += l;
+            return l;
+        }
+
+        @Override
+        public long write(ByteBuffer[] srcs) throws IOException {
+            long l = super.write(srcs);
+            responseBytesSent += l;
+            return l;
+        }
+
+        @Override
+        public int writeFinal(ByteBuffer src) throws IOException {
+            int l = super.writeFinal(src);
+            responseBytesSent += l;
+            return l;
+        }
+
+        @Override
+        public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+            long l = super.writeFinal(srcs, offset, length);
+            responseBytesSent += l;
+            return l;
+        }
+
+        @Override
+        public long writeFinal(ByteBuffer[] srcs) throws IOException {
+            long l = super.writeFinal(srcs);
+            responseBytesSent += l;
+            return l;
+        }
+
+        @Override
+        public int write(ByteBuffer src) throws IOException {
+            int l = super.write(src);
+            responseBytesSent += l;
+            return l;
         }
     }
 
