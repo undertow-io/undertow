@@ -212,7 +212,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
                         }
                         if(statisticsEnabled) {
                             this.channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(this.channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
-                            this.channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(this.channel.getSourceChannel().getConduit(), connectorStatistics.sentAccumulator()));
+                            this.channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(this.channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
                         }
                         free = false;
                         channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics));

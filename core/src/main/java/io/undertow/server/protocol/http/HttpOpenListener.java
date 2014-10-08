@@ -116,14 +116,14 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             IoUtils.safeClose(channel);
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         }
-
+        if(statisticsEnabled) {
+            channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
+            channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
+        }
 
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         HttpReadListener readListener = new HttpReadListener(connection, parser, statisticsEnabled ? connectorStatistics : null);
-        if(statisticsEnabled) {
-            channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
-            channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.sentAccumulator()));
-        }
+
 
         connection.setReadListener(readListener);
         readListener.newRequest();

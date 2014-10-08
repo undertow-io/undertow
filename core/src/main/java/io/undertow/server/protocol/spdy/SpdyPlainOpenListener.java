@@ -90,7 +90,7 @@ public final class SpdyPlainOpenListener implements ChannelListener<StreamConnec
         }
         if(statisticsEnabled) {
             channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
-            channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.sentAccumulator()));
+            channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
         }
         spdy.getReceiveSetter().set(new SpdyReceiveListener(rootHandler, getUndertowOptions(), bufferSize, statisticsEnabled ? connectorStatistics : null));
         spdy.resumeReceives();
