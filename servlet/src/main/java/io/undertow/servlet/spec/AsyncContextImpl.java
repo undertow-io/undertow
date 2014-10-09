@@ -280,7 +280,7 @@ public class AsyncContextImpl implements AsyncContext {
             timeoutKey.remove();
             timeoutKey = null;
         }
-
+        servletRequestContext.getOriginalRequest().asyncRequestDispatched();
         Thread currentThread = Thread.currentThread();
         if (!initialRequestDone && currentThread == initiatingThread) {
             //the context was stopped in the same request context it was started, we don't do anything
