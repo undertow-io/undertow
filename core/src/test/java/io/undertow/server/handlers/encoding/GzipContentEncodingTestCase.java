@@ -94,6 +94,27 @@ public class GzipContentEncodingTestCase {
         }
     }
 
+
+    //UNDERTOW-331
+    @Test
+    public void testAcceptIdentity() throws IOException {
+        ContentEncodingHttpClient client = new ContentEncodingHttpClient();
+        try {
+            message = "Hi";
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            get.setHeader(Headers.ACCEPT_ENCODING_STRING, "identity;q=1, *;q=0");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
+            Assert.assertEquals(1, header.length);
+            Assert.assertEquals("identity", header[0].getValue());
+            final String body = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("Hi", body);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
     @Test
     public void testGZipEncodingLargeResponse() throws IOException {
         final StringBuilder messageBuilder = new StringBuilder(691963);
