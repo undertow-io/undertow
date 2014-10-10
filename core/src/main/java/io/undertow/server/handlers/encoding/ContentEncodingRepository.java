@@ -38,6 +38,7 @@ import java.util.Map;
 public class ContentEncodingRepository {
 
     public static final String IDENTITY = "identity";
+    public static final EncodingMapping IDENTITY_ENCODING = new EncodingMapping(IDENTITY, ContentEncodingProvider.IDENTITY, 0, Predicates.truePredicate());
 
     private final Map<String, EncodingMapping> encodingMap = new CopyOnWriteMap<>();
 
@@ -62,9 +63,12 @@ public class ContentEncodingRepository {
                 EncodingMapping encoding;
                 if (value.getValue().equals("*")) {
                     includesIdentity = true;
-                    encoding = new EncodingMapping(IDENTITY, ContentEncodingProvider.IDENTITY, 0, Predicates.truePredicate());
+                    encoding = IDENTITY_ENCODING;
                 } else {
                     encoding = encodingMap.get(value.getValue());
+                    if(encoding == null && IDENTITY.equals(value.getValue())) {
+                        encoding = IDENTITY_ENCODING;
+                    }
                 }
                 if (value.isQValueZero()) {
                     isQValue0 = true;
