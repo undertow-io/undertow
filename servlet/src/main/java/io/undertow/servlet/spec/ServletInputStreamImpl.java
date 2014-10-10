@@ -185,9 +185,6 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 if (res == 0) {
                     pooled.free();
                     pooled = null;
-                    if(!channel.isReadResumed()) {
-                        channel.resumeReads();
-                    }
                     return;
                 }
                 pooled.getResource().flip();
