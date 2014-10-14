@@ -433,7 +433,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     sendGoAway(ERROR_PROTOCOL_ERROR);
                     return;
                 }
-                encoder.setMaxTableSize(setting.getValue());
             }
             //ignore the rest for now
         }
