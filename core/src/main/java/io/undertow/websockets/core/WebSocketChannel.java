@@ -51,8 +51,12 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     private final WebSocketVersion version;
     private final String wsUrl;
 
-    private boolean closeFrameReceived;
-    private boolean closeFrameSent;
+    private volatile boolean closeFrameReceived;
+    private volatile boolean closeFrameSent;
+    /**
+     * If this is true then the web socket close was initiated by the remote peer
+     */
+    private volatile boolean closeInitiatedByRemotePeer;
     private final String subProtocol;
     private final boolean extensionsSupported;
     /**
@@ -182,6 +186,9 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         PartialFrame partialFrame = (PartialFrame) frameHeaderData;
         StreamSourceFrameChannel channel = partialFrame.getChannel(frameData);
         if (channel.getType() == WebSocketFrameType.CLOSE) {
+            if(!closeFrameSent) {
+                closeInitiatedByRemotePeer = true;
+            }
             closeFrameReceived = true;
         }
         return channel;
@@ -393,6 +400,14 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      */
     public Set<WebSocketChannel> getPeerConnections() {
         return Collections.unmodifiableSet(peerConnections);
+    }
+
+    /**
+     * If this is true the session is being closed because the remote peer sent a close frame
+     * @return <code>true</code> if the remote peer closed the connection
+     */
+    public boolean isCloseInitiatedByRemotePeer() {
+        return closeInitiatedByRemotePeer;
     }
 
     /**
