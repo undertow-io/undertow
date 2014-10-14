@@ -18,8 +18,11 @@
 
 package io.undertow.util;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- *
  * NOTE: If you add a new method here you must also add it to {@link io.undertow.server.protocol.http.HttpRequestParser}
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -67,26 +70,74 @@ public final class Methods {
     public static final HttpString DELETE = new HttpString(DELETE_STRING);
     public static final HttpString TRACE = new HttpString(TRACE_STRING);
     public static final HttpString CONNECT = new HttpString(CONNECT_STRING);
-    public static final HttpString PROPFIND =new HttpString(PROPFIND_STRING);
-    public static final HttpString PROPPATCH =new HttpString(PROPPATCH_STRING);
-    public static final HttpString MKCOL =new HttpString(MKCOL_STRING);
-    public static final HttpString COPY =new HttpString(COPY_STRING);
-    public static final HttpString MOVE =new HttpString(MOVE_STRING);
-    public static final HttpString LOCK =new HttpString(LOCK_STRING);
-    public static final HttpString UNLOCK =new HttpString(UNLOCK_STRING);
-    public static final HttpString ACL =new HttpString(ACL_STRING);
-    public static final HttpString REPORT =new HttpString(REPORT_STRING);
-    public static final HttpString VERSION_CONTROL =new HttpString(VERSION_CONTROL_STRING);
-    public static final HttpString CHECKIN =new HttpString(CHECKIN_STRING);
-    public static final HttpString CHECKOUT =new HttpString(CHECKOUT_STRING);
-    public static final HttpString UNCHECKOUT =new HttpString(UNCHECKOUT_STRING);
-    public static final HttpString SEARCH =new HttpString(SEARCH_STRING);
-    public static final HttpString MKWORKSPACE =new HttpString(MKWORKSPACE_STRING);
-    public static final HttpString UPDATE =new HttpString(UPDATE_STRING);
-    public static final HttpString LABEL =new HttpString(LABEL_STRING);
-    public static final HttpString MERGE =new HttpString(MERGE_STRING);
-    public static final HttpString BASELINE_CONTROL =new HttpString(BASELINE_CONTROL_STRING);
-    public static final HttpString MKACTIVITY =new HttpString(MKACTIVITY_STRING);
+    public static final HttpString PROPFIND = new HttpString(PROPFIND_STRING);
+    public static final HttpString PROPPATCH = new HttpString(PROPPATCH_STRING);
+    public static final HttpString MKCOL = new HttpString(MKCOL_STRING);
+    public static final HttpString COPY = new HttpString(COPY_STRING);
+    public static final HttpString MOVE = new HttpString(MOVE_STRING);
+    public static final HttpString LOCK = new HttpString(LOCK_STRING);
+    public static final HttpString UNLOCK = new HttpString(UNLOCK_STRING);
+    public static final HttpString ACL = new HttpString(ACL_STRING);
+    public static final HttpString REPORT = new HttpString(REPORT_STRING);
+    public static final HttpString VERSION_CONTROL = new HttpString(VERSION_CONTROL_STRING);
+    public static final HttpString CHECKIN = new HttpString(CHECKIN_STRING);
+    public static final HttpString CHECKOUT = new HttpString(CHECKOUT_STRING);
+    public static final HttpString UNCHECKOUT = new HttpString(UNCHECKOUT_STRING);
+    public static final HttpString SEARCH = new HttpString(SEARCH_STRING);
+    public static final HttpString MKWORKSPACE = new HttpString(MKWORKSPACE_STRING);
+    public static final HttpString UPDATE = new HttpString(UPDATE_STRING);
+    public static final HttpString LABEL = new HttpString(LABEL_STRING);
+    public static final HttpString MERGE = new HttpString(MERGE_STRING);
+    public static final HttpString BASELINE_CONTROL = new HttpString(BASELINE_CONTROL_STRING);
+    public static final HttpString MKACTIVITY = new HttpString(MKACTIVITY_STRING);
 
+    private static final Map<String, HttpString> METHODS;
+
+    static {
+        Map<String, HttpString> methods = new HashMap<>();
+        putString(methods, OPTIONS);
+        putString(methods, GET);
+        putString(methods, HEAD);
+        putString(methods, POST);
+        putString(methods, PUT);
+        putString(methods, DELETE);
+        putString(methods, TRACE);
+        putString(methods, CONNECT);
+        putString(methods, PROPFIND);
+        putString(methods, PROPPATCH);
+        putString(methods, MKCOL);
+        putString(methods, COPY);
+        putString(methods, MOVE);
+        putString(methods, LOCK);
+        putString(methods, UNLOCK);
+        putString(methods, ACL);
+        putString(methods, REPORT);
+        putString(methods, VERSION_CONTROL);
+        putString(methods, CHECKIN);
+        putString(methods, CHECKOUT);
+        putString(methods, UNCHECKOUT);
+        putString(methods, SEARCH);
+        putString(methods, MKWORKSPACE);
+        putString(methods, UPDATE);
+        putString(methods, LABEL);
+        putString(methods, MERGE);
+        putString(methods, BASELINE_CONTROL);
+        putString(methods, MKACTIVITY);
+
+        METHODS = Collections.unmodifiableMap(methods);
+    }
+
+    private static void putString(Map<String, HttpString> methods, HttpString options) {
+        methods.put(options.toString(), options);
+    }
+
+
+    public static HttpString fromString(String method) {
+        HttpString res = METHODS.get(method);
+        if(res == null) {
+            return new HttpString(method);
+        }
+        return res;
+    }
 
 }

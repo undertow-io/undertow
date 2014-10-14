@@ -22,6 +22,7 @@ import java.io.IOException;
 import javax.net.ssl.SSLSession;
 
 import io.undertow.server.ConnectorStatisticsImpl;
+import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -100,8 +101,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
                 dataChannel.setMaxStreamSize(maxEntitySize);
                 exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
                 exchange.setProtocol(Protocols.HTTP_1_1);
-                exchange.setRequestMethod(new HttpString(exchange.getRequestHeaders().getFirst(METHOD)));
+                exchange.setRequestMethod(Methods.fromString(exchange.getRequestHeaders().getFirst(METHOD)));
                 exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
+
                 final String path = exchange.getRequestHeaders().getFirst(PATH);
                 Connectors.setExchangeRequestPath(exchange, path, encoding,decode, allowEncodingSlash, decodeBuffer);
                 SSLSession session = channel.getSslSession();
@@ -127,6 +129,13 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
                 if(connectorStatistics != null) {
                     connectorStatistics.setup(exchange);
                 }
+
+                //TODO: we should never actually put these into the map in the first place
+                exchange.getRequestHeaders().remove(AUTHORITY);
+                exchange.getRequestHeaders().remove(PATH);
+                exchange.getRequestHeaders().remove(SCHEME);
+                exchange.getRequestHeaders().remove(METHOD);
+
 
                 Connectors.executeRootHandler(rootHandler, exchange);
             }
