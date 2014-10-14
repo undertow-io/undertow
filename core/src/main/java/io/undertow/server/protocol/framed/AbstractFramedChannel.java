@@ -342,7 +342,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     boolean moreData = data.getFrameLength() > frameData.getResource().remaining();
                     R newChannel = createChannel(data, frameData);
                     if (newChannel != null) {
-                        receivers.add(newChannel);
+                        if(!newChannel.isComplete()) {
+                            receivers.add(newChannel);
+                        }
                         if (moreData) {
                             receiver = newChannel;
                         }
