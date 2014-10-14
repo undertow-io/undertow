@@ -283,7 +283,15 @@ public class HpackDecoder extends Hpack {
     private void addEntryToHeaderTable(HeaderField entry) {
         if (entry.size > maxMemorySize) {
             //it is to big to fit, so we just completely clear the table.
-            filledTableSlots = 0;
+            while (filledTableSlots > 0) {
+                headerTable[firstSlotPosition] = null;
+                firstSlotPosition++;
+                if (firstSlotPosition == headerTable.length) {
+                    firstSlotPosition = 0;
+                }
+                filledTableSlots--;
+            }
+            currentMemorySize = 0;
             return;
         }
         resizeIfRequired();
