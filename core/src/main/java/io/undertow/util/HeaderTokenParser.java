@@ -49,6 +49,7 @@ public class HeaderTokenParser<E extends HeaderToken> {
         int nameStart = 0;
         E currentToken = null;
         int valueStart = 0;
+        boolean containsEscapes = false;
 
         for (int i = 0; i < headerChars.length; i++) {
             switch (searchingFor) {
@@ -81,11 +82,28 @@ public class HeaderTokenParser<E extends HeaderToken> {
                     }
                     break;
                 case LAST_QUOTE:
-                    if (headerChars[i] == QUOTE) {
+                    boolean backslash = headerChars[i - 1] != '\\';
+                    if (headerChars[i] == QUOTE && backslash) {
                         String value = String.valueOf(headerChars, valueStart, i - valueStart);
+                        if(containsEscapes) {
+                            StringBuilder sb = new StringBuilder();
+                            boolean lastEscape = false;
+                            for(int j = 0; j < value.length(); ++j) {
+                                char c = value.charAt(j);
+                                if(c == '\\' && !lastEscape) {
+                                    lastEscape = true;
+                                } else {
+                                    lastEscape = false;
+                                    sb.append(c);
+                                }
+                            }
+                            value = sb.toString();
+                        }
                         response.put(currentToken, value);
 
                         searchingFor = SearchingFor.START_OF_NAME;
+                    } else if(backslash) {
+                        containsEscapes = true;
                     }
                     break;
                 case END_OF_VALUE:
