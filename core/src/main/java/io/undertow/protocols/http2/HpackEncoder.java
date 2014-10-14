@@ -25,6 +25,7 @@ import io.undertow.util.HttpString;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -220,6 +221,12 @@ public class HpackEncoder extends Hpack {
     private void addToDynamicTable(HttpString headerName, String val) {
         int pos = entryPositionCounter++;
         DynamicTableEntry d = new DynamicTableEntry(headerName, val, -pos);
+        List<TableEntry> existing = dynamicTable.get(headerName);
+        if(existing == null) {
+            dynamicTable.put(headerName, existing = new ArrayList<TableEntry>(1));
+        }
+        existing.add(d);
+        evictionQueue.add(d);
         currentTableSize += d.size;
         runEvictionIfRequired();
         if (entryPositionCounter == Integer.MAX_VALUE) {
@@ -380,7 +387,7 @@ public class HpackEncoder extends Hpack {
 
         @Override
         public int getPosition() {
-            return super.getPosition() + entryPositionCounter;
+            return super.getPosition() + entryPositionCounter + STATIC_TABLE_LENGTH;
         }
     }
 
