@@ -216,10 +216,19 @@ public final class UndertowSession implements Session {
                     }
                 } finally {
                     try {
-                        if (closeReason == null) {
-                            endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.NO_STATUS_CODE, null));
+                        if(webSocketChannel.isCloseInitiatedByRemotePeer()) {
+                            if (closeReason == null) {
+                                endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.NO_STATUS_CODE, null));
+                            } else {
+                                endpoint.getInstance().onClose(this, closeReason);
+                            }
                         } else {
-                            endpoint.getInstance().onClose(this, closeReason);
+                            //2.1.5: we must use 1006 if the close was initiated locally
+                            if (closeReason == null) {
+                                endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, null));
+                            } else {
+                                endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, closeReason.getReasonPhrase()));
+                            }
                         }
                     } catch (Exception e) {
                         endpoint.getInstance().onError(this, e);
