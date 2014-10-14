@@ -34,8 +34,6 @@ import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * Utility class which holds general useful utility methods which
@@ -50,20 +48,6 @@ public final class WebSocketUtils {
      */
     public static final Charset UTF_8 = Charset.forName("UTF-8");
     private static final String EMPTY = "";
-
-    /**
-     * Generate the MD5 hash out of the given {@link ByteBuffer}
-     */
-    public static ByteBuffer md5(ByteBuffer buffer) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(buffer);
-            return ByteBuffer.wrap(md.digest());
-        } catch (NoSuchAlgorithmException e) {
-            // Should never happen
-            throw new InternalError("MD5 not supported on this platform");
-        }
-    }
 
     /**
      * Create a {@link ByteBuffer} which holds the UTF8 encoded bytes for the

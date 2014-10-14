@@ -21,20 +21,31 @@ package io.undertow.server.handlers.resource;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.DateUtils;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
+import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
+import io.undertow.util.StatusCodes;
 import org.xnio.channels.Channels;
 
 /**
  * @author Stuart Douglas
  */
 public class DirectoryUtils {
+
+    private static final Charset US_ASCII = Charset.forName("US-ASCII");
 
     /**
      * Serve static resource for the directory listing
@@ -45,17 +56,27 @@ public class DirectoryUtils {
     public static boolean sendRequestedBlobs(HttpServerExchange exchange) {
         ByteBuffer buffer = null;
         String type = null;
+        String etag = null;
         if ("css".equals(exchange.getQueryString())) {
             buffer = Blobs.FILE_CSS_BUFFER.duplicate();
             type = "text/css";
+            etag = Blobs.FILE_CSS_ETAG;
         } else if ("js".equals(exchange.getQueryString())) {
             buffer = Blobs.FILE_JS_BUFFER.duplicate();
             type = "application/javascript";
+            etag = Blobs.FILE_JS_ETAG;
         }
 
         if (buffer != null) {
+
+            if(ETagUtils.handleIfMatch(exchange, new ETag(false, etag), false)) {
+                exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
+                return true;
+            }
+
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(buffer.limit()));
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, type);
+            exchange.getResponseHeaders().put(Headers.ETAG, etag);
             if (Methods.HEAD.equals(exchange.getRequestMethod())) {
                 exchange.endExchange();
                 return true;
@@ -143,6 +164,8 @@ public class DirectoryUtils {
             ByteBuffer output = ByteBuffer.wrap(builder.toString().getBytes("UTF-8"));
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(output.limit()));
+            exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(new Date()));
+            exchange.getResponseHeaders().put(Headers.CACHE_CONTROL, "must-revalidate");
             Channels.writeBlocking(exchange.getResponseChannel(), output);
         } catch (UnsupportedEncodingException e) {
             throw new IllegalStateException(e);
@@ -237,6 +260,7 @@ public class DirectoryUtils {
                   "        document.documentElement.style.overflowY=\"auto\";\n" +
                   "    }\n" +
                   "}";
+          public static final String FILE_JS_ETAG = '"' + md5(FILE_JS.getBytes(US_ASCII)) + '"';
           public static final String FILE_CSS =
                   "body {\n" +
                   "    font-family: \"Lucida Grande\", \"Lucida Sans Unicode\", \"Trebuchet MS\", Helvetica, Arial, Verdana, sans-serif;\n" +
@@ -340,6 +364,7 @@ public class DirectoryUtils {
                   "a.file {\n" +
                   "    background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXZwQWcAAAAQAAAAEABcxq3DAAABM0lEQVQ4y5WSTW6DMBCF3xvzc4wuOEIO0kVAuUB7vJ4g3KBdoHSRROomEpusUaoAcaYLfmKoqVRLIxnJ7/M3YwJVBcknACv8b+1U9SvoP1bXa/3WNDVIAQmQBLsNOEsGQYAwDNcARgDqusbl+wIRA2NkBEyqP0s+kCOAQhhjICJdkaDIJDwEvQAhH+G+SHagWTsi4jHoAWYIOxYDZDjnb8Fn4Akvz6AHcAbx3Tp5ETwI3RwckyVtv4Fr4VEe9qq6bDB5tlnYWou2bWGtRRRF6jdwAm5Za1FVFc7nM0QERVG8A9hPDRaGpapomgZlWSJJEuR5ftpsNq8ADr9amC+SuN/vuN1uIIntdnvKsuwZwKf2wxgBxpjpX+dA4jjW4/H4kabpixt2AbvAmDX+XnsAB509ww+A8mAar+XXgQAAAABJRU5ErkJggg==') left center no-repeat;\n" +
                   "}";
+        public static final String FILE_CSS_ETAG = '"' + md5(FILE_CSS.getBytes(US_ASCII)) + '"';
 
         public static final ByteBuffer FILE_CSS_BUFFER;
         public static final ByteBuffer FILE_JS_BUFFER;
@@ -361,4 +386,21 @@ public class DirectoryUtils {
         }
 
     }
+
+
+    /**
+     * Generate the MD5 hash out of the given {@link ByteBuffer}
+     */
+    private static String md5(byte[] buffer) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(buffer);
+            byte[] digest = md.digest();
+            return new String(FlexBase64.encodeBytes(digest, 0, digest.length, false));
+        } catch (NoSuchAlgorithmException e) {
+            // Should never happen
+            throw new InternalError("MD5 not supported on this platform");
+        }
+    }
+
 }
