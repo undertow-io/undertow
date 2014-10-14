@@ -251,7 +251,7 @@ public class AnnotatedEndpointTest {
 
         Session session = deployment.connectToServer(DoNothingEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/timeout"));
 
-        Assert.assertEquals(CloseReason.CloseCodes.GOING_AWAY, TimeoutEndpoint.getReason().getCloseCode());
+        Assert.assertEquals(CloseReason.CloseCodes.CLOSED_ABNORMALLY, TimeoutEndpoint.getReason().getCloseCode());
     }
 
     @Test

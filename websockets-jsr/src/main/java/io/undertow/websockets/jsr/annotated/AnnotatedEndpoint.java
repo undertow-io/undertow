@@ -30,6 +30,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.jsr.DefaultPongMessage;
+import io.undertow.websockets.jsr.JsrWebSocketLogger;
 import io.undertow.websockets.jsr.OrderedExecutor;
 import io.undertow.websockets.jsr.UndertowSession;
 import org.xnio.Buffers;
@@ -204,28 +205,22 @@ public class AnnotatedEndpoint extends Endpoint {
             final ByteBuffer buffer = WebSockets.mergeBuffers(data.getResource());
             final CloseMessage cm = new CloseMessage(buffer);
             data.free();
-            try {
-                if (webSocketClose != null) {
+            //execute this in the executor to preserve ordering, otherwise the socket
+            //may be closed while invocations are active
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
                     try {
-                        final Map<Class<?>, Object> params = new HashMap<>();
-                        params.put(Session.class, session);
-                        params.put(Map.class, session.getPathParameters());
-                        params.put(CloseReason.class, new CloseReason(CloseReason.CloseCodes.getCloseCode(cm.getCode()), cm.getReason()));
-                        invokeMethod(params, webSocketClose, session);
-                    } catch (Exception e) {
-                        AnnotatedEndpoint.this.onError(session, e);
+                        WebSockets.sendClose(buffer.duplicate(), channel, null);
+                    } finally {
+                        try {
+                            session.close(new CloseReason(CloseReason.CloseCodes.getCloseCode(cm.getCode()), cm.getReason()));
+                        } catch (IOException e) {
+                            JsrWebSocketLogger.REQUEST_LOGGER.debug("Exception closing websocket session", e);
+                        }
                     }
                 }
-            } finally {
-                //execute this in the executor to preserve ordering, otherwise the socket
-                //may be closed while invocations are active
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        WebSockets.sendClose(buffer.duplicate(), channel, null);
-                    }
-                });
-            }
+            });
         }
 
         @Override
