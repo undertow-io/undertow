@@ -243,9 +243,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 Http2HeadersParser parser = (Http2HeadersParser) frameParser.parser;
                 channel = new Http2StreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), parser.getHeaderMap(), frameParser.streamId);
                 lastGoodStreamId = Math.max(lastGoodStreamId, frameParser.streamId);
-                incomingStreams.put(frameParser.streamId, (Http2StreamSourceChannel) channel);
                 if (parser.isHeadersEndStream() && Bits.allAreSet(frameParser.flags, HEADERS_FLAG_END_HEADERS)) {
                     channel.lastFrame();
+                } else {
+                    incomingStreams.put(frameParser.streamId, (Http2StreamSourceChannel) channel);
                 }
                 break;
             }

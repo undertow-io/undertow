@@ -57,7 +57,7 @@ public abstract class Http2PushBackParser {
             int rem = dataToParse.remaining();
             handleData(dataToParse, headerParser);
             used = rem - dataToParse.remaining();
-            if(remainingData > 0 && used == 0 && dataToParse.remaining() >= remainingData) {
+            if(!isFinished() && remainingData > 0 && used == 0 && dataToParse.remaining() >= remainingData) {
                 throw UndertowMessages.MESSAGES.parserDidNotMakeProgress();
             }
 
