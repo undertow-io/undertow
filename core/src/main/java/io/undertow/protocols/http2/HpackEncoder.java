@@ -144,7 +144,7 @@ public class HpackEncoder extends Hpack {
                         this.headersIterator = it;
                         return State.UNDERFLOW;
                     }
-                    boolean canIndex = indexFunction.shouldUseIndexing(headerName, val);
+                    boolean canIndex = indexFunction.shouldUseIndexing(headerName, val) && (headerName.length() + val.length() + 32) < maxTableSize; //only index if it will fit
                     if (tableEntry == null && canIndex) {
                         //add the entry to the dynamic table
                         target.put((byte) (1 << 6));
