@@ -71,6 +71,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     private boolean ignoredFlushPerformed = false;
 
+    private boolean treatAsCommitted = false;
 
     private boolean charsetSet = false; //if a content type has been set either implicitly or implicitly
     private String contentType;
@@ -118,13 +119,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (responseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
-        resetBuffer();
         writer = null;
         responseState = ResponseState.NONE;
         exchange.setResponseCode(sc);
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         if(src.isRunningInsideHandler()) {
             //all we do is set the error on the context, we handle it when the request is returned
+            treatAsCommitted = true;
             src.setError(sc, msg);
         } else {
             //if the src is null there is no outer handler, as we are in an asnc request
@@ -133,6 +134,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void doErrorDispatch(int sc, String error) throws IOException {
+        resetBuffer();
+        treatAsCommitted = false;
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
         if (location != null) {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
@@ -232,7 +235,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.headerNameWasNull();
         }
-        if (insideInclude || ignoredFlushPerformed) {
+        if (insideInclude || ignoredFlushPerformed || treatAsCommitted) {
             return;
         }
         if(name.equals(Headers.CONTENT_TYPE) && !exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
@@ -254,7 +257,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setStatus(final int sc) {
-        if (insideInclude) {
+        if (insideInclude || treatAsCommitted) {
             return;
         }
         if (responseStarted()) {
@@ -265,9 +268,6 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setStatus(final int sc, final String sm) {
-        if (insideInclude) {
-            return;
-        }
         setStatus(sc);
     }
 
@@ -396,7 +396,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     private boolean responseStarted() {
-        return exchange.isResponseStarted() || ignoredFlushPerformed;
+        return exchange.isResponseStarted() || ignoredFlushPerformed || treatAsCommitted;
     }
 
     @Override
@@ -480,6 +480,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void closeStreamAndWriter() throws IOException {
+        if(treatAsCommitted) {
+            return;
+        }
         if (writer != null) {
             if (!servletOutputStream.isClosed()) {
                 writer.flush();
@@ -527,6 +530,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         responseState = ResponseState.NONE;
         exchange.getResponseHeaders().clear();
         exchange.setResponseCode(200);
+        treatAsCommitted = false;
     }
 
     @Override
@@ -567,7 +571,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void responseDone() {
-        if (responseDone) {
+        if (responseDone || treatAsCommitted) {
             return;
         }
         servletContext.updateSessionAccessTime(exchange);
@@ -767,5 +771,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     private static String escapeHtml(String msg) {
         return msg.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;");
+    }
+
+    public boolean isTreatAsCommitted() {
+        return treatAsCommitted;
     }
 }
