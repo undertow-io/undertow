@@ -28,6 +28,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.util.FileUtils;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -55,13 +56,13 @@ public class MultipartFormDataParserTestCase {
                 try {
                     FormData data = parser.parseBlocking();
                     System.out.println("done parsing");
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     if (data.getFirst("formValue").getValue().equals("myValue")) {
                         FormData.FormValue file = data.getFirst("file");
                         if (file.isFile()) {
                             if (file.getFile() != null) {
                                 if (FileUtils.readFile(file.getFile()).startsWith("file contents")) {
-                                    exchange.setResponseCode(200);
+                                    exchange.setResponseCode(StatusCodes.OK);
                                 }
                             }
                         }
@@ -69,7 +70,7 @@ public class MultipartFormDataParserTestCase {
                     exchange.endExchange();
                 } catch (Throwable e) {
                     e.printStackTrace();
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     exchange.endExchange();
                 } finally {
                     IoUtils.safeClose(parser);

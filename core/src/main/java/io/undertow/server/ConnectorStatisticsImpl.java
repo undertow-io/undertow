@@ -19,6 +19,7 @@
 package io.undertow.server;
 
 import io.undertow.conduits.ByteActivityCallback;
+import io.undertow.util.StatusCodes;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
@@ -45,7 +46,7 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
         @Override
         public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
             try {
-                if (exchange.getResponseCode() == 500) {
+                if (exchange.getResponseCode() == StatusCodes.INTERNAL_SERVER_ERROR) {
                     errorCountUpdater.incrementAndGet(ConnectorStatisticsImpl.this);
 
                 }

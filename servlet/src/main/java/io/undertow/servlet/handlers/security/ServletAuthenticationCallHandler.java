@@ -21,6 +21,7 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.util.StatusCodes;
 
 /**
  * This is the final {@link io.undertow.server.HttpHandler} in the security chain, it's purpose is to act as a barrier at the end of the chain to
@@ -56,7 +57,7 @@ public class ServletAuthenticationCallHandler implements HttpHandler {
                next.handleRequest(exchange);
             }
         } else {
-            if(exchange.getResponseCode() >= 400 && !exchange.isComplete()) {
+            if(exchange.getResponseCode() >= StatusCodes.BAD_REQUEST && !exchange.isComplete()) {
                 ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
                 src.getOriginalResponse().sendError(exchange.getResponseCode());
             } else {

@@ -115,7 +115,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         if(isForbiddenPath(path)) {
-            exchange.setResponseCode(404);
+            exchange.setResponseCode(StatusCodes.NOT_FOUND);
             return;
         }
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
@@ -129,7 +129,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
-            exchange.setResponseCode(302);
+            exchange.setResponseCode(StatusCodes.FOUND);
             exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             return;
         } else if (info.getType() == ServletPathMatch.Type.REWRITE) {
@@ -276,7 +276,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 } else {
                     if (!exchange.isResponseStarted()) {
                         response.reset();                       //reset the response
-                        exchange.setResponseCode(500);
+                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.getResponseHeaders().clear();
                         String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
                         if (location == null) {
@@ -293,7 +293,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                             if (servletRequestContext.displayStackTraces()) {
                                 ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, t);
                             } else {
-                                servletRequestContext.getOriginalResponse().doErrorDispatch(500, StatusCodes.INTERNAL_SERVER_ERROR_STRING);
+                                servletRequestContext.getOriginalResponse().doErrorDispatch(StatusCodes.INTERNAL_SERVER_ERROR, StatusCodes.INTERNAL_SERVER_ERROR_STRING);
                             }
                         }
                     }

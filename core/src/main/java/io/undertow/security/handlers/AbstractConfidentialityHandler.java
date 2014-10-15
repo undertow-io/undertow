@@ -24,6 +24,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * Handler responsible for checking of confidentiality is required for the requested resource and if so rejecting the request
@@ -47,11 +48,11 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
             try {
                 URI redirectUri = getRedirectURI(exchange);
 
-                exchange.setResponseCode(302);
+                exchange.setResponseCode(StatusCodes.FOUND);
                 exchange.getResponseHeaders().put(Headers.LOCATION, redirectUri.toString());
             } catch (Exception e) {
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-                exchange.setResponseCode(500);
+                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }
             exchange.endExchange();
         }

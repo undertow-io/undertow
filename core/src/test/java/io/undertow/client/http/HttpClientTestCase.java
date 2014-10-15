@@ -29,10 +29,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.Headers;
-import io.undertow.util.Methods;
-import io.undertow.util.StringReadChannelListener;
+import io.undertow.util.*;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -97,7 +94,7 @@ public class HttpClientTestCase {
     }
 
     static void sendMessage(final HttpServerExchange exchange) {
-        exchange.setResponseCode(200);
+        exchange.setResponseCode(StatusCodes.OK);
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
         final Sender sender = exchange.getResponseSender();
         sender.send(message);

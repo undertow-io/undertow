@@ -28,6 +28,6 @@ public class StatusCodesTestCase {
 
     @Test
     public void testCodeLookup() {
-        Assert.assertEquals("OK", StatusCodes.getReason(200));
+        Assert.assertEquals("OK", StatusCodes.getReason(StatusCodes.OK));
     }
 }

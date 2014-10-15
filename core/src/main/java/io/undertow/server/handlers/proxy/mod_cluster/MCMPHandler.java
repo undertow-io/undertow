@@ -66,6 +66,7 @@ import io.undertow.server.handlers.form.FormEncodedDataDefinition;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.ssl.XnioSsl;
@@ -148,7 +149,7 @@ class MCMPHandler implements HttpHandler {
             handleRequest(method, exchange);
         } catch (Exception e) {
             UndertowLogger.ROOT_LOGGER.errorf(e, "failed to process management request");
-            exchange.setResponseCode(500);
+            exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
             exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, CONTENT_TYPE);
             final Sender sender = exchange.getResponseSender();
             sender.send("failed to process management request");
@@ -685,7 +686,7 @@ class MCMPHandler implements HttpHandler {
      * @param response    the response string
      */
     static void sendResponse(final HttpServerExchange exchange, final String response) {
-        exchange.setResponseCode(200);
+        exchange.setResponseCode(StatusCodes.OK);
         exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, CONTENT_TYPE);
         final Sender sender = exchange.getResponseSender();
         sender.send(response);
@@ -697,7 +698,7 @@ class MCMPHandler implements HttpHandler {
      * @throws Exception
      */
     static void processOK(HttpServerExchange exchange) throws IOException {
-        exchange.setResponseCode(200);
+        exchange.setResponseCode(StatusCodes.OK);
         exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, CONTENT_TYPE);
         exchange.endExchange();
     }
@@ -714,7 +715,7 @@ class MCMPHandler implements HttpHandler {
      * @param exchange     the http server exchange
      */
     static void processError(String type, String errString, HttpServerExchange exchange) {
-        exchange.setResponseCode(500);
+        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
         exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, CONTENT_TYPE);
         exchange.getResponseHeaders().add(new HttpString("Version"), VERSION_PROTOCOL);
         exchange.getResponseHeaders().add(new HttpString("Type"), type);

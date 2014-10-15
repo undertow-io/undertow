@@ -33,6 +33,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import junit.textui.TestRunner;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -103,7 +104,7 @@ public class FormDataParserTestCase {
                         }
                     }
                 } catch (IOException e) {
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 }
             }
         });

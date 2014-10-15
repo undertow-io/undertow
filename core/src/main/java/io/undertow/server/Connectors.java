@@ -22,6 +22,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
@@ -216,7 +217,7 @@ public class Connectors {
         } catch (Throwable t) {
             exchange.setInCall(false);
             if (!exchange.isResponseStarted()) {
-                exchange.setResponseCode(500);
+                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }
             UndertowLogger.REQUEST_LOGGER.errorf(t, "Undertow request failed %s", exchange);
             exchange.endExchange();

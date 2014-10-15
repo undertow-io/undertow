@@ -62,7 +62,7 @@ public class SimpleErrorPageHandler implements HttpHandler {
                     return false;
                 }
                 Set<Integer> codes = responseCodes;
-                if (codes == null ? exchange.getResponseCode() >= 400 : codes.contains(Integer.valueOf(exchange.getResponseCode()))) {
+                if (codes == null ? exchange.getResponseCode() >= StatusCodes.BAD_REQUEST : codes.contains(Integer.valueOf(exchange.getResponseCode()))) {
                     final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getResponseCode() + " - " + StatusCodes.getReason(exchange.getResponseCode()) + "</body></html>";
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
