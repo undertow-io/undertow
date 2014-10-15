@@ -41,6 +41,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
+import io.undertow.util.StatusCodes;
 import org.jboss.logging.Logger;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
@@ -671,7 +672,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return True if this exchange represents an upgrade response
      */
     public boolean isUpgrade() {
-        return getResponseCode() == 101;
+        return getResponseCode() == StatusCodes.SWITCHING_PROTOCOLS;
     }
 
     /**
@@ -826,7 +827,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
         connection.setUpgradeListener(listener);
-        setResponseCode(101);
+        setResponseCode(StatusCodes.SWITCHING_PROTOCOLS);
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
         return this;
     }
@@ -845,7 +846,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
         connection.setUpgradeListener(listener);
-        setResponseCode(101);
+        setResponseCode(StatusCodes.SWITCHING_PROTOCOLS);
         final HeaderMap headers = getResponseHeaders();
         headers.put(Headers.UPGRADE, productName);
         headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
@@ -1478,7 +1479,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                         //so we attempt to drain, and if we have not drained anything then we
                         //assume the server has not sent any data
 
-                        if (getResponseCode() != 417 || totalRead > 0) {
+                        if (getResponseCode() != StatusCodes.EXPECTATION_FAILED || totalRead > 0) {
                             requestChannel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE,
                                     new ChannelListener<StreamSourceChannel>() {
                                         @Override

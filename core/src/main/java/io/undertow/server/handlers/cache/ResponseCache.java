@@ -25,12 +25,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.DateUtils;
-import io.undertow.util.ETag;
-import io.undertow.util.ETagUtils;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
+import io.undertow.util.*;
 
 import static io.undertow.util.Methods.GET;
 import static io.undertow.util.Methods.HEAD;
@@ -129,7 +124,7 @@ public class ResponseCache {
         }
         //we do send a 304 if the if-none-match header matches
         if (!ETagUtils.handleIfNoneMatch(exchange, etag, true)) {
-            exchange.setResponseCode(304);
+            exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
             exchange.endExchange();
             return true;
         }
@@ -138,7 +133,7 @@ public class ResponseCache {
             return false;
         }
         if (!DateUtils.handleIfModifiedSince(exchange, existingKey.getLastModified())) {
-            exchange.setResponseCode(304);
+            exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
             exchange.endExchange();
             return true;
         }

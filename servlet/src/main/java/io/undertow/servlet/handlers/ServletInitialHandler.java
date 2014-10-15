@@ -115,7 +115,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         if(isForbiddenPath(path)) {
-            exchange.setResponseCode(404);
+            exchange.setResponseCode(StatusCodes.NOT_FOUND);
             return;
         }
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
@@ -275,7 +275,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 } else {
                     if (!exchange.isResponseStarted()) {
                         response.reset();                       //reset the response
-                        exchange.setResponseCode(500);
+                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.getResponseHeaders().clear();
                         String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
                         if (location == null) {
@@ -292,7 +292,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                             if (servletRequestContext.displayStackTraces()) {
                                 ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, t);
                             } else {
-                                servletRequestContext.getOriginalResponse().doErrorDispatch(500, StatusCodes.INTERNAL_SERVER_ERROR_STRING);
+                                servletRequestContext.getOriginalResponse().doErrorDispatch(StatusCodes.INTERNAL_SERVER_ERROR, StatusCodes.INTERNAL_SERVER_ERROR_STRING);
                             }
                         }
                     }

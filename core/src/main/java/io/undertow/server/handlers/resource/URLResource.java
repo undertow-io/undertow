@@ -37,6 +37,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
+import io.undertow.util.StatusCodes;
 import org.xnio.IoUtils;
 
 /**
@@ -138,7 +139,7 @@ public class URLResource implements Resource {
                     try {
                         inputStream = url.openStream();
                     } catch (IOException e) {
-                        exchange.setResponseCode(500);
+                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         return;
                     }
                     buffer = new byte[1024];//TODO: we should be pooling these
@@ -172,7 +173,7 @@ public class URLResource implements Resource {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 IoUtils.safeClose(inputStream);
                 if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 }
                 completionCallback.onException(exchange, sender, exception);
             }

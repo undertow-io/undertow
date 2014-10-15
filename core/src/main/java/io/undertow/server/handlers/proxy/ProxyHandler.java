@@ -59,15 +59,7 @@ import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.util.Attachable;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.Certificates;
-import io.undertow.util.CopyOnWriteMap;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.SameThreadExecutor;
+import io.undertow.util.*;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -291,7 +283,7 @@ public final class ProxyHandler implements HttpHandler {
             if (exchange.isResponseStarted()) {
                 IoUtils.safeClose(exchange.getConnection());
             } else {
-                exchange.setResponseCode(503);
+                exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
                 exchange.endExchange();
             }
         }
@@ -308,7 +300,7 @@ public final class ProxyHandler implements HttpHandler {
             if (exchange.isResponseStarted()) {
                 IoUtils.safeClose(exchange.getConnection());
             } else {
-                exchange.setResponseCode(503);
+                exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
                 exchange.endExchange();
             }
         }
@@ -372,7 +364,7 @@ public final class ProxyHandler implements HttpHandler {
                 }
             } catch (UnsupportedEncodingException e) {
                 //impossible
-                exchange.setResponseCode(500);
+                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 exchange.endExchange();
                 return;
             }
@@ -512,7 +504,7 @@ public final class ProxyHandler implements HttpHandler {
                 public void failed(IOException e) {
                     UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
                     if (!exchange.isResponseStarted()) {
-                        exchange.setResponseCode(503);
+                        exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
                         exchange.endExchange();
                     } else {
                         IoUtils.safeClose(exchange.getConnection());
@@ -567,7 +559,7 @@ public final class ProxyHandler implements HttpHandler {
         public void failed(IOException e) {
             UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
             if (!exchange.isResponseStarted()) {
-                exchange.setResponseCode(500);
+                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 exchange.endExchange();
             } else {
                 IoUtils.safeClose(exchange.getConnection());
@@ -631,13 +623,13 @@ public final class ProxyHandler implements HttpHandler {
                 IoUtils.safeClose(clientConnection);
                 UndertowLogger.REQUEST_IO_LOGGER.debug("Exception reading from target server", exception);
                 if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     exchange.endExchange();
                 } else {
                     IoUtils.safeClose(exchange.getConnection());
                 }
             } else {
-                exchange.setResponseCode(500);
+                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 exchange.endExchange();
             }
         }

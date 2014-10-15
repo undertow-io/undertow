@@ -26,6 +26,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 
+import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -43,7 +44,7 @@ public class BadRequestTestCase {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
-                exchange.setResponseCode(200);
+                exchange.setResponseCode(StatusCodes.OK);
             }
         });
     }

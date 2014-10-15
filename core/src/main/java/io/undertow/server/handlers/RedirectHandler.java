@@ -31,6 +31,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * A redirect handler that redirects to the specified location via a 302 redirect.
@@ -60,7 +61,7 @@ public class RedirectHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.setResponseCode(302);
+        exchange.setResponseCode(StatusCodes.FOUND);
         exchange.getResponseHeaders().put(Headers.LOCATION, attribute.readAttribute(exchange));
         exchange.endExchange();
     }

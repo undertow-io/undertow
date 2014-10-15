@@ -35,10 +35,9 @@ import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.StatusCodes;
 
 import static io.undertow.UndertowMessages.MESSAGES;
-import static io.undertow.util.StatusCodes.FORBIDDEN;
-import static io.undertow.util.StatusCodes.OK;
 
 /**
  * The internal SecurityContext used to hold the state of security for the current exchange.
@@ -338,7 +337,7 @@ public class SecurityContextImpl implements SecurityContext {
                     if (chosenStatusCode == null) {
                         chosenStatusCode = desiredCode;
                     } else if (desiredCode != null) {
-                        if (chosenStatusCode.equals(OK)) {
+                        if (chosenStatusCode.equals(StatusCodes.OK)) {
                             // Allows a more specific code to be chosen.
                             // TODO - Still need a more complex code resolution strategy if many different codes are
                             // returned (Although those mechanisms may just never work together.)

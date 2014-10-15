@@ -530,7 +530,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         writer = null;
         responseState = ResponseState.NONE;
         exchange.getResponseHeaders().clear();
-        exchange.setResponseCode(200);
+        exchange.setResponseCode(StatusCodes.OK);
         treatAsCommitted = false;
     }
 

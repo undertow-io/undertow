@@ -23,6 +23,7 @@ import io.undertow.io.IoCallback;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -99,7 +100,7 @@ public class HttpContinue {
         }
 
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
-        newExchange.setResponseCode(100);
+        newExchange.setResponseCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
         return new ContinueResponseSender() {
@@ -136,7 +137,7 @@ public class HttpContinue {
             throw UndertowMessages.MESSAGES.cannotSendContinueResponse();
         }
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
-        newExchange.setResponseCode(100);
+        newExchange.setResponseCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         newExchange.startBlocking();
         newExchange.getOutputStream().close();
@@ -149,7 +150,7 @@ public class HttpContinue {
      * @param exchange The exchange to reject
      */
     public static void rejectExchange(final HttpServerExchange exchange) {
-        exchange.setResponseCode(417);
+        exchange.setResponseCode(StatusCodes.EXPECTATION_FAILED);
         exchange.setPersistent(false);
         exchange.endExchange();
     }
@@ -157,7 +158,7 @@ public class HttpContinue {
 
     private static void internalSendContinueResponse(final HttpServerExchange exchange, final IoCallback callback) {
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
-        newExchange.setResponseCode(100);
+        newExchange.setResponseCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
         try {
