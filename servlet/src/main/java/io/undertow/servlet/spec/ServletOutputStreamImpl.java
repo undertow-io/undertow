@@ -132,7 +132,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      * {@inheritDoc}
      */
     public void write(final byte[] b, final int off, final int len) throws IOException {
-        if (anyAreSet(state, FLAG_CLOSED)) {
+        if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
         if (len < 1) {
@@ -266,7 +266,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     @Override
     public void write(ByteBuffer[] buffers) throws IOException {
-        if (anyAreSet(state, FLAG_CLOSED)) {
+        if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
         int len = 0;
@@ -388,6 +388,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     }
 
     private boolean flushBufferAsync(final boolean writeFinal) throws IOException {
+
         ByteBuffer[] bufs = buffersToWrite;
         if (bufs == null) {
             ByteBuffer buffer = this.buffer;
@@ -452,7 +453,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      */
     public void flush() throws IOException {
         //according to the servlet spec we ignore a flush from within an include
-        if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE) {
+        if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE ||
+                servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             return;
         }
         if (servletRequestContext.getDeployment().getDeploymentInfo().isIgnoreFlush() &&
@@ -511,11 +513,10 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     @Override
     public void transferFrom(FileChannel source) throws IOException {
+        if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
+            throw UndertowServletMessages.MESSAGES.streamIsClosed();
+        }
         if (listener == null) {
-            if (anyAreSet(state, FLAG_CLOSED)) {
-                //just return
-                return;
-            }
             if (buffer != null && buffer.position() != 0) {
                 writeBufferBlocking(false);
             }
@@ -577,7 +578,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      * {@inheritDoc}
      */
     public void close() throws IOException {
-        if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE) {
+        if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE ||
+                servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             return;
         }
         if (listener == null) {
@@ -629,7 +631,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      * @throws IOException
      */
     public void closeAsync() throws IOException {
-        if (anyAreSet(state, FLAG_CLOSED)) return;
+        if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
+            return;
+        }
 
         state |= FLAG_CLOSED;
         state &= ~FLAG_READY;
@@ -702,7 +706,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     }
 
     public void setBufferSize(final int size) {
-        if (buffer != null) {
+        if (buffer != null || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.contentHasBeenWritten();
         }
         this.bufferSize = size;

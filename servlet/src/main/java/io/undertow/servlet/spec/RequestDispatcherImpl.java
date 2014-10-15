@@ -160,6 +160,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                         servletContext.getDeployment().getServletDispatcher().dispatchToPath(requestImpl.getExchange(), pathMatch, DispatcherType.FORWARD);
                     }
 
+                    //if we are not in an async or error dispatch then we close the response
                     if (!request.isAsyncStarted()) {
                         if (response instanceof HttpServletResponseImpl) {
                             responseImpl.closeStreamAndWriter();
