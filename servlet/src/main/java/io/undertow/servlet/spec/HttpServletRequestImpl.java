@@ -139,24 +139,34 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (cookies.isEmpty()) {
                 return null;
             }
-            Cookie[] value = new Cookie[cookies.size()];
+            int count = cookies.size();
+            Cookie[] value = new Cookie[count];
             int i = 0;
             for (Map.Entry<String, io.undertow.server.handlers.Cookie> entry : cookies.entrySet()) {
                 io.undertow.server.handlers.Cookie cookie = entry.getValue();
-                Cookie c = new Cookie(cookie.getName(), cookie.getValue());
-                if (cookie.getDomain() != null) {
-                    c.setDomain(cookie.getDomain());
+                try {
+                    Cookie c = new Cookie(cookie.getName(), cookie.getValue());
+                    if (cookie.getDomain() != null) {
+                        c.setDomain(cookie.getDomain());
+                    }
+                    c.setHttpOnly(cookie.isHttpOnly());
+                    if (cookie.getMaxAge() != null) {
+                        c.setMaxAge(cookie.getMaxAge());
+                    }
+                    if (cookie.getPath() != null) {
+                        c.setPath(cookie.getPath());
+                    }
+                    c.setSecure(cookie.isSecure());
+                    c.setVersion(cookie.getVersion());
+                    value[i++] = c;
+                } catch (IllegalArgumentException e) {
+                    // Ignore bad cookie
                 }
-                c.setHttpOnly(cookie.isHttpOnly());
-                if (cookie.getMaxAge() != null) {
-                    c.setMaxAge(cookie.getMaxAge());
-                }
-                if (cookie.getPath() != null) {
-                    c.setPath(cookie.getPath());
-                }
-                c.setSecure(cookie.isSecure());
-                c.setVersion(cookie.getVersion());
-                value[i++] = c;
+            }
+            if( i < count ) {
+                Cookie[] shrunkCookies = new Cookie[i];
+                System.arraycopy(value, 0, shrunkCookies, 0, i);
+                value = shrunkCookies;
             }
             this.cookies = value;
         }
