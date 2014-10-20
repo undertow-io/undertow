@@ -134,7 +134,7 @@ public class AnnotatedEndpoint extends Endpoint {
 
 
     private void addWholeHandler(final UndertowSession session, final BoundMethod method) {
-        session.addMessageHandler((Class) textMessage.getMessageType(), new MessageHandler.Whole<Object>() {
+        session.addMessageHandler((Class) method.getMessageType(), new MessageHandler.Whole<Object>() {
             @Override
             public void onMessage(Object partialMessage) {
 
