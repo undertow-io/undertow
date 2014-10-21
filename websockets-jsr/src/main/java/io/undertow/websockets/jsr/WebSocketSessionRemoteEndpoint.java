@@ -84,11 +84,23 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
     @Override
     public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+        if(applicationData == null) {
+            throw JsrWebSocketMessages.MESSAGES.messageInNull();
+        }
+        if(applicationData.remaining() > 125) {
+            throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
+        }
         WebSockets.sendPing(applicationData, webSocketChannel, null);
     }
 
     @Override
     public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+        if(applicationData == null) {
+            throw JsrWebSocketMessages.MESSAGES.messageInNull();
+        }
+        if(applicationData.remaining() > 125) {
+            throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
+        }
         WebSockets.sendPong(applicationData, webSocketChannel, null);
     }
 
@@ -207,6 +219,9 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if(applicationData == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
+            if(applicationData.remaining() > 125) {
+                throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
+            }
             WebSockets.sendPing(applicationData, webSocketChannel, null, sendTimeout);
         }
 
@@ -214,6 +229,9 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
             if(applicationData == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
+            if(applicationData.remaining() > 125) {
+                throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
             WebSockets.sendPong(applicationData, webSocketChannel, null, sendTimeout);
         }
@@ -233,12 +251,18 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendText(final String text) throws IOException {
+            if(text == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             assertNotInFragment();
             WebSockets.sendTextBlocking(text, webSocketChannel);
         }
 
         @Override
         public void sendBinary(final ByteBuffer data) throws IOException {
+            if(data == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             assertNotInFragment();
             WebSockets.sendBinaryBlocking(data, webSocketChannel);
             data.clear(); //for some reason the TCK expects this, might as well just match the RI behaviour
@@ -246,6 +270,9 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendText(final String partialMessage, final boolean isLast) throws IOException {
+            if(partialMessage == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             if (binaryFrameSender != null) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
@@ -268,6 +295,10 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendBinary(final ByteBuffer partialByte, final boolean isLast) throws IOException {
+
+            if(partialByte == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             if (textFrameSender != null) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
@@ -303,22 +334,21 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendObject(final Object data) throws IOException, EncodeException {
+            if(data == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             sendObjectImpl(data);
         }
 
-        private void sendObjectImpl(final Object o) throws IOException {
-            try {
-                if (encoding.canEncodeText(o.getClass())) {
-                    WebSockets.sendTextBlocking(encoding.encodeText(o), webSocketChannel);
-                } else if (encoding.canEncodeBinary(o.getClass())) {
-                    WebSockets.sendBinaryBlocking(encoding.encodeBinary(o), webSocketChannel);
-                } else {
-                    // TODO: Replace on bug is fixed
-                    // https://issues.jboss.org/browse/LOGTOOL-64
-                    throw new EncodeException(o, "No suitable encoder found");
-                }
-            } catch (EncodeException e) {
-                throw new RuntimeException(e);
+        private void sendObjectImpl(final Object o) throws IOException, EncodeException {
+            if (encoding.canEncodeText(o.getClass())) {
+                WebSockets.sendTextBlocking(encoding.encodeText(o), webSocketChannel);
+            } else if (encoding.canEncodeBinary(o.getClass())) {
+                WebSockets.sendBinaryBlocking(encoding.encodeBinary(o), webSocketChannel);
+            } else {
+                // TODO: Replace on bug is fixed
+                // https://issues.jboss.org/browse/LOGTOOL-64
+                throw new EncodeException(o, "No suitable encoder found");
             }
         }
 
@@ -339,11 +369,23 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+            if(applicationData == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
+            if(applicationData.remaining() > 125) {
+                throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
+            }
             WebSockets.sendPingBlocking(applicationData, webSocketChannel);
         }
 
         @Override
         public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+            if(applicationData == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
+            if(applicationData.remaining() > 125) {
+                throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
+            }
             WebSockets.sendPongBlocking(applicationData, webSocketChannel);
         }
     }

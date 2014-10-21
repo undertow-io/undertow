@@ -145,4 +145,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3037, value = "Message is null")
     IllegalArgumentException messageInNull();
+
+    @Message(id = 3038, value = "Message of size %s was larger than the maximum of %s")
+    IllegalArgumentException messageTooLarge(int size, int max);
 }
