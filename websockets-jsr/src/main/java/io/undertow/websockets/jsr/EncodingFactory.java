@@ -322,7 +322,6 @@ public class EncodingFactory {
                 clazz == Integer.class ||
                 clazz == Long.class ||
                 clazz == Float.class ||
-                clazz == Double.class ||
-                clazz == String.class; //we don't care about void
+                clazz == Double.class;//we don't care about void
     }
 }

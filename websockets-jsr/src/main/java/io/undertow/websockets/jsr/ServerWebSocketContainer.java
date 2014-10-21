@@ -408,7 +408,13 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             } else if (clientEndpoint != null) {
                 JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedClientEndpoint(endpoint);
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, clientEndpoint.decoders(), clientEndpoint.encoders());
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory, Collections.<String>emptySet());
+                InstanceFactory<?> instanceFactory;
+                try {
+                    instanceFactory = classIntrospecter.createInstanceFactory(endpoint);
+                } catch (Exception e) {
+                    instanceFactory = null; //this endpoint cannot be created by the container, the user will instantiate it
+                }
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, instanceFactory, encodingFactory, Collections.<String>emptySet());
 
                 ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
                         .decoders(Arrays.asList(clientEndpoint.decoders()))
