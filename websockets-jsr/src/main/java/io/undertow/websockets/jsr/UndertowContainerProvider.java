@@ -23,6 +23,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.util.DefaultClassIntrospector;
+import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.OptionMap;
 import org.xnio.Options;
@@ -44,6 +45,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Stuart Douglas
  */
 public class UndertowContainerProvider extends ContainerProvider {
+
+    private static final boolean directBuffers = Boolean.getBoolean("io.undertow.websockets.direct-buffers");
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.websockets.jsr.MODIFY_WEBSOCKET_CONTAINER");
 
@@ -88,7 +91,7 @@ public class UndertowContainerProvider extends ContainerProvider {
                     //but there is not much we can do
                     //todo: what options should we use here?
                     XnioWorker worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
-                    Pool<ByteBuffer> buffers = new ByteBufferSlicePool(1024, 10240);
+                    Pool<ByteBuffer> buffers = new ByteBufferSlicePool(directBuffers ? BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR : BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 10240);
                     defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), worker, buffers, new CompositeThreadSetupAction(Collections.<ThreadSetupAction>emptyList()), false);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
