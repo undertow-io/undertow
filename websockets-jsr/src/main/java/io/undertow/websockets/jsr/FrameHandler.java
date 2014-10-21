@@ -184,7 +184,14 @@ class FrameHandler extends AbstractReceiveListener {
                     if (handler.isPartialHandler()) {
                         MessageHandler.Partial mHandler = (MessageHandler.Partial) handler.getHandler();
                         ByteBuffer[] payload = pooled.getResource();
-                        if (handler.getMessageType() == ByteBuffer.class) {
+                        if(handler.decodingNeeded) {
+                            try {
+                                Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
+                                mHandler.onMessage(object, finalFragment);
+                            } catch (DecodeException e) {
+                                invokeOnError(e);
+                            }
+                        } else if (handler.getMessageType() == ByteBuffer.class) {
                             mHandler.onMessage(toBuffer(payload), finalFragment);
                         } else if (handler.getMessageType() == byte[].class) {
                             byte[] data = toArray(payload);
@@ -192,18 +199,18 @@ class FrameHandler extends AbstractReceiveListener {
                         } else if (handler.getMessageType() == InputStream.class) {
                             byte[] data = toArray(payload);
                             mHandler.onMessage(new ByteArrayInputStream(data), finalFragment);
-                        } else {
-                            try {
-                                Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
-                                mHandler.onMessage(object, finalFragment);
-                            } catch (DecodeException e) {
-                                invokeOnError(e);
-                            }
                         }
                     } else {
                         MessageHandler.Whole mHandler = (MessageHandler.Whole) handler.getHandler();
                         ByteBuffer[] payload = pooled.getResource();
-                        if (handler.getMessageType() == ByteBuffer.class) {
+                        if(handler.decodingNeeded) {
+                            try {
+                                Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
+                                mHandler.onMessage(object);
+                            } catch (DecodeException e) {
+                                invokeOnError(e);
+                            }
+                        } else if (handler.getMessageType() == ByteBuffer.class) {
                             mHandler.onMessage(toBuffer(payload));
                         } else if (handler.getMessageType() == byte[].class) {
                             byte[] data = toArray(payload);
@@ -211,13 +218,6 @@ class FrameHandler extends AbstractReceiveListener {
                         } else if (handler.getMessageType() == InputStream.class) {
                             byte[] data = toArray(payload);
                             mHandler.onMessage(new ByteArrayInputStream(data));
-                        } else {
-                            try {
-                                Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
-                                mHandler.onMessage(object);
-                            } catch (DecodeException e) {
-                                invokeOnError(e);
-                            }
                         }
                     }
                 } finally {
@@ -237,22 +237,22 @@ class FrameHandler extends AbstractReceiveListener {
                 try {
 
                     if (mHandler instanceof MessageHandler.Partial) {
-                        if (handler.getMessageType() == String.class) {
+                        if (handler.decodingNeeded) {
+                            Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
+                            ((MessageHandler.Partial) handler.getHandler()).onMessage(object, finalFragment);
+                        } else if (handler.getMessageType() == String.class) {
                             ((MessageHandler.Partial) handler.getHandler()).onMessage(message, finalFragment);
                         } else if (handler.getMessageType() == Reader.class) {
                             ((MessageHandler.Partial) handler.getHandler()).onMessage(new StringReader(message), finalFragment);
-                        } else {
-                            Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
-                            ((MessageHandler.Partial) handler.getHandler()).onMessage(object, finalFragment);
                         }
                     } else {
-                        if (handler.getMessageType() == String.class) {
+                        if(handler.decodingNeeded) {
+                            Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
+                            ((MessageHandler.Whole) handler.getHandler()).onMessage(object);
+                        } else if (handler.getMessageType() == String.class) {
                             ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
                         } else if (handler.getMessageType() == Reader.class) {
                             ((MessageHandler.Whole) handler.getHandler()).onMessage(new StringReader(message));
-                        } else {
-                            Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
-                            ((MessageHandler.Whole) handler.getHandler()).onMessage(object);
                         }
                     }
                 } catch (Exception e) {
@@ -346,6 +346,13 @@ class FrameHandler extends AbstractReceiveListener {
      * Return the {@link FrameType} for the given {@link Class}.
      */
     protected HandlerWrapper createHandlerWrapper(Class<?> type, MessageHandler handler, boolean partialHandler) {
+        //check the encodings first
+        Encoding encoding = session.getEncoding();
+        if (encoding.canDecodeText(type)) {
+            return new HandlerWrapper(FrameType.TEXT, handler, type, true, false);
+        } else if (encoding.canDecodeBinary(type)) {
+            return new HandlerWrapper(FrameType.BYTE, handler, type, true, false);
+        }
         if (partialHandler) {
             // Partial message handler supports only String, byte[] and ByteBuffer.
             // See JavaDocs of the MessageHandler.Partial interface.
@@ -365,12 +372,6 @@ class FrameHandler extends AbstractReceiveListener {
         }
         if (type == PongMessage.class) {
             return new HandlerWrapper(FrameType.PONG, handler, type, false, false);
-        }
-        Encoding encoding = session.getEncoding();
-        if (encoding.canDecodeText(type)) {
-            return new HandlerWrapper(FrameType.TEXT, handler, type, true, false);
-        } else if (encoding.canDecodeBinary(type)) {
-            return new HandlerWrapper(FrameType.BYTE, handler, type, true, false);
         }
         throw JsrWebSocketMessages.MESSAGES.unsupportedFrameType(type);
     }

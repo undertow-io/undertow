@@ -122,13 +122,36 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                     boolean messageHandled = false;
                     //this is a bit more complex
                     Class<?>[] parameterTypes = method.getParameterTypes();
+                    int booleanLocation = -1;
                     for (int i = 0; i < parameterTypes.length; ++i) {
                         if (hasAnnotation(PathParam.class, method.getParameterAnnotations()[i])) {
                             continue;
                         }
 
                         final Class<?> param = parameterTypes[i];
-                        if (param.equals(byte[].class)) {
+                        if(param == boolean.class || param == Boolean.class) {
+                            booleanLocation = i;
+                        } else if (encodingFactory.canDecodeText(param)) {
+                            if (textMessage != null) {
+                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
+                            }
+                            textMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
+                                    new BoundSingleParameter(method, boolean.class, true),
+                                    new BoundSingleParameter(i, param),
+                                    createBoundPathParameters(method, paths, endpointClass));
+                            messageHandled = true;
+                            break;
+                        } else if (encodingFactory.canDecodeBinary(param)) {
+                            if (binaryMessage != null) {
+                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
+                            }
+                            binaryMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
+                                    new BoundSingleParameter(method, boolean.class, true),
+                                    new BoundSingleParameter(i, param),
+                                    createBoundPathParameters(method, paths, endpointClass));
+                            messageHandled = true;
+                            break;
+                        } else if (param.equals(byte[].class)) {
                             if (binaryMessage != null) {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
@@ -196,38 +219,17 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             break;
                         }
                     }
-                    if (!messageHandled) {
-                        //ok, now we need to look through again for encodable / decodable values
-                        //we can't do this on the first pass, as we can't decide if a boolean is the payload
-                        //or an indicator that the frame is complete
-                        for (int i = 0; i < parameterTypes.length; ++i) {
-                            if (hasAnnotation(PathParam.class, method.getParameterAnnotations()[i])) {
-                                continue;
-                            }
-
-                            final Class<?> param = parameterTypes[i];
-                            if (encodingFactory.canDecodeText(param)) {
-                                if (textMessage != null) {
-                                    throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
-                                }
-                                textMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
-                                        new BoundSingleParameter(method, boolean.class, true),
-                                        new BoundSingleParameter(i, param),
-                                        createBoundPathParameters(method, paths, endpointClass));
-                                messageHandled = true;
-                                break;
-                            } else if (encodingFactory.canDecodeBinary(param)) {
-                                if (binaryMessage != null) {
-                                    throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
-                                }
-                                binaryMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
-                                        new BoundSingleParameter(method, boolean.class, true),
-                                        new BoundSingleParameter(i, param),
-                                        createBoundPathParameters(method, paths, endpointClass));
-                                messageHandled = true;
-                                break;
-                            }
+                    if (!messageHandled && booleanLocation > 0) {
+                        //so it turns out that the boolean was the message type and not a final fragement indicator
+                        if (textMessage != null) {
+                            throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                         }
+                        Class<?> boolClass = parameterTypes[booleanLocation];
+                        textMessage = new BoundMethod(method, boolClass, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
+                                new BoundSingleParameter(method, boolean.class, true),
+                                new BoundSingleParameter(booleanLocation, boolClass),
+                                createBoundPathParameters(method, paths, endpointClass));
+                        messageHandled = true;
                     }
                     if (!messageHandled) {
                         throw JsrWebSocketMessages.MESSAGES.couldNotFindMessageParameter(method);
