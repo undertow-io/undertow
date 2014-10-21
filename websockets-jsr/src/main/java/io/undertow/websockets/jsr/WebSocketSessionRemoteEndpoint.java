@@ -185,7 +185,13 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         private void sendObjectImpl(final Object o, final WebSocketCallback callback) {
             try {
-                if (encoding.canEncodeText(o.getClass())) {
+                if(o instanceof String) {
+                    WebSockets.sendText((String)o, webSocketChannel, callback, sendTimeout);
+                } else if(o instanceof byte[]) {
+                    WebSockets.sendBinary(ByteBuffer.wrap((byte[])o), webSocketChannel, callback, sendTimeout);
+                } else if(o instanceof ByteBuffer) {
+                    WebSockets.sendBinary((ByteBuffer)o, webSocketChannel, callback, sendTimeout);
+                } if (encoding.canEncodeText(o.getClass())) {
                     WebSockets.sendText(encoding.encodeText(o), webSocketChannel, callback, sendTimeout);
                 } else if (encoding.canEncodeBinary(o.getClass())) {
                     WebSockets.sendBinary(encoding.encodeBinary(o), webSocketChannel, callback, sendTimeout);
@@ -341,7 +347,13 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         }
 
         private void sendObjectImpl(final Object o) throws IOException, EncodeException {
-            if (encoding.canEncodeText(o.getClass())) {
+            if(o instanceof String) {
+                sendText((String)o);
+            } else if(o instanceof byte[]) {
+                sendBinary(ByteBuffer.wrap((byte[])o));
+            } else if(o instanceof ByteBuffer) {
+                sendBinary((ByteBuffer)o);
+            } else if (encoding.canEncodeText(o.getClass())) {
                 WebSockets.sendTextBlocking(encoding.encodeText(o), webSocketChannel);
             } else if (encoding.canEncodeBinary(o.getClass())) {
                 WebSockets.sendBinaryBlocking(encoding.encodeBinary(o), webSocketChannel);

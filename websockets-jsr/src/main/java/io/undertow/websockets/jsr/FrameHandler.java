@@ -30,7 +30,6 @@ import org.xnio.Buffers;
 import org.xnio.Pooled;
 
 import javax.websocket.CloseReason;
-import javax.websocket.DecodeException;
 import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
 import javax.websocket.PongMessage;
@@ -111,7 +110,7 @@ class FrameHandler extends AbstractReceiveListener {
     }
 
     @Override
-    protected void onFullPongMessage(WebSocketChannel webSocketChannel, BufferedBinaryMessage bufferedBinaryMessage) {
+    protected void onFullPongMessage(final WebSocketChannel webSocketChannel, BufferedBinaryMessage bufferedBinaryMessage) {
         final HandlerWrapper handler = getHandler(FrameType.PONG);
         if (handler != null) {
             final Pooled<ByteBuffer[]> pooled = bufferedBinaryMessage.getData();
@@ -122,6 +121,8 @@ class FrameHandler extends AbstractReceiveListener {
                 public void run() {
                     try {
                         ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
+                    } catch (Exception e) {
+                        invokeOnError(e);
                     } finally {
                         pooled.free();
                     }
@@ -185,12 +186,8 @@ class FrameHandler extends AbstractReceiveListener {
                         MessageHandler.Partial mHandler = (MessageHandler.Partial) handler.getHandler();
                         ByteBuffer[] payload = pooled.getResource();
                         if(handler.decodingNeeded) {
-                            try {
-                                Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
-                                mHandler.onMessage(object, finalFragment);
-                            } catch (DecodeException e) {
-                                invokeOnError(e);
-                            }
+                            Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
+                            mHandler.onMessage(object, finalFragment);
                         } else if (handler.getMessageType() == ByteBuffer.class) {
                             mHandler.onMessage(toBuffer(payload), finalFragment);
                         } else if (handler.getMessageType() == byte[].class) {
@@ -204,12 +201,8 @@ class FrameHandler extends AbstractReceiveListener {
                         MessageHandler.Whole mHandler = (MessageHandler.Whole) handler.getHandler();
                         ByteBuffer[] payload = pooled.getResource();
                         if(handler.decodingNeeded) {
-                            try {
-                                Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
-                                mHandler.onMessage(object);
-                            } catch (DecodeException e) {
-                                invokeOnError(e);
-                            }
+                            Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
+                            mHandler.onMessage(object);
                         } else if (handler.getMessageType() == ByteBuffer.class) {
                             mHandler.onMessage(toBuffer(payload));
                         } else if (handler.getMessageType() == byte[].class) {
@@ -220,6 +213,8 @@ class FrameHandler extends AbstractReceiveListener {
                             mHandler.onMessage(new ByteArrayInputStream(data));
                         }
                     }
+                } catch (Exception e) {
+                    invokeOnError(e);
                 } finally {
                     pooled.free();
                 }
