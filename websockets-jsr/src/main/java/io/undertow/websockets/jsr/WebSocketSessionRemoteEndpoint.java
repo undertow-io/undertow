@@ -94,43 +94,66 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
     class AsyncWebSocketSessionRemoteEndpoint implements Async {
 
+        private long sendTimeout = 0;
+
         @Override
         public long getSendTimeout() {
-            return 0;
-            //return webSocketChannel.getAsyncSendTimeout();
+            return sendTimeout;
         }
 
         @Override
         public void setSendTimeout(final long timeoutmillis) {
-            //webSocketChannel.setAsyncSendTimeout((int) timeoutmillis);
+            sendTimeout = timeoutmillis;
         }
 
         @Override
         public void sendText(final String text, final SendHandler handler) {
-            WebSockets.sendText(text, webSocketChannel, new SendHandlerAdapter(handler));
+            if(handler == null) {
+                throw JsrWebSocketMessages.MESSAGES.handlerIsNull();
+            }
+            if(text == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
+            WebSockets.sendText(text, webSocketChannel, new SendHandlerAdapter(handler), sendTimeout);
         }
 
         @Override
         public Future<Void> sendText(final String text) {
+            if(text == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             final SendResultFuture future = new SendResultFuture();
-            WebSockets.sendText(text, webSocketChannel, future);
+            WebSockets.sendText(text, webSocketChannel, future, sendTimeout);
             return future;
         }
 
         @Override
         public Future<Void> sendBinary(final ByteBuffer data) {
+            if(data == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             final SendResultFuture future = new SendResultFuture();
-            WebSockets.sendBinary(data, webSocketChannel, future);
+            WebSockets.sendBinary(data, webSocketChannel, future, sendTimeout);
             return future;
         }
 
         @Override
         public void sendBinary(final ByteBuffer data, final SendHandler completion) {
-            WebSockets.sendBinary(data, webSocketChannel, new SendHandlerAdapter(completion));
+
+            if(completion == null) {
+                throw JsrWebSocketMessages.MESSAGES.handlerIsNull();
+            }
+            if(data == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
+            WebSockets.sendBinary(data, webSocketChannel, new SendHandlerAdapter(completion), sendTimeout);
         }
 
         @Override
         public Future<Void> sendObject(final Object o) {
+            if(o == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             final SendResultFuture future = new SendResultFuture();
             sendObjectImpl(o, future);
             return future;
@@ -138,22 +161,29 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendObject(final Object data, final SendHandler handler) {
+
+            if(handler == null) {
+                throw JsrWebSocketMessages.MESSAGES.handlerIsNull();
+            }
+            if(data == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
             sendObjectImpl(data, new SendHandlerAdapter(handler));
         }
 
         private void sendObjectImpl(final Object o, final WebSocketCallback callback) {
             try {
                 if (encoding.canEncodeText(o.getClass())) {
-                    WebSockets.sendText(encoding.encodeText(o), webSocketChannel, callback);
+                    WebSockets.sendText(encoding.encodeText(o), webSocketChannel, callback, sendTimeout);
                 } else if (encoding.canEncodeBinary(o.getClass())) {
-                    WebSockets.sendBinary(encoding.encodeBinary(o), webSocketChannel, callback);
+                    WebSockets.sendBinary(encoding.encodeBinary(o), webSocketChannel, callback, sendTimeout);
                 } else {
                     // TODO: Replace on bug is fixed
                     // https://issues.jboss.org/browse/LOGTOOL-64
                     throw new EncodeException(o, "No suitable encoder found");
                 }
-            } catch (EncodeException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                callback.onError(webSocketChannel, o, e);
             }
         }
 
@@ -174,12 +204,18 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            WebSockets.sendPing(applicationData, webSocketChannel, null);
+            if(applicationData == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
+            WebSockets.sendPing(applicationData, webSocketChannel, null, sendTimeout);
         }
 
         @Override
         public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            WebSockets.sendPong(applicationData, webSocketChannel, null);
+            if(applicationData == null) {
+                throw JsrWebSocketMessages.MESSAGES.messageInNull();
+            }
+            WebSockets.sendPong(applicationData, webSocketChannel, null, sendTimeout);
         }
     }
 

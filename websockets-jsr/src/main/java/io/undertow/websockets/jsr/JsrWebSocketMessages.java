@@ -139,4 +139,10 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3035, value = "Connection timed out")
     IOException connectionTimedOut();
+
+    @Message(id = 3036, value = "SendHandler is null")
+    IllegalArgumentException handlerIsNull();
+
+    @Message(id = 3037, value = "Message is null")
+    IllegalArgumentException messageInNull();
 }
