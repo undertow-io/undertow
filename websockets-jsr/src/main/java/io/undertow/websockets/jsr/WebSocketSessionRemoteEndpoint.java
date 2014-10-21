@@ -183,7 +183,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                     throw new EncodeException(o, "No suitable encoder found");
                 }
             } catch (Exception e) {
-                callback.onError(webSocketChannel, o, e);
+                callback.onError(webSocketChannel, null, e);
             }
         }
 
