@@ -148,4 +148,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3038, value = "Message of size %s was larger than the maximum of %s")
     IllegalArgumentException messageTooLarge(int size, int max);
+
+    @Message(id = 3039, value = "The container cannot find a suitable constructor to instantiate endpoint of type %s")
+    InstantiationException cannotInstantiateEndpoint(Class<?> c);
 }

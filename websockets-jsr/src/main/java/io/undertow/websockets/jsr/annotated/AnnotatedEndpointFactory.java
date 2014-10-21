@@ -278,6 +278,9 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
     @Override
     public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+        if(underlyingFactory == null) {
+            throw JsrWebSocketMessages.MESSAGES.cannotInstantiateEndpoint(endpointClass);
+        }
         final InstanceHandle<?> instance = underlyingFactory.createInstance();
         final AnnotatedEndpoint endpoint = new AnnotatedEndpoint(instance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
         return new InstanceHandle<Endpoint>() {
