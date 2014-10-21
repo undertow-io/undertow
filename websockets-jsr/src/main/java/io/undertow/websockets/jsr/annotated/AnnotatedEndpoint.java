@@ -75,6 +75,7 @@ public class AnnotatedEndpoint extends Endpoint {
 
         this.executor = new OrderedExecutor(((UndertowSession)session).getWebSocketChannel().getWorker());
 
+
         final UndertowSession s = (UndertowSession) session;
         boolean partialText = textMessage == null || (textMessage.hasParameterType(boolean.class) && !textMessage.getMessageType().equals(boolean.class));
         boolean partialBinary = binaryMessage == null || (binaryMessage.hasParameterType(boolean.class) && !binaryMessage.getMessageType().equals(boolean.class));
@@ -83,6 +84,9 @@ public class AnnotatedEndpoint extends Endpoint {
             if(partialText) {
                 addPartialHandler(s, textMessage);
             } else {
+                if(textMessage.getMaxMessageSize() > 0) {
+                    s.setMaxTextMessageBufferSize((int) textMessage.getMaxMessageSize());
+                }
                 addWholeHandler(s, textMessage);
             }
         }
@@ -90,6 +94,9 @@ public class AnnotatedEndpoint extends Endpoint {
             if(partialBinary) {
                 addPartialHandler(s, binaryMessage);
             } else {
+                if(binaryMessage.getMaxMessageSize() > 0) {
+                    s.setMaxBinaryMessageBufferSize((int) binaryMessage.getMaxMessageSize());
+                }
                 addWholeHandler(s, binaryMessage);
             }
         }
