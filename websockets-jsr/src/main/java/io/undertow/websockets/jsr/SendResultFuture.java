@@ -55,6 +55,7 @@ final class SendResultFuture<T> implements Future<Void>, WebSocketCallback<T> {
             throw new IllegalStateException();
         }
         exception = throwable;
+        done = true;
         if (waiters > 0) {
             notifyAll();
         }
