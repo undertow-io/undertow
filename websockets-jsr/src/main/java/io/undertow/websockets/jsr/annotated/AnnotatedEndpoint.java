@@ -105,7 +105,7 @@ public class AnnotatedEndpoint extends Endpoint {
     }
 
     private void addPartialHandler(final UndertowSession session, final BoundMethod method) {
-        session.addMessageHandler((Class) textMessage.getMessageType(), new MessageHandler.Partial<Object>() {
+        session.addMessageHandler((Class) method.getMessageType(), new MessageHandler.Partial<Object>() {
             @Override
             public void onMessage(Object partialMessage, boolean last) {
 
