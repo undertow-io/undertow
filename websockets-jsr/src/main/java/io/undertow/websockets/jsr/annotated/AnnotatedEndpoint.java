@@ -100,6 +100,9 @@ public class AnnotatedEndpoint extends Endpoint {
                 addWholeHandler(s, binaryMessage);
             }
         }
+        if(pongMessage != null) {
+            addWholeHandler(s, pongMessage);
+        }
 
         if (webSocketOpen != null) {
             final Map<Class<?>, Object> params = new HashMap<>();
