@@ -127,9 +127,6 @@ public class Encoding implements Closeable {
         if (targetType == Boolean.class || targetType == boolean.class) {
             return Boolean.valueOf(message);
         } else if (targetType == Character.class || targetType == char.class) {
-            if (message.length() > 1) {
-                throw new DecodeException(message, "Character message larger than 1 character");
-            }
             return Character.valueOf(message.charAt(0));
         } else if (targetType == Byte.class || targetType == byte.class) {
             return Byte.valueOf(message);
