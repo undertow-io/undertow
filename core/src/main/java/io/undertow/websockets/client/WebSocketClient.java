@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.client;
 
+import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 
@@ -68,6 +69,7 @@ public class WebSocketClient {
         }
         final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation);
         final Map<String, String> headers = handshake.createHeaders();
+        headers.put(Headers.ORIGIN_STRING, uri.getHost());
         if (clientNegotiation != null) {
             clientNegotiation.beforeRequest(headers);
         }
