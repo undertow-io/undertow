@@ -82,7 +82,6 @@ class FrameHandler extends AbstractReceiveListener {
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
-                WebSockets.sendClose(toSend, channel, null);
                 try {
                     if (singleBuffer.remaining() > 1) {
                         final CloseReason.CloseCode code = CloseReason.CloseCodes.getCloseCode(singleBuffer.getShort());
@@ -95,6 +94,7 @@ class FrameHandler extends AbstractReceiveListener {
                     invokeOnError(e);
                 } finally {
                     pooled.free();
+                    WebSockets.sendClose(toSend, channel, null);
                 }
             }
         });
