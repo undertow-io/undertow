@@ -51,14 +51,6 @@ public class AnnotatedEndpoint extends Endpoint {
     private final BoundMethod textMessage;
     private final BoundMethod binaryMessage;
     private final BoundMethod pongMessage;
-    private final SendHandler errorReportingSendHandler = new SendHandler() {
-        @Override
-        public void onResult(final SendResult result) {
-            if (!result.isOK()) {
-                AnnotatedEndpoint.this.onError(null, result.getException());
-            }
-        }
-    };
 
     AnnotatedEndpoint(final InstanceHandle<?> instance, final BoundMethod webSocketOpen, final BoundMethod webSocketClose, final BoundMethod webSocketError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
         this.instance = instance;
@@ -186,13 +178,13 @@ public class AnnotatedEndpoint extends Endpoint {
     private void sendResult(final Object result, UndertowSession session) {
         if (result != null) {
             if (result instanceof String) {
-                session.getAsyncRemote().sendText((String) result, errorReportingSendHandler);
+                session.getAsyncRemote().sendText((String) result, new ErrorReportingSendHandler(session));
             } else if (result instanceof byte[]) {
-                session.getAsyncRemote().sendBinary(ByteBuffer.wrap((byte[]) result), errorReportingSendHandler);
+                session.getAsyncRemote().sendBinary(ByteBuffer.wrap((byte[]) result), new ErrorReportingSendHandler(session));
             } else if (result instanceof ByteBuffer) {
-                session.getAsyncRemote().sendBinary((ByteBuffer) result, errorReportingSendHandler);
+                session.getAsyncRemote().sendBinary((ByteBuffer) result, new ErrorReportingSendHandler(session));
             } else {
-                session.getAsyncRemote().sendObject(result, errorReportingSendHandler);
+                session.getAsyncRemote().sendObject(result, new ErrorReportingSendHandler(session));
             }
         }
     }
@@ -235,4 +227,21 @@ public class AnnotatedEndpoint extends Endpoint {
             WebSocketLogger.REQUEST_LOGGER.unhandledErrorInAnnotatedEndpoint(instance.getInstance(), thr);
         }
     }
+
+
+    private final class ErrorReportingSendHandler implements SendHandler {
+
+        private final Session session;
+
+        private ErrorReportingSendHandler(Session session) {
+            this.session = session;
+        }
+
+        @Override
+        public void onResult(final SendResult result) {
+            if (!result.isOK()) {
+                AnnotatedEndpoint.this.onError(session, result.getException());
+            }
+        }
+    };
 }

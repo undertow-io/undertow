@@ -70,6 +70,7 @@ public final class UndertowSession implements Session {
     private final List<Extension> extensions;
     private volatile int maximumBinaryBufferSize = 0;
     private volatile int maximumTextBufferSize = 0;
+    private volatile boolean localClose;
 
     public UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
                            Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
@@ -111,7 +112,11 @@ public final class UndertowSession implements Session {
                     @Override
                     public void run() {
                         //we delegate this execution to the IO thread
-                        IoUtils.safeClose(UndertowSession.this);
+                        try {
+                            closeInternal(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, null));
+                        } catch (IOException e) {
+                            //ignore
+                        }
                     }
                 });
             }
@@ -202,6 +207,15 @@ public final class UndertowSession implements Session {
 
     @Override
     public void close(CloseReason closeReason) throws IOException {
+        localClose = true;
+        closeInternal(closeReason);
+    }
+
+    public void closeInternal() throws IOException {
+        closeInternal(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, null));
+    }
+
+    public void closeInternal(CloseReason closeReason) throws IOException {
         if(closed.compareAndSet(false, true)) {
             try {
                 try {
@@ -216,7 +230,7 @@ public final class UndertowSession implements Session {
                     }
                 } finally {
                     try {
-                        if(webSocketChannel.isCloseInitiatedByRemotePeer()) {
+                        if(webSocketChannel.isCloseInitiatedByRemotePeer() || !localClose) {
                             if (closeReason == null) {
                                 endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.NO_STATUS_CODE, null));
                             } else {
