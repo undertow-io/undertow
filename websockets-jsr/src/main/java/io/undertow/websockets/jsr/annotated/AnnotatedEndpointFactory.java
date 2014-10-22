@@ -219,7 +219,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             break;
                         }
                     }
-                    if (!messageHandled && booleanLocation > 0) {
+                    if (!messageHandled && booleanLocation != -1) {
                         //so it turns out that the boolean was the message type and not a final fragement indicator
                         if (textMessage != null) {
                             throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
