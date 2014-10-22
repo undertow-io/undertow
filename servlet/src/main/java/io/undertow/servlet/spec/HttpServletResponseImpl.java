@@ -484,9 +484,6 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         if (writer != null) {
-            if (!servletOutputStream.isClosed()) {
-                writer.flush();
-            }
             writer.close();
         } else {
             if (servletOutputStream == null) {
