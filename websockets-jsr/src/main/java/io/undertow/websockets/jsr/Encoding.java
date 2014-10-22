@@ -57,9 +57,6 @@ public class Encoding implements Closeable {
 
 
     public boolean canEncodeText(final Class<?> type) {
-        if (EncodingFactory.isPrimitiveOrBoxed(type)) {
-            return true;
-        }
         if(textEncoders.containsKey(type)) {
             return true;
         }
@@ -68,15 +65,23 @@ public class Encoding implements Closeable {
                 return true;
             }
         }
+        if (EncodingFactory.isPrimitiveOrBoxed(type)) {
+            Class<?> primType = boxedType(type);
+            return !binaryEncoders.containsKey(primType) && !binaryEncoders.containsKey(Object.class); //don't use a built in coding if a user supplied binary one is present
+        }
         return false;
     }
 
 
     public boolean canDecodeText(final Class<?> type) {
-        if (EncodingFactory.isPrimitiveOrBoxed(type)) {
+        if(textDecoders.containsKey(type)) {
             return true;
         }
-        return textDecoders.containsKey(type);
+        if (EncodingFactory.isPrimitiveOrBoxed(type)) {
+            Class<?> primType = boxedType(type);
+            return !binaryDecoders.containsKey(primType) && !binaryEncoders.containsKey(Object.class); //don't use a built in coding if a user supplied binary one is present
+        }
+        return false;
     }
 
 
@@ -166,9 +171,6 @@ public class Encoding implements Closeable {
     }
 
     public String encodeText(final Object o) throws EncodeException {
-        if (EncodingFactory.isPrimitiveOrBoxed(o.getClass())) {
-            return o.toString();
-        }
         List<InstanceHandle<? extends Encoder>> encoders = textEncoders.get(o.getClass());
         if(encoders == null) {
             for(Map.Entry<Class<?>, List<InstanceHandle<? extends Encoder>>> entry : textEncoders.entrySet()) {
@@ -193,6 +195,10 @@ public class Encoding implements Closeable {
                     }
                 }
             }
+        }
+
+        if (EncodingFactory.isPrimitiveOrBoxed(o.getClass())) {
+            return o.toString();
         }
         throw new EncodeException(o, "Could not encode text");
     }
@@ -253,5 +259,26 @@ public class Encoding implements Closeable {
                 val.release();
             }
         }
+    }
+
+    private static Class<?> boxedType(final Class<?> targetType) {
+        if (targetType == Boolean.class || targetType == boolean.class) {
+            return Boolean.class;
+        } else if (targetType == Character.class || targetType == char.class) {
+            return Character.class;
+        } else if (targetType == Byte.class || targetType == byte.class) {
+            return Byte.class;
+        } else if (targetType == Short.class || targetType == short.class) {
+            return Short.class;
+        } else if (targetType == Integer.class || targetType == int.class) {
+            return Integer.class;
+        } else if (targetType == Long.class || targetType == long.class) {
+            return Long.class;
+        } else if (targetType == Float.class || targetType == float.class) {
+            return Float.class;
+        } else if (targetType == Double.class || targetType == double.class) {
+            return Double.class;
+        }
+        return targetType;
     }
 }
