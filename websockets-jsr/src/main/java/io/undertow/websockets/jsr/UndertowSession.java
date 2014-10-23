@@ -219,7 +219,7 @@ public final class UndertowSession implements Session {
         if(closed.compareAndSet(false, true)) {
             try {
                 try {
-                    if (!webSocketChannel.isCloseFrameReceived()) {
+                    if (!webSocketChannel.isCloseFrameReceived() && !webSocketChannel.isCloseFrameSent()) {
                         //if we have already recieved a close frame then the close frame handler
                         //will deal with sending back the reason message
                         if (closeReason == null) {
@@ -230,20 +230,22 @@ public final class UndertowSession implements Session {
                     }
                 } finally {
                     try {
-                        if(webSocketChannel.isCloseInitiatedByRemotePeer() || !localClose) {
-                            if (closeReason == null) {
-                                endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.NO_STATUS_CODE, null));
-                            } else {
-                                endpoint.getInstance().onClose(this, closeReason);
-                            }
-                        } else {
-                            //2.1.5: we must use 1006 if the close was initiated locally
-                            if (closeReason == null) {
-                                endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, null));
-                            } else {
-                                endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, closeReason.getReasonPhrase()));
-                            }
+                        String reason = null;
+                        CloseReason.CloseCode code = CloseReason.CloseCodes.NO_STATUS_CODE;
+                        if(webSocketChannel.getCloseCode() != -1) {
+                            reason = webSocketChannel.getCloseReason();
+                            code = CloseReason.CloseCodes.getCloseCode(webSocketChannel.getCloseCode());
+                        } else if(closeReason != null) {
+                            reason = closeReason.getReasonPhrase();
+                            code = closeReason.getCloseCode();
                         }
+                        if(!webSocketChannel.isCloseInitiatedByRemotePeer() && code.getCode() == CloseReason.CloseCodes.NORMAL_CLOSURE.getCode()) {
+                            //2.1.5: we must use 1006 if the close was initiated locally
+                            //however we only do this for normal closure
+                            //if the close was due to another reason such as a message being too long we need to report the real reason
+                            code = CloseReason.CloseCodes.CLOSED_ABNORMALLY;
+                        }
+                        endpoint.getInstance().onClose(this, new CloseReason(code, reason));
                     } catch (Exception e) {
                         endpoint.getInstance().onError(this, e);
                     }

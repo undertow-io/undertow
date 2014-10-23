@@ -307,7 +307,8 @@ public class WebSockets {
      * @param callback
      */
     public static void sendClose(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.CLOSE, wsChannel, callback, -1);
+        CloseMessage sm = new CloseMessage(data);
+        sendClose(sm, wsChannel, callback);
     }
 
     /**
@@ -318,7 +319,8 @@ public class WebSockets {
      * @param callback
      */
     public static void sendClose(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        sendInternal(data, WebSocketFrameType.CLOSE, wsChannel, callback, -1);
+        CloseMessage sm = new CloseMessage(data);
+        sendClose(sm, wsChannel, callback);
     }
 
 
@@ -330,9 +332,33 @@ public class WebSockets {
      * @param callback
      */
     public static void sendClose(final int code, String reason, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        sendClose(new CloseMessage(code, reason).toByteBuffer(), wsChannel, callback);
+        sendClose(new CloseMessage(code, reason), wsChannel, callback);
     }
 
+    /**
+     * Sends a complete close message, invoking the callback when complete
+     *
+     * @param closeMessage The close message
+     * @param wsChannel
+     * @param callback
+     */
+    public static void sendClose(final CloseMessage closeMessage, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
+        wsChannel.setCloseCode(closeMessage.getCode());
+        wsChannel.setCloseReason(closeMessage.getReason());
+        sendInternal(new ByteBuffer[]{closeMessage.toByteBuffer()}, WebSocketFrameType.CLOSE, wsChannel, callback, -1);
+    }
+
+    /**
+     * Sends a complete close message, invoking the callback when complete
+     *
+     * @param closeMessage the close message
+     * @param wsChannel
+     */
+    public static void sendCloseBlocking(final CloseMessage closeMessage, final WebSocketChannel wsChannel) throws IOException {
+        wsChannel.setCloseReason(closeMessage.getReason());
+        wsChannel.setCloseCode(closeMessage.getCode());
+        sendBlockingInternal(new ByteBuffer[]{closeMessage.toByteBuffer()}, WebSocketFrameType.CLOSE, wsChannel);
+    }
     /**
      * Sends a complete close message, invoking the callback when complete
      *
@@ -340,7 +366,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendCloseBlocking(final int code, String reason, final WebSocketChannel wsChannel) throws IOException {
-        sendCloseBlocking(new CloseMessage(code, reason).toByteBuffer(), wsChannel);
+        sendCloseBlocking(new CloseMessage(code, reason), wsChannel);
     }
     /**
      * Sends a complete close message, invoking the callback when complete
@@ -349,7 +375,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendCloseBlocking(final ByteBuffer data, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(new ByteBuffer[]{data}, WebSocketFrameType.CLOSE, wsChannel);
+        sendCloseBlocking(new CloseMessage(data), wsChannel);
     }
 
     /**
@@ -359,7 +385,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendCloseBlocking(final ByteBuffer[] data, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(data, WebSocketFrameType.CLOSE, wsChannel);
+        sendCloseBlocking(new CloseMessage(data), wsChannel);
     }
 
     private static void sendInternal(final ByteBuffer[] data, WebSocketFrameType type, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {

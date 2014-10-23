@@ -57,6 +57,8 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * If this is true then the web socket close was initiated by the remote peer
      */
     private volatile boolean closeInitiatedByRemotePeer;
+    private volatile int closeCode = -1;
+    private volatile String closeReason;
     private final String subProtocol;
     private final boolean extensionsSupported;
     /**
@@ -363,6 +365,8 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * Send a Close frame without a payload
      */
     public void sendClose() throws IOException {
+        closeReason = "";
+        closeCode = CloseMessage.NORMAL_CLOSURE;
         StreamSinkFrameChannel closeChannel = send(WebSocketFrameType.CLOSE, 0);
         closeChannel.shutdownWrites();
         if (!closeChannel.flush()) {
@@ -429,5 +433,29 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
          * @return true if the channel is available
          */
         boolean isDone();
+    }
+
+    /**
+     *
+     * @return The close reason
+     */
+    public String getCloseReason() {
+        return closeReason;
+    }
+
+    public void setCloseReason(String closeReason) {
+        this.closeReason = closeReason;
+    }
+
+    /**
+     *
+     * @return The close code
+     */
+    public int getCloseCode() {
+        return closeCode;
+    }
+
+    public void setCloseCode(int closeCode) {
+        this.closeCode = closeCode;
     }
 }

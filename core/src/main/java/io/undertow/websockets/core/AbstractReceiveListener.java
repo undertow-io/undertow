@@ -188,7 +188,7 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
             CloseMessage cm = new CloseMessage(data.getResource());
             onCloseMessage(cm, channel);
             if (!channel.isCloseFrameSent()) {
-                WebSockets.sendClose(cm.toByteBuffer(), channel, null);
+                WebSockets.sendClose(cm, channel, null);
             }
         } finally {
             data.free();

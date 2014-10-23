@@ -56,7 +56,7 @@ public class BufferedTextMessage {
             currentSize += res;
         }
         if (maxMessageSize > 0 && currentSize > maxMessageSize) {
-            WebSockets.sendClose(new CloseMessage(CloseMessage.MSG_TOO_BIG, WebSocketMessages.MESSAGES.messageToBig(maxMessageSize)).toByteBuffer(), channel.getWebSocketChannel(), null);
+            WebSockets.sendClose(new CloseMessage(CloseMessage.MSG_TOO_BIG, WebSocketMessages.MESSAGES.messageToBig(maxMessageSize)), channel.getWebSocketChannel(), null);
             throw new IOException(WebSocketMessages.MESSAGES.messageToBig(maxMessageSize));
         }
     }
