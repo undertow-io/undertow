@@ -19,6 +19,9 @@ package io.undertow.websockets.jsr.handshake;
 
 import java.net.URI;
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,8 +31,6 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 /**
  * {@link HandshakeRequest} which wraps a {@link io.undertow.websockets.spi.WebSocketHttpExchange} to act on it.
- * Once the processing of it is done {@link #update()} must be called to persist any changes
- * made.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
@@ -71,7 +72,25 @@ public final class ExchangeHandshakeRequest implements HandshakeRequest {
 
     @Override
     public Map<String, List<String>> getParameterMap() {
-        return exchange.getRequestParameters();
+        Map<String, List<String>> requestParameters = new HashMap<>();
+        for(Map.Entry<String, List<String>> e : exchange.getRequestParameters().entrySet()) {
+            List<String> list = requestParameters.get(e.getKey());
+            if(list == null) {
+                requestParameters.put(e.getKey(), list = new ArrayList<>());
+            }
+            list.addAll(e.getValue());
+        }
+        Map<String, String> pathParms = exchange.getAttachment(HandshakeUtil.PATH_PARAMS);
+        if(pathParms != null) {
+            for(Map.Entry<String, String> e : pathParms.entrySet()) {
+                List<String> list = requestParameters.get(e.getKey());
+                if(list == null) {
+                    requestParameters.put(e.getKey(), list = new ArrayList<>());
+                }
+                list.add(e.getValue());
+            }
+        }
+        return Collections.unmodifiableMap(requestParameters);
     }
 
     @Override

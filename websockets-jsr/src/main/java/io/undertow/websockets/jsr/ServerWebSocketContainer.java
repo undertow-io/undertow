@@ -64,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -571,7 +572,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
             if (configurator != null) {
-                final Map<String, List<String>> newHeaders = new HashMap<>();
+                final Map<String, List<String>> newHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
                 for (Map.Entry<String, String> entry : headers.entrySet()) {
                     ArrayList<String> arrayList = new ArrayList<>();
                     arrayList.add(entry.getValue());
