@@ -23,6 +23,7 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.jsr.annotated.AnnotatedEndpoint;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoUtils;
@@ -30,6 +31,7 @@ import org.xnio.IoUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.websocket.Endpoint;
 import javax.websocket.Extension;
+import javax.websocket.server.ServerEndpointConfig;
 import java.net.URI;
 import java.security.Principal;
 import java.util.Collections;
@@ -58,12 +60,29 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
     public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
         ConfiguredServerEndpoint config = HandshakeUtil.getConfig(channel);
         try {
-            InstanceFactory<Endpoint> endpointFactory = config.getEndpointFactory();
-            final InstanceHandle<Endpoint> instance;
-            if(endpointFactory != null) {
-                instance = endpointFactory.createInstance();
+            InstanceFactory<?> endpointFactory = config.getEndpointFactory();
+            ServerEndpointConfig.Configurator configurator = config.getEndpointConfiguration().getConfigurator();
+            final InstanceHandle<?> instance;
+            DefaultContainerConfigurator.setCurrentInstanceFactory(endpointFactory);
+            final Object instanceFromConfigurator = configurator.getEndpointInstance(config.getEndpointConfiguration().getEndpointClass());
+            final InstanceHandle<?> factoryInstance = DefaultContainerConfigurator.clearCurrentInstanceFactory();
+            if (factoryInstance == null) {
+                instance = new ImmediateInstanceHandle<>(instanceFromConfigurator);
+            } else if (factoryInstance.getInstance() == instanceFromConfigurator) {
+                instance = factoryInstance;
             } else {
-                instance = new ImmediateInstanceHandle<>((Endpoint) config.getEndpointConfiguration().getConfigurator().getEndpointInstance(config.getEndpointConfiguration().getEndpointClass()));
+                //the default instance has been wrapped
+                instance = new InstanceHandle<Object>() {
+                    @Override
+                    public Object getInstance() {
+                        return instanceFromConfigurator;
+                    }
+
+                    @Override
+                    public void release() {
+                        factoryInstance.release();
+                    }
+                };
             }
 
             ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
@@ -73,17 +92,34 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
             } else {
                 principal = src.getOriginalRequest().getUserPrincipal();
             }
+            final InstanceHandle<Endpoint> endpointInstance;
+            if(config.getAnnotatedEndpointFactory() != null) {
+                final AnnotatedEndpoint annotated = config.getAnnotatedEndpointFactory().createInstance(instance);
+                endpointInstance = new InstanceHandle<Endpoint>() {
+                    @Override
+                    public Endpoint getInstance() {
+                        return annotated;
+                    }
 
-            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions(), channel.getSubProtocol(), Collections.<Extension>emptyList());
+                    @Override
+                    public void release() {
+                        instance.release();
+                    }
+                };
+            } else {
+                endpointInstance = (InstanceHandle<Endpoint>) instance;
+            }
+
+            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, endpointInstance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions(), channel.getSubProtocol(), Collections.<Extension>emptyList());
             config.getOpenSessions().add(session);
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
             session.setMaxIdleTimeout(getContainer().getDefaultMaxSessionIdleTimeout());
             session.getAsyncRemote().setSendTimeout(getContainer().getDefaultAsyncSendTimeout());
             try {
-                instance.getInstance().onOpen(session, config.getEndpointConfiguration());
+                endpointInstance.getInstance().onOpen(session, config.getEndpointConfiguration());
             } catch (Exception e) {
-                instance.getInstance().onError(session, e);
+                endpointInstance.getInstance().onError(session, e);
                 IoUtils.safeClose(session);
             }
             channel.resumeReceives();

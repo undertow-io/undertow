@@ -151,4 +151,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3039, value = "The container cannot find a suitable constructor to instantiate endpoint of type %s")
     InstantiationException cannotInstantiateEndpoint(Class<?> c);
+
+    @Message(id = 3040, value = "Annotated endpoint instance %s was not of correct type %s")
+    IllegalArgumentException endpointNotOfCorrectType(Object instance, Class expected);
 }

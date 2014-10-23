@@ -18,6 +18,9 @@
 
 package io.undertow.websockets.jsr;
 
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +37,14 @@ import javax.websocket.server.ServerEndpointConfig;
  * @author Stuart Douglas
  */
 public class DefaultContainerConfigurator extends ServerEndpointConfig.Configurator {
+
+    public static final DefaultContainerConfigurator INSTANCE = new DefaultContainerConfigurator();
+
+    /**
+     * thread local hacks to work around a horrible horrible broken API
+     */
+    private static final ThreadLocal<InstanceFactory<?>> currentInstanceFactory = new ThreadLocal<>();
+    private static final ThreadLocal<InstanceHandle<?>> currentInstanceHandle = new ThreadLocal<>();
 
     @Override
     public String getNegotiatedSubprotocol(final List<String> supported, final List<String> requested) {
@@ -71,10 +82,27 @@ public class DefaultContainerConfigurator extends ServerEndpointConfig.Configura
 
     @Override
     public <T> T getEndpointInstance(final Class<T> endpointClass) throws InstantiationException {
+        InstanceFactory<?> factory = currentInstanceFactory.get();
+        if(factory != null) {
+            InstanceHandle<?> instance = factory.createInstance();
+            currentInstanceHandle.set(instance);
+            return (T) instance.getInstance();
+        }
         try {
             return endpointClass.newInstance();
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    static void setCurrentInstanceFactory(InstanceFactory<?> factory) {
+         currentInstanceFactory.set(factory);
+    }
+
+    static InstanceHandle<?> clearCurrentInstanceFactory() {
+        currentInstanceFactory.remove();
+        InstanceHandle<?> handle = currentInstanceHandle.get();
+        currentInstanceHandle.remove();
+        return handle;
     }
 }

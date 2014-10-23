@@ -41,7 +41,7 @@ public abstract class Handshake {
     private final String magicNumber;
     protected final Set<String> subprotocols;
     private static final byte[] EMPTY = new byte[0];
-    private static final Pattern PATTERN = Pattern.compile(",");
+    private static final Pattern PATTERN = Pattern.compile("\\s*,\\s*");
 
     protected Handshake(WebSocketVersion version, String hashAlgorithm, String magicNumber, final Set<String> subprotocols) {
         this.version = version;

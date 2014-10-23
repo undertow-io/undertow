@@ -52,6 +52,8 @@ public class AnnotatedEndpoint extends Endpoint {
     private final BoundMethod binaryMessage;
     private final BoundMethod pongMessage;
 
+    private volatile boolean released;
+
     AnnotatedEndpoint(final InstanceHandle<?> instance, final BoundMethod webSocketOpen, final BoundMethod webSocketClose, final BoundMethod webSocketError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
         this.instance = instance;
         this.webSocketOpen = webSocketOpen;
@@ -165,10 +167,12 @@ public class AnnotatedEndpoint extends Endpoint {
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
-                try {
-                    method.invoke(instance.getInstance(), params);
-                } catch (Exception e) {
-                    onError(session, e);
+                if(!released) {
+                    try {
+                        method.invoke(instance.getInstance(), params);
+                    } catch (Exception e) {
+                        onError(session, e);
+                    }
                 }
             }
         });
@@ -196,7 +200,23 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             params.put(CloseReason.class, closeReason);
-            invokeMethod(params, webSocketClose, (UndertowSession) session);
+            ((UndertowSession) session).getContainer().invokeEndpointMethod(executor, new Runnable() {
+                        @Override
+                        public void run() {
+                            if(!released) {
+                                try {
+                                    webSocketClose.invoke(instance.getInstance(), params);
+                                } catch (Exception e) {
+                                    onError(session, e);
+                                } finally {
+                                    released = true;
+                                    instance.release();
+                                }
+                            }
+                        }
+                    }
+
+            );
         }
     }
 
@@ -211,13 +231,15 @@ public class AnnotatedEndpoint extends Endpoint {
             ((UndertowSession) session).getContainer().invokeEndpointMethod(executor, new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        webSocketError.invoke(instance.getInstance(), params);
-                    } catch (Exception e) {
-                        if(e instanceof RuntimeException) {
-                            throw (RuntimeException)e;
+                    if(!released) {
+                        try {
+                            webSocketError.invoke(instance.getInstance(), params);
+                        } catch (Exception e) {
+                            if (e instanceof RuntimeException) {
+                                throw (RuntimeException) e;
+                            }
+                            throw new RuntimeException(e); //not much we can do here
                         }
-                        throw new RuntimeException(e); //not much we can do here
                     }
                 }
             });

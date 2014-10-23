@@ -22,6 +22,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.servlet.util.ConstructorInstanceFactory;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.util.PathTemplate;
 import io.undertow.websockets.WebSocketExtension;
@@ -139,7 +140,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
         }
-        Endpoint instance = config.getFactory().createInstanceForExisting(annotatedEndpointInstance);
+        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<Object>(annotatedEndpointInstance));
         XnioSsl ssl = null;
         for (WebsocketClientSslProvider provider : clientSslProviders) {
             ssl = provider.getSsl(xnioWorker, annotatedEndpointInstance, path);
@@ -157,7 +158,10 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
         }
         try {
-            InstanceHandle<Endpoint> instance = config.getFactory().createInstance();
+            AnnotatedEndpointFactory factory = config.getFactory();
+
+
+            InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
             XnioSsl ssl = null;
             for (WebsocketClientSslProvider provider : clientSslProviders) {
                 ssl = provider.getSsl(xnioWorker, aClass, uri);
@@ -165,7 +169,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                     break;
                 }
             }
-            return connectToServerInternal(instance.getInstance(), ssl, config, uri);
+            return connectToServerInternal(factory.createInstance(instance), ssl, config, uri);
         } catch (InstantiationException e) {
             throw new RuntimeException(e);
         }
@@ -385,13 +389,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 seenPaths.add(template);
 
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, serverEndpoint.decoders(), serverEndpoint.encoders());
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory, template.getParameterNames());
+                AnnotatedEndpointFactory annotatedEndpointFactory = AnnotatedEndpointFactory.create(endpoint, encodingFactory, template.getParameterNames());
+                InstanceFactory<?> instanceFactory = classIntrospecter.createInstanceFactory(endpoint);
                 Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
                 ServerEndpointConfig.Configurator configurator;
                 if (configuratorClass != ServerEndpointConfig.Configurator.class) {
                     configurator = configuratorClass.newInstance();
                 } else {
-                    configurator = new ServerInstanceFactoryConfigurator(factory);
+                    configurator = DefaultContainerConfigurator.INSTANCE;
                 }
 
                 ServerEndpointConfig config = ServerEndpointConfig.Builder.create(endpoint, serverEndpoint.value())
@@ -402,7 +407,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                         .build();
 
 
-                ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, factory, template, encodingFactory);
+                ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, template, encodingFactory, annotatedEndpointFactory);
                 configuredServerEndpoints.add(confguredServerEndpoint);
                 handleAddingFilterMapping();
             } else if (clientEndpoint != null) {
@@ -412,9 +417,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 try {
                     instanceFactory = classIntrospecter.createInstanceFactory(endpoint);
                 } catch (Exception e) {
-                    instanceFactory = null; //this endpoint cannot be created by the container, the user will instantiate it
+                    instanceFactory = new ConstructorInstanceFactory<>(endpoint.getConstructor()); //this endpoint cannot be created by the container, the user will instantiate it
                 }
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, instanceFactory, encodingFactory, Collections.<String>emptySet());
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, encodingFactory, Collections.<String>emptySet());
 
                 ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
                         .decoders(Arrays.asList(clientEndpoint.decoders()))
@@ -423,7 +428,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                         .configurator(clientEndpoint.configurator().newInstance())
                         .build();
 
-                ConfiguredClientEndpoint configuredClientEndpoint = new ConfiguredClientEndpoint(config, factory, encodingFactory);
+                ConfiguredClientEndpoint configuredClientEndpoint = new ConfiguredClientEndpoint(config, factory, encodingFactory, instanceFactory);
                 clientEndpoints.put(endpoint, configuredClientEndpoint);
             } else {
                 throw JsrWebSocketMessages.MESSAGES.classWasNotAnnotated(endpoint);
@@ -466,7 +471,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         seenPaths.add(template);
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, endpoint.getDecoders(), endpoint.getEncoders());
-        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory);
+        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory, null);
         configuredServerEndpoints.add(confguredServerEndpoint);
         handleAddingFilterMapping();
     }
@@ -538,20 +543,6 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     public XnioWorker getXnioWorker() {
         return xnioWorker;
-    }
-
-    private static final class ServerInstanceFactoryConfigurator extends ServerEndpointConfig.Configurator {
-
-        private final InstanceFactory<?> factory;
-
-        private ServerInstanceFactoryConfigurator(final InstanceFactory<?> factory) {
-            this.factory = factory;
-        }
-
-        @Override
-        public <T> T getEndpointInstance(final Class<T> endpointClass) throws InstantiationException {
-            return (T) factory.createInstance().getInstance();
-        }
     }
 
     private static List<WebSocketExtension> toExtensionList(final List<Extension> extensions) {
