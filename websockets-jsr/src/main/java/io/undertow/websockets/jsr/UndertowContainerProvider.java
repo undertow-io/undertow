@@ -47,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class UndertowContainerProvider extends ContainerProvider {
 
     private static final boolean directBuffers = Boolean.getBoolean("io.undertow.websockets.direct-buffers");
+    private static final boolean invokeInIoThread = Boolean.getBoolean("io.undertow.websockets.invoke-in-io-thread");
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.websockets.jsr.MODIFY_WEBSOCKET_CONTAINER");
 
@@ -92,7 +93,7 @@ public class UndertowContainerProvider extends ContainerProvider {
                     //todo: what options should we use here?
                     XnioWorker worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
                     Pool<ByteBuffer> buffers = new ByteBufferSlicePool(directBuffers ? BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR : BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 10240);
-                    defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), worker, buffers, new CompositeThreadSetupAction(Collections.<ThreadSetupAction>emptyList()), false);
+                    defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), worker, buffers, new CompositeThreadSetupAction(Collections.<ThreadSetupAction>emptyList()), !invokeInIoThread);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
