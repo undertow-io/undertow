@@ -17,9 +17,9 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.websocket.HandshakeResponse;
 
@@ -43,7 +43,8 @@ public final class ExchangeHandshakeResponse implements HandshakeResponse {
     @Override
     public Map<String, List<String>> getHeaders() {
         if (headers == null) {
-            headers = new HashMap<>(exchange.getResponseHeaders());
+            headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            headers.putAll(exchange.getResponseHeaders());
         }
         return headers;
     }

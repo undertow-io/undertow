@@ -131,33 +131,39 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
         return new HandshakeChecker() {
             @Override
             public void checkHandshake(Map<String, String> headers) throws IOException {
-                if(negotiation != null) {
-                    negotiation.afterRequest(headers);
-                }
-                String upgrade = headers.get(Headers.UPGRADE_STRING.toLowerCase(Locale.ENGLISH));
-                if (upgrade == null || !upgrade.trim().equalsIgnoreCase("websocket")) {
-                    throw WebSocketMessages.MESSAGES.noWebSocketUpgradeHeader();
-                }
-                String connHeader = headers.get(Headers.CONNECTION_STRING.toLowerCase(Locale.ENGLISH));
-                if (connHeader == null || !connHeader.trim().equalsIgnoreCase("upgrade")) {
-                    throw WebSocketMessages.MESSAGES.noWebSocketConnectionHeader();
-                }
-                String acceptKey = headers.get(Headers.SEC_WEB_SOCKET_ACCEPT_STRING.toLowerCase(Locale.ENGLISH));
-                final String dKey = solve(sentKey);
-                if (!dKey.equals(acceptKey)) {
-                    throw WebSocketMessages.MESSAGES.webSocketAcceptKeyMismatch(dKey, acceptKey);
-                }
-                if (negotiation != null) {
-                    String subProto = headers.get(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING.toLowerCase(Locale.ENGLISH));
-                    if (subProto != null && !subProto.isEmpty() && !negotiation.getSupportedSubProtocols().contains(subProto)) {
-                        throw WebSocketMessages.MESSAGES.unsupportedProtocol(subProto, negotiation.getSupportedSubProtocols());
+                try {
+                    if (negotiation != null) {
+                        negotiation.afterRequest(headers);
                     }
-                    List<WebSocketExtension> extensions = Collections.emptyList();
-                    String extHeader = headers.get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING.toLowerCase(Locale.ENGLISH));
-                    if (extHeader != null) {
-                        extensions = WebSocketExtension.parse(extHeader);
+                    String upgrade = headers.get(Headers.UPGRADE_STRING.toLowerCase(Locale.ENGLISH));
+                    if (upgrade == null || !upgrade.trim().equalsIgnoreCase("websocket")) {
+                        throw WebSocketMessages.MESSAGES.noWebSocketUpgradeHeader();
                     }
-                    negotiation.handshakeComplete(subProto, extensions);
+                    String connHeader = headers.get(Headers.CONNECTION_STRING.toLowerCase(Locale.ENGLISH));
+                    if (connHeader == null || !connHeader.trim().equalsIgnoreCase("upgrade")) {
+                        throw WebSocketMessages.MESSAGES.noWebSocketConnectionHeader();
+                    }
+                    String acceptKey = headers.get(Headers.SEC_WEB_SOCKET_ACCEPT_STRING.toLowerCase(Locale.ENGLISH));
+                    final String dKey = solve(sentKey);
+                    if (!dKey.equals(acceptKey)) {
+                        throw WebSocketMessages.MESSAGES.webSocketAcceptKeyMismatch(dKey, acceptKey);
+                    }
+                    if (negotiation != null) {
+                        String subProto = headers.get(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING.toLowerCase(Locale.ENGLISH));
+                        if (subProto != null && !subProto.isEmpty() && !negotiation.getSupportedSubProtocols().contains(subProto)) {
+                            throw WebSocketMessages.MESSAGES.unsupportedProtocol(subProto, negotiation.getSupportedSubProtocols());
+                        }
+                        List<WebSocketExtension> extensions = Collections.emptyList();
+                        String extHeader = headers.get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING.toLowerCase(Locale.ENGLISH));
+                        if (extHeader != null) {
+                            extensions = WebSocketExtension.parse(extHeader);
+                        }
+                        negotiation.handshakeComplete(subProto, extensions);
+                    }
+                } catch (IOException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new IOException(e);
                 }
             }
         };
