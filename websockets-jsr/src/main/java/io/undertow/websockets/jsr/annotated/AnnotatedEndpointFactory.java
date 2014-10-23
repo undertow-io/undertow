@@ -18,9 +18,7 @@
 
 package io.undertow.websockets.jsr.annotated;
 
-import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.websockets.jsr.Encoding;
 import io.undertow.websockets.jsr.EncodingFactory;
 import io.undertow.websockets.jsr.JsrWebSocketLogger;
@@ -29,7 +27,6 @@ import io.undertow.websockets.jsr.JsrWebSocketMessages;
 import javax.websocket.CloseReason;
 import javax.websocket.DecodeException;
 import javax.websocket.DeploymentException;
-import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
@@ -53,9 +50,8 @@ import java.util.Set;
  *
  * @author Stuart Douglas
  */
-public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
+public class AnnotatedEndpointFactory {
 
-    private final InstanceFactory<?> underlyingFactory;
     private final Class<?> endpointClass;
     private final BoundMethod OnOpen;
     private final BoundMethod OnClose;
@@ -64,9 +60,8 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     private final BoundMethod binaryMessage;
     private final BoundMethod pongMessage;
 
-    private AnnotatedEndpointFactory(final Class<?> endpointClass, final InstanceFactory<?> underlyingFactory, final BoundMethod OnOpen, final BoundMethod OnClose, final BoundMethod OnError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
+    private AnnotatedEndpointFactory(final Class<?> endpointClass, final BoundMethod OnOpen, final BoundMethod OnClose, final BoundMethod OnError, final BoundMethod textMessage, final BoundMethod binaryMessage, final BoundMethod pongMessage) {
 
-        this.underlyingFactory = underlyingFactory;
         this.endpointClass = endpointClass;
         this.OnOpen = OnOpen;
         this.OnClose = OnClose;
@@ -78,7 +73,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     }
 
 
-    public static AnnotatedEndpointFactory create(final Class<?> endpointClass, final InstanceFactory<?> underlyingInstance, final EncodingFactory encodingFactory, final Set<String> paths) throws DeploymentException {
+    public static AnnotatedEndpointFactory create(final Class<?> endpointClass, final EncodingFactory encodingFactory, final Set<String> paths) throws DeploymentException {
         final Set<Class<? extends Annotation>> found = new HashSet<>();
         BoundMethod OnOpen = null;
         BoundMethod OnClose = null;
@@ -238,7 +233,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
             }
             c = c.getSuperclass();
         } while (c != Object.class && c != null);
-        return new AnnotatedEndpointFactory(endpointClass, underlyingInstance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
+        return new AnnotatedEndpointFactory(endpointClass, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
     }
 
     private static BoundPathParameters createBoundPathParameters(final Method method, Set<String> paths, Class<?> endpointClass) throws DeploymentException {
@@ -276,30 +271,12 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
         return false;
     }
 
-    @Override
-    public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-        if(underlyingFactory == null) {
-            throw JsrWebSocketMessages.MESSAGES.cannotInstantiateEndpoint(endpointClass);
+    public AnnotatedEndpoint createInstance(InstanceHandle<?> endpointInstance) {
+        if(!endpointClass.isInstance(endpointInstance.getInstance())) {
+            throw JsrWebSocketMessages.MESSAGES.endpointNotOfCorrectType(endpointInstance, endpointClass);
         }
-        final InstanceHandle<?> instance = underlyingFactory.createInstance();
-        final AnnotatedEndpoint endpoint = new AnnotatedEndpoint(instance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
-        return new InstanceHandle<Endpoint>() {
-            @Override
-            public Endpoint getInstance() {
-                return endpoint;
-            }
-
-            @Override
-            public void release() {
-                instance.release();
-            }
-        };
+        return new AnnotatedEndpoint(endpointInstance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
     }
-
-    public Endpoint createInstanceForExisting(final Object instance) {
-        return new AnnotatedEndpoint(new ImmediateInstanceHandle<>(instance), OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
-    }
-
 
     /**
      * represents a parameter binding

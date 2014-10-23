@@ -20,6 +20,7 @@ package io.undertow.websockets.jsr;
 
 import javax.websocket.ClientEndpointConfig;
 
+import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 
 /**
@@ -30,11 +31,13 @@ public class ConfiguredClientEndpoint {
     private final ClientEndpointConfig config;
     private final AnnotatedEndpointFactory factory;
     private final EncodingFactory encodingFactory;
+    private final InstanceFactory<?> instanceFactory;
 
-    public ConfiguredClientEndpoint(final ClientEndpointConfig config, final AnnotatedEndpointFactory factory, final EncodingFactory encodingFactory) {
+    public ConfiguredClientEndpoint(final ClientEndpointConfig config, final AnnotatedEndpointFactory factory, final EncodingFactory encodingFactory, InstanceFactory<?> instanceFactory) {
         this.config = config;
         this.factory = factory;
         this.encodingFactory = encodingFactory;
+        this.instanceFactory = instanceFactory;
     }
 
     public ClientEndpointConfig getConfig() {
@@ -47,5 +50,9 @@ public class ConfiguredClientEndpoint {
 
     public EncodingFactory getEncodingFactory() {
         return encodingFactory;
+    }
+
+    public InstanceFactory<?> getInstanceFactory() {
+        return instanceFactory;
     }
 }
