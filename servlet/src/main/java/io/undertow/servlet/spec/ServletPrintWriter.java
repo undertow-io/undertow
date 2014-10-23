@@ -211,18 +211,22 @@ public class ServletPrintWriter {
 
                 int end = off + len;
                 int i = off;
-                int fpos = i + remaining;
-                for (; i < end; ++i) {
-                    if (i == fpos) {
+                int flushPos = i + remaining;
+                while (ok && i < end) {
+                    int realEnd = Math.min(end, flushPos);
+                    for (; i < realEnd; ++i) {
+                        char c = buf[i];
+                        if (c > 127) {
+                            ok = false;
+                            break;
+                        } else {
+                            buffer.put((byte) c);
+                        }
+                    }
+                    if (i == flushPos) {
                         outputStream.flushInternal();
-                        fpos = i + buffer.remaining();
+                        flushPos = i + buffer.remaining();
                     }
-                    char c = buf[i];
-                    if (c > 127) {
-                        ok = false;
-                        break;
-                    }
-                    buffer.put((byte) c);
                 }
                 outputStream.updateWritten(remaining - buffer.remaining());
                 if (ok) {
