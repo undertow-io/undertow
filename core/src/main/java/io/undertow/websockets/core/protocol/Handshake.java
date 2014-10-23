@@ -156,7 +156,7 @@ public abstract class Handshake {
 
         String[] requestedSubprotocolArray = PATTERN.split(requestedSubprotocols);
         String subProtocol = supportedSubprotols(requestedSubprotocolArray);
-        if (subProtocol != null) {
+        if (subProtocol != null && !subProtocol.isEmpty()) {
             exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, subProtocol);
         }
 

@@ -48,12 +48,12 @@ public class DefaultContainerConfigurator extends ServerEndpointConfig.Configura
 
     @Override
     public String getNegotiatedSubprotocol(final List<String> supported, final List<String> requested) {
-        for(String proto : supported) {
-            if(requested.contains(proto)) {
+        for(String proto : requested) {
+            if(supported.contains(proto)) {
                 return proto;
             }
         }
-        return null;
+        return "";
     }
 
     @Override
