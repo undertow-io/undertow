@@ -239,7 +239,11 @@ public final class UndertowSession implements Session {
                             reason = closeReason.getReasonPhrase();
                             code = closeReason.getCloseCode();
                         }
-                        if(!webSocketChannel.isCloseInitiatedByRemotePeer() && code.getCode() == CloseReason.CloseCodes.NORMAL_CLOSURE.getCode()) {
+                        //horrible hack
+                        //the spec says that if we (the local container) close locally then we need to use 1006
+                        //although the TCK does not expect this behaviour for TOO_BIG
+                        //we need to really clean up the close behaviour in the next spec
+                        if(!webSocketChannel.isCloseInitiatedByRemotePeer() && !localClose && code.getCode() != CloseReason.CloseCodes.TOO_BIG.getCode()) {
                             //2.1.5: we must use 1006 if the close was initiated locally
                             //however we only do this for normal closure
                             //if the close was due to another reason such as a message being too long we need to report the real reason
