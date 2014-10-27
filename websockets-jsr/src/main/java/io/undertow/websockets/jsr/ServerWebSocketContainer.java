@@ -137,7 +137,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public Session connectToServer(final Object annotatedEndpointInstance, final URI path) throws DeploymentException, IOException {
-        ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass());
+        ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
         }
@@ -154,7 +154,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public Session connectToServer(Class<?> aClass, URI uri) throws DeploymentException, IOException {
-        ConfiguredClientEndpoint config = getClientEndpoint(aClass);
+        ConfiguredClientEndpoint config = getClientEndpoint(aClass, true);
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
         }
@@ -367,80 +367,99 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         if (deploymentComplete) {
             throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
         }
-        addEndpointInternal(endpoint);
+        addEndpointInternal(endpoint, true);
     }
 
-    private void addEndpointInternal(final Class<?> endpoint) throws DeploymentException {
-        try {
-            ServerEndpoint serverEndpoint = endpoint.getAnnotation(ServerEndpoint.class);
-            ClientEndpoint clientEndpoint = endpoint.getAnnotation(ClientEndpoint.class);
-            if (serverEndpoint != null) {
-                JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedServerEndpoint(endpoint, serverEndpoint.value());
-                final PathTemplate template = PathTemplate.create(serverEndpoint.value());
-                if (seenPaths.contains(template)) {
-                    PathTemplate existing = null;
-                    for (PathTemplate p : seenPaths) {
-                        if (p.compareTo(template) == 0) {
-                            existing = p;
-                            break;
-                        }
+    private void addEndpointInternal(final Class<?> endpoint, boolean requiresCreation) throws DeploymentException {
+        ServerEndpoint serverEndpoint = endpoint.getAnnotation(ServerEndpoint.class);
+        ClientEndpoint clientEndpoint = endpoint.getAnnotation(ClientEndpoint.class);
+        if (serverEndpoint != null) {
+            JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedServerEndpoint(endpoint, serverEndpoint.value());
+            final PathTemplate template = PathTemplate.create(serverEndpoint.value());
+            if (seenPaths.contains(template)) {
+                PathTemplate existing = null;
+                for (PathTemplate p : seenPaths) {
+                    if (p.compareTo(template) == 0) {
+                        existing = p;
+                        break;
                     }
-                    throw JsrWebSocketMessages.MESSAGES.multipleEndpointsWithOverlappingPaths(template, existing);
                 }
-                seenPaths.add(template);
+                throw JsrWebSocketMessages.MESSAGES.multipleEndpointsWithOverlappingPaths(template, existing);
+            }
+            seenPaths.add(template);
 
-                EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, serverEndpoint.decoders(), serverEndpoint.encoders());
-                AnnotatedEndpointFactory annotatedEndpointFactory = AnnotatedEndpointFactory.create(endpoint, encodingFactory, template.getParameterNames());
-                InstanceFactory<?> instanceFactory = classIntrospecter.createInstanceFactory(endpoint);
-                Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
-                ServerEndpointConfig.Configurator configurator;
-                if (configuratorClass != ServerEndpointConfig.Configurator.class) {
-                    configurator = configuratorClass.newInstance();
-                } else {
-                    configurator = DefaultContainerConfigurator.INSTANCE;
-                }
-
-                ServerEndpointConfig config = ServerEndpointConfig.Builder.create(endpoint, serverEndpoint.value())
-                        .decoders(Arrays.asList(serverEndpoint.decoders()))
-                        .encoders(Arrays.asList(serverEndpoint.encoders()))
-                        .subprotocols(Arrays.asList(serverEndpoint.subprotocols()))
-                        .configurator(configurator)
-                        .build();
-
-
-                ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, template, encodingFactory, annotatedEndpointFactory);
-                configuredServerEndpoints.add(confguredServerEndpoint);
-                handleAddingFilterMapping();
-            } else if (clientEndpoint != null) {
-                JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedClientEndpoint(endpoint);
-                EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, clientEndpoint.decoders(), clientEndpoint.encoders());
-                InstanceFactory<?> instanceFactory;
+            EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, serverEndpoint.decoders(), serverEndpoint.encoders());
+            AnnotatedEndpointFactory annotatedEndpointFactory = AnnotatedEndpointFactory.create(endpoint, encodingFactory, template.getParameterNames());
+            InstanceFactory<?> instanceFactory = null;
+            try {
+                instanceFactory = classIntrospecter.createInstanceFactory(endpoint);
+            } catch (NoSuchMethodException e) {
+                throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+            }
+            Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
+            ServerEndpointConfig.Configurator configurator;
+            if (configuratorClass != ServerEndpointConfig.Configurator.class) {
                 try {
-                    instanceFactory = classIntrospecter.createInstanceFactory(endpoint);
-                } catch (Exception e) {
-                    instanceFactory = new ConstructorInstanceFactory<>(endpoint.getConstructor()); //this endpoint cannot be created by the container, the user will instantiate it
+                    configurator = configuratorClass.newInstance();
+                } catch (InstantiationException | IllegalAccessException e) {
+                    throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
                 }
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, encodingFactory, Collections.<String>emptySet());
-
-                ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
-                        .decoders(Arrays.asList(clientEndpoint.decoders()))
-                        .encoders(Arrays.asList(clientEndpoint.encoders()))
-                        .preferredSubprotocols(Arrays.asList(clientEndpoint.subprotocols()))
-                        .configurator(clientEndpoint.configurator().newInstance())
-                        .build();
-
-                ConfiguredClientEndpoint configuredClientEndpoint = new ConfiguredClientEndpoint(config, factory, encodingFactory, instanceFactory);
-                clientEndpoints.put(endpoint, configuredClientEndpoint);
             } else {
-                throw JsrWebSocketMessages.MESSAGES.classWasNotAnnotated(endpoint);
+                configurator = DefaultContainerConfigurator.INSTANCE;
             }
 
-        } catch (NoSuchMethodException e) {
-            throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
-        } catch (InstantiationException e) {
-            throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
-        } catch (IllegalAccessException e) {
-            throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+            ServerEndpointConfig config = ServerEndpointConfig.Builder.create(endpoint, serverEndpoint.value())
+                    .decoders(Arrays.asList(serverEndpoint.decoders()))
+                    .encoders(Arrays.asList(serverEndpoint.encoders()))
+                    .subprotocols(Arrays.asList(serverEndpoint.subprotocols()))
+                    .configurator(configurator)
+                    .build();
+
+
+            ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, template, encodingFactory, annotatedEndpointFactory);
+            configuredServerEndpoints.add(confguredServerEndpoint);
+            handleAddingFilterMapping();
+        } else if (clientEndpoint != null) {
+            JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedClientEndpoint(endpoint);
+            EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, clientEndpoint.decoders(), clientEndpoint.encoders());
+            InstanceFactory<?> instanceFactory;
+            try {
+                instanceFactory = classIntrospecter.createInstanceFactory(endpoint);
+            } catch (Exception e) {
+                try {
+                    instanceFactory = new ConstructorInstanceFactory<>(endpoint.getConstructor()); //this endpoint cannot be created by the container, the user will instantiate it
+                } catch (NoSuchMethodException e1) {
+                    if(requiresCreation) {
+                        throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+                    } else {
+                        instanceFactory = new InstanceFactory<Object>() {
+                            @Override
+                            public InstanceHandle<Object> createInstance() throws InstantiationException {
+                                throw new InstantiationException();
+                            }
+                        };
+                    }
+                }
+            }
+            AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, encodingFactory, Collections.<String>emptySet());
+
+            ClientEndpointConfig.Configurator configurator = null;
+            try {
+                configurator = clientEndpoint.configurator().newInstance();
+            } catch (InstantiationException | IllegalAccessException e) {
+                throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+            }
+            ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
+                    .decoders(Arrays.asList(clientEndpoint.decoders()))
+                    .encoders(Arrays.asList(clientEndpoint.encoders()))
+                    .preferredSubprotocols(Arrays.asList(clientEndpoint.subprotocols()))
+                    .configurator(configurator)
+                    .build();
+
+            ConfiguredClientEndpoint configuredClientEndpoint = new ConfiguredClientEndpoint(config, factory, encodingFactory, instanceFactory);
+            clientEndpoints.put(endpoint, configuredClientEndpoint);
+        } else {
+            throw JsrWebSocketMessages.MESSAGES.classWasNotAnnotated(endpoint);
         }
     }
 
@@ -478,7 +497,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
 
-    public ConfiguredClientEndpoint getClientEndpoint(final Class<?> endpointType) {
+    private ConfiguredClientEndpoint getClientEndpoint(final Class<?> endpointType, boolean requiresCreation) {
         Class<?> type = endpointType;
         while (type != Object.class && type != null && !type.isAnnotationPresent(ClientEndpoint.class)) {
             type = type.getSuperclass();
@@ -498,7 +517,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
             if (type.isAnnotationPresent(ClientEndpoint.class)) {
                 try {
-                    addEndpointInternal(type);
+                    addEndpointInternal(type, requiresCreation);
                     return clientEndpoints.get(type);
                 } catch (DeploymentException e) {
                     throw new RuntimeException(e);
