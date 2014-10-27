@@ -160,7 +160,11 @@ public class ResourceHandler implements HttpHandler {
             public void run() {
                 Resource resource = null;
                 try {
-                    resource = resourceManager.getResource(canonicalize(exchange.getRelativePath()));
+                    if(File.separatorChar == '/' || !exchange.getRelativePath().contains(File.separator)) {
+                        //we don't process resources that contain the sperator character if this is not /
+                        //this prevents attacks where people use windows path seperators in file URLS's
+                        resource = resourceManager.getResource(canonicalize(exchange.getRelativePath()));
+                    }
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     exchange.setResponseCode(500);

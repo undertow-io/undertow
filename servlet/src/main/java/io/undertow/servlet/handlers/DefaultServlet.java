@@ -41,6 +41,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
@@ -126,12 +127,22 @@ public class DefaultServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        final String path = getPath(req);
+        String path = getPath(req);
         if (!isAllowed(path, req.getDispatcherType())) {
             resp.sendError(404);
             return;
         }
-        final Resource resource = resourceManager.getResource(path);
+        if(File.separatorChar != '/') {
+            //if the separator char is not / we want to replace it with a / and canonicalise
+            path = CanonicalPathUtils.canonicalize(path.replace(File.separatorChar, '/'));
+        }
+        final Resource resource;
+        //we want to disallow windows characters in the path
+        if(File.separatorChar == '/' || !path.contains(File.separator)) {
+            resource = resourceManager.getResource(path);
+        } else {
+            resource = null;
+        }
         if (resource == null) {
             if (req.getDispatcherType() == DispatcherType.INCLUDE) {
                 //servlet 9.3

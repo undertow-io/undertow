@@ -20,3 +20,5 @@ io.undertow.server.handlers.RequestLimitingHandler$Builder
 io.undertow.server.handlers.resource.ResourceHandler$Builder
 io.undertow.server.handlers.SSLHeaderHandler$Builder
 io.undertow.server.handlers.ResponseRateLimitingHandler$Builder
+io.undertow.server.handlers.URLDecodingHandler$Builder
+io.undertow.server.handlers.PathSeparatorHandler$Builder
