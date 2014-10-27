@@ -28,7 +28,7 @@ import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
-import org.xnio.http.HandshakeChecker;
+import org.xnio.http.ExtendedHandshakeChecker;
 
 import java.io.IOException;
 import java.net.URI;
@@ -126,35 +126,36 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     }
 
     @Override
-    public HandshakeChecker handshakeChecker(final URI uri, final Map<String, String> requestHeaders) {
-        final String sentKey = requestHeaders.get(Headers.SEC_WEB_SOCKET_KEY_STRING);
-        return new HandshakeChecker() {
+    public ExtendedHandshakeChecker handshakeChecker(final URI uri, final Map<String, List<String>> requestHeaders) {
+        final String sentKey = requestHeaders.containsKey(Headers.SEC_WEB_SOCKET_KEY_STRING) ? requestHeaders.get(Headers.SEC_WEB_SOCKET_KEY_STRING).get(0) : null;
+        return new ExtendedHandshakeChecker() {
+
             @Override
-            public void checkHandshake(Map<String, String> headers) throws IOException {
+            public void checkHandshakeExtended(Map<String, List<String>> headers) throws IOException {
                 try {
                     if (negotiation != null) {
                         negotiation.afterRequest(headers);
                     }
-                    String upgrade = headers.get(Headers.UPGRADE_STRING.toLowerCase(Locale.ENGLISH));
+                    String upgrade = getFirst(Headers.UPGRADE_STRING, headers);
                     if (upgrade == null || !upgrade.trim().equalsIgnoreCase("websocket")) {
                         throw WebSocketMessages.MESSAGES.noWebSocketUpgradeHeader();
                     }
-                    String connHeader = headers.get(Headers.CONNECTION_STRING.toLowerCase(Locale.ENGLISH));
+                    String connHeader = getFirst(Headers.CONNECTION_STRING, headers);
                     if (connHeader == null || !connHeader.trim().equalsIgnoreCase("upgrade")) {
                         throw WebSocketMessages.MESSAGES.noWebSocketConnectionHeader();
                     }
-                    String acceptKey = headers.get(Headers.SEC_WEB_SOCKET_ACCEPT_STRING.toLowerCase(Locale.ENGLISH));
+                    String acceptKey = getFirst(Headers.SEC_WEB_SOCKET_ACCEPT_STRING, headers);
                     final String dKey = solve(sentKey);
                     if (!dKey.equals(acceptKey)) {
                         throw WebSocketMessages.MESSAGES.webSocketAcceptKeyMismatch(dKey, acceptKey);
                     }
                     if (negotiation != null) {
-                        String subProto = headers.get(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING.toLowerCase(Locale.ENGLISH));
+                        String subProto = getFirst(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, headers);
                         if (subProto != null && !subProto.isEmpty() && !negotiation.getSupportedSubProtocols().contains(subProto)) {
                             throw WebSocketMessages.MESSAGES.unsupportedProtocol(subProto, negotiation.getSupportedSubProtocols());
                         }
                         List<WebSocketExtension> extensions = Collections.emptyList();
-                        String extHeader = headers.get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING.toLowerCase(Locale.ENGLISH));
+                        String extHeader = getFirst(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING, headers);
                         if (extHeader != null) {
                             extensions = WebSocketExtension.parse(extHeader);
                         }
@@ -167,6 +168,14 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                 }
             }
         };
+    }
+
+    private String getFirst(String key, Map<String, List<String>> map) {
+        List<String> list = map.get(key.toLowerCase(Locale.ENGLISH));
+        if(list == null || list.isEmpty()) {
+            return null;
+        }
+        return list.get(0);
     }
 
     protected final String solve(final String nonceBase64) {

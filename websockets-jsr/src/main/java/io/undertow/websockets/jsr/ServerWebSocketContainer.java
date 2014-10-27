@@ -587,14 +587,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
 
         @Override
-        public void afterRequest(final Map<String, String> headers) {
+        public void afterRequest(final Map<String, List<String>> headers) {
 
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
             if (configurator != null) {
                 final Map<String, List<String>> newHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
                     ArrayList<String> arrayList = new ArrayList<>();
-                    arrayList.add(entry.getValue());
+                    arrayList.addAll(entry.getValue());
                     newHeaders.put(entry.getKey(), arrayList);
                 }
                 configurator.afterResponse(new HandshakeResponse() {
@@ -607,20 +607,20 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
 
         @Override
-        public void beforeRequest(Map<String, String> headers) {
+        public void beforeRequest(Map<String, List<String>> headers) {
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
             if (configurator != null) {
                 final Map<String, List<String>> newHeaders = new HashMap<>();
-                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
                     ArrayList<String> arrayList = new ArrayList<>();
-                    arrayList.add(entry.getValue());
+                    arrayList.addAll(entry.getValue());
                     newHeaders.put(entry.getKey(), arrayList);
                 }
                 configurator.beforeRequest(newHeaders);
                 headers.clear(); //TODO: more efficient way
                 for (Map.Entry<String, List<String>> entry : newHeaders.entrySet()) {
                     if (!entry.getValue().isEmpty()) {
-                        headers.put(entry.getKey(), entry.getValue().get(0));
+                        headers.put(entry.getKey(), entry.getValue());
                     }
                 }
             }
