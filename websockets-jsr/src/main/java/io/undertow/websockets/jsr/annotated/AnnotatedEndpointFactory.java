@@ -75,9 +75,9 @@ public class AnnotatedEndpointFactory {
 
     public static AnnotatedEndpointFactory create(final Class<?> endpointClass, final EncodingFactory encodingFactory, final Set<String> paths) throws DeploymentException {
         final Set<Class<? extends Annotation>> found = new HashSet<>();
-        BoundMethod OnOpen = null;
-        BoundMethod OnClose = null;
-        BoundMethod OnError = null;
+        BoundMethod onOpen = null;
+        BoundMethod onClose = null;
+        BoundMethod onError = null;
         BoundMethod textMessage = null;
         BoundMethod binaryMessage = null;
         BoundMethod pongMessage = null;
@@ -87,32 +87,53 @@ public class AnnotatedEndpointFactory {
             for (final Method method : c.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(OnOpen.class)) {
                     if (found.contains(OnOpen.class)) {
-                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnOpen.class);
+                        if(!onOpen.overrides(method)) {
+                            throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnOpen.class);
+                        } else {
+                            continue;
+                        }
                     }
                     found.add(OnOpen.class);
-                    OnOpen = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
+                    onOpen = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, EndpointConfig.class, true),
                             createBoundPathParameters(method, paths, endpointClass));
                 }
                 if (method.isAnnotationPresent(OnClose.class)) {
                     if (found.contains(OnClose.class)) {
-                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnClose.class);
+                        if(!onClose.overrides(method)) {
+                            throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnClose.class);
+                        } else {
+                            continue;
+                        }
                     }
                     found.add(OnClose.class);
-                    OnClose = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
+                    onClose = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, CloseReason.class, true),
                             createBoundPathParameters(method, paths, endpointClass));
                 }
                 if (method.isAnnotationPresent(OnError.class)) {
                     if (found.contains(OnError.class)) {
-                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnError.class);
+                        if(!onError.overrides(method)) {
+                            throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnError.class);
+                        } else {
+                            continue;
+                        }
                     }
                     found.add(OnError.class);
-                    OnError = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
+                    onError = new BoundMethod(method, null, false, 0, new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, Throwable.class, false),
                             createBoundPathParameters(method, paths, endpointClass));
                 }
                 if (method.isAnnotationPresent(OnMessage.class)) {
+                    if(binaryMessage != null && binaryMessage.overrides(method)) {
+                        continue;
+                    }
+                    if(textMessage != null && textMessage.overrides(method)) {
+                        continue;
+                    }
+                    if(pongMessage != null && pongMessage.overrides(method)) {
+                        continue;
+                    }
                     long maxMessageSize = method.getAnnotation(OnMessage.class).maxMessageSize();
                     boolean messageHandled = false;
                     //this is a bit more complex
@@ -233,7 +254,7 @@ public class AnnotatedEndpointFactory {
             }
             c = c.getSuperclass();
         } while (c != Object.class && c != null);
-        return new AnnotatedEndpointFactory(endpointClass, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
+        return new AnnotatedEndpointFactory(endpointClass, onOpen, onClose, onError, textMessage, binaryMessage, pongMessage);
     }
 
     private static BoundPathParameters createBoundPathParameters(final Method method, Set<String> paths, Class<?> endpointClass) throws DeploymentException {
