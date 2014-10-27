@@ -116,6 +116,10 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(final int sc, final String msg) throws IOException {
+        if(insideInclude) {
+            //not 100% sure this is the correct action
+            return;
+        }
         if (responseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
