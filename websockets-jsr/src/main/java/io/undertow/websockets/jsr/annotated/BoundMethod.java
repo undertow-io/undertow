@@ -111,4 +111,22 @@ final class BoundMethod {
     public long getMaxMessageSize() {
         return maxMessageSize;
     }
+
+    public boolean overrides(Method method) {
+        if(!method.getName().equals(this.method.getName())) {
+            return false;
+        }
+        if(!method.getReturnType().isAssignableFrom(this.method.getReturnType())) {
+            return false;
+        }
+        if(method.getParameterTypes().length != this.method.getParameterTypes().length) {
+            return false;
+        }
+        for(int i = 0; i < method.getParameterTypes().length; ++i) {
+            if(method.getParameterTypes()[i] != this.method.getParameterTypes()[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
