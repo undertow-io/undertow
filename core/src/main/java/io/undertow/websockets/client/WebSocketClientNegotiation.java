@@ -54,10 +54,10 @@ public class WebSocketClientNegotiation {
         return selectedExtensions;
     }
 
-    public void beforeRequest(final Map<String, String> headers) {
+    public void beforeRequest(final Map<String, List<String>> headers) {
 
     }
-    public void afterRequest(final Map<String, String> headers) {
+    public void afterRequest(final Map<String, List<String>> headers) {
 
     }
 

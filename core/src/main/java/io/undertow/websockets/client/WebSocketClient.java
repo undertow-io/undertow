@@ -36,6 +36,9 @@ import org.xnio.ssl.XnioSsl;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -68,8 +71,14 @@ public class WebSocketClient {
             throw new RuntimeException(e);
         }
         final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation);
-        final Map<String, String> headers = handshake.createHeaders();
-        headers.put(Headers.ORIGIN_STRING, uri.getHost());
+        final Map<String, String> originalHeaders = handshake.createHeaders();
+        originalHeaders.put(Headers.ORIGIN_STRING, uri.getHost());
+        final Map<String, List<String>> headers = new HashMap<>();
+        for(Map.Entry<String, String> entry : originalHeaders.entrySet()) {
+            List<String> list = new ArrayList<>();
+            list.add(entry.getValue());
+            headers.put(entry.getKey(), list);
+        }
         if (clientNegotiation != null) {
             clientNegotiation.beforeRequest(headers);
         }
