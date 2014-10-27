@@ -1,5 +1,6 @@
 package io.undertow.server.handlers.resource;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
@@ -23,6 +24,8 @@ import io.undertow.util.Methods;
 import io.undertow.util.MimeMappings;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
+
+import static io.undertow.util.CanonicalPathUtils.canonicalize;
 
 /**
  * @author Stuart Douglas
@@ -128,7 +131,11 @@ public class ResourceHandler implements HttpHandler {
             public void run() {
                 Resource resource = null;
                 try {
-                    resource = resourceManager.getResource(exchange.getRelativePath());
+                    if(File.separatorChar == '/' || !exchange.getRelativePath().contains(File.separator)) {
+                        //we don't process resources that contain the sperator character if this is not /
+                        //this prevents attacks where people use windows path seperators in file URLS's
+                        resource = resourceManager.getResource(canonicalize(exchange.getRelativePath()));
+                    }
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     exchange.setResponseCode(500);

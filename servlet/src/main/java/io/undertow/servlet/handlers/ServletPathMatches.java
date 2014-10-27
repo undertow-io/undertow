@@ -34,6 +34,7 @@ import io.undertow.servlet.core.ManagedServlets;
 import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
 
 import javax.servlet.DispatcherType;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -126,9 +127,12 @@ public class ServletPathMatches {
     }
 
     private ServletPathMatch findWelcomeFile(final String path, boolean requiresRedirect) {
+        if(File.separatorChar != '/' && path.contains(File.separator)) {
+            return null;
+        }
         for (String i : welcomePages) {
             try {
-                String mergedPath = path + i;
+                final String mergedPath = path + i;
                 Resource resource = resourceManager.getResource(mergedPath);
                 if (resource != null) {
                     final ServletPathMatch handler = data.getServletHandlerByPath(mergedPath);

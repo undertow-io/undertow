@@ -1,13 +1,17 @@
 package io.undertow.server.handlers;
 
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.URLUtils;
 
 /**
@@ -54,4 +58,49 @@ public class URLDecodingHandler implements HttpHandler {
         }
         next.handleRequest(exchange);
     }
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "url-decoding";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.<String,Class<?>>singletonMap("charset", String.class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("charset");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "charset";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper(config.get("charset").toString());
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final String charset;
+
+        private Wrapper(String charset) {
+            this.charset = charset;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new URLDecodingHandler(handler, charset);
+        }
+    }
+
 }
