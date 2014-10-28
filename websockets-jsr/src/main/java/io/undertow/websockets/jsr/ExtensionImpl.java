@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * @author Stuart Douglas
  */
-class ExtensionImpl implements Extension {
+public class ExtensionImpl implements Extension {
 
     private final String name;
     private final List<Parameter> parameters;

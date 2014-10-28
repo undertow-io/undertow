@@ -94,7 +94,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                 Iterator<WebSocketExtension> it = extensions.iterator();
                 while (it.hasNext()) {
                     WebSocketExtension next = it.next();
-                    sb.append(next);
+                    sb.append(next.getName());
                     for (WebSocketExtension.Parameter param : next.getParameters()) {
                         sb.append("; ");
                         sb.append(param.getName());

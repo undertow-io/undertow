@@ -18,8 +18,11 @@
 package io.undertow.websockets.jsr.handshake;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
+import javax.websocket.Extension;
 import javax.websocket.server.ServerEndpointConfig;
 
 import io.undertow.util.AttachmentKey;
@@ -62,14 +65,14 @@ public final class HandshakeUtil {
     }
 
     /**
-     * Set the {@link ServerEndpointConfiguration} which is used to create the {@link WebSocketChannel}.
+     * Set the {@link ConfiguredServerEndpoint} which is used to create the {@link WebSocketChannel}.
      */
     public static void setConfig(WebSocketChannel channel, ConfiguredServerEndpoint config) {
         channel.setAttribute(CONFIG_KEY, config);
     }
 
     /**
-     * Returns the {@link ServerEndpointConfiguration} which was used while create the {@link WebSocketChannel}.
+     * Returns the {@link ConfiguredServerEndpoint} which was used while create the {@link WebSocketChannel}.
      */
     public static ConfiguredServerEndpoint getConfig(WebSocketChannel channel) {
         return (ConfiguredServerEndpoint) channel.getAttribute(CONFIG_KEY);
@@ -88,6 +91,14 @@ public final class HandshakeUtil {
                 }
             }
             return null;
+        }
+    }
+
+    static List<Extension> selectExtensions(final ConfiguredServerEndpoint config, final List<Extension> requestedExtensions) {
+        if (config.getEndpointConfiguration().getConfigurator() != null) {
+            return config.getEndpointConfiguration().getConfigurator().getNegotiatedExtensions(config.getEndpointConfiguration().getExtensions(), requestedExtensions);
+        } else {
+            return Collections.emptyList();
         }
     }
 }
