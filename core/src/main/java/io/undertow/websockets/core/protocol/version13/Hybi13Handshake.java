@@ -54,6 +54,7 @@ public class Hybi13Handshake extends Hybi07Handshake {
             exchange.setResponseHeader(Headers.ORIGIN_STRING, origin);
         }
         selectSubprotocol(exchange);
+        selectExtensions(exchange);
         exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_LOCATION_STRING, getWebSocketLocation(exchange));
 
         final String key = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY_STRING);

@@ -19,6 +19,7 @@
 package io.undertow.websockets.core.protocol;
 
 import io.undertow.util.Headers;
+import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
@@ -27,6 +28,9 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -162,6 +166,31 @@ public abstract class Handshake {
 
     }
 
+
+    protected final void selectExtensions(final WebSocketHttpExchange exchange) {
+        List<WebSocketExtension> requestedExtensions = WebSocketExtension.parse(exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING));
+        List<WebSocketExtension> extensions = selectedExtension(requestedExtensions);
+        if (extensions != null && !extensions.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            Iterator<WebSocketExtension> it = extensions.iterator();
+            while (it.hasNext()) {
+                WebSocketExtension next = it.next();
+                sb.append(next.getName());
+                for (WebSocketExtension.Parameter param : next.getParameters()) {
+                    sb.append("; ");
+                    sb.append(param.getName());
+                    sb.append("=");
+                    sb.append(param.getValue());
+                }
+                if (it.hasNext()) {
+                    sb.append(", ");
+                }
+            }
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING, sb.toString());
+        }
+
+    }
+
     protected String supportedSubprotols(String[] requestedSubprotocolArray) {
         for (String p : requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
@@ -173,5 +202,9 @@ public abstract class Handshake {
             }
         }
         return null;
+    }
+
+    protected List<WebSocketExtension> selectedExtension(List<WebSocketExtension> extensionList) {
+        return Collections.emptyList();
     }
 }

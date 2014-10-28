@@ -77,6 +77,9 @@ public class WebSocketExtension {
     }
 
     public static List<WebSocketExtension> parse(final String extensionHeader) {
+        if(extensionHeader == null || extensionHeader.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<WebSocketExtension> extensions = new ArrayList<>();
         //TODO: more efficient parsing algorithm
         String[] parts = extensionHeader.split(",");
@@ -84,11 +87,11 @@ public class WebSocketExtension {
             String[] items = part.split(";");
             if (items.length > 0) {
                 final List<Parameter> params = new ArrayList<>(items.length - 1);
-                String name = items[0];
+                String name = items[0].trim();
                 for (int i = 1; i < items.length; ++i) {
                     String[] param = items[i].split("=");
                     if (param.length == 2) {
-                        params.add(new Parameter(param[0], param[1]));
+                        params.add(new Parameter(param[0].trim(), param[1].trim()));
                     }
                 }
                 extensions.add(new WebSocketExtension(name, params));
