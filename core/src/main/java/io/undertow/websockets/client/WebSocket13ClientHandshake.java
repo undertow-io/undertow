@@ -61,7 +61,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     public WebSocket13ClientHandshake(final URI url, WebSocketClientNegotiation negotiation, Set<ExtensionHandshake> extensions) {
         super(url);
         this.negotiation = negotiation;
-        this.extensions = extensions;
+        this.extensions = extensions == null ? Collections.<ExtensionHandshake>emptySet() : extensions;
     }
 
     public WebSocket13ClientHandshake(final URI url) {
@@ -71,9 +71,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     @Override
     public WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool) {
         if (negotiation != null && negotiation.getSelectedExtensions() != null && !negotiation.getSelectedExtensions().isEmpty()) {
-            if (extensions == null || extensions.isEmpty()) {
-                throw WebSocketMessages.MESSAGES.badExtensionsConfiguredInClient();
-            }
+
             List<WebSocketExtension> selected = negotiation.getSelectedExtensions();
             List<ExtensionFunction> negotiated = new ArrayList();
             if (selected != null && !selected.isEmpty()) {
@@ -85,8 +83,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                     }
                 }
             }
-            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, !negotiated.isEmpty(), negotiated, new HashSet<WebSocketChannel>());
-
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation.getSelectedSubProtocol(), true, !negotiated.isEmpty(), negotiated, new HashSet<WebSocketChannel>());
         } else {
             return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, null, new HashSet<WebSocketChannel>());
         }
