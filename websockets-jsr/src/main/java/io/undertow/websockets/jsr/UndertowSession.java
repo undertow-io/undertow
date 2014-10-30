@@ -222,7 +222,7 @@ public final class UndertowSession implements Session {
                     if (!webSocketChannel.isCloseFrameReceived() && !webSocketChannel.isCloseFrameSent()) {
                         //if we have already recieved a close frame then the close frame handler
                         //will deal with sending back the reason message
-                        if (closeReason == null) {
+                        if (closeReason == null || closeReason.getCloseCode().getCode() == CloseReason.CloseCodes.NO_STATUS_CODE.getCode()) {
                             webSocketChannel.sendClose();
                         } else {
                             WebSockets.sendClose(new CloseMessage(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()).toByteBuffer(), webSocketChannel, null);
