@@ -33,6 +33,7 @@ import io.undertow.servlet.test.util.TestConfidentialPortManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -121,7 +122,7 @@ public class ConfidentialityConstraintUrlMappingTestCase {
         try {
             HttpGet get = new HttpGet(url);
             HttpResponse result = client.execute(get);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(expectedScheme, response);
         } finally {

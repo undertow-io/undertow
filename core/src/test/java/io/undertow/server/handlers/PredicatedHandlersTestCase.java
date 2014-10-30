@@ -25,6 +25,7 @@ import io.undertow.server.handlers.builder.PredicatedHandlersParser;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -60,7 +61,7 @@ public class PredicatedHandlersTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("get", result.getHeaders("type")[0].getValue());
             Assert.assertEquals("always", result.getHeaders("someHeader")[0].getValue());
@@ -69,7 +70,7 @@ public class PredicatedHandlersTestCase {
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b.css");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("get", result.getHeaders("type")[0].getValue());
             Assert.assertEquals("true", result.getHeaders("chained")[0].getValue());
@@ -79,7 +80,7 @@ public class PredicatedHandlersTestCase {
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b.redirect");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("get", result.getHeaders("type")[0].getValue());
             Assert.assertEquals("always", result.getHeaders("someHeader")[0].getValue());

@@ -30,6 +30,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -68,7 +69,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         String header = getAuthHeader(BASIC, values);
         assertEquals(BASIC + " realm=\"Test Realm\"", header);
@@ -77,7 +78,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         get = new HttpGet(DefaultServer.getDefaultServerURL());
         get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
         result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
@@ -96,7 +97,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         String header = getAuthHeader(BASIC, values);
         assertEquals(BASIC + " realm=\"Test Realm\"", header);
@@ -105,7 +106,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         get = new HttpGet(DefaultServer.getDefaultServerURL());
         get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("badUser:passwordOne".getBytes(), false));
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         HttpClientUtils.readResponse(result);
     }
 
@@ -120,7 +121,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         String header = getAuthHeader(BASIC, values);
         assertEquals(BASIC + " realm=\"Test Realm\"", header);
@@ -129,7 +130,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         get = new HttpGet(DefaultServer.getDefaultServerURL());
         get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:badPassword".getBytes(), false));
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         HttpClientUtils.readResponse(result);
     }
 

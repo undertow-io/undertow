@@ -34,6 +34,7 @@ import io.undertow.servlet.test.util.EmptyServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.Tracker;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
@@ -81,7 +82,7 @@ public class ServletSessionListenerOrderingTestCase {
             Tracker.reset();
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/listener/test");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             List<String> expected = new ArrayList<>();
             expected.add(FirstListener.class.getSimpleName());

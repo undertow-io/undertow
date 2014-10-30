@@ -26,6 +26,7 @@ import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -75,7 +76,7 @@ public class ClientCertTestCase extends AuthenticationTestBase {
         client.setSSLContext(clientSSLContext);
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
         HttpResponse result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         Header[] values = result.getHeaders("ProcessedBy");
         assertEquals("ProcessedBy Headers", 1, values.length);

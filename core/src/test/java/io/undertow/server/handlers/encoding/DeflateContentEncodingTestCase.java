@@ -28,6 +28,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -84,7 +85,7 @@ public class DeflateContentEncodingTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "deflate");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
             Assert.assertEquals(0, header.length);
             final String body = HttpClientUtils.readResponse(result);
@@ -127,7 +128,7 @@ public class DeflateContentEncodingTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "deflate");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
             Assert.assertEquals("deflate", header[0].getValue());
             final String body = HttpClientUtils.readResponse(result);

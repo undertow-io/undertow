@@ -31,6 +31,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -64,7 +65,7 @@ public class SecurityErrorPageTestCase {
         builder.addServlet(new ServletInfo("path", PathServlet.class)
                 .addMapping("/*"));
 
-        builder.addErrorPage(new ErrorPage("/401", 401));
+        builder.addErrorPage(new ErrorPage("/401", StatusCodes.UNAUTHORIZED));
 
         ServletIdentityManager identityManager = new ServletIdentityManager();
         identityManager.addUser("user1", "password1"); // Just one role less user.
@@ -88,7 +89,7 @@ public class SecurityErrorPageTestCase {
     public void testErrorPages() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(client, 401, "/401");
+            runTest(client, StatusCodes.UNAUTHORIZED, "/401");
         } finally {
             client.getConnectionManager().shutdown();
         }

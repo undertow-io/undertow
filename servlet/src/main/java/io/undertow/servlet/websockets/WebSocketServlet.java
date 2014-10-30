@@ -22,6 +22,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.util.StatusCodes;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.Handshake;
@@ -104,7 +105,7 @@ public class WebSocketServlet extends HttpServlet {
 
         if (handshaker == null) {
             UndertowLogger.REQUEST_LOGGER.debug("Could not find hand shaker for web socket request");
-            resp.sendError(400);
+            resp.sendError(StatusCodes.BAD_REQUEST);
             return;
         }
         final Handshake selected = handshaker;

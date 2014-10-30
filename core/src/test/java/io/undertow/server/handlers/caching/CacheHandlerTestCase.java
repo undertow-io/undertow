@@ -30,6 +30,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -75,26 +76,26 @@ public class CacheHandlerTestCase {
             //it takes 5 hits to make an entry actually get cached
             for (int i = 1; i <= 5; ++i) {
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 Assert.assertEquals("Response " + i, HttpClientUtils.readResponse(result));
             }
 
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Response 5", HttpClientUtils.readResponse(result));
 
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Response 5", HttpClientUtils.readResponse(result));
 
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Response 5", HttpClientUtils.readResponse(result));
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path2");
 
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Response 6", HttpClientUtils.readResponse(result));
 
         } finally {

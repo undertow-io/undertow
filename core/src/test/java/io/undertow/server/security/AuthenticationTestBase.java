@@ -43,6 +43,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HexConverter;
 import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -246,7 +247,7 @@ public abstract class AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         Header[] values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);

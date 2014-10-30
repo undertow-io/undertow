@@ -21,6 +21,7 @@ package io.undertow.server.handlers.proxy.mod_cluster;
 import java.io.IOException;
 
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -79,41 +80,41 @@ public class BasicMCMPUnitTestCase extends AbstractModClusterTestBase {
         for (int i = 0; i < 10; i++) {
             HttpGet get = get("/name");
             HttpResponse result = httpClient.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
         }
 
         for (int i = 0; i < 10; i++) {
             HttpGet get = get("/session");
             HttpResponse result = httpClient.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
         }
     }
 
     @Test
     public void testAppCommand() throws IOException {
-        checkGet("/name", 404);
-        checkGet("/session", 404);
+        checkGet("/name", StatusCodes.NOT_FOUND);
+        checkGet("/session", StatusCodes.NOT_FOUND);
 
         registerNodes(false, server1, server2);
 
-        checkGet("/name", 404);
-        checkGet("/session", 404);
+        checkGet("/name", StatusCodes.NOT_FOUND);
+        checkGet("/session", StatusCodes.NOT_FOUND);
 
         modClusterClient.enableApp("s1", "/name", "localhost", "localhost:7777");
         modClusterClient.enableApp("s1", "/session", "localhost", "localhost:7777");
         modClusterClient.enableApp("s2", "/name", "localhost", "localhost:7777");
         modClusterClient.enableApp("s2", "/session", "localhost", "localhost:7777");
 
-        checkGet("/name", 503);
-        checkGet("/session", 503);
+        checkGet("/name", StatusCodes.SERVICE_UNAVAILABLE);
+        checkGet("/session", StatusCodes.SERVICE_UNAVAILABLE);
 
         modClusterClient.updateLoad("s1", 100);
         modClusterClient.updateLoad("s2", 1);
 
-        checkGet("/name", 200);
-        checkGet("/session", 200);
+        checkGet("/name", StatusCodes.OK);
+        checkGet("/session", StatusCodes.OK);
 
     }
 
@@ -123,16 +124,16 @@ public class BasicMCMPUnitTestCase extends AbstractModClusterTestBase {
         registerNodes(false, server1);
 
         modClusterClient.enableApp("s1", "/name", "localhost", "localhost:7777");
-        checkGet("/name", 503);
+        checkGet("/name", StatusCodes.SERVICE_UNAVAILABLE);
 
         modClusterClient.updateLoad("s1", 1);
-        checkGet("/name", 200);
+        checkGet("/name", StatusCodes.OK);
 
         modClusterClient.updateLoad("s1", -1);
-        checkGet("/name", 503);
+        checkGet("/name", StatusCodes.SERVICE_UNAVAILABLE);
 
         modClusterClient.updateLoad("s1", -2);
-        checkGet("/name", 503);
+        checkGet("/name", StatusCodes.SERVICE_UNAVAILABLE);
     }
 
     @Test

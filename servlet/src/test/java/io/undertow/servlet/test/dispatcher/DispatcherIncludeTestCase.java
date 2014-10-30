@@ -37,6 +37,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -104,7 +105,7 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("include", "/include");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(IncludeServlet.MESSAGE + "Path!Name!included", response);
         } finally {
@@ -120,7 +121,7 @@ public class DispatcherIncludeTestCase {
             get.setHeader("include", "include");
             get.setHeader("name", "true");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(IncludeServlet.MESSAGE + "Name!included", response);
         } finally {
@@ -135,7 +136,7 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("include", "/snippet.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
         } finally {
@@ -150,7 +151,7 @@ public class DispatcherIncludeTestCase {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             post.setHeader("include", "/snippet.html");
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
         } finally {
@@ -166,14 +167,14 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("include", "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("include", "/path?foo=bar");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
         } finally {

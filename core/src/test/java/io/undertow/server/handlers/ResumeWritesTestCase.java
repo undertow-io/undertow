@@ -30,6 +30,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpVersion;
 import org.apache.http.client.methods.HttpGet;
@@ -67,13 +68,13 @@ public class ResumeWritesTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
@@ -95,13 +96,13 @@ public class ResumeWritesTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
@@ -125,13 +126,13 @@ public class ResumeWritesTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_0);
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();

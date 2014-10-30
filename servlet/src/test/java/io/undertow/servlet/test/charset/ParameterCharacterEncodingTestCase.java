@@ -23,6 +23,7 @@ import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -66,7 +67,7 @@ public class ParameterCharacterEncodingTestCase {
             String charset = "UTF-8";
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=" + charset + "&message=" + URLEncoder.encode(message, "UTF-8"));
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(message, response);
         } finally {
@@ -82,7 +83,7 @@ public class ParameterCharacterEncodingTestCase {
             String charset = "UTF-8";
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + URLEncoder.encode(message, "UTF-8") + "?charset=" + charset);
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(message, response);
         } finally {
@@ -104,7 +105,7 @@ public class ParameterCharacterEncodingTestCase {
             multipart.addPart("message", new StringBody(message, Charset.forName(charset)));
             post.setEntity(multipart);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(message, response);
         } finally {
@@ -126,7 +127,7 @@ public class ParameterCharacterEncodingTestCase {
             UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
             post.setEntity(data);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(message, response);
         } finally {

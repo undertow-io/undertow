@@ -19,6 +19,8 @@
 package io.undertow.servlet.test.response.writer;
 
 import javax.servlet.ServletException;
+
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -69,7 +71,7 @@ public class ResponseWriterTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/resp?test=" + ResponseWriterServlet.CONTENT_LENGTH_FLUSH);
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String data = FileUtils.readFile(result.getEntity().getContent());
             Assert.assertEquals("first-aaaa", data);
             Assert.assertEquals(0, result.getHeaders("not-header").length);
@@ -86,7 +88,7 @@ public class ResponseWriterTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/large");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String data = FileUtils.readFile(result.getEntity().getContent());
             Assert.assertEquals(LargeResponseWriterServlet.getMessage(), data);
 

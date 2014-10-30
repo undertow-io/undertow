@@ -21,6 +21,7 @@ package io.undertow.server;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -62,16 +63,16 @@ public class HttpServerExchangeTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("localhost:HTTP/1.1:GET:" + port + ":/somepath:/somepath:", HttpClientUtils.readResponse(result));
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath?a=b");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("localhost:HTTP/1.1:GET:" + port + ":/somepath:/somepath:a=b", HttpClientUtils.readResponse(result));
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath?a=b");
             get.addHeader("Host", "[::1]:8080");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("::1:HTTP/1.1:GET:8080:/somepath:/somepath:a=b", HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();

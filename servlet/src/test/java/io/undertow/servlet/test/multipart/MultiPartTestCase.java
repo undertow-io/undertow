@@ -33,6 +33,7 @@ import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -91,7 +92,7 @@ public class MultiPartTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("PARAMS:\n", response);
         } finally {
@@ -112,7 +113,7 @@ public class MultiPartTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("PARAMS:\n" +
                     "name: formValue\n" +
@@ -147,7 +148,7 @@ public class MultiPartTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("PARAMS:\n" +
                     "name: formValue\n" +
@@ -181,7 +182,7 @@ public class MultiPartTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
         } catch (IOException expected) {
             //in some environments the forced close of the read side will cause a connection reset
@@ -204,7 +205,7 @@ public class MultiPartTestCase {
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("TEST FAILED: wrong response code\n" + response, 500, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("TEST FAILED: wrong response code\n" + response, StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }

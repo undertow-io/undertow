@@ -33,6 +33,7 @@ import io.undertow.servlet.test.util.ParameterEchoServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -84,7 +85,7 @@ public class ParameterEchoTestCase {
             UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
             post.setEntity(data);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(RESPONSE, response);
         } finally {
@@ -104,7 +105,7 @@ public class ParameterEchoTestCase {
             UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
             post.setEntity(data);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(RESPONSE, response);
         } finally {
@@ -122,7 +123,7 @@ public class ParameterEchoTestCase {
             UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
             post.setEntity(data);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(RESPONSE, response);
         } finally {

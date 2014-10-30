@@ -37,6 +37,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.FlexBase64;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 import javax.servlet.ServletException;
 
@@ -110,7 +111,7 @@ public class EmptyRoleSemanticTestCase {
             initialGet.addHeader("ExpectedMechanism", "None");
             initialGet.addHeader("ExpectedUser", "None");
             HttpResponse result = client.execute(initialGet);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);
@@ -128,7 +129,7 @@ public class EmptyRoleSemanticTestCase {
             initialGet.addHeader("ExpectedMechanism", "None");
             initialGet.addHeader("ExpectedUser", "None");
             HttpResponse result = client.execute(initialGet);
-            assertEquals(403, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -141,7 +142,7 @@ public class EmptyRoleSemanticTestCase {
         try {
             HttpGet get = new HttpGet(url);
             HttpResponse result = client.execute(get);
-            assertEquals(401, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
             Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
             assertEquals(1, values.length);
             assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
@@ -152,7 +153,7 @@ public class EmptyRoleSemanticTestCase {
             get.addHeader("ExpectedUser", "user1");
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
             result = client.execute(get);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);

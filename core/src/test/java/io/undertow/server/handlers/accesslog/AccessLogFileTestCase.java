@@ -28,6 +28,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.After;
@@ -99,7 +101,7 @@ public class AccessLogFileTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.addHeader("test-header", "single-val");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latchHandler.await();
             logReceiver.awaitWrittenForTest();
@@ -134,7 +136,7 @@ public class AccessLogFileTestCase {
                                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
                                 get.addHeader("test-header", "thread-" + threadNo + "-request-" + i);
                                 HttpResponse result = client.execute(get);
-                                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                                 final String response = HttpClientUtils.readResponse(result);
                                 Assert.assertEquals("Hello", response);
                             }
@@ -177,7 +179,7 @@ public class AccessLogFileTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.addHeader("test-header", "v1");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latchHandler.await();
             latchHandler.reset();
@@ -192,7 +194,7 @@ public class AccessLogFileTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.addHeader("test-header", "v2");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latchHandler.await();
             latchHandler.reset();

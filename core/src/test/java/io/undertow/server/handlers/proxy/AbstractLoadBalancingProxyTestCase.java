@@ -27,6 +27,8 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -64,7 +66,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
             try {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 resultString.append(HttpClientUtils.readResponse(result));
                 resultString.append(' ');
             } finally {
@@ -85,7 +87,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
             try {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 resultString.append(HttpClientUtils.readResponse(result));
                 resultString.append(' ');
             } catch (Throwable t) {
@@ -120,7 +122,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/session");
                     get.addHeader("Connection", "close");
                     HttpResponse result = client.execute(get);
-                    Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                    Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                     int count = Integer.parseInt(HttpClientUtils.readResponse(result));
                     Assert.assertEquals(expected++, count);
                 } catch (Exception e) {
@@ -151,7 +153,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     get.addHeader("a", "b");
                     get.addHeader("Connection", "close");
                     HttpResponse result = client.execute(get);
-                    Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                    Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                     int count = Integer.parseInt(HttpClientUtils.readResponse(result));
                     Assert.assertEquals(expected++, count);
                 } catch (Exception e) {

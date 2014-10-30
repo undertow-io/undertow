@@ -31,6 +31,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -111,18 +112,18 @@ public class SaveOriginalPostRequestTestCase {
 
         // let's test if a usual POST request have its parameters dumped in the response
         HttpResponse result = executePostRequest(client, "/servletContext/dumpRequest", new BasicNameValuePair("param1", "param1Value"), new BasicNameValuePair("param2", "param2Value"));
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         String response = HttpClientUtils.readResponse(result);
         assertTrue(response.contains("param1=param1Value/param2=param2Value"));
 
         // this request should be saved and the client redirect to the login form.
         result = executePostRequest(client, "/servletContext/secured/dumpRequest", new BasicNameValuePair("securedParam1", "securedParam1Value"), new BasicNameValuePair("securedParam2", "securedParam2Value"));
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         Assert.assertEquals("Login Page", HttpClientUtils.readResponse(result));
 
         // let's perform a successful authentication and get the request restored
         result = executePostRequest(client, "/servletContext/j_security_check", new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1"));
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         response = HttpClientUtils.readResponse(result);
 
         // let's check if the original request was saved, including its parameters.
@@ -136,7 +137,7 @@ public class SaveOriginalPostRequestTestCase {
         client.setRedirectStrategy(new DefaultRedirectStrategy() {
             @Override
             public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == 302) {
+                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
                     return true;
                 }
                 return super.isRedirected(request, response, context);

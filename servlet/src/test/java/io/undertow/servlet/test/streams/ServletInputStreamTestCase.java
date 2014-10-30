@@ -32,6 +32,7 @@ import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -119,7 +120,7 @@ public class ServletInputStreamTestCase {
             OutputStream os = urlcon.getOutputStream();
             os.write(message.getBytes());
             os.close();
-            Assert.assertEquals(200, urlcon.getResponseCode());
+            Assert.assertEquals(StatusCodes.OK, urlcon.getResponseCode());
             InputStream is = urlcon.getInputStream();
 
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -163,7 +164,7 @@ public class ServletInputStreamTestCase {
             HttpPost post = new HttpPost(uri);
             post.setEntity(new StringEntity(message));
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(message.length(), response.length());
             Assert.assertEquals(message, response);

@@ -41,6 +41,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
+import io.undertow.util.StatusCodes;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -99,7 +100,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, current);
 
         path.addPrefixPath("/test2", current);
-        path.addPrefixPath("/login", new ResponseCodeHandler(401));
+        path.addPrefixPath("/login", new ResponseCodeHandler(StatusCodes.UNAUTHORIZED));
 
 
         DefaultServer.setRootHandler(new SessionAttachmentHandler(path, new InMemorySessionManager(""), new SessionCookieConfig()));
@@ -117,7 +118,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         client.setCookieStore(new BasicCookieStore());
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1");
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         String header = getAuthHeader(BASIC, values);
         assertEquals(BASIC + " realm=\"Test Realm\"", header);
@@ -126,7 +127,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1");
         get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
         result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
@@ -137,7 +138,7 @@ public class SsoTestCase extends AuthenticationTestBase {
 
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test2");
         result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
@@ -149,7 +150,7 @@ public class SsoTestCase extends AuthenticationTestBase {
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1?logout=true");
         get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
         result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
@@ -160,6 +161,6 @@ public class SsoTestCase extends AuthenticationTestBase {
 
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test2");
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
     }
 }

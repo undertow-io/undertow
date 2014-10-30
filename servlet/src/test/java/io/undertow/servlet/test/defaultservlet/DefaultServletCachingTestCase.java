@@ -42,6 +42,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -103,20 +104,20 @@ public class DefaultServletCachingTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             File f = new File(tmpDir, fileName);
             writeFile(f, "hello");
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             Thread.sleep(METADATA_MAX_AGE);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("hello", response);
         } finally {
@@ -134,7 +135,7 @@ public class DefaultServletCachingTestCase {
             for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 String response = HttpClientUtils.readResponse(result);
                 Assert.assertEquals("hello", response);
             }
@@ -143,7 +144,7 @@ public class DefaultServletCachingTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("hello", response);
 
@@ -151,7 +152,7 @@ public class DefaultServletCachingTestCase {
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("hello world", response);
 
@@ -170,7 +171,7 @@ public class DefaultServletCachingTestCase {
             for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 String response = HttpClientUtils.readResponse(result);
                 Assert.assertEquals("FILTER_TEXT hello", response);
             }
@@ -179,7 +180,7 @@ public class DefaultServletCachingTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("FILTER_TEXT hello", response);
 
@@ -187,7 +188,7 @@ public class DefaultServletCachingTestCase {
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("FILTER_TEXT hello world", response);
 

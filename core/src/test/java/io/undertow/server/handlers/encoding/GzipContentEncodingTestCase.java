@@ -25,6 +25,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -84,7 +85,7 @@ public class GzipContentEncodingTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "gzip");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
             Assert.assertEquals(0, header.length);
             final String body = HttpClientUtils.readResponse(result);
@@ -104,7 +105,7 @@ public class GzipContentEncodingTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "identity;q=1, *;q=0");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
             Assert.assertEquals(1, header.length);
             Assert.assertEquals("identity", header[0].getValue());
@@ -148,7 +149,7 @@ public class GzipContentEncodingTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "gzip");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
             Assert.assertEquals("gzip", header[0].getValue());
             final String body = HttpClientUtils.readResponse(result);
