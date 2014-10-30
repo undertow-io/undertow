@@ -22,7 +22,11 @@ import java.util.List;
 
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.*;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.ConduitFactory;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 import org.xnio.conduits.StreamSinkConduit;
 
 /**
