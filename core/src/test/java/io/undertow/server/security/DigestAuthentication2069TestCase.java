@@ -45,6 +45,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -110,7 +111,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
         String value = values[0].getValue();
@@ -136,7 +137,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
@@ -162,7 +163,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
@@ -183,7 +184,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
         String value = values[0].getValue();
@@ -208,7 +209,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
@@ -222,7 +223,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
         String value = values[0].getValue();
@@ -247,7 +248,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
@@ -262,7 +263,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
         String value = values[0].getValue();
@@ -287,7 +288,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
         value = values[0].getValue();
@@ -313,7 +314,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
 
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
@@ -332,7 +333,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
         String value = values[0].getValue();
@@ -357,7 +358,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
@@ -368,7 +369,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
@@ -395,7 +396,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
 
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);

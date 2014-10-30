@@ -34,6 +34,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.jboss.logging.Logger;
@@ -64,8 +65,8 @@ public class ErrorPageTestCase {
                 .addMapping("/*"));
 
         builder1.addErrorPage(new ErrorPage("/defaultErrorPage"));
-        builder1.addErrorPage(new ErrorPage("/404", 404));
-        builder1.addErrorPage(new ErrorPage("/500", 500));
+        builder1.addErrorPage(new ErrorPage("/404", StatusCodes.NOT_FOUND));
+        builder1.addErrorPage(new ErrorPage("/500", StatusCodes.INTERNAL_SERVER_ERROR));
         builder1.addErrorPage(new ErrorPage("/parentException", ParentException.class));
         builder1.addErrorPage(new ErrorPage("/childException", ChildException.class));
         builder1.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
@@ -96,8 +97,8 @@ public class ErrorPageTestCase {
         builder2.addServlet(new ServletInfo("path", PathServlet.class)
                 .addMapping("/*"));
 
-        builder2.addErrorPage(new ErrorPage("/404", 404));
-        builder2.addErrorPage(new ErrorPage("/501", 501));
+        builder2.addErrorPage(new ErrorPage("/404", StatusCodes.NOT_FOUND));
+        builder2.addErrorPage(new ErrorPage("/501", StatusCodes.NOT_IMPLEMENTED));
         builder2.addErrorPage(new ErrorPage("/parentException", ParentException.class));
         builder2.addErrorPage(new ErrorPage("/childException", ChildException.class));
         builder2.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
@@ -127,8 +128,8 @@ public class ErrorPageTestCase {
         builder3.addServlet(new ServletInfo("path", PathServlet.class)
                 .addMapping("/*"));
 
-        builder3.addErrorPage(new ErrorPage("/404", 404));
-        builder3.addErrorPage(new ErrorPage("/500", 500));
+        builder3.addErrorPage(new ErrorPage("/404", StatusCodes.NOT_FOUND));
+        builder3.addErrorPage(new ErrorPage("/500", StatusCodes.INTERNAL_SERVER_ERROR));
         builder3.addErrorPage(new ErrorPage("/parentException", ParentException.class));
         builder3.addErrorPage(new ErrorPage("/childException", ChildException.class));
         builder3.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
@@ -156,9 +157,9 @@ public class ErrorPageTestCase {
     public void testErrorPages() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(1, client, 404, null, "/404");
-            runTest(1, client, 500, null, "/500");
-            runTest(1, client, 501, null, "/defaultErrorPage");
+            runTest(1, client, StatusCodes.NOT_FOUND, null, "/404");
+            runTest(1, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "/500");
+            runTest(1, client, StatusCodes.NOT_IMPLEMENTED, null, "/defaultErrorPage");
             runTest(1, client, null, ParentException.class, "/parentException");
             runTest(1, client, null, ChildException.class, "/childException");
             runTest(1, client, null, RuntimeException.class, "/runtimeException");
@@ -175,9 +176,9 @@ public class ErrorPageTestCase {
     public void testErrorPagesWithNoDefaultErrorPage() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(2, client, 404, null, "/404");
-            runTest(2, client, 501, null, "/501");
-            runTest(2, client, 500, null, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
+            runTest(2, client, StatusCodes.NOT_FOUND, null, "/404");
+            runTest(2, client, StatusCodes.NOT_IMPLEMENTED, null, "/501");
+            runTest(2, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
             runTest(2, client, null, ParentException.class, "/parentException");
             runTest(2, client, null, ChildException.class, "/childException");
             runTest(2, client, null, RuntimeException.class, "/runtimeException");
@@ -195,9 +196,9 @@ public class ErrorPageTestCase {
     public void testErrorPagesWith500PageMapped() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(3, client, 404, null, "/404");
-            runTest(3, client, 500, null, "/500");
-            runTest(3, client, 501, null, "<html><head><title>Error</title></head><body>Not Implemented</body></html>");
+            runTest(3, client, StatusCodes.NOT_FOUND, null, "/404");
+            runTest(3, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "/500");
+            runTest(3, client, StatusCodes.NOT_IMPLEMENTED, null, "<html><head><title>Error</title></head><body>Not Implemented</body></html>");
             runTest(3, client, null, ParentException.class, "/parentException");
             runTest(3, client, null, ChildException.class, "/childException");
             runTest(3, client, null, RuntimeException.class, "/runtimeException");
@@ -215,7 +216,7 @@ public class ErrorPageTestCase {
         final String response;
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext" + deploymentNo + "/error?" + (statusCode != null ? "statusCode=" + statusCode : "exception=" + exception.getName()));
         result = client.execute(get);
-        Assert.assertEquals(statusCode == null ? 500 : statusCode, result.getStatusLine().getStatusCode());
+        Assert.assertEquals(statusCode == null ? StatusCodes.INTERNAL_SERVER_ERROR : statusCode, result.getStatusLine().getStatusCode());
         response = HttpClientUtils.readResponse(result);
         Assert.assertEquals(expected, response);
     }

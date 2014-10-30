@@ -34,6 +34,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
+import io.undertow.util.StatusCodes;
 
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
@@ -90,7 +91,7 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
         final TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         String header = getAuthHeader(NEGOTIATE, values);
         assertEquals(NEGOTIATE.toString(), header);
@@ -126,14 +127,14 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
                             token = FlexBase64.decode(headerBytes, NEGOTIATE.toString().length() + 1, headerBytes.length).array();
                         }
 
-                        if (result.getStatusLine().getStatusCode() == 200) {
+                        if (result.getStatusLine().getStatusCode() == StatusCodes.OK) {
                             Header[] values = result.getHeaders("ProcessedBy");
                             assertEquals(1, values.length);
                             assertEquals("ResponseHandler", values[0].getValue());
                             HttpClientUtils.readResponse(result);
                             assertSingleNotificationType(EventType.AUTHENTICATED);
                             gotOur200 = true;
-                        } else if (result.getStatusLine().getStatusCode() == 401) {
+                        } else if (result.getStatusLine().getStatusCode() == StatusCodes.UNAUTHORIZED) {
                             assertTrue("We did get a header.", headers.length > 0);
 
                             HttpClientUtils.readResponse(result);

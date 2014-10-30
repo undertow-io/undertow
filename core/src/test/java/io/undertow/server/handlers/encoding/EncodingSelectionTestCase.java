@@ -27,6 +27,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -69,7 +70,7 @@ public class EncodingSelectionTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(HEADER);
             Assert.assertEquals(0, header.length);
             HttpClientUtils.readResponse(result);
@@ -77,7 +78,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "bzip");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -86,7 +87,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "bzip compress identity someOtherEncoding");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -94,7 +95,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, " compress, identity, someOtherEncoding,  bzip  , ");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -103,7 +104,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "boo; compress, identity; someOtherEncoding,   , ");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("compress", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -111,7 +112,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "boo; compress; identity; someOtherEncoding,   , ");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("compress", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -145,7 +146,7 @@ public class EncodingSelectionTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "bzip, compress;q=0.6");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -153,14 +154,14 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "*;q=0.00");
             result = client.execute(get);
-            Assert.assertEquals(406, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_ACCEPTABLE, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "*;q=0.00 bzip");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -168,7 +169,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "*;q=0.00 bzip;q=0.3");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -177,7 +178,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "compress;q=0.1 bzip;q=0.05");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("compress", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -185,7 +186,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "compress;q=0.1, bzip;q=1.000");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -214,7 +215,7 @@ public class EncodingSelectionTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "bzip, compress;q=0.6");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -222,13 +223,13 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "*;q=0.00");
             result = client.execute(get);
-            Assert.assertEquals(406, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_ACCEPTABLE, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "compress");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals(0, header.length);
             HttpClientUtils.readResponse(result);
@@ -236,7 +237,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "*;q=0.00 bzip;q=0.3");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -245,7 +246,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "compress;q=0.1 bzip;q=0.05");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -253,7 +254,7 @@ public class EncodingSelectionTestCase {
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "compress;q=0.1, bzip;q=1.000");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders(HEADER);
             Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);

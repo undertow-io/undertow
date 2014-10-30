@@ -238,7 +238,7 @@ public class HttpClientTestCase {
                     listener.setup(channel);
 
                     final UndertowClientResponse response = request.getResponse().get();
-                    Assert.assertEquals(404, response.getResponseCode());
+                    Assert.assertEquals(StatusCodes.NOT_FOUND, response.getResponseCode());
 
                 } finally {
                     IoUtils.safeClose(connection);
@@ -272,7 +272,7 @@ public class HttpClientTestCase {
                     listener.setup(channel);
 
                     final UndertowClientResponse response = request.getResponse().get();
-                    Assert.assertEquals(417, response.getResponseCode());
+                    Assert.assertEquals(StatusCodes.EXPECTATION_FAILED, response.getResponseCode());
                     Assert.assertTrue(listener.hasRemaining());
 
                 } finally {

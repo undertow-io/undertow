@@ -94,7 +94,7 @@ public class MultipartFormDataParserTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
 
@@ -119,7 +119,7 @@ public class MultipartFormDataParserTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
 

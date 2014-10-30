@@ -26,6 +26,7 @@ import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -54,7 +55,7 @@ public class SimpleAsyncTestCase {
         DeploymentUtils.setupServlet(new ServletExtension() {
             @Override
             public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
-                deploymentInfo.addErrorPages(new ErrorPage("/500", 500));
+                deploymentInfo.addErrorPages(new ErrorPage("/500", StatusCodes.INTERNAL_SERVER_ERROR));
             }
         },
                 servlet("messageServlet", MessageServlet.class)
@@ -84,7 +85,7 @@ public class SimpleAsyncTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);
         } finally {
@@ -98,7 +99,7 @@ public class SimpleAsyncTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async2");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(AnotherAsyncServlet.class.getSimpleName(), response);
         } finally {
@@ -112,7 +113,7 @@ public class SimpleAsyncTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/error");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("500", response);
         } finally {
@@ -127,14 +128,14 @@ public class SimpleAsyncTestCase {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/error");
             post.setEntity(new StringEntity("Post body stuff"));
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("500", response);
 
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/error");
             post.setEntity(new StringEntity("Post body stuff"));
             result = client.execute(post);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("500", response);
         } finally {

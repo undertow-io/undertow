@@ -359,7 +359,7 @@ public class SecurityContextImpl implements SecurityContext {
                         }
                     } else {
                         // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
-                        exchange.setResponseCode(FORBIDDEN);
+                        exchange.setResponseCode(StatusCodes.FORBIDDEN);
                     }
                 }
                 return AuthenticationState.CHALLENGE_SENT;

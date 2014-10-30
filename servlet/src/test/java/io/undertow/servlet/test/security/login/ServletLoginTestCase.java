@@ -37,6 +37,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -94,20 +95,20 @@ public class ServletLoginTestCase {
             get.addHeader("username", "bob");
             get.addHeader("password", "bogus");
             HttpResponse result = client.execute(get);
-            assertEquals(401, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(url);
             get.addHeader("username", "user1");
             get.addHeader("password", "password1");
             result = client.execute(get);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("user1", response);
 
             get = new HttpGet(url);
             result = client.execute(get);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("user1", response);
         } finally {

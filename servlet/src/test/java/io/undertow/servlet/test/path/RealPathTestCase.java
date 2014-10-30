@@ -31,6 +31,7 @@ import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -73,7 +74,7 @@ public class RealPathTestCase {
     public void testRealPath() throws Exception {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/real-path");
         HttpResponse result = new TestHttpClient().execute(get);
-        Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         String response = HttpClientUtils.readResponse(result);
         Assert.assertEquals(new File(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
     }
@@ -82,7 +83,7 @@ public class RealPathTestCase {
     public void testPathTranslated() throws Exception {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/file.txt");
         HttpResponse result = new TestHttpClient().execute(get);
-        Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         String response = HttpClientUtils.readResponse(result);
         Assert.assertEquals(new File(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
     }

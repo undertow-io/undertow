@@ -28,6 +28,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 import io.undertow.util.StringWriteChannelListener;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -109,7 +110,7 @@ public class ChunkedResponseTrailersTestCase {
         try {
             generateMessage(1);
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
 
@@ -127,7 +128,7 @@ public class ChunkedResponseTrailersTestCase {
 
             generateMessage(1000);
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
             footers = stream.get().getFooters();
             Assert.assertEquals(2, footers.length);

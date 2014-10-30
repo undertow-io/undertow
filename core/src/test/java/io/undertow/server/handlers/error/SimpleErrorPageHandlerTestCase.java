@@ -46,7 +46,7 @@ public class SimpleErrorPageHandlerTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
 
             Assert.assertTrue(response, response.contains(StatusCodes.NOT_FOUND_STRING));

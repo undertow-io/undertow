@@ -38,6 +38,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -221,7 +222,7 @@ public class FilterPathMappingTestCase {
         final String response;
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + path);
         result = client.execute(get);
-        Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         requireHeaders(result, headers);
         response = HttpClientUtils.readResponse(result);
         Assert.assertEquals(expected, response);

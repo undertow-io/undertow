@@ -28,6 +28,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -85,7 +86,7 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
         client.setSSLContext(clientSSLContext);
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
         HttpResponse result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         Header[] values = result.getHeaders("ProcessedBy");
         assertEquals("ProcessedBy Headers", 1, values.length);
@@ -107,7 +108,7 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerSSLAddress());
         post.setEntity(new StringEntity("hi"));
         HttpResponse result = client.execute(post);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         Header[] values = result.getHeaders("ProcessedBy");
         assertEquals("ProcessedBy Headers", 1, values.length);
@@ -138,7 +139,7 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerSSLAddress());
         post.setEntity(new StringEntity(messageBuilder.toString()));
         HttpResponse result = client.execute(post);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         Header[] values = result.getHeaders("ProcessedBy");
         assertEquals("ProcessedBy Headers", 1, values.length);

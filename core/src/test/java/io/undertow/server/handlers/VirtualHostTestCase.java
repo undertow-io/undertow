@@ -24,6 +24,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.NetworkUtils;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -55,7 +56,7 @@ public class VirtualHostTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             //no origin header, we dny by default
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders("myHost");
             Assert.assertEquals("localhost", header[0].getValue());
             HttpClientUtils.readResponse(result);
@@ -64,7 +65,7 @@ public class VirtualHostTestCase {
             get.addHeader("Host", "otherHost");
             result = client.execute(get);
             //no origin header, we dny by default
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getHeaders("myHost");
             Assert.assertEquals("default", header[0].getValue());
             HttpClientUtils.readResponse(result);

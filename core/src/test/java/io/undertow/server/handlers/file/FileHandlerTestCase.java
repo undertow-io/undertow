@@ -64,7 +64,7 @@ public class FileHandlerTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
@@ -113,7 +113,7 @@ public class FileHandlerTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());

@@ -27,6 +27,7 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.ContentEncodingHttpClient;
@@ -83,7 +84,7 @@ public class ContentEncodedResourceTestCase {
             for (int i = 0; i < 3; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + fileName);
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 String response = HttpClientUtils.readResponse(result);
                 Assert.assertEquals("hello world", response);
                 Assert.assertEquals("deflate", result.getHeaders(Headers.CONTENT_ENCODING_STRING)[0].getValue());
@@ -93,7 +94,7 @@ public class ContentEncodedResourceTestCase {
             //if it is serving a cached compressed version what is being served will not change
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + fileName);
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("hello world", response);
             Assert.assertEquals("deflate", result.getHeaders(Headers.CONTENT_ENCODING_STRING)[0].getValue());

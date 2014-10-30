@@ -30,6 +30,7 @@ import java.util.Arrays;
 
 import javax.servlet.ServletException;
 
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -107,7 +108,7 @@ public class MultiPartForwardTestCase {
             post.setEntity(postEntity);
 
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             return HttpClientUtils.readResponse(result).trim();
 

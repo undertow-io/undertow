@@ -30,6 +30,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -94,7 +95,7 @@ public class HttpContinueConduitWrappingHandlerTestCase {
             post.setEntity(new StringEntity(message));
 
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(417, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.EXPECTATION_FAILED, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -115,7 +116,7 @@ public class HttpContinueConduitWrappingHandlerTestCase {
             post.setEntity(new StringEntity(message));
 
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
@@ -143,7 +144,7 @@ public class HttpContinueConduitWrappingHandlerTestCase {
             });
 
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();

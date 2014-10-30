@@ -17,6 +17,8 @@
  */
 package io.undertow.servlet.test.listener.request.async.onTimeout;
 
+import io.undertow.util.StatusCodes;
+
 import java.io.IOException;
 
 import javax.servlet.AsyncEvent;
@@ -32,7 +34,7 @@ public class SimpleAsyncListener implements AsyncListener {
     @Override
     public void onTimeout(AsyncEvent event) throws IOException {
         HttpServletResponse response = (HttpServletResponse) event.getSuppliedResponse();
-        response.setStatus(200);
+        response.setStatus(StatusCodes.OK);
         event.getAsyncContext().complete();
     }
 

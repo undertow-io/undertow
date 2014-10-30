@@ -24,6 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -54,20 +55,20 @@ public class SetAttributeTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/a");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             Assert.assertEquals("/path/a-", result.getHeaders("foo")[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/a?p1=someQp");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             Assert.assertEquals("/path/a-someQp", result.getHeaders("foo")[0].getValue());
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/a?p1=someQp&p1=value2");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             Assert.assertEquals("/path/a-[someQp, value2]", result.getHeaders("foo")[0].getValue());
 
@@ -90,20 +91,20 @@ public class SetAttributeTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/relative/foo/a/b");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("URI: /relative/foo?bar=a&woz=b relative: /foo QS:?bar=a&woz=b bar: a woz: b", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somePath/foo/a/b");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("URI: /otherPath/foo/a/b relative: /foo/a/b QS:", response);
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somePath/foo?a=b");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("URI: /otherPath/foo relative: /foo QS:a=b a: b", response);
 

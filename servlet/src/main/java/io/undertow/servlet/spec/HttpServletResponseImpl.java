@@ -173,7 +173,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         resetBuffer();
-        setStatus(302);
+        setStatus(StatusCodes.FOUND);
         String realPath;
         if (location.contains("://")) {//absolute url
             exchange.getResponseHeaders().put(Headers.LOCATION, location);

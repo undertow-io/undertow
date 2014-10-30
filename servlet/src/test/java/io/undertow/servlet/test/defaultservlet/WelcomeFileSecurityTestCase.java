@@ -40,6 +40,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.FlexBase64;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -106,7 +107,7 @@ public class WelcomeFileSecurityTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(401, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
 
             Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
             assertEquals(1, values.length);
@@ -117,7 +118,7 @@ public class WelcomeFileSecurityTestCase {
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
             result = client.execute(get);
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             Assert.assertTrue(response.contains("Redirected home page"));
 
@@ -132,7 +133,7 @@ public class WelcomeFileSecurityTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path?a=b");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(401, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
 
             Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
             assertEquals(1, values.length);
@@ -143,7 +144,7 @@ public class WelcomeFileSecurityTestCase {
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
             result = client.execute(get);
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path/default requestUri:/servletContext/path/default", response);
 
         } finally {

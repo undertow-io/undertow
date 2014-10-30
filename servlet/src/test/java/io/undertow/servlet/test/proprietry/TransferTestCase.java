@@ -36,6 +36,7 @@ import io.undertow.servlet.test.util.TestListener;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -80,7 +81,7 @@ public class TransferTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final byte[] response = HttpClientUtils.readRawResponse(result);
             File file = new File(TXServlet.class.getResource(TXServlet.class.getSimpleName() + ".class").toURI());
             byte[] expected = new byte[(int) file.length()];

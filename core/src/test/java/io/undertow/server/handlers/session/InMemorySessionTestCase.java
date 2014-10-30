@@ -30,6 +30,7 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -74,21 +75,21 @@ public class InMemorySessionTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             Header[] header = result.getHeaders(COUNT);
             Assert.assertEquals("0", header[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("1", header[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("2", header[0].getValue());
@@ -131,21 +132,21 @@ public class InMemorySessionTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             HttpResponse result = client1.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             Header[] header = result.getHeaders(COUNT);
             Assert.assertEquals("0", header[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             result = client1.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("1", header[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             result = client2.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("0", header[0].getValue());
@@ -153,7 +154,7 @@ public class InMemorySessionTestCase {
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             result = client1.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("0", header[0].getValue());

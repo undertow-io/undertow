@@ -34,6 +34,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
+import io.undertow.util.StatusCodes;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -434,7 +435,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     }
                 }
 
-                if (builder.getStatusCode() == 100) {
+                if (builder.getStatusCode() == StatusCodes.CONTINUE) {
                     pendingResponse = new HttpResponseBuilder();
                     currentRequest.setContinueResponse(response);
                 } else {

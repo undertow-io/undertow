@@ -31,6 +31,7 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -158,7 +159,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -182,7 +183,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -206,7 +207,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerDir/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
@@ -217,7 +218,7 @@ public class FileHandlerSymlinksTestCase {
              */
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/page.html");
             result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
 
 
         } finally {
@@ -243,7 +244,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
@@ -271,7 +272,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
@@ -304,7 +305,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/.");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
@@ -332,7 +333,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -356,7 +357,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -380,7 +381,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             /**
              * A readResponse() is needed in order to release connection and execute next get.
              */
@@ -391,7 +392,7 @@ public class FileHandlerSymlinksTestCase {
              */
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/page.html");
             result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -416,7 +417,7 @@ public class FileHandlerSymlinksTestCase {
              */
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/innerSymlink/page.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         } finally {
             client.getConnectionManager().shutdown();

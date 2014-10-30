@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Collections;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
@@ -34,6 +35,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.undertow.util.StatusCodes;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
@@ -78,14 +80,14 @@ public class DefaultCharsetTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/writer");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             byte[] response = HttpClientUtils.readRawResponse(result);
             Assert.assertArrayEquals(UTF8, response);
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/writer?array=true");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readRawResponse(result);
             Assert.assertArrayEquals(UTF8, response);
         } finally {
@@ -101,7 +103,7 @@ public class DefaultCharsetTestCase {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/form");
             post.setEntity(new UrlEncodedFormEntity(Collections.singletonList(new BasicNameValuePair("\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A", "\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A")), "UTF-8"));
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             byte[] response = HttpClientUtils.readRawResponse(result);
             Assert.assertArrayEquals(UTF8, response);
         } finally {

@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.test.security.login;
 
+import io.undertow.util.StatusCodes;
+
 import java.io.IOException;
 
 import javax.servlet.Filter;
@@ -51,7 +53,7 @@ public class LoginFilter implements Filter {
             req.login(username, password);
             chain.doFilter(request, response);
         } catch (ServletException e) {
-            ((HttpServletResponse)response).setStatus(401);
+            ((HttpServletResponse)response).setStatus(StatusCodes.UNAUTHORIZED);
         }
     }
 

@@ -1,5 +1,7 @@
 package io.undertow.servlet.test.async;
 
+import io.undertow.util.StatusCodes;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -19,7 +21,7 @@ public class AsyncErrorServlet extends HttpServlet {
             public void run() {
                 try {
                     Thread.sleep(100);
-                    resp.sendError(500);
+                    resp.sendError(StatusCodes.INTERNAL_SERVER_ERROR);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
