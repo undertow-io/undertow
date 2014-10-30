@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class UTF8Checker implements ChannelFunction {
+public final class UTF8Checker implements ChannelFunction {
 
 
     private static final int UTF8_ACCEPT = 0;
@@ -61,7 +61,6 @@ final class UTF8Checker implements ChannelFunction {
         byte type = TYPES[b & 0xFF];
 
         state = STATES[state + type];
-
         if (state == UTF8_REJECT) {
             throw WebSocketMessages.MESSAGES.invalidTextFrameEncoding();
         }

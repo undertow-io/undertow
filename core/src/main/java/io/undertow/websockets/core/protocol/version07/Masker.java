@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class Masker implements ChannelFunction {
+public final class Masker implements ChannelFunction {
 
     private byte[] maskingKey;
     int m;

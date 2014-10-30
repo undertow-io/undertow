@@ -51,7 +51,7 @@ public class CloseMessage {
             code = (buffer.get() & 0XFF) << 8 | (buffer.get() & 0xFF);
             reason = new UTF8Output(buffer).extract();
         } else {
-            code = GOING_AWAY;
+            code = NORMAL_CLOSURE;
             reason = "";
         }
     }

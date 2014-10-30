@@ -29,6 +29,7 @@ import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.spi.AsyncWebSocketHttpServerExchange;
 import org.xnio.StreamConnection;
 
@@ -204,5 +205,20 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
 
     public Set<WebSocketChannel> getPeerConnections() {
         return peerConnections;
+    }
+
+    /**
+     * Add a new WebSocket Extension into the handshakes defined in this handler.
+     *
+     * @param extension a new {@code ExtensionHandshake} instance
+     * @return          current handler
+     */
+    public WebSocketProtocolHandshakeHandler addExtension(ExtensionHandshake extension) {
+        if (extension != null) {
+            for (Handshake handshake : handshakes) {
+                handshake.addExtension(extension);
+            }
+        }
+        return this;
     }
 }

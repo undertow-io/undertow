@@ -44,8 +44,6 @@ public class Hybi07Handshake extends Handshake {
 
     public static final String MAGIC_NUMBER = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-    protected final boolean allowExtensions;
-
     protected Hybi07Handshake(final WebSocketVersion version, final Set<String> subprotocols, boolean allowExtensions) {
         super(version, "SHA1", MAGIC_NUMBER, subprotocols);
         this.allowExtensions = allowExtensions;
@@ -101,6 +99,6 @@ public class Hybi07Handshake extends Handshake {
 
     @Override
     public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final Pool<ByteBuffer> pool) {
-        return new WebSocket07Channel(channel, pool, getWebSocketLocation(exchange), exchange.getResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING), false, allowExtensions, exchange.getPeerConnections());
+        return new WebSocket07Channel(channel, pool, getWebSocketLocation(exchange), exchange.getResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING), false, allowExtensions, initExtensions(exchange), exchange.getPeerConnections());
     }
 }

@@ -22,14 +22,16 @@ import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.extensions.ExtensionFunction;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoFuture;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -46,6 +48,8 @@ public abstract class Handshake {
     protected final Set<String> subprotocols;
     private static final byte[] EMPTY = new byte[0];
     private static final Pattern PATTERN = Pattern.compile("\\s*,\\s*");
+    protected Set<ExtensionHandshake> availableExtensions = new HashSet<>();
+    protected boolean allowExtensions;
 
     protected Handshake(WebSocketVersion version, String hashAlgorithm, String magicNumber, final Set<String> subprotocols) {
         this.version = version;
@@ -171,22 +175,7 @@ public abstract class Handshake {
         List<WebSocketExtension> requestedExtensions = WebSocketExtension.parse(exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING));
         List<WebSocketExtension> extensions = selectedExtension(requestedExtensions);
         if (extensions != null && !extensions.isEmpty()) {
-            StringBuilder sb = new StringBuilder();
-            Iterator<WebSocketExtension> it = extensions.iterator();
-            while (it.hasNext()) {
-                WebSocketExtension next = it.next();
-                sb.append(next.getName());
-                for (WebSocketExtension.Parameter param : next.getParameters()) {
-                    sb.append("; ");
-                    sb.append(param.getName());
-                    sb.append("=");
-                    sb.append(param.getValue());
-                }
-                if (it.hasNext()) {
-                    sb.append(", ");
-                }
-            }
-            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING, sb.toString());
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING, WebSocketExtension.toExtensionHeader(extensions));
         }
 
     }
@@ -205,6 +194,53 @@ public abstract class Handshake {
     }
 
     protected List<WebSocketExtension> selectedExtension(List<WebSocketExtension> extensionList) {
-        return Collections.emptyList();
+        List<WebSocketExtension> selected = new ArrayList<>();
+        List<ExtensionHandshake> configured = new ArrayList<>();
+        for (WebSocketExtension ext : extensionList) {
+            for (ExtensionHandshake extHandshake : availableExtensions) {
+                WebSocketExtension negotiated = extHandshake.accept(ext);
+                if (ext != null && !extHandshake.isIncompatible(configured)) {
+                    selected.add(negotiated);
+                    configured.add(extHandshake);
+                }
+            }
+        }
+        return selected;
+    }
+
+    /**
+     * Add a new WebSocket Extension handshake to the list of available extensions.
+     *
+     * @param extension a new {@code ExtensionHandshake}
+     */
+    public final void addExtension(ExtensionHandshake extension) {
+        availableExtensions.add(extension);
+        allowExtensions = true;
+    }
+
+    /**
+     * Create the {@code ExtensionFunction} list associated with the negotiated extensions defined in the exchange's response.
+     *
+     * @param exchange the exchange used to retrieve negotiated extensions
+     * @return         a list of {@code ExtensionFunction} with the implementation of the extensions
+     */
+    protected final List<ExtensionFunction> initExtensions(final WebSocketHttpExchange exchange) {
+        String extHeader = exchange.getResponseHeaders().get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING) != null ?
+                exchange.getResponseHeaders().get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING).get(0) : null;
+
+        List<ExtensionFunction> negotiated = new ArrayList<>();
+        if (extHeader != null) {
+            List<WebSocketExtension> extensions = WebSocketExtension.parse(extHeader);
+            if (extensions != null && !extensions.isEmpty()) {
+                for (WebSocketExtension ext : extensions) {
+                    for (ExtensionHandshake extHandshake : availableExtensions) {
+                        if (extHandshake.getName().equals(ext.getName())) {
+                            negotiated.add(extHandshake.create());
+                        }
+                    }
+                }
+            }
+        }
+        return negotiated;
     }
 }

@@ -139,6 +139,16 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
             return;
         }
         super.afterRead(buffer, position, length);
+    }
 
+    @Override
+    protected void checker(ByteBuffer buffer, int position, int length, boolean complete) throws IOException {
+        /*
+            Not check for UTF8 when read the status code
+         */
+        if (!statusValidated) {
+            return;
+        }
+        super.checker(buffer, position, length, complete);
     }
 }

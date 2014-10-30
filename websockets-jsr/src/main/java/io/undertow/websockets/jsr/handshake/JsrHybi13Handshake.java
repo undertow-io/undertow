@@ -17,20 +17,15 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
-import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
-import io.undertow.websockets.jsr.ExtensionImpl;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
-import javax.websocket.Extension;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 
 /**
  * {@link Hybi13Handshake} sub-class which takes care of match against the {@link javax.websocket.server.ServerEndpointConfiguration} and
@@ -69,25 +64,5 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
         return HandshakeUtil.selectSubProtocol(config, requestedSubprotocolArray);
     }
 
-    @Override
-    protected List<WebSocketExtension> selectedExtension(List<WebSocketExtension> extensionList) {
-        List<Extension> ext = new ArrayList<>();
-        for(WebSocketExtension i : extensionList) {
-            ext.add(ExtensionImpl.create(i));
-        }
-        List<Extension> selected = HandshakeUtil.selectExtensions(config, ext);
-        if(selected == null) {
-            return Collections.emptyList();
-        }
-        List<WebSocketExtension> ret = new ArrayList<>();
-        for(Extension i : selected) {
-            List<WebSocketExtension.Parameter> parameters = new ArrayList<>();
-            for(Extension.Parameter p : i.getParameters()) {
-                parameters.add(new WebSocketExtension.Parameter(p.getName(), p.getValue()));
-            }
-            ret.add(new WebSocketExtension(i.getName(), parameters));
-        }
 
-        return ret;
-    }
 }

@@ -11,3 +11,4 @@ lib
 bin
 dependency-reduced-pom.xml
 hotspot.log
+.directory
