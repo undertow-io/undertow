@@ -39,16 +39,21 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class RoutingHandler implements HttpHandler {
 
+    // Matcher objects grouped by http methods.
     private final Map<HttpString, PathTemplateMatcher<RoutingMatch>> matches = new CopyOnWriteMap<>();
+    // Matcher used to find if this instance contains matches for any http method for a path.
+    // This matcher is used to report if this instance can match a path for one of the http methods.
     private final PathTemplateMatcher<RoutingMatch> allMethodsMatcher = new PathTemplateMatcher<>();
 
+    // Handler called when no match was found and invalid method handler can't be invoked.
     private volatile HttpHandler fallbackHandler = ResponseCodeHandler.HANDLE_404;
+    // Handler called when this instance can not match the http method but can match another http method.
+    // For example: For an exchange the POST method is not matched by this instance but at least one http method is
+    // matched for the same exchange.
+    // If this handler is null the fallbackHandler will be used.
     private volatile HttpHandler invalidMethodHandler = ResponseCodeHandler.HANDLE_405;
 
-    /**
-     * If this is true then path matches will be added to the query parameters for easy access by
-     * later handlers.
-     */
+    // If this is true then path matches will be added to the query parameters for easy access by later handlers.
     private final boolean rewriteQueryParameters;
 
     public RoutingHandler(boolean rewriteQueryParameters) {
@@ -64,16 +69,12 @@ public class RoutingHandler implements HttpHandler {
 
         PathTemplateMatcher<RoutingMatch> matcher = matches.get(exchange.getRequestMethod());
         if (matcher == null) {
-            invalidMethodHandler.handleRequest(exchange);
+            handleNoMatch(exchange);
             return;
         }
         PathTemplateMatcher.PathMatchResult<RoutingMatch> match = matcher.match(exchange.getRelativePath());
         if (match == null) {
-            if (allMethodsMatcher.match(exchange.getRelativePath()) != null) {
-                invalidMethodHandler.handleRequest(exchange);
-                return;
-            }
-            fallbackHandler.handleRequest(exchange);
+            handleNoMatch(exchange);
             return;
         }
         exchange.putAttachment(PathTemplateMatch.ATTACHMENT_KEY, match);
@@ -95,6 +96,22 @@ public class RoutingHandler implements HttpHandler {
         }
     }
 
+    /**
+     * Handles the case in with a match was not found for the http method but might exist for another http method.
+     * For example: POST not matched for a path but at least one match exists for same path.
+     *
+     * @param exchange The object for which its handled the "no match" case.
+     * @throws Exception
+     */
+    private void handleNoMatch(final HttpServerExchange exchange) throws Exception {
+        // if invalidMethodHandler is null we fail fast without matching with allMethodsMatcher
+        if (invalidMethodHandler != null && allMethodsMatcher.match(exchange.getRelativePath()) != null) {
+            invalidMethodHandler.handleRequest(exchange);
+            return;
+        }
+        fallbackHandler.handleRequest(exchange);
+    }
+
     public synchronized RoutingHandler add(final String method, final String template, HttpHandler handler) {
         return add(new HttpString(method), template, handler);
     }
@@ -114,8 +131,6 @@ public class RoutingHandler implements HttpHandler {
         res.defaultHandler = handler;
         return this;
     }
-
-
 
     public synchronized RoutingHandler get(final String template, HttpHandler handler) {
         return add(Methods.GET, template, handler);
@@ -192,19 +207,40 @@ public class RoutingHandler implements HttpHandler {
         return matches;
     }
 
+    /**
+     * @return Handler called when no match was found and invalid method handler can't be invoked.
+     */
     public HttpHandler getFallbackHandler() {
         return fallbackHandler;
     }
 
+    /**
+     * @param fallbackHandler Handler that will be called when no match was found and invalid method handler can't be
+     * invoked.
+     * @return This instance.
+     */
     public RoutingHandler setFallbackHandler(HttpHandler fallbackHandler) {
         this.fallbackHandler = fallbackHandler;
         return this;
     }
 
+    /**
+     * @return Handler called when this instance can not match the http method but can match another http method.
+     */
     public HttpHandler getInvalidMethodHandler() {
         return invalidMethodHandler;
     }
 
+    /**
+     * Sets the handler called when this instance can not match the http method but can match another http method.
+     * For example: For an exchange the POST method is not matched by this instance but at least one http method matched
+     * for the exchange.
+     * If this handler is null the fallbackHandler will be used.
+     *
+     * @param invalidMethodHandler Handler that will be called when this instance can not match the http method but can
+     * match another http method.
+     * @return This instance.
+     */
     public RoutingHandler setInvalidMethodHandler(HttpHandler invalidMethodHandler) {
         this.invalidMethodHandler = invalidMethodHandler;
         return this;
