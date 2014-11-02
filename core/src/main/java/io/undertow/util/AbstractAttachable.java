@@ -42,7 +42,7 @@ public abstract class AbstractAttachable implements Attachable {
         if (key == null || attachments == null) {
             return null;
         }
-        return key.cast(attachments.get(key));
+        return (T) attachments.get(key);
     }
 
     /**
@@ -53,7 +53,7 @@ public abstract class AbstractAttachable implements Attachable {
         if (key == null || attachments == null) {
             return Collections.emptyList();
         }
-        List<T> list = key.cast(attachments.get(key));
+        List<T> list = (List<T>) attachments.get(key);
         if (list == null) {
             return Collections.emptyList();
         }
@@ -71,7 +71,7 @@ public abstract class AbstractAttachable implements Attachable {
         if(attachments == null) {
             attachments = createAttachmentMap();
         }
-        return key.cast(attachments.put(key, key.cast(value)));
+        return (T) attachments.put(key, value);
     }
 
     protected Map<AttachmentKey<?>, Object> createAttachmentMap() {
@@ -86,7 +86,7 @@ public abstract class AbstractAttachable implements Attachable {
         if (key == null || attachments == null) {
             return null;
         }
-        return key.cast(attachments.remove(key));
+        return (T) attachments.remove(key);
     }
 
     /**
@@ -99,7 +99,7 @@ public abstract class AbstractAttachable implements Attachable {
                 attachments = createAttachmentMap();
             }
             final Map<AttachmentKey<?>, Object> attachments = this.attachments;
-            final AttachmentList<T> list = key.cast(attachments.get(key));
+            final AttachmentList<T> list = (AttachmentList<T>) attachments.get(key);
             if (list == null) {
                 final AttachmentList<T> newList = new AttachmentList<>(((ListAttachmentKey<T>) key).getValueClass());
                 attachments.put(key, newList);
