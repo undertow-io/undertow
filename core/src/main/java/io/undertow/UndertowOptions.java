@@ -59,6 +59,13 @@ public class UndertowOptions {
     public static final Option<Integer> IDLE_TIMEOUT = Option.simple(UndertowOptions.class, "IDLE_TIMEOUT", Integer.class);
 
     /**
+     * The maximum allowed time of reading HTTP request in milliseconds.
+     *
+     * <code>-1</code> or missing value disables this functionality.
+     */
+    public static final Option<Integer> REQUEST_PARSE_TIMEOUT = Option.simple(UndertowOptions.class, "REQUEST_PARSE_TIMEOUT", Integer.class);
+
+    /**
      * The maximum number of parameters that will be parsed. This is used to protect against hash vulnerabilities.
      * <p/>
      * This applies to both query parameters, and to POST data, but is not cumulative (i.e. you can potentially have

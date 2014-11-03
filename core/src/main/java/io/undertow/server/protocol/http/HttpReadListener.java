@@ -67,12 +67,18 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
     private static final AtomicIntegerFieldUpdater<HttpReadListener> requestStateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpReadListener.class, "requestState");
 
+    //-1 - disabled
+    private final int requestParseTimeout;
+    private ParseTimeoutUpdater parseTimeoutUpdater;
+
     HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser) {
         this.connection = connection;
         this.parser = parser;
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
+        this.requestParseTimeout = connection.getUndertowOptions().get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
+        this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection, requestParseTimeout);
     }
 
     public void newRequest() {
@@ -101,7 +107,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             channel.suspendReads();
             return;
         }
-
 
         final Pooled<ByteBuffer> pooled = existing == null ? connection.getBufferPool().allocate() : existing;
         final ByteBuffer buffer = pooled.getResource();
@@ -133,6 +138,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 } else {
                     buffer.flip();
                 }
+                this.parseTimeoutUpdater.update();
                 parser.handle(buffer, state, httpServerExchange);
                 if (buffer.hasRemaining()) {
                     free = false;
@@ -146,6 +152,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     return;
                 }
             } while (!state.isComplete());
+            parseTimeoutUpdater.cancel();
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
