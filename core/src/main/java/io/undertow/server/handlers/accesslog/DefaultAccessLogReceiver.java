@@ -73,6 +73,8 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
 
     private Writer writer = null;
 
+    private volatile boolean closed = false;
+
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName) {
         this(logWriteExecutor, outputDirectory, logBaseName, null);
     }
@@ -89,9 +91,10 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
 
     private void calculateChangeOverPoint() {
         Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.SECOND, 59);
-        calendar.set(Calendar.MINUTE, 59);
-        calendar.set(Calendar.HOUR, 23);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.HOUR, 0);
+        calendar.add(Calendar.DATE, 1);
         changeOverPoint = calendar.getTimeInMillis();
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         currentDateString = df.format(new Date());
@@ -140,6 +143,14 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             if (!pendingMessages.isEmpty() || forceLogRotation) {
                 if (stateUpdater.compareAndSet(this, 0, 1)) {
                     logWriteExecutor.execute(this);
+                }
+            } else if(closed) {
+                try {
+                    writer.flush();
+                    writer.close();
+                    writer = null;
+                } catch (IOException e) {
+                    UndertowLogger.ROOT_LOGGER.errorWritingAccessLog(e);
                 }
             }
         }
@@ -215,8 +226,9 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
 
     @Override
     public void close() throws IOException {
-        writer.flush();
-        writer.close();
-        writer = null;
+        closed = true;
+        if (stateUpdater.compareAndSet(this, 0, 1)) {
+            logWriteExecutor.execute(this);
+        }
     }
 }
