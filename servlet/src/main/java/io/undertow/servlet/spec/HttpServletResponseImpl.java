@@ -173,7 +173,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         resetBuffer();
-        setStatus(302);
+        setStatus(StatusCodes.FOUND);
         String realPath;
         if (location.contains("://")) {//absolute url
             exchange.getResponseHeaders().put(Headers.LOCATION, location);
@@ -530,7 +530,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         writer = null;
         responseState = ResponseState.NONE;
         exchange.getResponseHeaders().clear();
-        exchange.setResponseCode(200);
+        exchange.setResponseCode(StatusCodes.OK);
         treatAsCommitted = false;
     }
 

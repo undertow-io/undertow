@@ -26,6 +26,7 @@ import io.undertow.testutils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,12 +42,12 @@ public class FileErrorPageHandlerTestCase {
     public void testFileBasedErrorPageIsGenerated() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final FileErrorPageHandler handler = new FileErrorPageHandler(new File(getClass().getResource("errorpage.html").getFile()), 404);
+            final FileErrorPageHandler handler = new FileErrorPageHandler(new File(getClass().getResource("errorpage.html").getFile()), StatusCodes.NOT_FOUND);
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
 
             Assert.assertTrue(response, response.contains("Custom Error Page"));

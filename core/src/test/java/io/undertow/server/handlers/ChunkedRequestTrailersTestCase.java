@@ -29,6 +29,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.StatusCodes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -66,7 +67,7 @@ public class ChunkedRequestTrailersTestCase {
                     if (connection == null) {
                         connection = (HttpServerConnection) exchange.getConnection();
                     } else if (!DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                        exchange.setResponseCode(500);
+                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();

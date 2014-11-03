@@ -41,6 +41,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -155,12 +156,12 @@ public class SecurityConstraintUrlMappingTestCase {
             initialGet.addHeader("ExpectedMechanism", "None");
             initialGet.addHeader("ExpectedUser", "None");
             HttpResponse result = client.execute(initialGet);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             HttpPost post = new HttpPost(url);
             result = client.execute(post);
-            assertEquals(401, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
             Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
             assertEquals(1, values.length);
             assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
@@ -169,7 +170,7 @@ public class SecurityConstraintUrlMappingTestCase {
             post = new HttpPost(url);
             post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user2:password2".getBytes(), false));
             result = client.execute(post);
-            assertEquals(403, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             post = new HttpPost(url);
@@ -177,7 +178,7 @@ public class SecurityConstraintUrlMappingTestCase {
             post.addHeader("ExpectedMechanism", "BASIC");
             post.addHeader("ExpectedUser", "user1");
             result = client.execute(post);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);
@@ -191,7 +192,7 @@ public class SecurityConstraintUrlMappingTestCase {
         try {
             HttpGet get = new HttpGet(url);
             HttpResponse result = client.execute(get);
-            assertEquals(401, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
             Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
             assertEquals(1, values.length);
             assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
@@ -200,7 +201,7 @@ public class SecurityConstraintUrlMappingTestCase {
             get = new HttpGet(url);
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(badUser.getBytes(), false));
             result = client.execute(get);
-            assertEquals(403, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(url);
@@ -208,7 +209,7 @@ public class SecurityConstraintUrlMappingTestCase {
             get.addHeader("ExpectedMechanism", "BASIC");
             get.addHeader("ExpectedUser", goodUser.substring(0, goodUser.indexOf(':')));
             result = client.execute(get);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             //make sure that caching is disabled
             Assert.assertEquals("0", result.getHeaders("Expires")[0].getValue());

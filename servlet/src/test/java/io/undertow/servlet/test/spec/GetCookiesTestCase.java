@@ -19,6 +19,8 @@
 package io.undertow.servlet.test.spec;
 
 import javax.servlet.ServletException;
+
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -76,7 +78,7 @@ public class GetCookiesTestCase {
                                               "/servletContext/aaa");
             get.setHeader(Headers.COOKIE_STRING, "testcookie=works");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Only one valid cookie", "name='testcookie'value='works'", response);
         } finally {
@@ -93,7 +95,7 @@ public class GetCookiesTestCase {
                                               "/servletContext/aaa");
             get.setHeader(Headers.COOKIE_STRING, "ctx:123=456");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("No valid cookie", "", response);
         } finally {
@@ -109,7 +111,7 @@ public class GetCookiesTestCase {
                                               "/servletContext/aaa");
             get.setHeader(Headers.COOKIE_STRING, "testcookie=works; ctx:123=456");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Only one valid cookie", "name='testcookie'value='works'", response);
         } finally {

@@ -33,6 +33,7 @@ import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
@@ -129,7 +130,7 @@ public class DefaultServlet extends HttpServlet {
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         String path = getPath(req);
         if (!isAllowed(path, req.getDispatcherType())) {
-            resp.sendError(404);
+            resp.sendError(StatusCodes.NOT_FOUND);
             return;
         }
         if(File.separatorChar != '/') {
@@ -148,7 +149,7 @@ public class DefaultServlet extends HttpServlet {
                 //servlet 9.3
                 throw new FileNotFoundException(path);
             } else {
-                resp.sendError(404);
+                resp.sendError(StatusCodes.NOT_FOUND);
             }
             return;
         } else if (resource.isDirectory()) {
@@ -165,7 +166,7 @@ public class DefaultServlet extends HttpServlet {
                 StringBuilder output = DirectoryUtils.renderDirectoryListing(req.getRequestURI(), resource);
                 resp.getWriter().write(output.toString());
             } else {
-                resp.sendError(403);
+                resp.sendError(StatusCodes.FORBIDDEN);
             }
         } else {
             serveFileBlocking(req, resp, resource);
@@ -245,12 +246,12 @@ public class DefaultServlet extends HttpServlet {
         final Date lastModified = resource.getLastModified();
         if (!ETagUtils.handleIfMatch(req.getHeader(Headers.IF_MATCH_STRING), etag, false) ||
                 !DateUtils.handleIfUnmodifiedSince(req.getHeader(Headers.IF_UNMODIFIED_SINCE_STRING), lastModified)) {
-            resp.setStatus(412);
+            resp.setStatus(StatusCodes.PRECONDITION_FAILED);
             return;
         }
         if (!ETagUtils.handleIfNoneMatch(req.getHeader(Headers.IF_NONE_MATCH_STRING), etag, true) ||
                 !DateUtils.handleIfModifiedSince(req.getHeader(Headers.IF_MODIFIED_SINCE_STRING), lastModified)) {
-            resp.setStatus(304);
+            resp.setStatus(StatusCodes.NOT_MODIFIED);
             return;
         }
         //todo: handle range requests

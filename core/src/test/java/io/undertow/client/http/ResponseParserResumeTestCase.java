@@ -20,6 +20,7 @@ package io.undertow.client.http;
 
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
+import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -74,7 +75,7 @@ public class ResponseParserResumeTestCase {
     }
 
     private void runAssertions(final HttpResponseBuilder result, final ResponseParseState context) {
-        Assert.assertEquals(200, result.getStatusCode());
+        Assert.assertEquals(StatusCodes.OK, result.getStatusCode());
         Assert.assertEquals("OK", result.getReasonPhrase());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
 

@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import io.undertow.util.StatusCodes;
+
 import java.io.IOException;
 
 import org.junit.AfterClass;
@@ -66,7 +68,7 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         final String jvmRoute;
         if (response.startsWith(server1.getJvmRoute())) {
             jvmRoute = server1.getJvmRoute();
@@ -76,7 +78,7 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.disableApp(jvmRoute, SESSION);
 
         for (int i = 0; i < 20 ; i++) {
-            checkGet("/session", 200, jvmRoute).startsWith(jvmRoute);
+            checkGet("/session", StatusCodes.OK, jvmRoute).startsWith(jvmRoute);
         }
     }
 
@@ -88,14 +90,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.removeApp(server1.getJvmRoute(), SESSION);
         } else {
             modClusterClient.removeApp(server2.getJvmRoute(), SESSION);
         }
 
-        checkGet("/session", 503);
+        checkGet("/session", StatusCodes.SERVICE_UNAVAILABLE);
     }
 
     @Test
@@ -106,14 +108,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.stopApp(server1.getJvmRoute(), SESSION);
         } else {
             modClusterClient.stopApp(server2.getJvmRoute(), SESSION);
         }
 
-        checkGet("/session", 503);
+        checkGet("/session", StatusCodes.SERVICE_UNAVAILABLE);
     }
 
     @Test
@@ -124,14 +126,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.updateLoad(server1.getJvmRoute(), -1);
         } else {
             modClusterClient.updateLoad(server2.getJvmRoute(), -1);
         }
 
-        checkGet("/session", 503);
+        checkGet("/session", StatusCodes.SERVICE_UNAVAILABLE);
     }
 
     @Test
@@ -145,14 +147,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.removeApp(server1.getJvmRoute(), SESSION);
         } else {
             modClusterClient.removeApp(server2.getJvmRoute(), SESSION);
         }
 
-        checkGet("/session", 503);
+        checkGet("/session", StatusCodes.SERVICE_UNAVAILABLE);
     }
 
     @Test
@@ -166,14 +168,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.stopApp(server1.getJvmRoute(), SESSION);
         } else {
             modClusterClient.stopApp(server2.getJvmRoute(), SESSION);
         }
 
-        checkGet("/session", 503);
+        checkGet("/session", StatusCodes.SERVICE_UNAVAILABLE);
     }
 
     @Test
@@ -187,14 +189,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.updateLoad(server1.getJvmRoute(), -1);
         } else {
             modClusterClient.updateLoad(server2.getJvmRoute(), -1);
         }
 
-        checkGet("/session", 503);
+        checkGet("/session", StatusCodes.SERVICE_UNAVAILABLE);
     }
 
     @Test
@@ -208,14 +210,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.stopApp(server1.getJvmRoute(), SESSION);
         } else {
             modClusterClient.stopApp(server2.getJvmRoute(), SESSION);
         }
 
-        checkGet("/session", 200);
+        checkGet("/session", StatusCodes.OK);
     }
 
     @Test
@@ -229,14 +231,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.removeApp(server1.getJvmRoute(), SESSION);
         } else {
             modClusterClient.removeApp(server2.getJvmRoute(), SESSION);
         }
 
-        checkGet("/session", 200);
+        checkGet("/session", StatusCodes.OK);
     }
 
     @Test
@@ -250,14 +252,14 @@ public class StickySessionUnitTestCase extends AbstractModClusterTestBase {
         modClusterClient.enableApp(server1.getJvmRoute(), SESSION);
         modClusterClient.enableApp(server2.getJvmRoute(), SESSION);
 
-        final String response = checkGet("/session", 200);
+        final String response = checkGet("/session", StatusCodes.OK);
         if (response.startsWith(server1.getJvmRoute())) {
             modClusterClient.updateLoad(server1.getJvmRoute(), -1);
         } else {
             modClusterClient.updateLoad(server2.getJvmRoute(), -1);
         }
 
-        checkGet("/session", 200);
+        checkGet("/session", StatusCodes.OK);
     }
 
 }

@@ -23,6 +23,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.AuthorizationManager;
 import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.util.StatusCodes;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletRequest;
@@ -54,7 +55,7 @@ public class ServletSecurityRoleHandler implements HttpHandler {
             if (!authorizationManager.canAccessResource(constraints, sc.getAuthenticatedAccount(), servletRequestContext.getCurrentServlet().getManagedServlet().getServletInfo(), servletRequestContext.getOriginalRequest(), servletRequestContext.getDeployment())) {
 
                 HttpServletResponse response = (HttpServletResponse) servletRequestContext.getServletResponse();
-                response.sendError(403);
+                response.sendError(StatusCodes.FORBIDDEN);
                 return;
             }
         }

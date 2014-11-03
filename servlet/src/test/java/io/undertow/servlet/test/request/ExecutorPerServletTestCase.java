@@ -33,6 +33,7 @@ import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -93,7 +94,7 @@ public class ExecutorPerServletTestCase {
                             for (int i = 0; i < NUM_REQUESTS; ++i) {
                                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext" + path);
                                 HttpResponse result = client.execute(get);
-                                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                                 final String response = HttpClientUtils.readResponse(result);
                             }
                         } catch (IOException e) {
@@ -111,7 +112,7 @@ public class ExecutorPerServletTestCase {
             try {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext" + path);
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 return Integer.parseInt(HttpClientUtils.readResponse(result));
             } finally {
                 client.getConnectionManager().shutdown();

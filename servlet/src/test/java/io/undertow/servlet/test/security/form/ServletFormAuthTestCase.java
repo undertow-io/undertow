@@ -39,6 +39,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -118,7 +119,7 @@ public class ServletFormAuthTestCase {
         client.setRedirectStrategy(new DefaultRedirectStrategy() {
             @Override
             public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == 302) {
+                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
                     return true;
                 }
                 return super.isRedirected(request, response, context);
@@ -128,7 +129,7 @@ public class ServletFormAuthTestCase {
             final String uri = DefaultServer.getDefaultServerURL() + "/servletContext/secured/test";
             HttpGet get = new HttpGet(uri);
             HttpResponse result = client.execute(get);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Login Page", response);
 
@@ -140,7 +141,7 @@ public class ServletFormAuthTestCase {
             post.setEntity(new UrlEncodedFormEntity(data));
 
             result = client.execute(post);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("user1", response);
@@ -155,7 +156,7 @@ public class ServletFormAuthTestCase {
         client.setRedirectStrategy(new DefaultRedirectStrategy() {
             @Override
             public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == 302) {
+                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
                     return true;
                 }
                 return super.isRedirected(request, response, context);
@@ -166,7 +167,7 @@ public class ServletFormAuthTestCase {
             HttpPost post = new HttpPost(uri);
             post.setEntity(new StringEntity("String Entity"));
             HttpResponse result = client.execute(post);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Login Page", response);
 
@@ -178,7 +179,7 @@ public class ServletFormAuthTestCase {
             post.setEntity(new UrlEncodedFormEntity(data));
 
             result = client.execute(post);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("String Entity", response);
@@ -194,7 +195,7 @@ public class ServletFormAuthTestCase {
         client.setRedirectStrategy(new DefaultRedirectStrategy() {
             @Override
             public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == 302) {
+                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
                     return true;
                 }
                 return super.isRedirected(request, response, context);
@@ -205,7 +206,7 @@ public class ServletFormAuthTestCase {
             HttpPost post = new HttpPost(uri);
             post.setEntity(new StringEntity("String Entity"));
             HttpResponse result = client.execute(post);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Login Page", response);
 
@@ -217,7 +218,7 @@ public class ServletFormAuthTestCase {
             post.setEntity(new UrlEncodedFormEntity(data));
 
             result = client.execute(post);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             response = HttpClientUtils.readResponse(result);
             assertEquals("developer", response);

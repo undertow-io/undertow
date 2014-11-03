@@ -37,6 +37,7 @@ import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
@@ -79,7 +80,7 @@ public class FileHandlerStressTestCase {
                             for (int i = 0; i < NUM_REQUESTS; ++i) {
                                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
                                 HttpResponse result = client.execute(get);
-                                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                                 final String response = HttpClientUtils.readResponse(result);
                                 Assert.assertTrue(response, response.contains("A web page"));
                             }

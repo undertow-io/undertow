@@ -34,6 +34,7 @@ import io.undertow.security.impl.SimpleNonceManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HexConverter;
+import io.undertow.util.StatusCodes;
 
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -196,7 +197,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         String value = getAuthHeader(DIGEST, values);
 
@@ -221,7 +222,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
 
             get.addHeader(AUTHORIZATION.toString(), authorization);
             result = client.execute(get);
-            assertEquals(200, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             values = result.getHeaders("ProcessedBy");
             assertEquals(1, values.length);
@@ -255,7 +256,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
 
         String value = getAuthHeader(DIGEST, values);
@@ -280,7 +281,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), authorization);
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
@@ -297,7 +298,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
 
         String value = getAuthHeader(DIGEST, values);
@@ -322,7 +323,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), authorization);
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
@@ -339,7 +340,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
 
         String value = getAuthHeader(DIGEST, values);
@@ -364,7 +365,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
 
         get.addHeader(AUTHORIZATION.toString(), authorization);
         result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
@@ -383,7 +384,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
 
         String value = getAuthHeader(DIGEST, values);
@@ -411,7 +412,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
             result = client.execute(get);
 
             if (i == 0) {
-                assertEquals(200, result.getStatusLine().getStatusCode());
+                assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 assertSingleNotificationType(EventType.AUTHENTICATED);
 
                 values = result.getHeaders("ProcessedBy");
@@ -430,7 +431,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
                 assertEquals(clientNonce, parsedAuthInfo.get(AuthenticationInfoToken.CNONCE));
                 assertEquals(nonceCountString, parsedAuthInfo.get(AuthenticationInfoToken.NONCE_COUNT));
             } else {
-                assertEquals(401, result.getStatusLine().getStatusCode());
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
             }
         }
     }

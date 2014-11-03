@@ -36,6 +36,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
+import io.undertow.util.StatusCodes;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
@@ -119,11 +120,11 @@ public class FileResource implements Resource {
                 try {
                     fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
                 } catch (FileNotFoundException e) {
-                    exchange.setResponseCode(404);
+                    exchange.setResponseCode(StatusCodes.NOT_FOUND);
                     callback.onException(exchange, sender, e);
                     return false;
                 } catch (IOException e) {
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     callback.onException(exchange, sender, e);
                     return false;
                 }
@@ -182,7 +183,7 @@ public class FileResource implements Resource {
                 }
                 IoUtils.safeClose(fileChannel);
                 if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 }
                 callback.onException(exchange, sender, exception);
             }

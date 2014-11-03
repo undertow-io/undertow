@@ -25,6 +25,7 @@ import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -64,7 +65,7 @@ public class ChunkedRequestTransferCodingTestCase {
                     if (connection == null) {
                         connection = exchange.getConnection();
                     } else if (!DefaultServer.isAjp() && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                        exchange.setResponseCode(500);
+                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();
@@ -99,7 +100,7 @@ public class ChunkedRequestTransferCodingTestCase {
                 }
             });
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             final Random random = new Random();
@@ -135,7 +136,7 @@ public class ChunkedRequestTransferCodingTestCase {
                     }
                 });
                 result = client.execute(post);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 HttpClientUtils.readResponse(result);
             }
         } finally {
@@ -162,12 +163,12 @@ public class ChunkedRequestTransferCodingTestCase {
             });
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3L));
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             connection = null;
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) message.length()));
             result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
         } finally {

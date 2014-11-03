@@ -30,6 +30,7 @@ import io.undertow.servlet.util.InMemorySessionPersistence;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -70,7 +71,7 @@ public class ServletSessionPersistenceTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("1", response);
 
@@ -79,7 +80,7 @@ public class ServletSessionPersistenceTestCase {
             Assert.assertTrue(cookieValue, cookieValue.contains("/servletContext/aa"));
 
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("2", response);
 
@@ -89,7 +90,7 @@ public class ServletSessionPersistenceTestCase {
             pathHandler.addPrefixPath(builder.getContextPath(), manager.start());
 
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("3", response);
 

@@ -29,6 +29,7 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -57,7 +58,7 @@ public class FileHandlerIndexTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
@@ -80,7 +81,7 @@ public class FileHandlerIndexTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
@@ -88,7 +89,7 @@ public class FileHandlerIndexTestCase {
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/.");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());

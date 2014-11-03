@@ -32,6 +32,7 @@ import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -80,21 +81,21 @@ public class SSLSessionTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/notamatchingpath");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             Header[] header = result.getHeaders(COUNT);
             Assert.assertEquals("0", header[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/notamatchingpath");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("1", header[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/notamatchingpath");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("2", header[0].getValue());

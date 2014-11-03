@@ -27,6 +27,7 @@ import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -65,13 +66,13 @@ public class CharacterEncodingTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=UTF-16BE");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             byte[] response = HttpClientUtils.readRawResponse(result);
             Assert.assertArrayEquals(UTF16, response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=UTF-8");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readRawResponse(result);
             Assert.assertArrayEquals(UTF8, response);
         } finally {

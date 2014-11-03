@@ -32,6 +32,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.jboss.logging.Logger;
@@ -98,7 +99,7 @@ public class AsyncListenerOnErrorTest {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async1");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
             Assert.assertArrayEquals(new String[] {"ERROR", "COMPLETE"}, AsyncEventListener.results());
@@ -113,7 +114,7 @@ public class AsyncListenerOnErrorTest {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async2");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
             Assert.assertArrayEquals(new String[] {"COMPLETE", "ERROR"}, AsyncEventListener.results());
@@ -128,7 +129,7 @@ public class AsyncListenerOnErrorTest {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async3");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
             Assert.assertArrayEquals(new String[] {"START", "COMPLETE", "ERROR"}, AsyncEventListener.results());

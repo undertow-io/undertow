@@ -34,6 +34,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 
 /**
  * The mod cluster manager web frontend.
@@ -151,7 +152,7 @@ class MCMPWebManager extends MCMPHandler {
             }
         }
 
-        exchange.setResponseCode(200);
+        exchange.setResponseCode(StatusCodes.OK);
         exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/html; charset=ISO-8859-1");
         final Sender resp = exchange.getResponseSender();
 

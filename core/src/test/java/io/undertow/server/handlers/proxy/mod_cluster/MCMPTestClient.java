@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -185,7 +186,7 @@ public class MCMPTestClient implements Closeable {
 
     static String assertResponse(final HttpResponse result) throws IOException {
         final String response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(response, 200, result.getStatusLine().getStatusCode());
+        Assert.assertEquals(response, StatusCodes.OK, result.getStatusLine().getStatusCode());
         return response;
     }
 

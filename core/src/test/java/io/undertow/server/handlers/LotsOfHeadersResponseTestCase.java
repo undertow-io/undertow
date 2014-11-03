@@ -26,6 +26,7 @@ import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -65,7 +66,7 @@ public class LotsOfHeadersResponseTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             for (int i = 0; i < COUNT; ++i) {
                 Header[] header = result.getHeaders(HEADER + i);
                 Assert.assertEquals(MESSAGE + i, header[0].getValue());

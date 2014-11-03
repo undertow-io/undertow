@@ -24,6 +24,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -49,7 +50,7 @@ public class DateHandlerTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header date = result.getHeaders("Date")[0];
             final long firstDate = DateUtils.parseDate(date.getValue()).getTime();
             Assert.assertTrue((firstDate + 3000) > System.currentTimeMillis());
@@ -57,7 +58,7 @@ public class DateHandlerTestCase {
             HttpClientUtils.readResponse(result);
             Thread.sleep(1500);
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             date = result.getHeaders("Date")[0];
             final long secondDate = DateUtils.parseDate(date.getValue()).getTime();
             Assert.assertTrue((secondDate + 2000) > System.currentTimeMillis());

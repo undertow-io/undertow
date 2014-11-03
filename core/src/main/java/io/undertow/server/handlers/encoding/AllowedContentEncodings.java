@@ -26,6 +26,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 import org.xnio.conduits.StreamSinkConduit;
 
 /**
@@ -87,8 +88,8 @@ public class AllowedContentEncodings implements ConduitWrapper<StreamSinkConduit
         }
         //if this is a zero length response we don't want to encode
         if (exchange.getResponseContentLength() != 0
-                && exchange.getResponseCode() != 204
-                && exchange.getResponseCode() != 304) {
+                && exchange.getResponseCode() != StatusCodes.NO_CONTENT
+                && exchange.getResponseCode() != StatusCodes.NOT_MODIFIED) {
             EncodingMapping encoding = getEncoding();
             if (encoding != null) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, encoding.getName());

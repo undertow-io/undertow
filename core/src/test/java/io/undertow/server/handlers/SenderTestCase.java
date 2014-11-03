@@ -33,6 +33,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -173,7 +174,7 @@ public class SenderTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             Assert.assertEquals(sb.toString(), HttpClientUtils.readResponse(result));
 
@@ -192,7 +193,7 @@ public class SenderTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             File file = new File(SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI());
             byte[] data = new byte[(int) file.length() * TXS];
 
@@ -217,7 +218,7 @@ public class SenderTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             File file = new File(SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI());
             byte[] data = new byte[(int) file.length() * TXS];
 
@@ -243,7 +244,7 @@ public class SenderTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             Assert.assertEquals(sb.toString(), HttpClientUtils.readResponse(result));
 
@@ -258,7 +259,7 @@ public class SenderTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(HELLO_WORLD, HttpClientUtils.readResponse(result));
             Header[] header = result.getHeaders(Headers.CONTENT_LENGTH_STRING);
             Assert.assertEquals(1, header.length);

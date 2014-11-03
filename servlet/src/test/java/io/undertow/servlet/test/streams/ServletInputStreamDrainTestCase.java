@@ -19,6 +19,8 @@
 package io.undertow.servlet.test.streams;
 
 import javax.servlet.ServletException;
+
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -71,15 +73,15 @@ public class ServletInputStreamDrainTestCase {
             HttpPost post = new HttpPost(uri);
             post.setEntity(new StringEntity(message));
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("close",HttpClientUtils.readResponse(result));
 
             result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("close",HttpClientUtils.readResponse(result));
 
             result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("close",HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();

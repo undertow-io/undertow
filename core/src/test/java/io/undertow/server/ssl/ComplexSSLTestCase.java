@@ -37,6 +37,7 @@ import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -83,7 +84,7 @@ public class ComplexSSLTestCase {
             //get file list, this works
             HttpGet getFileList = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
             HttpResponse resultList = client.execute(getFileList);
-            Assert.assertEquals(200, resultList.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, resultList.getStatusLine().getStatusCode());
             String responseList = HttpClientUtils.readResponse(resultList);
             Assert.assertTrue(responseList, responseList.contains("page.html"));
             Header[] headersList = resultList.getHeaders("Content-Type");
@@ -92,7 +93,7 @@ public class ComplexSSLTestCase {
             //get file itself, breaks
             HttpGet getFile = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/page.html");
             HttpResponse result = client.execute(getFile);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
@@ -136,7 +137,7 @@ public class ComplexSSLTestCase {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerSSLAddress());
             post.setEntity(new StringEntity(message));
             HttpResponse resultList = client.execute(post);
-            Assert.assertEquals(200, resultList.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, resultList.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(resultList);
             Assert.assertEquals(message.length(), response.length());
             Assert.assertEquals(message, response);
@@ -145,7 +146,7 @@ public class ComplexSSLTestCase {
             post = new HttpPost(DefaultServer.getDefaultServerSSLAddress());
             post.setEntity(new StringEntity(message));
             resultList = client.execute(post);
-            Assert.assertEquals(200, resultList.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, resultList.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(resultList);
             Assert.assertEquals(message, response);
 

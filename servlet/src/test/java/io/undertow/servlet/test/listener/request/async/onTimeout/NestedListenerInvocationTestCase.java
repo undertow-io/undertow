@@ -31,6 +31,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -78,7 +79,7 @@ public class NestedListenerInvocationTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
             HttpResponse response = client.execute(get);
-            Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, response.getStatusLine().getStatusCode());
             Assert.assertFalse(SimpleRequestListener.hasNestedInvocationOccured());
         } finally {
             client.getConnectionManager().shutdown();

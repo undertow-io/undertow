@@ -21,6 +21,8 @@ package io.undertow.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -75,7 +77,7 @@ public class MaxRequestSizeTestCase {
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 10);
@@ -86,7 +88,7 @@ public class MaxRequestSizeTestCase {
                 HttpClientUtils.readResponse(response);
 
                 if (DefaultServer.isProxy() || DefaultServer.isAjp()) {
-                    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
+                    Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, response.getStatusLine().getStatusCode());
                 } else {
                     Assert.fail("request should have been too big");
                 }
@@ -97,7 +99,7 @@ public class MaxRequestSizeTestCase {
             maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
             DefaultServer.setUndertowOptions(maxSize);
             result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
         } finally {
@@ -115,7 +117,7 @@ public class MaxRequestSizeTestCase {
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) A_MESSAGE.length() - 1);
@@ -124,7 +126,7 @@ public class MaxRequestSizeTestCase {
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             result = client.execute(post);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
@@ -133,7 +135,7 @@ public class MaxRequestSizeTestCase {
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
             result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
         } finally {

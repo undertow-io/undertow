@@ -29,6 +29,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -73,13 +74,13 @@ public class PathTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
             result = client.execute(get);
-            Assert.assertEquals(404, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             runPathTest(client, "/path", "/path", "");
@@ -95,7 +96,7 @@ public class PathTestCase {
             //now test the exact path match
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/aa");
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Exact /aa match::/aa", HttpClientUtils.readResponse(result));
 
 
@@ -110,7 +111,7 @@ public class PathTestCase {
     private void runPathTest(TestHttpClient client, String path, String expectedMatch, String expectedRemaining, Map<String, String> queryParams) throws IOException {
         HttpResponse result;HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
         result = client.execute(get);
-        Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         Header[] header = result.getHeaders(MATCHED);
         Assert.assertEquals(expectedMatch, header[0].getValue());
         header = result.getHeaders(PATH);

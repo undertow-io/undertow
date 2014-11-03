@@ -26,6 +26,7 @@ import io.undertow.servlet.api.AuthorizationManager;
 import io.undertow.servlet.api.ConfidentialPortManager;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.util.StatusCodes;
 
 import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
@@ -57,7 +58,7 @@ public class ServletConfidentialityConstraintHandler extends SinglePortConfident
 
         if (TransportGuaranteeType.REJECTED == transportGuarantee) {
             HttpServletResponse response = (HttpServletResponse) servletRequestContext.getServletResponse();
-            response.sendError(403);
+            response.sendError(StatusCodes.FORBIDDEN);
             return;
         }
         super.handleRequest(exchange);

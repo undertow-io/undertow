@@ -33,6 +33,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import junit.textui.TestRunner;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -103,7 +104,7 @@ public class FormDataParserTestCase {
                         }
                     }
                 } catch (IOException e) {
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 }
             }
         });
@@ -132,7 +133,7 @@ public class FormDataParserTestCase {
             post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataDefinition.APPLICATION_X_WWW_FORM_URLENCODED);
             post.setEntity(new UrlEncodedFormEntity(data));
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             checkResult(data, result);
             HttpClientUtils.readResponse(result);
 

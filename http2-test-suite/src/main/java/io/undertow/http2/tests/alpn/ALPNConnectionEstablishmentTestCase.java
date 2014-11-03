@@ -23,6 +23,7 @@ import io.undertow.http2.tests.framework.Http2Client;
 import io.undertow.http2.tests.framework.Http2TestRunner;
 import io.undertow.http2.tests.framework.HttpResponse;
 import io.undertow.http2.tests.framework.TestEnvironment;
+import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,7 +42,7 @@ public class ALPNConnectionEstablishmentTestCase {
     public void testConnectionEstablished() throws IOException {
         Http2Client connection = TestEnvironment.connectViaAlpn();
         HttpResponse response = connection.sendRequest(new ClientRequest());
-        Assert.assertEquals(200, response.getStatus());
+        Assert.assertEquals(StatusCodes.OK, response.getStatus());
 
     }
 

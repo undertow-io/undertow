@@ -151,7 +151,7 @@ public class DirectoryUtils {
         }
         String requestPath = exchange.getRequestPath();
         if (! requestPath.endsWith("/")) {
-            exchange.setResponseCode(302);
+            exchange.setResponseCode(StatusCodes.FOUND);
             exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             exchange.endExchange();
             return;
@@ -171,7 +171,7 @@ public class DirectoryUtils {
             throw new IllegalStateException(e);
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-            exchange.setResponseCode(500);
+            exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
         }
 
         exchange.endExchange();

@@ -24,6 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
@@ -83,19 +84,19 @@ public class GracefulShutdownTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             shutdown.shutdown();
 
             result = client.execute(get);
-            Assert.assertEquals(503, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             shutdown.start();
 
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             CountDownLatch latch = new CountDownLatch(1);
@@ -129,19 +130,19 @@ public class GracefulShutdownTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             shutdown.shutdown();
 
             result = client.execute(get);
-            Assert.assertEquals(503, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             shutdown.start();
 
             result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             CountDownLatch latch = new CountDownLatch(1);
@@ -188,7 +189,7 @@ public class GracefulShutdownTestCase {
             TestHttpClient client = new TestHttpClient();
             try {
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 HttpClientUtils.readResponse(result);
 
             } catch (ClientProtocolException e) {

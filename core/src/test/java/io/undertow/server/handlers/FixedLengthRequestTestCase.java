@@ -26,6 +26,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -64,7 +65,7 @@ public class FixedLengthRequestTestCase {
                     if (connection == null) {
                         connection = exchange.getConnection();
                     } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                        exchange.setResponseCode(500);
+                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();
@@ -78,7 +79,7 @@ public class FixedLengthRequestTestCase {
                     outputStream.close();
                 } catch (IOException e) {
                     exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     throw new RuntimeException(e);
                 }
             }
@@ -94,14 +95,14 @@ public class FixedLengthRequestTestCase {
             generateMessage(1);
             post.setEntity(new StringEntity(message));
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
 
             generateMessage(1000);
             post.setEntity(new StringEntity(message));
             result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
         } finally {
 
@@ -122,12 +123,12 @@ public class FixedLengthRequestTestCase {
             post.setEntity(new StringEntity(message));
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3L));
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             connection = null;
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) message.length()));
             result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
         } finally {

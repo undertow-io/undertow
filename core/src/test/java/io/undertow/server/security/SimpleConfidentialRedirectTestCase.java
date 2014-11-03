@@ -23,6 +23,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -61,7 +62,7 @@ public class SimpleConfidentialRedirectTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders("scheme");
             Assert.assertEquals("https", header[0].getValue());
         } finally {

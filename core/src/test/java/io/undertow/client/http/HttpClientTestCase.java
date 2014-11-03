@@ -32,6 +32,7 @@ import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -97,7 +98,7 @@ public class HttpClientTestCase {
     }
 
     static void sendMessage(final HttpServerExchange exchange) {
-        exchange.setResponseCode(200);
+        exchange.setResponseCode(StatusCodes.OK);
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
         final Sender sender = exchange.getResponseSender();
         sender.send(message);
@@ -237,7 +238,7 @@ public class HttpClientTestCase {
                     listener.setup(channel);
 
                     final UndertowClientResponse response = request.getResponse().get();
-                    Assert.assertEquals(404, response.getResponseCode());
+                    Assert.assertEquals(StatusCodes.NOT_FOUND, response.getResponseCode());
 
                 } finally {
                     IoUtils.safeClose(connection);
@@ -271,7 +272,7 @@ public class HttpClientTestCase {
                     listener.setup(channel);
 
                     final UndertowClientResponse response = request.getResponse().get();
-                    Assert.assertEquals(417, response.getResponseCode());
+                    Assert.assertEquals(StatusCodes.EXPECTATION_FAILED, response.getResponseCode());
                     Assert.assertTrue(listener.hasRemaining());
 
                 } finally {

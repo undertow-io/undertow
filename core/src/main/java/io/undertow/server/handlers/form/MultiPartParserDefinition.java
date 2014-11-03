@@ -29,6 +29,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.MalformedMessageException;
 import io.undertow.util.MultipartParser;
 import io.undertow.util.SameThreadExecutor;
+import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
@@ -347,7 +348,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                                     exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
                                 } else {
                                     UndertowLogger.REQUEST_IO_LOGGER.ioException(UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData());
-                                    exchange.setResponseCode(500);
+                                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                                     exchange.endExchange();
                                 }
                                 return;
@@ -359,7 +360,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                         }
                     } catch (MalformedMessageException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        exchange.setResponseCode(500);
+                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.endExchange();
                     } finally {
                         pooled.free();
@@ -367,7 +368,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
                 } catch (Throwable e) {
                     UndertowLogger.REQUEST_IO_LOGGER.debug("Exception parsing data", e);
-                    exchange.setResponseCode(500);
+                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     exchange.endExchange();
                 }
             }

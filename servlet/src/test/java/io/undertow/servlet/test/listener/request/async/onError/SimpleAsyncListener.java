@@ -17,6 +17,8 @@
  */
 package io.undertow.servlet.test.listener.request.async.onError;
 
+import io.undertow.util.StatusCodes;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -53,7 +55,7 @@ public class SimpleAsyncListener implements AsyncListener {
         ServletResponse response = event.getSuppliedResponse();
         HttpServletResponse httpResponse = (HttpServletResponse) response;
         httpResponse.setContentType("text/plain");
-        httpResponse.setStatus(200);
+        httpResponse.setStatus(StatusCodes.OK);
         PrintWriter writer = httpResponse.getWriter();
         writer.write(MESSAGE);
         writer.flush();

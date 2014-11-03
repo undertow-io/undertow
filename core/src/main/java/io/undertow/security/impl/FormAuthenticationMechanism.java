@@ -33,12 +33,11 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.Sessions;
+import io.undertow.util.StatusCodes;
 
 import java.io.IOException;
 
 import static io.undertow.UndertowMessages.MESSAGES;
-import static io.undertow.util.StatusCodes.FOUND;
-import static io.undertow.util.StatusCodes.TEMPORARY_REDIRECT;
 
 /**
  * @author Stuart Douglas
@@ -135,7 +134,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                     @Override
                     public boolean handleDefaultResponse(final HttpServerExchange exchange) {
                         FormAuthenticationMechanism.sendRedirect(exchange, location);
-                        exchange.setResponseCode(FOUND);
+                        exchange.setResponseCode(StatusCodes.FOUND);
                         exchange.endExchange();
                         return true;
                     }
@@ -167,7 +166,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
 
     protected Integer servePage(final HttpServerExchange exchange, final String location) {
         sendRedirect(exchange, location);
-        return TEMPORARY_REDIRECT;
+        return StatusCodes.TEMPORARY_REDIRECT;
     }
 
 

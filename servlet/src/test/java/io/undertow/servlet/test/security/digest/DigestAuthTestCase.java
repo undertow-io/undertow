@@ -44,6 +44,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HexConverter;
+import io.undertow.util.StatusCodes;
 
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -122,7 +123,7 @@ public class DigestAuthTestCase {
         String url = DefaultServer.getDefaultServerURL() + "/servletContext/secured/" + path;
         HttpGet get = new HttpGet(url);
         HttpResponse result = client.execute(get);
-        assertEquals(401, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
         String value = values[0].getValue();
@@ -148,7 +149,7 @@ public class DigestAuthTestCase {
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
-        assertEquals(200, result.getStatusLine().getStatusCode());
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
         final String response = HttpClientUtils.readResponse(result);
         assertEquals(expectedResponse, response);
