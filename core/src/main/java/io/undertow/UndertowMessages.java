@@ -367,4 +367,7 @@ public interface UndertowMessages {
 
     @Message(id = 113, value = "Only the server side can send a push promise stream")
     IOException pushPromiseCanOnlyBeCreatedByServer();
+
+    @Message(id = 114, value = "Invalid IP access control rule %s. Format is: [ip-match] allow|deny")
+    IllegalArgumentException invalidAclRule(String rule);
 }

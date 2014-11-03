@@ -22,3 +22,4 @@ io.undertow.server.handlers.SSLHeaderHandler$Builder
 io.undertow.server.handlers.ResponseRateLimitingHandler$Builder
 io.undertow.server.handlers.URLDecodingHandler$Builder
 io.undertow.server.handlers.PathSeparatorHandler$Builder
+io.undertow.server.handlers.IPAddressAccessControlHandler$Builder
