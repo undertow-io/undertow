@@ -21,6 +21,7 @@ package io.undertow.server.handlers;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import io.undertow.server.handlers.builder.HandlerParser;
 import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -102,6 +103,16 @@ public class IPAddressAccessControlHandlerUnitTestCase {
                 .addAllow("FE45:00:00:000:0:AAA:FFFF:0045")
                 .addAllow("FE45:00:00:000:0:AAA:FFFF:01F4/127")
                 .addDeny("FE45:00:00:000:0:AAA:FFFF:0/112");
+        runIpv6SlashMAtchTest(handler);
+    }
+
+    @Test
+    public void testParsedHandler() throws UnknownHostException {
+        IPAddressAccessControlHandler handler = (IPAddressAccessControlHandler) HandlerParser.parse("ip-access-control[default-allow=true, acl={'FE45:00:00:000:0:AAA:FFFF:0045 allow', 'FE45:00:00:000:0:AAA:FFFF:01F4/127 allow', 'FE45:00:00:000:0:AAA:FFFF:0/112 deny'}]", getClass().getClassLoader()).wrap(ResponseCodeHandler.HANDLE_404);
+
+        runIpv6SlashMAtchTest(handler);
+    }
+    private void runIpv6SlashMAtchTest(IPAddressAccessControlHandler handler) throws UnknownHostException {
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("FE45:0:0:0:0:AAA:FFFF:45")));
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("127.0.0.2")));
         Assert.assertFalse(handler.isAllowed(InetAddress.getByName("FE45:0:0:0:0:AAA:FFFF:46")));
@@ -124,4 +135,5 @@ public class IPAddressAccessControlHandlerUnitTestCase {
       IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler(null, StatusCodes.NOT_FOUND);
       Assert.assertEquals(StatusCodes.NOT_FOUND, handler.getDenyResponseCode());
     }
+
 }

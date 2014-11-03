@@ -363,4 +363,7 @@ public interface UndertowMessages {
 
     @Message(id = 112, value = "Only client side can call createStream, if you wish to send a PUSH_PROMISE frame use createPushPromiseStream instead")
     IOException headersStreamCanOnlyBeCreatedByClient();
+
+    @Message(id = 114, value = "Invalid IP access control rule %s. Format is: [ip-match] allow|deny")
+    IllegalArgumentException invalidAclRule(String rule);
 }
