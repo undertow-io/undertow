@@ -332,7 +332,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * @param headerData The frame header data. This may be null if the data is part of a an existing frame
      * @param frameData  The frame data
      */
-    void dataReady(FrameHeaderData headerData, Pooled<ByteBuffer> frameData) {
+    protected void dataReady(FrameHeaderData headerData, Pooled<ByteBuffer> frameData) {
         if(anyAreSet(state, STATE_STREAM_BROKEN)) {
             frameData.free();
             return;
