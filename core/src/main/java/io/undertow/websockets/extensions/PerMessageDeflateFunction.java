@@ -19,14 +19,10 @@
 package io.undertow.websockets.extensions;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketLogger;
@@ -45,18 +41,10 @@ import io.undertow.websockets.core.WebSocketMessages;
  *
  * @author Lucas Ponce
  */
-public class PerMessageDeflateExtension implements ExtensionHandshake, ExtensionFunction {
+public class PerMessageDeflateFunction implements ExtensionFunction {
 
-    private static final String PERMESSAGE_DEFLATE = "permessage-deflate";
-    private static final String SERVER_NO_CONTEXT_TAKEOVER = "server_no_context_takeover";
-    private static final String CLIENT_NO_CONTEXT_TAKEOVER = "client_no_context_takeover";
-    private static final String SERVER_MAX_WINDOW_BITS = "server_max_window_bits";
-    private static final String CLIENT_MAX_WINDOW_BITS = "client_max_window_bits";
-
-    private final Set<String> incompatibleExtensions = new HashSet<>();
-
-    private volatile boolean compressContextTakeover;
-    private volatile boolean decompressContextTakeover;
+    private boolean compressContextTakeover;
+    private boolean decompressContextTakeover;
 
     private final boolean client;
     private final int deflaterLevel;
@@ -65,45 +53,21 @@ public class PerMessageDeflateExtension implements ExtensionHandshake, Extension
     private Deflater compress;
 
     /**
-     * Default configuration for DEFLATE algorithm implementation
+     * Pool for aux buffers used in compression/decompression tasks.
      */
-    public static final int DEFAULT_DEFLATER = Deflater.BEST_SPEED;
+    private static final ThreadLocal<byte[][]> pool = new ThreadLocal<byte[][]>() {
+        protected byte[][] initialValue() {
+            return new byte[2][];
+        }
+    };
+
+    private byte[] input;
+    private byte[] output;
+
+    private static final int OFFSET = 64;
 
     public static final byte[] TAIL = new byte[]{0x00, 0x00, (byte)0xFF, (byte)0xFF};
 
-    public PerMessageDeflateExtension() {
-        this(false);
-    }
-
-    /**
-     * Create a new {@code PerMessageDeflateExtension} instance.
-     *
-     * @param client indicate if extension is configured in client ({@code true }) context or server ({@code false }) context.
-     */
-    public PerMessageDeflateExtension(final boolean client) {
-        this(client, DEFAULT_DEFLATER);
-    }
-
-    /**
-     * Create a new {@code PerMessageDeflateExtension} instance.
-     *
-     * @param client        indicate if extension is configured in client ({@code true }) context or server ({@code false }) context
-     * @param deflaterLevel the level of configuration of DEFLATE algorithm implementation
-     */
-    public PerMessageDeflateExtension(final boolean client, final int deflaterLevel) {
-        this(client, deflaterLevel, true, true);
-    }
-
-    /**
-     * Create a new {@code PerMessageDeflateExtension} instance.
-     *
-     * @param client                    flag for client ({@code true }) context or server ({@code false }) context
-     * @param compressContextTakeover   flag for compressor context takeover or without compressor context
-     * @param decompressContextTakeover flag for decompressor context takeover or without decompressor context
-     */
-    public PerMessageDeflateExtension(final boolean client, boolean compressContextTakeover, boolean decompressContextTakeover) {
-        this(client, DEFAULT_DEFLATER, compressContextTakeover, decompressContextTakeover);
-    }
 
     /**
      * Create a new {@code PerMessageDeflateExtension} instance.
@@ -113,85 +77,20 @@ public class PerMessageDeflateExtension implements ExtensionHandshake, Extension
      * @param compressContextTakeover   flag for compressor context takeover or without compressor context
      * @param decompressContextTakeover flag for decompressor context takeover or without decompressor context
      */
-    public PerMessageDeflateExtension(final boolean client, final int deflaterLevel, boolean compressContextTakeover, boolean decompressContextTakeover) {
+    public PerMessageDeflateFunction(final boolean client, final int deflaterLevel, boolean compressContextTakeover, boolean decompressContextTakeover) {
         this.client = client;
         this.deflaterLevel = deflaterLevel;
-        /*
-            This extension is incompatible with multiple instances of same extension in the same Endpoint.
-         */
-        incompatibleExtensions.add(PERMESSAGE_DEFLATE);
         decompress = new Inflater(true);
         compress = new Deflater(this.deflaterLevel, true);
         this.compressContextTakeover = compressContextTakeover;
         this.decompressContextTakeover = decompressContextTakeover;
-    }
-
-    @Override
-    public ExtensionFunction create() {
-        return new PerMessageDeflateExtension(client, deflaterLevel, compressContextTakeover, decompressContextTakeover);
+        input = null;
+        output = null;
     }
 
     @Override
     public boolean isClient() {
         return client;
-    }
-
-    @Override
-    public String getName() {
-        return PERMESSAGE_DEFLATE;
-    }
-
-    @Override
-    public Set<String> getIncompatibleExtensions() {
-        return incompatibleExtensions;
-    }
-
-    @Override
-    public WebSocketExtension accept(final WebSocketExtension extension) {
-        if (extension == null || !extension.getName().equals(getName())) return null;
-
-        WebSocketExtension negotiated = new WebSocketExtension(extension.getName());
-
-        if (extension.getParameters() == null || extension.getParameters().size() == 0) return negotiated;
-        for (WebSocketExtension.Parameter parameter : extension.getParameters()) {
-            if (parameter.getName().equals(SERVER_MAX_WINDOW_BITS)) {
-                /*
-                    Not supported
-                 */
-            } else if (parameter.getName().equals(CLIENT_MAX_WINDOW_BITS)) {
-                /*
-                    Not supported
-                 */
-            } else if (parameter.getName().equals(SERVER_NO_CONTEXT_TAKEOVER)) {
-                negotiated.getParameters().add(parameter);
-                if (client) {
-                    decompressContextTakeover = false;
-                } else {
-                    compressContextTakeover = false;
-                }
-            } else if (parameter.getName().equals(CLIENT_NO_CONTEXT_TAKEOVER)) {
-                negotiated.getParameters().add(parameter);
-                if (client) {
-                    compressContextTakeover = false;
-                } else {
-                    decompressContextTakeover = false;
-                }
-            } else {
-                WebSocketLogger.EXTENSION_LOGGER.incorrectExtensionParameter(parameter);
-                return null;
-            }
-        }
-        return negotiated;
-    }
-
-    @Override
-    public boolean isIncompatible(List<ExtensionHandshake> extensions) {
-        for (ExtensionHandshake extension : extensions) {
-            if (extension.getIncompatibleExtensions().contains(getName())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
@@ -208,13 +107,12 @@ public class PerMessageDeflateExtension implements ExtensionHandshake, Extension
     public void beforeWrite(StreamSinkFrameChannel channel, ExtensionByteBuffer extBuf, int position, int length)  throws IOException {
         if (extBuf == null || length == 0) return;
 
-        byte[] input = new byte[length];
+        initBuffers(Math.max(extBuf.getInput().capacity(), length));
+
         for (int i = 0; i < length; i++) {
             input[i] = extBuf.get(position + i);
         }
-        compress.setInput(input);
-
-        byte[] output = new byte[length + 64];
+        compress.setInput(input, 0, length);
 
         int n;
         while (!compress.needsInput() && !compress.finished()) {
@@ -253,18 +151,13 @@ public class PerMessageDeflateExtension implements ExtensionHandshake, Extension
     public void afterRead(final StreamSourceFrameChannel channel, final ExtensionByteBuffer extBuf, final int position, final int length) throws IOException {
         if (extBuf == null) return;
 
+        initBuffers(Math.max(extBuf.getInput().capacity(), length));
+
         if (length > 0) {
-
-            byte[] input;
-            int inputLength = length;
-            input = new byte[inputLength];
-
             for (int i = 0; i < length; i++) {
                 input[i] = extBuf.get(position + i);
             }
-            decompress.setInput(input);
-
-            byte[] output = new byte[length + 64];
+            decompress.setInput(input, 0, length);
 
             int n;
             while (!decompress.needsInput() && !decompress.finished()) {
@@ -286,16 +179,15 @@ public class PerMessageDeflateExtension implements ExtensionHandshake, Extension
             /*
                 Process TAIL bytes at the end of the message.
              */
-            byte[] outputTail = new byte[TAIL.length + 64];
             int n;
 
             decompress.setInput(TAIL);
             while (!decompress.needsInput() && !decompress.finished()) {
                 try {
-                    n = decompress.inflate(outputTail, 0, outputTail.length);
+                    n = decompress.inflate(output, 0, output.length);
                     if (n > 0) {
                         for (int i = 0; i < n; i++) {
-                            extBuf.put(outputTail[i]);
+                            extBuf.put(output[i]);
                         }
                     }
                 } catch (DataFormatException e) {
@@ -311,12 +203,30 @@ public class PerMessageDeflateExtension implements ExtensionHandshake, Extension
         }
     }
 
+    /**
+     * Initialize input/output buffers used for compression/decompression tasks.
+     *
+     * @param length max capacity of internal buffers
+     */
+    private void initBuffers(int length) {
+        if (input == null || output == null || input.length < length || output.length < (length + OFFSET)) {
+            if (pool.get()[0] == null || pool.get()[0].length < length) {
+                pool.get()[0] = new byte[length];
+            }
+            if (pool.get()[1] == null || pool.get()[1].length < (length + OFFSET)) {
+                pool.get()[1] = new byte[length + OFFSET];
+            }
+            input = pool.get()[0];
+            output = pool.get()[1];
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof PerMessageDeflateExtension)) return false;
+        if (!(o instanceof PerMessageDeflateFunction)) return false;
 
-        PerMessageDeflateExtension that = (PerMessageDeflateExtension) o;
+        PerMessageDeflateFunction that = (PerMessageDeflateFunction) o;
 
         if (client != that.client) return false;
         if (compressContextTakeover != that.compressContextTakeover) return false;

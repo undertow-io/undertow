@@ -70,6 +70,13 @@ public class ExtensionByteBuffer {
     }
 
     /**
+     * @return the wrapped buffer
+     */
+    public ByteBuffer getInput() {
+        return input;
+    }
+
+    /**
      * Write the given byte into the wrapped {@link ByteBuffer} at the current position.
      * <p>
      * It creates an extra buffer when current position reaches wrapped buffer or previously extra buffer maximum capacity.

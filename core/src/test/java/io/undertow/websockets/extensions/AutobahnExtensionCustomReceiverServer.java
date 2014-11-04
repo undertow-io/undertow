@@ -104,7 +104,7 @@ public class AutobahnExtensionCustomReceiverServer {
 
 
             setRootHandler(getRootHandler()
-                            .addExtension(new PerMessageDeflateExtension())
+                            .addExtension(new PerMessageDeflateHandshake())
             );
             server.resumeAccepts();
         } catch (IOException e) {

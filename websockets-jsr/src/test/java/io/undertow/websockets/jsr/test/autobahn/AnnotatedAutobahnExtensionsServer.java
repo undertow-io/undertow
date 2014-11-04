@@ -25,7 +25,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
-import io.undertow.websockets.extensions.PerMessageDeflateExtension;
+import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import org.jboss.logging.Logger;
@@ -105,7 +105,7 @@ public class AnnotatedAutobahnExtensionsServer implements Runnable {
                                             deployment = container;
                                         }
                                     })
-                                    .addExtension(new PerMessageDeflateExtension())
+                                    .addExtension(new PerMessageDeflateHandshake())
                     )
                     .setDeploymentName("servletContext.war");
 

@@ -97,7 +97,7 @@ public class WebSocketExtensionBasicTest {
                 .getMap());
 
         WebSocketProtocolHandshakeHandler handler = webSocketDebugHandler()
-                .addExtension(new PerMessageDeflateExtension());
+                .addExtension(new PerMessageDeflateHandshake());
 
         DebugExtensionsHeaderHandler debug = new DebugExtensionsHeaderHandler(handler);
 
@@ -113,7 +113,7 @@ public class WebSocketExtensionBasicTest {
         final WebSocketClientNegotiation negotiation = new WebSocketClientNegotiation(null, extensionsList);
 
         Set<ExtensionHandshake> extensionHandshakes = new HashSet<>();
-        extensionHandshakes.add(new PerMessageDeflateExtension(true));
+        extensionHandshakes.add(new PerMessageDeflateHandshake(true));
 
         final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, buffer, OptionMap.EMPTY, new URI("http://localhost:8080"), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
 
@@ -185,7 +185,7 @@ public class WebSocketExtensionBasicTest {
 
 
         WebSocketProtocolHandshakeHandler handler = webSocketDebugHandler()
-                .addExtension(new PerMessageDeflateExtension());
+                .addExtension(new PerMessageDeflateHandshake());
 
         DebugExtensionsHeaderHandler debug = new DebugExtensionsHeaderHandler(handler);
 
@@ -285,7 +285,7 @@ public class WebSocketExtensionBasicTest {
                 .getMap());
 
         WebSocketProtocolHandshakeHandler handler = webSocketDebugHandler()
-                .addExtension(new PerMessageDeflateExtension());
+                .addExtension(new PerMessageDeflateHandshake());
 
         DebugExtensionsHeaderHandler debug = new DebugExtensionsHeaderHandler(handler);
 
@@ -302,7 +302,7 @@ public class WebSocketExtensionBasicTest {
         final WebSocketClientNegotiation negotiation = new WebSocketClientNegotiation(null, extensions);
 
         Set<ExtensionHandshake> extensionHandshakes = new HashSet<>();
-        extensionHandshakes.add(new PerMessageDeflateExtension(true));
+        extensionHandshakes.add(new PerMessageDeflateHandshake(true));
 
         final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, buffer, OptionMap.EMPTY, new URI("http://localhost:8080"), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
 

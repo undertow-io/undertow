@@ -95,7 +95,7 @@ public class AutobahnExtensionsServer {
             server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
             WebSocketProtocolHandshakeHandler handler = webSocketDebugHandler()
-                    .addExtension(new PerMessageDeflateExtension());
+                    .addExtension(new PerMessageDeflateHandshake());
 
             DebugExtensionsHeaderHandler debug = new DebugExtensionsHeaderHandler(handler);
 

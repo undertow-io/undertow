@@ -19,7 +19,6 @@
 package io.undertow.websockets.extensions;
 
 import java.util.List;
-import java.util.Set;
 
 import io.undertow.websockets.WebSocketExtension;
 
@@ -38,11 +37,6 @@ public interface ExtensionHandshake {
      * @return name of the WebSocket Extension
      */
     String getName();
-
-    /**
-     * @return a set of incompatible WebSocket Extension names
-     */
-    Set<String> getIncompatibleExtensions();
 
     /**
      * Validate if an extension request is accepted.
