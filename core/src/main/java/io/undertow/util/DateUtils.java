@@ -200,18 +200,7 @@ public class DateUtils {
      * @return
      */
     public static boolean handleIfUnmodifiedSince(final HttpServerExchange exchange, final Date lastModified) {
-        if (lastModified == null) {
-            return true;
-        }
-        String modifiedSince = exchange.getRequestHeaders().getFirst(Headers.IF_UNMODIFIED_SINCE);
-        if (modifiedSince == null) {
-            return true;
-        }
-        Date modDate = parseDate(modifiedSince);
-        if (modDate == null) {
-            return true;
-        }
-        return lastModified.getTime() < (modDate.getTime() + 999); //UNDERTOW-341 +999 as there is no millisecond part in the if-unmodified-since
+        return handleIfModifiedSince(exchange.getRequestHeaders().getFirst(Headers.IF_UNMODIFIED_SINCE), lastModified);
     }
 
     /**
