@@ -138,4 +138,30 @@ public class DefaultServletTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+
+
+    @Test
+    public void testIfMoodifiedSince() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/index.html");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.contains("Redirected home page"));
+
+            String lm = result.getHeaders("Last-Modified")[0].getValue();
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/index.html");
+            get.addHeader("IF-Modified-Since", lm);
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.NOT_MODIFIED, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertFalse(response.contains("Redirected home page"));
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 }

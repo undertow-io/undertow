@@ -168,18 +168,7 @@ public class DateUtils {
      * @return
      */
     public static boolean handleIfModifiedSince(final HttpServerExchange exchange, final Date lastModified) {
-        if (lastModified == null) {
-            return true;
-        }
-        String modifiedSince = exchange.getRequestHeaders().getFirst(Headers.IF_MODIFIED_SINCE);
-        if (modifiedSince == null) {
-            return true;
-        }
-        Date modDate = parseDate(modifiedSince);
-        if (modDate == null) {
-            return true;
-        }
-        return lastModified.after(modDate);
+        return handleIfModifiedSince(exchange.getRequestHeaders().getFirst(Headers.IF_MODIFIED_SINCE), lastModified);
     }
 
     /**
@@ -200,7 +189,7 @@ public class DateUtils {
         if (modDate == null) {
             return true;
         }
-        return lastModified.after(modDate);
+        return lastModified.getTime() > (modDate.getTime() + 1000); //UNDERTOW-341 +1000 as there is no millisecond part in the if-modified-since
     }
 
     /**
@@ -222,7 +211,7 @@ public class DateUtils {
         if (modDate == null) {
             return true;
         }
-        return lastModified.before(modDate);
+        return lastModified.getTime() < (modDate.getTime() + 1000); //UNDERTOW-341 +1000 as there is no millisecond part in the if-unmodified-since
     }
 
     /**
@@ -243,7 +232,7 @@ public class DateUtils {
         if (modDate == null) {
             return true;
         }
-        return lastModified.after(modDate);
+        return lastModified.getTime() < (modDate.getTime() + 1000); //UNDERTOW-341 +1000 as there is no millisecond part in the if-unmodified-since
     }
 
     public static void addDateHeaderIfRequired(HttpServerExchange exchange) {

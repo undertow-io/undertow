@@ -18,7 +18,19 @@
 
 package io.undertow.servlet.test.util;
 
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
+import io.undertow.server.handlers.resource.Resource;
+import io.undertow.util.ETag;
+import io.undertow.util.MimeMappings;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Date;
+import java.util.List;
 
 /**
  * @author Stuart Douglas
@@ -29,4 +41,82 @@ public class TestResourceLoader extends ClassPathResourceManager {
         super(testClass.getClassLoader(), testClass.getPackage().getName().replace(".", "/"));
     }
 
+    @Override
+    public Resource getResource(String path) throws IOException {
+        final Resource delegate = super.getResource(path);
+        if(delegate == null) {
+            return delegate;
+        }
+        return new Resource() {
+            @Override
+            public String getPath() {
+                return delegate.getPath();
+            }
+
+            @Override
+            public Date getLastModified() {
+                return new Date(delegate.getLastModified().getTime() + 20); //file system dates may have a millisecond part, see UNDERTOW-341
+            }
+
+            @Override
+            public String getLastModifiedString() {
+                return delegate.getLastModifiedString();
+            }
+
+            @Override
+            public ETag getETag() {
+                return delegate.getETag();
+            }
+
+            @Override
+            public String getName() {
+                return delegate.getName();
+            }
+
+            @Override
+            public boolean isDirectory() {
+                return delegate.isDirectory();
+            }
+
+            @Override
+            public List<Resource> list() {
+                return delegate.list();
+            }
+
+            @Override
+            public String getContentType(MimeMappings mimeMappings) {
+                return delegate.getContentType(mimeMappings);
+            }
+
+            @Override
+            public void serve(Sender sender, HttpServerExchange exchange, IoCallback completionCallback) {
+                delegate.serve(sender, exchange, completionCallback);
+            }
+
+            @Override
+            public Long getContentLength() {
+                return delegate.getContentLength();
+            }
+
+            @Override
+            public String getCacheKey() {
+                return delegate.getCacheKey();
+            }
+
+            @Override
+            public File getFile() {
+                return delegate.getFile();
+            }
+
+            @Override
+            public File getResourceManagerRoot() {
+                return delegate.getResourceManagerRoot();
+            }
+
+            @Override
+            public URL getUrl() {
+                return delegate.getUrl();
+            }
+        };
+    }
 }
