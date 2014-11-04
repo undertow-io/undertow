@@ -189,7 +189,7 @@ public class DateUtils {
         if (modDate == null) {
             return true;
         }
-        return lastModified.getTime() > (modDate.getTime() + 1000); //UNDERTOW-341 +1000 as there is no millisecond part in the if-modified-since
+        return lastModified.getTime() > (modDate.getTime() + 999); //UNDERTOW-341 +999 as there is no millisecond part in the if-modified-since
     }
 
     /**
@@ -211,7 +211,7 @@ public class DateUtils {
         if (modDate == null) {
             return true;
         }
-        return lastModified.getTime() < (modDate.getTime() + 1000); //UNDERTOW-341 +1000 as there is no millisecond part in the if-unmodified-since
+        return lastModified.getTime() < (modDate.getTime() + 999); //UNDERTOW-341 +999 as there is no millisecond part in the if-unmodified-since
     }
 
     /**
@@ -232,7 +232,7 @@ public class DateUtils {
         if (modDate == null) {
             return true;
         }
-        return lastModified.getTime() < (modDate.getTime() + 1000); //UNDERTOW-341 +1000 as there is no millisecond part in the if-unmodified-since
+        return lastModified.getTime() < (modDate.getTime() + 999); //UNDERTOW-341 +999 as there is no millisecond part in the if-unmodified-since
     }
 
     public static void addDateHeaderIfRequired(HttpServerExchange exchange) {
