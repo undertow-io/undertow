@@ -70,8 +70,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
     private final ConnectorStatisticsImpl connectorStatistics;
 
-    //-1 - disabled
-    private final int requestParseTimeout;
     private ParseTimeoutUpdater parseTimeoutUpdater;
 
     HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser, ConnectorStatisticsImpl connectorStatistics) {
@@ -81,14 +79,23 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
-        this.requestParseTimeout = connection.getUndertowOptions().get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
-        this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection, requestParseTimeout);
+        int requestParseTimeout = connection.getUndertowOptions().get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
+        int requestIdleTimeout = connection.getUndertowOptions().get(UndertowOptions.NO_REQUEST_TIMEOUT, -1);
+        if(requestIdleTimeout < 0 && requestParseTimeout < 0) {
+            this.parseTimeoutUpdater = null;
+        } else {
+            this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection, requestParseTimeout, requestIdleTimeout);
+            connection.addCloseListener(parseTimeoutUpdater);
+        }
     }
 
     public void newRequest() {
         state.reset();
         read = 0;
         httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
+        if(parseTimeoutUpdater != null) {
+            parseTimeoutUpdater.connectionIdle();
+        }
     }
 
     public void handleEvent(final ConduitStreamSourceChannel channel) {
@@ -118,6 +125,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
         try {
             int res;
+            boolean bytesRead = false;
             do {
                 if (existing == null) {
                     buffer.clear();
@@ -133,8 +141,13 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 }
 
                 if (res <= 0) {
+                    if(bytesRead && parseTimeoutUpdater != null) {
+                        parseTimeoutUpdater.failedParse();
+                    }
                     handleFailedRead(channel, res);
                     return;
+                } else {
+                    bytesRead = true;
                 }
                 if (existing != null) {
                     existing = null;
@@ -142,7 +155,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 } else {
                     buffer.flip();
                 }
-                this.parseTimeoutUpdater.update();
                 parser.handle(buffer, state, httpServerExchange);
                 if (buffer.hasRemaining()) {
                     free = false;
@@ -156,7 +168,9 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     return;
                 }
             } while (!state.isComplete());
-            parseTimeoutUpdater.cancel();
+            if(parseTimeoutUpdater != null) {
+                parseTimeoutUpdater.requestStarted();
+            }
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
