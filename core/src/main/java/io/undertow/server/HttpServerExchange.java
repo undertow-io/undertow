@@ -1628,6 +1628,25 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Adds a listener that will be invoked on response commit
+     *
+     * @param listener The response listener
+     */
+    public void addResponseCommitListener(final ResponseCommitListener listener) {
+
+        //technically it is possible to modify the exchange after the response conduit has been created
+        //as the response channel should not be retrieved until it is about to be written to
+        //if we get complaints about this we can add support for it, however it makes the exchange bigger and the connectors more complex
+        addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
+            @Override
+            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+                listener.beforeCommit(exchange);
+                return factory.create();
+            }
+        });
+    }
+
+    /**
      * Actually resumes reads or writes, if the relevant method has been called.
      *
      * @return <code>true</code> if reads or writes were resumed
