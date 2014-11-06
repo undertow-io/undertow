@@ -38,12 +38,20 @@ import static io.undertow.Handlers.resource;
 /**
  * @author Stuart Douglas
  */
-@UndertowExample("Http2")
+@UndertowExample(value = "Http2", location = "https://localhost:8443")
 public class Http2Server {
 
     private static final char[] STORE_PASSWORD = "password".toCharArray();
 
     public static void main(final String[] args) throws Exception {
+        String version = System.getProperty("java.version");
+        System.out.println("Java version " + version);
+        if(version.charAt(0) == '1' && Integer.parseInt(version.charAt(2) + "") < 8 ) {
+            System.out.println("This example requires Java 1.8 or later");
+            System.out.println("The HTTP2 spec requires certain cyphers that are not present in older JVM's");
+            System.out.println("See section 9.2.2 of the HTTP2 specification for details");
+            System.exit(1);
+        }
         Undertow server = Undertow.builder()
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .addHttpsListener(8443, "localhost", createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore")))

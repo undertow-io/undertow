@@ -84,9 +84,11 @@ public class Runner {
 
             String example = names.get(data[0] - 'a');
             System.out.println("Running example " + example);
-            System.out.println("Please point your web browser at http://localhost:8080");
+            Class exampleClass = examples.get(example);
+            UndertowExample annotation = (UndertowExample) exampleClass.getAnnotation(UndertowExample.class);
+            System.out.println("Please point your web browser at " + annotation.location());
 
-            final Method main = examples.get(example).getDeclaredMethod("main", String[].class);
+            final Method main = exampleClass.getDeclaredMethod("main", String[].class);
             main.invoke(null, (Object)args);
 
         } catch (IOException e) {

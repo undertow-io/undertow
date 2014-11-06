@@ -30,4 +30,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface UndertowExample {
     String value();
+    String location() default "http://localhost:8080";
 }
