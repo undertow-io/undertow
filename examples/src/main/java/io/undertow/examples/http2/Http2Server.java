@@ -38,7 +38,7 @@ import static io.undertow.Handlers.resource;
 /**
  * @author Stuart Douglas
  */
-@UndertowExample(value = "Http2", location = "https://localhost:8443")
+@UndertowExample(value = "HTTP2", location = "https://localhost:8443")
 public class Http2Server {
 
     private static final char[] STORE_PASSWORD = "password".toCharArray();
