@@ -344,21 +344,24 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
-                    try {
-                        invocation.run();
-                    } finally {
-                        handle.tearDown();
-                    }
+                    invokeEndpointMethod(invocation);
                 }
             });
         } else {
-            ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
-            try {
-                invocation.run();
-            } finally {
-                handle.tearDown();
-            }
+            invokeEndpointMethod(invocation);
+        }
+    }
+
+    /**
+     * Directly invokes an endpoint method, without dispatching to an executor
+     * @param invocation The invocation
+     */
+    public void invokeEndpointMethod(final Runnable invocation) {
+        ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
+        try {
+            invocation.run();
+        } finally {
+            handle.tearDown();
         }
     }
 
