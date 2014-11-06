@@ -18,9 +18,6 @@
 
 package io.undertow;
 
-import io.undertow.security.api.AuthenticationMode;
-import io.undertow.security.api.GSSAPIServerSubjectFactory;
-import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
@@ -55,7 +52,6 @@ import java.util.List;
 /**
  * Convenience class used to build an Undertow server.
  * <p/>
- * TODO: This API is still a work in progress
  *
  * @author Stuart Douglas
  */
@@ -207,67 +203,6 @@ public class Undertow {
             this.keyManagers = null;
             this.trustManagers = null;
             this.sslContext = sslContext;
-        }
-    }
-
-    public static class LoginConfig {
-        private final IdentityManager identityManager;
-        private boolean basic;
-        private boolean digest;
-        private boolean kerberos;
-        private boolean form;
-        private String realmName;
-        private String errorPage, loginPage;
-        private GSSAPIServerSubjectFactory subjectFactory;
-        private AuthenticationMode authenticationMode = AuthenticationMode.PRO_ACTIVE;
-
-        public LoginConfig(final IdentityManager identityManager) {
-            this.identityManager = identityManager;
-        }
-
-        public LoginConfig basicAuth(final String realmName) {
-            if (digest) {
-                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("basic", "digest");
-            } else if (form) {
-                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("basic", "form");
-            }
-            basic = true;
-            this.realmName = realmName;
-            return this;
-        }
-
-        public LoginConfig digestAuth(final String realmName) {
-            if (basic) {
-                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("digest", "basic");
-            } else if (form) {
-                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("digest", "form");
-            }
-            digest = true;
-            this.realmName = realmName;
-            return this;
-        }
-
-        public LoginConfig kerberosAuth(GSSAPIServerSubjectFactory subjectFactory) {
-            kerberos = true;
-            this.subjectFactory = subjectFactory;
-            return this;
-        }
-
-        public LoginConfig formAuth(final String loginPage, final String errorPage) {
-            if (digest) {
-                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("form", "digest");
-            } else if (basic) {
-                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("form", "basic");
-            }
-            this.loginPage = loginPage;
-            this.errorPage = errorPage;
-            form = true;
-            return this;
-        }
-
-        public LoginConfig setAuthenticationMode(final AuthenticationMode authenticationMode) {
-            this.authenticationMode = authenticationMode;
-            return this;
         }
     }
 
