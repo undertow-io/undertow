@@ -118,7 +118,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Map.class, session.getPathParameters());
                 params.put(method.getMessageType(), partialMessage);
                 params.put(boolean.class, last);
-                session.getContainer().invokeEndpointMethod(executor, new Runnable() {
+                session.getContainer().invokeEndpointMethod(new Runnable() {
                     @Override
                     public void run() {
                         final Object result;
@@ -146,7 +146,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 params.put(method.getMessageType(), partialMessage);
-                session.getContainer().invokeEndpointMethod(executor, new Runnable() {
+                session.getContainer().invokeEndpointMethod(new Runnable() {
                     @Override
                     public void run() {
                         final Object result;
