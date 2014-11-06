@@ -106,19 +106,25 @@ public class DirectoryUtils {
 
         int state = 0;
         String parent = null;
-        for (int i = path.length() - 1; i >= 0; i--) {
-            if (state == 1) {
-                if (path.charAt(i) == '/') {
-                    state = 2;
+        if(path.length() > 1) {
+            for (int i = path.length() - 1; i >= 0; i--) {
+                if (state == 1) {
+                    if (path.charAt(i) == '/') {
+                        state = 2;
+                    }
+                } else if (path.charAt(i) != '/') {
+                    if (state == 2) {
+                        parent = path.substring(0, i + 1);
+                        break;
+                    }
+                    state = 1;
                 }
-            } else if (path.charAt(i) != '/') {
-                if (state == 2) {
-                    parent = path.substring(0, i + 1);
-                    break;
-                }
-                state = 1;
+            }
+            if(parent == null) {
+                parent = "/";
             }
         }
+
 
         SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss");
         int i = 0;
