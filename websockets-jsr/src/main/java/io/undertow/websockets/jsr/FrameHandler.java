@@ -279,6 +279,8 @@ class FrameHandler extends AbstractReceiveListener {
         HandlerWrapper handler = getHandler(FrameType.BYTE);
         if (handler != null) {
             invokeBinaryHandler(message, handler, true);
+        } else {
+            message.getData().free();
         }
     }
 
