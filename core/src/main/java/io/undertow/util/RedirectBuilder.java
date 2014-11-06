@@ -117,7 +117,7 @@ public class RedirectBuilder {
                 break;
             } else if (c == '/') {
                 if (pos != i) {
-                    String original = part.substring(pos, i - 1);
+                    String original = part.substring(pos, i);
                     String encoded = URLEncoder.encode(original, UTF_8);
                     if (!encoded.equals(original)) {
                         return realEncode(part, pos);
@@ -141,7 +141,7 @@ public class RedirectBuilder {
                 break;
             } else if (c == '/') {
                 if (pos != i) {
-                    String original = part.substring(pos, i - 1);
+                    String original = part.substring(pos, i);
                     String encoded = URLEncoder.encode(original, UTF_8);
                     sb.append(encoded);
                     sb.append('/');
