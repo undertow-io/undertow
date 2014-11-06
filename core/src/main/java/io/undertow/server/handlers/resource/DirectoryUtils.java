@@ -153,11 +153,6 @@ public class DirectoryUtils {
     }
 
     public static void renderDirectoryListing(HttpServerExchange exchange, Resource resource) {
-        if(exchange.getConnection().isPushSupported()) {
-            //try and push our resources to the remote endpoint
-            exchange.getConnection().pushResource(exchange.getRequestURI() + "?js", Methods.GET, new HeaderMap(), exchange);
-            exchange.getConnection().pushResource(exchange.getRequestURI() + "?css", Methods.GET, new HeaderMap(), exchange);
-        }
         String requestPath = exchange.getRequestPath();
         if (! requestPath.endsWith("/")) {
             exchange.setResponseCode(StatusCodes.FOUND);
@@ -165,7 +160,12 @@ public class DirectoryUtils {
             exchange.endExchange();
             return;
         }
-        String resolvedPath = exchange.getResolvedPath();
+
+        if(exchange.getConnection().isPushSupported()) {
+            //try and push our resources to the remote endpoint
+            exchange.getConnection().pushResource(exchange.getRequestURI() + "?js", Methods.GET, new HeaderMap(), exchange);
+            exchange.getConnection().pushResource(exchange.getRequestURI() + "?css", Methods.GET, new HeaderMap(), exchange);
+        }
 
         StringBuilder builder = renderDirectoryListing(requestPath, resource);
 
