@@ -56,7 +56,7 @@ public class Http2Server {
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.ENABLE_SPDY, true)
                 .addHttpsListener(8443, "localhost", createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore")))
-                .setHandler(resource(new FileResourceManager(new File(System.getProperty("user.home")), 100))
+                .setHandler(resource(new FileResourceManager(new File(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
                         .setDirectoryListingEnabled(true))
                 .build();
         server.start();
