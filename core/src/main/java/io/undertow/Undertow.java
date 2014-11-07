@@ -150,12 +150,12 @@ public class Undertow {
                             if(spdy) {
                                 SpdyOpenListener spdyListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions);
                                 spdyListener.setRootHandler(rootHandler);
-                                alpn.addProtocol(SpdyOpenListener.SPDY_3_1, spdyListener);
+                                alpn.addProtocol(SpdyOpenListener.SPDY_3_1, spdyListener, 5);
                             }
                             if(http2) {
                                 Http2OpenListener http2Listener = new Http2OpenListener(buffers, undertowOptions);
                                 http2Listener.setRootHandler(rootHandler);
-                                alpn.addProtocol(Http2OpenListener.HTTP2, http2Listener);
+                                alpn.addProtocol(Http2OpenListener.HTTP2, http2Listener, 10);
                             }
                             openListener = alpn;
                         } else {
