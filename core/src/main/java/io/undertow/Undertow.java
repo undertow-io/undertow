@@ -22,8 +22,8 @@ import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.OpenListener;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
+import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.spdy.SpdyOpenListener;
 import org.xnio.BufferAllocator;
@@ -141,11 +141,23 @@ public class Undertow {
                         server.resumeAccepts();
                         channels.add(server);
                     } else if (listener.type == ListenerType.HTTPS) {
-                        OpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
-                        if(serverOptions.get(UndertowOptions.ENABLE_SPDY, false)) {
-                            openListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions, (HttpOpenListener) openListener);
+                        ChannelListener<StreamConnection> openListener;
+
+                        HttpOpenListener httpOpenListener = new HttpOpenListener(buffers, undertowOptions);
+                        httpOpenListener.setRootHandler(rootHandler);
+
+                        boolean spdy = serverOptions.get(UndertowOptions.ENABLE_SPDY, false);
+                        if(spdy) {
+                            AlpnOpenListener alpn = new AlpnOpenListener(buffers, httpOpenListener);
+                            if(spdy) {
+                                SpdyOpenListener spdyListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions);
+                                spdyListener.setRootHandler(rootHandler);
+                                alpn.addProtocol(SpdyOpenListener.SPDY_3_1, spdyListener);
+                            }
+                            openListener = alpn;
+                        } else {
+                            openListener = httpOpenListener;
                         }
-                        openListener.setRootHandler(rootHandler);
                         ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                         XnioSsl xnioSsl;
                         if (listener.sslContext != null) {

@@ -23,8 +23,8 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
+import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.OpenListener;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -42,7 +42,7 @@ import java.nio.ByteBuffer;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpOpenListener implements ChannelListener<StreamConnection>, OpenListener {
+public final class HttpOpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
 
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
@@ -77,7 +77,11 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     }
 
     @Override
-    public void handleEvent(final StreamConnection channel) {
+    public void handleEvent(StreamConnection channel) {
+        handleEvent(channel, null);
+    }
+    @Override
+    public void handleEvent(final StreamConnection channel, Pooled<ByteBuffer> buffer) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
@@ -111,6 +115,14 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         HttpReadListener readListener = new HttpReadListener(connection, parser);
+
+        if(buffer != null) {
+            if(buffer.getResource().hasRemaining()) {
+                connection.setExtraBytes(buffer);
+            } else {
+                buffer.free();
+            }
+        }
 
         connection.setReadListener(readListener);
         readListener.newRequest();

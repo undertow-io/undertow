@@ -127,7 +127,11 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, FramePriority<C, R, S> framePriority, final Pooled<ByteBuffer> readData) {
         this.framePriority = framePriority;
         if (readData != null) {
-            this.readData = new ReferenceCountedPooled<>(readData, 1);
+            if(readData.getResource().hasRemaining()) {
+                this.readData = new ReferenceCountedPooled<>(readData, 1);
+            } else {
+                readData.free();
+            }
         }
         if(bufferPool == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("bufferPool");
