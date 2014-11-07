@@ -284,12 +284,7 @@ public class SpdyClientProvider implements ClientProvider {
 
         @Override
         public void unsupported() {
-            String existing = (String) sslEngine.getHandshakeSession().getValue(PROTOCOL_KEY);
-            if(existing != null) {
-                selected = existing;
-            } else {
-                selected = HTTP_1_1;
-            }
+            selected = HTTP_1_1;
         }
 
         @Override
