@@ -172,74 +172,64 @@ public class Http2ClientProvider implements ClientProvider {
         final SslConnection sslConnection = (SslConnection) connection;
         final SSLEngine sslEngine = JsseXnioSsl.getSslEngine(sslConnection);
 
-        String existing = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
-        if(existing != null) {
-            if (existing.equals(HTTP2)) {
-                listener.completed(createHttp2Channel(connection, bufferPool, options));
-            } else {
-                sslConnection.getSourceChannel().suspendReads();
-                http2FailedListener.handleEvent(sslConnection);
-            }
-        } else {
+        final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(sslEngine);
+        try {
+            ALPN_PUT_METHOD.invoke(null, sslEngine, spdySelectionProvider);
+        } catch (Exception e) {
+            http2FailedListener.handleEvent(sslConnection);
+            return;
+        }
 
-            final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(sslEngine);
-            try {
-                ALPN_PUT_METHOD.invoke(null, sslEngine, spdySelectionProvider);
-            } catch (Exception e) {
-                http2FailedListener.handleEvent(sslConnection);
-                return;
-            }
+        try {
+            sslConnection.startHandshake();
+            sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+                @Override
+                public void handleEvent(StreamSourceChannel channel) {
 
-            try {
-                sslConnection.startHandshake();
-                sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
-                    @Override
-                    public void handleEvent(StreamSourceChannel channel) {
-
-                        if (spdySelectionProvider.selected != null) {
-                            if (spdySelectionProvider.selected.equals(HTTP_1_1)) {
+                    if (spdySelectionProvider.selected != null) {
+                        if (spdySelectionProvider.selected.equals(HTTP_1_1)) {
+                            sslConnection.getSourceChannel().suspendReads();
+                            http2FailedListener.handleEvent(sslConnection);
+                            return;
+                        } else if (spdySelectionProvider.selected.equals(HTTP2)) {
+                            listener.completed(createHttp2Channel(connection, bufferPool, options));
+                        }
+                    } else {
+                        ByteBuffer buf = ByteBuffer.allocate(100);
+                        try {
+                            int read = channel.read(buf);
+                            if (read > 0) {
+                                PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
+                                pb.pushBack(new ImmediatePooled<>(buf));
+                                connection.getSourceChannel().setConduit(pb);
+                            }
+                            if (spdySelectionProvider.selected == null) {
+                                spdySelectionProvider.selected = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
+                            }
+                            if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
                                 sslConnection.getSourceChannel().suspendReads();
                                 http2FailedListener.handleEvent(sslConnection);
                                 return;
-                            } else if (spdySelectionProvider.selected.equals(HTTP2)) {
-                                listener.completed(createHttp2Channel(connection, bufferPool, options));
+                            } else if (spdySelectionProvider.selected != null) {
+                                //we have spdy
+                                if (spdySelectionProvider.selected.equals(HTTP2)) {
+                                    listener.completed(createHttp2Channel(connection, bufferPool, options));
+                                }
                             }
-                        } else {
-                            ByteBuffer buf = ByteBuffer.allocate(100);
-                            try {
-                                int read = channel.read(buf);
-                                if (read > 0) {
-                                    PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
-                                    pb.pushBack(new ImmediatePooled<>(buf));
-                                    connection.getSourceChannel().setConduit(pb);
-                                }
-                                if(spdySelectionProvider.selected == null) {
-                                    spdySelectionProvider.selected = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
-                                }
-                                if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
-                                    sslConnection.getSourceChannel().suspendReads();
-                                    http2FailedListener.handleEvent(sslConnection);
-                                    return;
-                                } else if (spdySelectionProvider.selected != null) {
-                                    //we have spdy
-                                    if (spdySelectionProvider.selected.equals(HTTP2)) {
-                                        listener.completed(createHttp2Channel(connection, bufferPool, options));
-                                    }
-                                }
-                            } catch (IOException e) {
-                                listener.failed(e);
-                            }
+                        } catch (IOException e) {
+                            listener.failed(e);
                         }
                     }
+                }
 
-                });
-                sslConnection.getSourceChannel().resumeReads();
-            } catch (IOException e) {
-                listener.failed(e);
-            } catch (Throwable e) {
-                listener.failed(new IOException(e));
-            }
+            });
+            sslConnection.getSourceChannel().resumeReads();
+        } catch (IOException e) {
+            listener.failed(e);
+        } catch (Throwable e) {
+            listener.failed(new IOException(e));
         }
+
 
     }
 
@@ -268,12 +258,7 @@ public class Http2ClientProvider implements ClientProvider {
 
         @Override
         public void unsupported() {
-            String existing = (String) sslEngine.getHandshakeSession().getValue(PROTOCOL_KEY);
-            if(existing != null) {
-                selected = existing;
-            } else {
-                selected = HTTP_1_1;
-            }
+            selected = HTTP_1_1;
         }
 
         @Override
