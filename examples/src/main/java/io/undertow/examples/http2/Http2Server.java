@@ -84,22 +84,26 @@ public class Http2Server {
         } else {
             stream = new FileInputStream(storeLoc);
         }
-        String pw = System.getProperty(name + ".password");
 
         try {
             KeyStore loadedKeystore = KeyStore.getInstance("JKS");
-            loadedKeystore.load(stream, pw != null ? pw.toCharArray() : STORE_PASSWORD);
+            loadedKeystore.load(stream, password());
             return loadedKeystore;
         } finally {
             IoUtils.safeClose(stream);
         }
     }
 
+    static char[] password() {
+        String pw = System.getProperty("keystore.password");
+        return pw != null ? pw.toCharArray() : STORE_PASSWORD;
+    }
+
 
     private static SSLContext createSSLContext(final KeyStore keyStore, final KeyStore trustStore) throws Exception {
         KeyManager[] keyManagers;
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(keyStore, STORE_PASSWORD);
+        keyManagerFactory.init(keyStore, password());
         keyManagers = keyManagerFactory.getKeyManagers();
 
         TrustManager[] trustManagers = null;
