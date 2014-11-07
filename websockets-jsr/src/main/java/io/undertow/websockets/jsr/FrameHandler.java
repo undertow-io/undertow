@@ -78,6 +78,8 @@ class FrameHandler extends AbstractReceiveListener {
         final Pooled<ByteBuffer[]> pooled = message.getData();
         final ByteBuffer singleBuffer = toBuffer(pooled.getResource());
         final ByteBuffer toSend = singleBuffer.duplicate();
+        //send the close immediatly
+        WebSockets.sendClose(toSend, channel, null);
 
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
@@ -94,7 +96,6 @@ class FrameHandler extends AbstractReceiveListener {
                     invokeOnError(e);
                 } finally {
                     pooled.free();
-                    WebSockets.sendClose(toSend, channel, null);
                 }
             }
         });
