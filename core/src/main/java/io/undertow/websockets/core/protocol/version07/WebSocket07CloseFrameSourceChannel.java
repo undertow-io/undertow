@@ -17,7 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
-import io.undertow.websockets.core.FixedPayloadFrameSourceChannel;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import org.xnio.Pooled;
@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel {
+class WebSocket07CloseFrameSourceChannel extends StreamSourceFrameChannel {
     private final ByteBuffer status = ByteBuffer.allocate(2);
     private boolean statusValidated;
     private final Masker masker;
@@ -38,15 +38,15 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
         VALIDATE
     }
 
-    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, long payloadSize, int rsv, Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
+    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
         // no fragmentation allowed per spec
-        super(wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, pooled, frameLength, masker, new UTF8Checker());
+        super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, masker, new UTF8Checker());
         this.masker = masker;
     }
 
-    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, long payloadSize, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
+    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
         // no fragmentation allowed per spec
-        super(wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, pooled, frameLength, new UTF8Checker());
+        super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, new UTF8Checker());
         masker = null;
     }
 

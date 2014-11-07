@@ -17,7 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
-import io.undertow.websockets.core.FixedPayloadFrameSourceChannel;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import org.xnio.Pooled;
@@ -27,14 +27,14 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class WebSocket07PongFrameSourceChannel extends FixedPayloadFrameSourceChannel {
-    WebSocket07PongFrameSourceChannel(WebSocketChannel wsChannel, long payloadSize, int rsv, final Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
+class WebSocket07PongFrameSourceChannel extends StreamSourceFrameChannel {
+    WebSocket07PongFrameSourceChannel(WebSocketChannel wsChannel, int rsv, final Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
         // can not be fragmented
-        super(wsChannel, WebSocketFrameType.PONG, payloadSize, rsv, true, pooled, frameLength, masker);
+        super(wsChannel, WebSocketFrameType.PONG, rsv, true, pooled, frameLength, masker);
     }
 
-    WebSocket07PongFrameSourceChannel(WebSocketChannel wsChannel, long payloadSize, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
+    WebSocket07PongFrameSourceChannel(WebSocketChannel wsChannel, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
         // can not be fragmented
-        super(wsChannel, WebSocketFrameType.PONG, payloadSize, rsv, true, pooled, frameLength);
+        super(wsChannel, WebSocketFrameType.PONG, rsv, true, pooled, frameLength);
     }
 }

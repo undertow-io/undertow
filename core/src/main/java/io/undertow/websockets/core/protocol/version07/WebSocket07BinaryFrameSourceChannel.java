@@ -17,7 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
-import io.undertow.websockets.core.FixedPayloadFrameSourceChannel;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import org.xnio.Pooled;
@@ -28,12 +28,12 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class WebSocket07BinaryFrameSourceChannel extends FixedPayloadFrameSourceChannel {
-    WebSocket07BinaryFrameSourceChannel(WebSocketChannel wsChannel, long payloadSize, int rsv, boolean finalFragment, Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
-        super(wsChannel, WebSocketFrameType.BINARY, payloadSize, rsv, finalFragment, pooled, frameLength, masker);
+class WebSocket07BinaryFrameSourceChannel extends StreamSourceFrameChannel {
+    WebSocket07BinaryFrameSourceChannel(WebSocketChannel wsChannel, int rsv, boolean finalFragment, Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
+        super(wsChannel, WebSocketFrameType.BINARY, rsv, finalFragment, pooled, frameLength, masker);
     }
 
-    WebSocket07BinaryFrameSourceChannel(WebSocketChannel wsChannel, long payloadSize, int rsv, boolean finalFragment, Pooled<ByteBuffer> pooled, long frameLength) {
-        super(wsChannel, WebSocketFrameType.BINARY, payloadSize, rsv, finalFragment, pooled, frameLength);
+    WebSocket07BinaryFrameSourceChannel(WebSocketChannel wsChannel, int rsv, boolean finalFragment, Pooled<ByteBuffer> pooled, long frameLength) {
+        super(wsChannel, WebSocketFrameType.BINARY, rsv, finalFragment, pooled, frameLength);
     }
 }
