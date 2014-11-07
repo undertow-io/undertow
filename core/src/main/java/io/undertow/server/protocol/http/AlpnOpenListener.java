@@ -93,10 +93,10 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
         final AlpnConnectionListener potentialConnection = new AlpnConnectionListener(channel);
         channel.getSourceChannel().setReadListener(potentialConnection);
         final SSLEngine sslEngine = JsseXnioSsl.getSslEngine((SslConnection) channel);
-        final String existing = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
         ALPN.put(sslEngine, new ALPN.ServerProvider() {
             @Override
             public void unsupported() {
+                final String existing = (String) sslEngine.getHandshakeSession().getValue(PROTOCOL_KEY);
                 if (existing == null || !listeners.containsKey(existing)) {
                     if(fallbackProtocol == null) {
                         UndertowLogger.REQUEST_IO_LOGGER.noALPNFallback(channel.getPeerAddress());
@@ -133,7 +133,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
                     IoUtils.safeClose(channel);
                     return null;
                 }
-                sslEngine.getSession().putValue(PROTOCOL_KEY, fallbackProtocol);
+                sslEngine.getHandshakeSession().putValue(PROTOCOL_KEY, fallbackProtocol);
                 potentialConnection.selected = fallbackProtocol;
                 return fallbackProtocol;
             }
