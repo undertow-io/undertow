@@ -18,34 +18,23 @@
 
 package io.undertow.server.protocol.http2;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-import javax.net.ssl.SSLEngine;
-
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
+import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
-import org.eclipse.jetty.alpn.ALPN;
+import io.undertow.server.DelegateOpenListener;
+import io.undertow.server.HttpHandler;
 import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.PushBackStreamSourceConduit;
-import org.xnio.ssl.JsseXnioSsl;
-import org.xnio.ssl.SslConnection;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.protocols.http2.Http2Channel;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.OpenListener;
-import io.undertow.server.protocol.http.HttpOpenListener;
+import java.nio.ByteBuffer;
 
 
 /**
@@ -53,79 +42,50 @@ import io.undertow.server.protocol.http.HttpOpenListener;
  *
  * @author Stuart Douglas
  */
-public final class Http2OpenListener implements ChannelListener<StreamConnection>, OpenListener {
+public final class Http2OpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
 
-    private static final String PROTOCOL_KEY = Http2OpenListener.class.getName() + ".protocol";
+    public  static final String HTTP2 = "h2-14";
 
-    private static final String HTTP2 = "h2-14";
-    private static final String HTTP_1_1 = "http/1.1";
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
 
     private volatile HttpHandler rootHandler;
 
     private volatile OptionMap undertowOptions;
-    private final HttpOpenListener delegate;
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
 
     public Http2OpenListener(final Pool<ByteBuffer> pool) {
-        this(pool, OptionMap.EMPTY, null);
+        this(pool, OptionMap.EMPTY);
     }
 
     public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
-        this(pool, undertowOptions, null);
-    }
-
-    public Http2OpenListener(final Pool<ByteBuffer> pool, HttpOpenListener httpDelegate) {
-        this(pool, OptionMap.EMPTY, httpDelegate);
-    }
-
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, HttpOpenListener httpDelegate) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
         Pooled<ByteBuffer> buf = pool.allocate();
         this.bufferSize = buf.getResource().remaining();
         buf.free();
-        this.delegate = httpDelegate;
         connectorStatistics = new ConnectorStatisticsImpl();
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 
-    public void handleEvent(final StreamConnection channel) {
+    public void handleEvent(final StreamConnection channel, Pooled<ByteBuffer> buffer) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
-            UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
+            UndertowLogger.REQUEST_LOGGER.tracef("Opened HTTP1 connection with %s", channel.getPeerAddress());
         }
-        final PotentialHttp2Connection potentialConnection = new PotentialHttp2Connection(channel);
-        channel.getSourceChannel().setReadListener(potentialConnection);
-        final SSLEngine sslEngine = JsseXnioSsl.getSslEngine((SslConnection) channel);
-        final String existing = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
-        ALPN.put(sslEngine, new ALPN.ServerProvider() {
-            @Override
-            public void unsupported() {
-                if(existing == null) {
-                    potentialConnection.selected = HTTP_1_1;
-                } else {
-                    potentialConnection.selected = existing;
-                }
-            }
 
-            @Override
-            public String select(List<String> strings) {
-                ALPN.remove(sslEngine);
-                for (String s : strings) {
-                    if (s.equals(HTTP2)) {
-                        potentialConnection.selected = s;
-                        sslEngine.getSession().putValue(PROTOCOL_KEY, s);
-                        return s;
-                    }
-                }
-                sslEngine.getSession().putValue(PROTOCOL_KEY, HTTP_1_1);
-                potentialConnection.selected = HTTP_1_1;
-                return HTTP_1_1;
-            }
-        });
-        potentialConnection.handleEvent(channel.getSourceChannel());
+        //cool, we have a Http2 connection.
+        Http2Channel http2Channel = new Http2Channel(channel, bufferPool, buffer, false, false, undertowOptions);
+        Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
+        if (idleTimeout != null && idleTimeout > 0) {
+            http2Channel.setIdleTimeout(idleTimeout);
+        }
+        if(statisticsEnabled) {
+            channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
+            channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
+        }
+        http2Channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics));
+        http2Channel.resumeReceives();
 
     }
 
@@ -144,9 +104,6 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     @Override
     public void setRootHandler(final HttpHandler rootHandler) {
         this.rootHandler = rootHandler;
-        if (delegate != null) {
-            delegate.setRootHandler(rootHandler);
-        }
     }
 
     @Override
@@ -168,71 +125,8 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         return bufferPool;
     }
 
-    private class PotentialHttp2Connection implements ChannelListener<StreamSourceChannel> {
-        private String selected;
-        private final StreamConnection channel;
-
-        private PotentialHttp2Connection(StreamConnection channel) {
-            this.channel = channel;
-        }
-
-        @Override
-        public void handleEvent(StreamSourceChannel source) {
-            Pooled<ByteBuffer> buffer = bufferPool.allocate();
-            boolean free = true;
-            try {
-                while (true) {
-                    int res = channel.getSourceChannel().read(buffer.getResource());
-                    if (res == -1) {
-                        IoUtils.safeClose(channel);
-                        return;
-                    }
-                    buffer.getResource().flip();
-                    if (HTTP2.equals(selected)) {
-
-                        //cool, we have a Http2 connection.
-                        Http2Channel channel = new Http2Channel(this.channel, bufferPool, buffer, false, false, undertowOptions);
-                        Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
-                        if (idleTimeout != null && idleTimeout > 0) {
-                            channel.setIdleTimeout(idleTimeout);
-                        }
-                        if(statisticsEnabled) {
-                            this.channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(this.channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
-                            this.channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(this.channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
-                        }
-                        free = false;
-                        channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics));
-                        channel.resumeReceives();
-                        return;
-                    } else if (HTTP_1_1.equals(selected) || res > 0) {
-                        if (delegate == null) {
-                            UndertowLogger.REQUEST_IO_LOGGER.couldNotInitiateHttp2Connection();
-                            IoUtils.safeClose(channel);
-                            return;
-                        }
-                        channel.getSourceChannel().setReadListener(null);
-                        if (res > 0) {
-                            PushBackStreamSourceConduit pushBackStreamSourceConduit = new PushBackStreamSourceConduit(channel.getSourceChannel().getConduit());
-                            channel.getSourceChannel().setConduit(pushBackStreamSourceConduit);
-                            pushBackStreamSourceConduit.pushBack(buffer);
-                            free = false;
-                        }
-                        delegate.handleEvent(channel);
-                        return;
-                    } else if (res == 0) {
-                        channel.getSourceChannel().resumeReads();
-                        return;
-                    }
-                }
-
-            } catch (IOException e) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                IoUtils.safeClose(channel);
-            } finally {
-                if (free) {
-                    buffer.free();
-                }
-            }
-        }
+    @Override
+    public void handleEvent(StreamConnection channel) {
+        handleEvent(channel, null);
     }
 }

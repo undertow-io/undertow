@@ -20,6 +20,7 @@ package io.undertow.http2.tests.framework;
 
 import io.undertow.UndertowOptions;
 import io.undertow.server.OpenListener;
+import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
 import org.jboss.logging.Logger;
 import org.xnio.BufferAllocator;
@@ -76,8 +77,9 @@ public class UndertowTestServer implements ServerController {
                     .set(Options.BALANCING_CONNECTIONS, 2)
                     .getMap();
 
-            openListener = new Http2OpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2 * BUFFER_SIZE, 100 * BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
-            acceptListener = ChannelListeners.openListenerAdapter(openListener);
+            ByteBufferSlicePool pool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2 * BUFFER_SIZE, 100 * BUFFER_SIZE);
+            openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
+            acceptListener = ChannelListeners.openListenerAdapter(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener));
 
             SSLContext serverContext = Http2TestRunner.getServerSslContext();
             XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, serverContext);

@@ -19,8 +19,8 @@
 package io.undertow;
 
 import io.undertow.server.HttpHandler;
-import io.undertow.server.OpenListener;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
+import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.server.protocol.spdy.SpdyOpenListener;
@@ -138,14 +138,29 @@ public class Undertow {
                         server.resumeAccepts();
                         channels.add(server);
                     } else if (listener.type == ListenerType.HTTPS) {
-                        OpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
-                        //TODO: support both HTTP2 and SPDY
-                        if(serverOptions.get(UndertowOptions.ENABLE_SPDY, false)) {
-                            openListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions, (HttpOpenListener) openListener);
-                        } else if(serverOptions.get(UndertowOptions.ENABLE_HTTP2, false)) {
-                            openListener = new Http2OpenListener(buffers, undertowOptions, (HttpOpenListener) openListener);
+                        ChannelListener<StreamConnection> openListener;
+
+                        HttpOpenListener httpOpenListener = new HttpOpenListener(buffers, undertowOptions);
+                        httpOpenListener.setRootHandler(rootHandler);
+
+                        boolean spdy = serverOptions.get(UndertowOptions.ENABLE_SPDY, false);
+                        boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, false);
+                        if(spdy || http2) {
+                            AlpnOpenListener alpn = new AlpnOpenListener(buffers, httpOpenListener);
+                            if(spdy) {
+                                SpdyOpenListener spdyListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions);
+                                spdyListener.setRootHandler(rootHandler);
+                                alpn.addProtocol(SpdyOpenListener.SPDY_3_1, spdyListener);
+                            }
+                            if(http2) {
+                                Http2OpenListener http2Listener = new Http2OpenListener(buffers, undertowOptions);
+                                http2Listener.setRootHandler(rootHandler);
+                                alpn.addProtocol(Http2OpenListener.HTTP2, http2Listener);
+                            }
+                            openListener = alpn;
+                        } else {
+                            openListener = httpOpenListener;
                         }
-                        openListener.setRootHandler(rootHandler);
                         ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                         XnioSsl xnioSsl;
                         if (listener.sslContext != null) {

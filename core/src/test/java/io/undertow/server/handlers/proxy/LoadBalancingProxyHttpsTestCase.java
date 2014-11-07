@@ -28,6 +28,7 @@ import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.ProxyIgnore;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
@@ -46,6 +47,7 @@ import static io.undertow.Handlers.path;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@ProxyIgnore
 public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyTestCase {
 
     @BeforeClass

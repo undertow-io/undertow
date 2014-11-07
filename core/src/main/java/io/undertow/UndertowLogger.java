@@ -180,4 +180,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.DEBUG)
     @Message(id = 5035, value = "Closing channel because of parse timeout for remote address %s")
     void parseRequestTimedOut(java.net.SocketAddress remoteAddress);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5036, value = "ALPN negotiation failed for %s and no fallback defined, closing connection")
+    void noALPNFallback(SocketAddress address);
 }
