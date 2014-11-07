@@ -79,7 +79,7 @@ public class UndertowTestServer implements ServerController {
 
             ByteBufferSlicePool pool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2 * BUFFER_SIZE, 100 * BUFFER_SIZE);
             openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
-            acceptListener = ChannelListeners.openListenerAdapter(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener));
+            acceptListener = ChannelListeners.openListenerAdapter(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10));
 
             SSLContext serverContext = Http2TestRunner.getServerSslContext();
             XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, serverContext);
