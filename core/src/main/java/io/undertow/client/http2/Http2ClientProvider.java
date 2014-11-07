@@ -213,6 +213,9 @@ public class Http2ClientProvider implements ClientProvider {
                                     pb.pushBack(new ImmediatePooled<>(buf));
                                     connection.getSourceChannel().setConduit(pb);
                                 }
+                                if(spdySelectionProvider.selected == null) {
+                                    spdySelectionProvider.selected = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
+                                }
                                 if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
                                     sslConnection.getSourceChannel().suspendReads();
                                     http2FailedListener.handleEvent(sslConnection);
@@ -265,7 +268,12 @@ public class Http2ClientProvider implements ClientProvider {
 
         @Override
         public void unsupported() {
-            selected = HTTP_1_1;
+            String existing = (String) sslEngine.getHandshakeSession().getValue(PROTOCOL_KEY);
+            if(existing != null) {
+                selected = existing;
+            } else {
+                selected = HTTP_1_1;
+            }
         }
 
         @Override
@@ -273,7 +281,7 @@ public class Http2ClientProvider implements ClientProvider {
 
             ALPN.remove(sslEngine);
             selected = s;
-            sslEngine.getSession().putValue(PROTOCOL_KEY, selected);
+            sslEngine.getHandshakeSession().putValue(PROTOCOL_KEY, selected);
         }
 
         private String getSelected() {

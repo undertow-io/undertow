@@ -200,69 +200,62 @@ public class SpdyClientProvider implements ClientProvider {
         final SslConnection sslConnection = (SslConnection) connection;
         final SSLEngine sslEngine = JsseXnioSsl.getSslEngine(sslConnection);
 
-        String existing = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
-        if(existing != null) {
-            if (existing.equals(SPDY_3) || existing.equals(SPDY_3_1)) {
-                listener.completed(createSpdyChannel(connection, bufferPool));
-            } else {
-                sslConnection.getSourceChannel().suspendReads();
-                spdyFailedListener.handleEvent(sslConnection);
-            }
-        } else {
+        final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(sslEngine);
+        try {
+            ALPN_PUT_METHOD.invoke(null, sslEngine, spdySelectionProvider);
+        } catch (Exception e) {
+            spdyFailedListener.handleEvent(sslConnection);
+            return;
+        }
 
-            final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(sslEngine);
-            try {
-                ALPN_PUT_METHOD.invoke(null, sslEngine, spdySelectionProvider);
-            } catch (Exception e) {
-                spdyFailedListener.handleEvent(sslConnection);
-                return;
-            }
+        try {
+            sslConnection.startHandshake();
+            sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+                @Override
+                public void handleEvent(StreamSourceChannel channel) {
 
-            try {
-                sslConnection.startHandshake();
-                sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
-                    @Override
-                    public void handleEvent(StreamSourceChannel channel) {
-
-                        if (spdySelectionProvider.selected != null) {
-                            if (spdySelectionProvider.selected.equals(HTTP_1_1)) {
+                    if (spdySelectionProvider.selected != null) {
+                        if (spdySelectionProvider.selected.equals(HTTP_1_1)) {
+                            sslConnection.getSourceChannel().suspendReads();
+                            spdyFailedListener.handleEvent(sslConnection);
+                            return;
+                        } else if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
+                            listener.completed(createSpdyChannel(connection, bufferPool));
+                        }
+                    } else {
+                        ByteBuffer buf = ByteBuffer.allocate(100);
+                        try {
+                            int read = channel.read(buf);
+                            if (read > 0) {
+                                PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
+                                pb.pushBack(new ImmediatePooled<>(buf));
+                                connection.getSourceChannel().setConduit(pb);
+                            }
+                            if(spdySelectionProvider.selected == null) {
+                                spdySelectionProvider.selected = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
+                            }
+                            if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
                                 sslConnection.getSourceChannel().suspendReads();
                                 spdyFailedListener.handleEvent(sslConnection);
                                 return;
-                            } else if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
-                                listener.completed(createSpdyChannel(connection, bufferPool));
-                            }
-                        } else {
-                            ByteBuffer buf = ByteBuffer.allocate(100);
-                            try {
-                                int read = channel.read(buf);
-                                if (read > 0) {
-                                    PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
-                                    pb.pushBack(new ImmediatePooled<>(buf));
-                                    connection.getSourceChannel().setConduit(pb);
+                            } else if (spdySelectionProvider.selected != null) {
+                                //we have spdy
+                                if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
+                                    listener.completed(createSpdyChannel(connection, bufferPool));
                                 }
-                                if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
-                                    sslConnection.getSourceChannel().suspendReads();
-                                    spdyFailedListener.handleEvent(sslConnection);
-                                    return;
-                                } else if (spdySelectionProvider.selected != null) {
-                                    //we have spdy
-                                    if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
-                                        listener.completed(createSpdyChannel(connection, bufferPool));
-                                    }
-                                }
-                            } catch (IOException e) {
-                                listener.failed(e);
                             }
+                        } catch (IOException e) {
+                            listener.failed(e);
                         }
                     }
+                }
 
-                });
-                sslConnection.getSourceChannel().resumeReads();
-            } catch (IOException e) {
-                listener.failed(e);
-            }
+            });
+            sslConnection.getSourceChannel().resumeReads();
+        } catch (IOException e) {
+            listener.failed(e);
         }
+
 
     }
 
@@ -291,7 +284,12 @@ public class SpdyClientProvider implements ClientProvider {
 
         @Override
         public void unsupported() {
-            selected = HTTP_1_1;
+            String existing = (String) sslEngine.getHandshakeSession().getValue(PROTOCOL_KEY);
+            if(existing != null) {
+                selected = existing;
+            } else {
+                selected = HTTP_1_1;
+            }
         }
 
         @Override
@@ -299,7 +297,7 @@ public class SpdyClientProvider implements ClientProvider {
 
             ALPN.remove(sslEngine);
             selected = s;
-            sslEngine.getSession().putValue(PROTOCOL_KEY, selected);
+            sslEngine.getHandshakeSession().putValue(PROTOCOL_KEY, selected);
         }
 
         private String getSelected() {
