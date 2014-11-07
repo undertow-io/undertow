@@ -18,9 +18,16 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.net.ssl.SSLEngine;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.DelegateOpenListener;
-import io.undertow.server.OpenListener;
 import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -30,13 +37,6 @@ import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
-
-import javax.net.ssl.SSLEngine;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Open listener adaptor for ALPN connections
@@ -51,14 +51,24 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
 
     private final Pool<ByteBuffer> bufferPool;
 
-    private final Map<String, DelegateOpenListener> listeners = new HashMap<>();
+    private final Map<String, ListenerEntry> listeners = new HashMap<>();
     private final String fallbackProtocol;
+
+    private static class ListenerEntry {
+        DelegateOpenListener listener;
+        int weight;
+
+        public ListenerEntry(DelegateOpenListener listener, int weight) {
+            this.listener = listener;
+            this.weight = weight;
+        }
+    }
 
     public AlpnOpenListener(Pool<ByteBuffer> bufferPool, String fallbackProtocol, DelegateOpenListener fallbackListener) {
         this.bufferPool = bufferPool;
         this.fallbackProtocol = fallbackProtocol;
         if(fallbackProtocol != null && fallbackListener != null) {
-            listeners.put(fallbackProtocol, fallbackListener);
+            addProtocol(fallbackProtocol, fallbackListener, 0);
         }
     }
 
@@ -71,8 +81,8 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
         this(bufferPool, null, null);
     }
 
-    public AlpnOpenListener addProtocol(String name, DelegateOpenListener listener) {
-        listeners.put(name, listener);
+    public AlpnOpenListener addProtocol(String name, DelegateOpenListener listener, int weight) {
+        listeners.put(name, new ListenerEntry(listener, weight));
         return this;
     }
 
@@ -102,13 +112,20 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
             public String select(List<String> strings) {
 
                 ALPN.remove(sslEngine);
+
+                String match = null;
+                int lastWeight = -1;
                 for (String s : strings) {
-                    OpenListener listener = listeners.get(s);
-                    if (listener != null) {
-                        potentialConnection.selected = s;
-                        sslEngine.getSession().putValue(PROTOCOL_KEY, s);
-                        return s;
+                    ListenerEntry listener = listeners.get(s);
+                    if (listener != null && listener.weight > lastWeight) {
+                        match = s;
+                        lastWeight = listener.weight;
                     }
+                }
+
+                if (match != null) {
+                    sslEngine.getSession().putValue(PROTOCOL_KEY, match);
+                    return potentialConnection.selected = match;
                 }
 
                 if(fallbackProtocol == null) {
@@ -146,7 +163,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
                     }
                     buffer.getResource().flip();
                     if(selected != null) {
-                        DelegateOpenListener listener = listeners.get(selected);
+                        DelegateOpenListener listener = listeners.get(selected).listener;
                         source.getReadSetter().set(null);
                         listener.handleEvent(channel, buffer);
                         free = false;
@@ -157,7 +174,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
                             IoUtils.safeClose(channel);
                             return;
                         }
-                        DelegateOpenListener listener = listeners.get(fallbackProtocol);
+                        DelegateOpenListener listener = listeners.get(fallbackProtocol).listener;
                         source.getReadSetter().set(null);
                         listener.handleEvent(channel, buffer);
                         free = false;
@@ -178,4 +195,5 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
             }
         }
     }
+
 }
