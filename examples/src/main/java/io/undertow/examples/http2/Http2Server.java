@@ -84,9 +84,11 @@ public class Http2Server {
         } else {
             stream = new FileInputStream(storeLoc);
         }
+        String pw = System.getProperty(name + ".password");
+
         try {
             KeyStore loadedKeystore = KeyStore.getInstance("JKS");
-            loadedKeystore.load(stream, STORE_PASSWORD);
+            loadedKeystore.load(stream, pw != null ? pw.toCharArray() : STORE_PASSWORD);
             return loadedKeystore;
         } finally {
             IoUtils.safeClose(stream);
