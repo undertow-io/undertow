@@ -95,7 +95,7 @@ public class Http2Server {
     }
 
     static char[] password(String name) {
-        String pw = System.getProperty(name + ".keystore.password");
+        String pw = System.getProperty(name + ".password");
         return pw != null ? pw.toCharArray() : STORE_PASSWORD;
     }
 
