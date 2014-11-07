@@ -20,6 +20,7 @@ package io.undertow.websockets.core;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.websockets.extensions.ExtensionFunction;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -35,6 +36,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,7 +62,10 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     private volatile int closeCode = -1;
     private volatile String closeReason;
     private final String subProtocol;
-    private final boolean extensionsSupported;
+    protected final boolean extensionsSupported;
+    protected final List<ExtensionFunction> extensions;
+    protected final boolean hasReservedOpCode;
+
     /**
      * an incoming frame that has not been created yet
      */
@@ -87,12 +92,25 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * @param client
      * @param peerConnections        The concurrent set that is used to track open connections associtated with an endpoint
      */
-    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, Set<WebSocketChannel> peerConnections) {
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final List<ExtensionFunction> extensions, Set<WebSocketChannel> peerConnections) {
         super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null);
         this.client = client;
         this.version = version;
         this.wsUrl = wsUrl;
         this.extensionsSupported = extensionsSupported;
+        this.extensions = extensions;
+        if (this.extensions != null && !this.extensions.isEmpty()) {
+            boolean extOpCode = false;
+            for (ExtensionFunction ext : this.extensions) {
+                if (ext.hasExtensionOpCode()) {
+                    extOpCode = true;
+                    break;
+                }
+            }
+            this.hasReservedOpCode = extOpCode;
+        } else {
+            this.hasReservedOpCode = false;
+        }
         this.subProtocol = subProtocol;
         this.peerConnections = peerConnections;
         addCloseTask(new ChannelListener<WebSocketChannel>() {
@@ -457,5 +475,12 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
 
     public void setCloseCode(int closeCode) {
         this.closeCode = closeCode;
+    }
+
+    public List<ExtensionFunction> getExtensions() {
+        if (extensions == null) {
+            return null;
+        }
+        return Collections.unmodifiableList(extensions);
     }
 }

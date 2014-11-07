@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.jsr;
 
+import io.undertow.websockets.extensions.ExtensionHandshake;
 import org.xnio.Pool;
 import org.xnio.XnioWorker;
 
@@ -41,6 +42,7 @@ public class WebSocketDeploymentInfo {
     private final List<Class<?>> annotatedEndpoints = new ArrayList<>();
     private final List<ServerEndpointConfig> programaticEndpoints = new ArrayList<>();
     private final List<ContainerReadyListener> containerReadyListeners = new ArrayList<>();
+    private final List<ExtensionHandshake> extensions = new ArrayList<>();
 
     public XnioWorker getWorker() {
         return worker;
@@ -99,5 +101,25 @@ public class WebSocketDeploymentInfo {
 
     public interface ContainerReadyListener {
         void ready(ServerWebSocketContainer container);
+    }
+
+    /**
+     * Add a new WebSocket Extension into this deployment info.
+     *
+     * @param extension a new {@code ExtensionHandshake} instance
+     * @return          current deployment info
+     */
+    public WebSocketDeploymentInfo addExtension(final ExtensionHandshake extension) {
+        if (null != extension) {
+            this.extensions.add(extension);
+        }
+        return this;
+    }
+
+    /**
+     * @return list of extensions available for this deployment info
+     */
+    public List<ExtensionHandshake> getExtensions() {
+        return extensions;
     }
 }

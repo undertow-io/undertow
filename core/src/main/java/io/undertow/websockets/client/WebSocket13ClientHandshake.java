@@ -26,6 +26,8 @@ import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
+import io.undertow.websockets.extensions.ExtensionFunction;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.http.ExtendedHandshakeChecker;
@@ -36,6 +38,7 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,6 +46,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Stuart Douglas
@@ -52,19 +56,40 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     public static final String MAGIC_NUMBER = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     private final WebSocketClientNegotiation negotiation;
+    private final Set<ExtensionHandshake> extensions;
 
-    public WebSocket13ClientHandshake(final URI url, WebSocketClientNegotiation negotiation) {
+    public WebSocket13ClientHandshake(final URI url, WebSocketClientNegotiation negotiation, Set<ExtensionHandshake> extensions) {
         super(url);
         this.negotiation = negotiation;
+        this.extensions = extensions;
     }
 
     public WebSocket13ClientHandshake(final URI url) {
-        this(url, null);
+        this(url, null, null);
     }
 
     @Override
     public WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool) {
-        return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, new HashSet<WebSocketChannel>());
+        if (negotiation != null && negotiation.getSelectedExtensions() != null && !negotiation.getSelectedExtensions().isEmpty()) {
+            if (extensions == null || extensions.isEmpty()) {
+                throw WebSocketMessages.MESSAGES.badExtensionsConfiguredInClient();
+            }
+            List<WebSocketExtension> selected = negotiation.getSelectedExtensions();
+            List<ExtensionFunction> negotiated = new ArrayList();
+            if (selected != null && !selected.isEmpty()) {
+                for (WebSocketExtension ext : selected) {
+                    for (ExtensionHandshake extHandshake : extensions) {
+                        if (ext.getName().equals(extHandshake.getName())) {
+                            negotiated.add(extHandshake.create());
+                        }
+                    }
+                }
+            }
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, !negotiated.isEmpty(), negotiated, new HashSet<WebSocketChannel>());
+
+        } else {
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, null, new HashSet<WebSocketChannel>());
+        }
     }
 
 
@@ -98,8 +123,13 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                     for (WebSocketExtension.Parameter param : next.getParameters()) {
                         sb.append("; ");
                         sb.append(param.getName());
-                        sb.append("=");
-                        sb.append(param.getValue());
+                        /*
+                            Extensions can have parameters without values
+                         */
+                        if (param.getValue() != null && param.getValue().length() > 0) {
+                            sb.append("=");
+                            sb.append(param.getValue());
+                        }
                     }
                     if (it.hasNext()) {
                         sb.append(", ");

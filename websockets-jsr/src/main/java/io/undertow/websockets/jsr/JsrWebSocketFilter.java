@@ -26,6 +26,7 @@ import io.undertow.util.PathTemplateMatcher;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.Handshake;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
 import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
@@ -72,14 +73,35 @@ public class JsrWebSocketFilter implements Filter {
         return new WebSocketHandshakeHolder(handshakes, config);
     }
 
+    protected WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config, List<ExtensionHandshake> extensions) {
+        List<Handshake> handshakes = new ArrayList<>();
+        Handshake jsrHybi13Handshake = new JsrHybi13Handshake(config);
+        Handshake jsrHybi08Handshake = new JsrHybi08Handshake(config);
+        Handshake jsrHybi07Handshake = new JsrHybi07Handshake(config);
+        for (ExtensionHandshake extension : extensions) {
+            jsrHybi13Handshake.addExtension(extension);
+            jsrHybi08Handshake.addExtension(extension);
+            jsrHybi07Handshake.addExtension(extension);
+        }
+        handshakes.add(jsrHybi13Handshake);
+        handshakes.add(jsrHybi08Handshake);
+        handshakes.add(jsrHybi07Handshake);
+        return new WebSocketHandshakeHolder(handshakes, config);
+    }
+
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
         peerConnections = Collections.newSetFromMap(new ConcurrentHashMap<WebSocketChannel, Boolean>());
         ServerWebSocketContainer container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
         container.deploymentComplete();
         pathTemplateMatcher = new PathTemplateMatcher<>();
+        WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)filterConfig.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
         for (ConfiguredServerEndpoint endpoint : container.getConfiguredServerEndpoints()) {
-            pathTemplateMatcher.add(endpoint.getPathTemplate(), handshakes(endpoint));
+            if (info == null || info.getExtensions().isEmpty()) {
+                pathTemplateMatcher.add(endpoint.getPathTemplate(), handshakes(endpoint));
+            } else {
+                pathTemplateMatcher.add(endpoint.getPathTemplate(), handshakes(endpoint, info.getExtensions()));
+            }
         }
         this.callback = new EndpointSessionHandler(container);
     }

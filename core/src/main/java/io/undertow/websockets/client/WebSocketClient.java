@@ -22,6 +22,7 @@ import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 
+import io.undertow.websockets.extensions.ExtensionHandshake;
 import org.xnio.Cancellable;
 import org.xnio.ChannelListener;
 import org.xnio.FutureResult;
@@ -40,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The Web socket client.
@@ -62,6 +64,10 @@ public class WebSocketClient {
     }
 
     public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
+        return connect(worker, ssl, bufferPool, optionMap, uri, version, clientNegotiation, null);
+    }
+
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
 
         final FutureResult<WebSocketChannel> ioFuture = new FutureResult<>();
         final URI newUri;
@@ -70,7 +76,7 @@ public class WebSocketClient {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation);
+        final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation, clientExtensions);
         final Map<String, String> originalHeaders = handshake.createHeaders();
         originalHeaders.put(Headers.ORIGIN_STRING, uri.getHost());
         final Map<String, List<String>> headers = new HashMap<>();

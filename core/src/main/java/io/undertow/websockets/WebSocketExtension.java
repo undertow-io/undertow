@@ -20,6 +20,7 @@ package io.undertow.websockets;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -29,6 +30,11 @@ public class WebSocketExtension {
 
     private final String name;
     private final List<Parameter> parameters;
+
+    public WebSocketExtension(String name) {
+        this.name = name;
+        this.parameters = new ArrayList<>();
+    }
 
     public WebSocketExtension(String name, List<Parameter> parameters) {
         this.name = name;
@@ -89,14 +95,50 @@ public class WebSocketExtension {
                 final List<Parameter> params = new ArrayList<>(items.length - 1);
                 String name = items[0].trim();
                 for (int i = 1; i < items.length; ++i) {
-                    String[] param = items[i].split("=");
-                    if (param.length == 2) {
-                        params.add(new Parameter(param[0].trim(), param[1].trim()));
+                    /*
+                        Extensions can have parameters without values
+                     */
+                    if (items[i].contains("=")) {
+                        String[] param = items[i].split("=");
+                        if (param.length == 2) {
+                            params.add(new Parameter(param[0].trim(), param[1].trim()));
+                        }
+                    } else {
+                        params.add(new Parameter(items[i].trim(), null));
                     }
                 }
                 extensions.add(new WebSocketExtension(name, params));
             }
         }
         return extensions;
+    }
+
+    /**
+     * Compose a String from a list of extensions to be used in the response of a protocol negotiation.
+     *
+     * @see io.undertow.util.Headers
+     *
+     * @param extensions list of {@link WebSocketExtension}
+     * @return           a string representation of the extensions
+     */
+    public static String toExtensionHeader(final List<WebSocketExtension> extensions) {
+        StringBuilder extensionsHeader = new StringBuilder();
+        if (extensions != null && extensions.size() > 0) {
+            Iterator<WebSocketExtension> it = extensions.iterator();
+            while (it.hasNext()) {
+                WebSocketExtension extension = it.next();
+                extensionsHeader.append(extension.getName());
+                for (Parameter param : extension.getParameters()) {
+                    extensionsHeader.append("; ").append(param.getName());
+                    if (param.getValue() != null && param.getValue().length() > 0) {
+                        extensionsHeader.append("=").append(param.getValue());
+                    }
+                }
+                if (it.hasNext()) {
+                    extensionsHeader.append(", ");
+                }
+            }
+        }
+        return extensionsHeader.toString();
     }
 }

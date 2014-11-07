@@ -162,4 +162,10 @@ public interface WebSocketMessages {
 
     @Message(id = 2042, value = "Server responded with unsupported extension %s. Supported extensions: %s")
     IOException unsupportedExtension(String part, List<WebSocketExtension> supportedExtensions);
+
+    @Message(id = 2043, value = "WebSocket client is trying to use extensions but there is not extensions configured")
+    IllegalStateException badExtensionsConfiguredInClient();
+
+    @Message(id = 2044, value = "Compressed message payload is corrupted")
+    IOException badCompressedPayload();
 }

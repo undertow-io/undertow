@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.core;
 
+import io.undertow.websockets.WebSocketExtension;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
@@ -36,6 +37,8 @@ public interface WebSocketLogger extends BasicLogger {
     WebSocketLogger ROOT_LOGGER = Logger.getMessageLogger(WebSocketLogger.class, WebSocketLogger.class.getPackage().getName());
 
     WebSocketLogger REQUEST_LOGGER = Logger.getMessageLogger(WebSocketLogger.class, WebSocketLogger.class.getPackage().getName() + ".request");
+
+    WebSocketLogger EXTENSION_LOGGER = Logger.getMessageLogger(WebSocketLogger.class, WebSocketLogger.class.getPackage().getName() + ".extension");
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 25001, value = "WebSocket handshake failed")
@@ -65,4 +68,8 @@ public interface WebSocketLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 25007, value = "Unhandled exception for annotated endpoint %s")
     void unhandledErrorInAnnotatedEndpoint(Object instance, @Cause Throwable thr);
+
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 25008, value = "Incorrect parameter %s for extension")
+    void incorrectExtensionParameter(WebSocketExtension.Parameter param);
 }

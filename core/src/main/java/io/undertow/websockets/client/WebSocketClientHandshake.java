@@ -20,6 +20,7 @@ package io.undertow.websockets.client;
 
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.http.ExtendedHandshakeChecker;
@@ -28,6 +29,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Stuart Douglas
@@ -37,13 +39,13 @@ public abstract class WebSocketClientHandshake {
     protected final URI url;
 
     public static WebSocketClientHandshake create(final WebSocketVersion version, final URI uri) {
-        return create(version, uri, null);
+        return create(version, uri, null, null);
     }
 
-    public static WebSocketClientHandshake create(final WebSocketVersion version, final URI uri, WebSocketClientNegotiation clientNegotiation) {
+    public static WebSocketClientHandshake create(final WebSocketVersion version, final URI uri, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> extensions) {
         switch (version) {
             case V13:
-                return new WebSocket13ClientHandshake(uri, clientNegotiation);
+                return new WebSocket13ClientHandshake(uri, clientNegotiation, extensions);
         }
         throw new IllegalArgumentException();
     }
