@@ -34,6 +34,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.KeyStore;
 
@@ -76,7 +77,13 @@ public class Http2Server {
     }
 
     private static KeyStore loadKeyStore(String name) throws Exception {
-        final InputStream stream = Http2Server.class.getResourceAsStream(name);
+        String storeLoc = System.getProperty(name);
+        final InputStream stream;
+        if(storeLoc == null) {
+            stream = Http2Server.class.getResourceAsStream(name);
+        } else {
+            stream = new FileInputStream(storeLoc);
+        }
         try {
             KeyStore loadedKeystore = KeyStore.getInstance("JKS");
             loadedKeystore.load(stream, STORE_PASSWORD);
