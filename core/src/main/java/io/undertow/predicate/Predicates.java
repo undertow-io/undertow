@@ -222,6 +222,14 @@ public class Predicates {
         return PredicateParser.parse(predicate, classLoader);
     }
 
+    /**
+     *
+     * @return A predicate that returns true if the request is secure
+     */
+    public static Predicate secure() {
+        return SecurePredicate.INSTANCE;
+    }
+
     private Predicates() {
 
     }

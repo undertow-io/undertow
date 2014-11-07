@@ -18,10 +18,16 @@
 
 package io.undertow.examples.http2;
 
+import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.examples.UndertowExample;
+import io.undertow.predicate.Predicates;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 import org.xnio.IoUtils;
 
 import javax.net.ssl.KeyManager;
@@ -33,7 +39,9 @@ import java.io.File;
 import java.io.InputStream;
 import java.security.KeyStore;
 
+import static io.undertow.Handlers.predicate;
 import static io.undertow.Handlers.resource;
+import static io.undertow.predicate.Predicates.secure;
 
 /**
  * @author Stuart Douglas
@@ -55,10 +63,16 @@ public class Http2Server {
         Undertow server = Undertow.builder()
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.ENABLE_SPDY, true)
+                .addHttpListener(8080, "localhost")
                 .addHttpsListener(8443, "localhost", createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore")))
-                .setHandler(resource(new FileResourceManager(new File(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
-                        .setDirectoryListingEnabled(true))
-                .build();
+                .setHandler(predicate(secure(), resource(new FileResourceManager(new File(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
+                        .setDirectoryListingEnabled(true), new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseHeaders().add(Headers.LOCATION, "https://" + exchange.getHostName() + ":" + (exchange.getHostPort() + 363) + exchange.getRelativePath());
+                        exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
+                    }
+                })).build();
         server.start();
     }
 

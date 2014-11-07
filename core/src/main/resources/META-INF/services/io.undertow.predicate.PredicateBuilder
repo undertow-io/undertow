@@ -10,3 +10,4 @@ io.undertow.predicate.MethodPredicate$Builder
 io.undertow.predicate.AuthenticationRequiredPredicate$Builder
 io.undertow.predicate.MaxContentSizePredicate$Builder
 io.undertow.predicate.MinContentSizePredicate$Builder
+io.undertow.predicate.SecurePredicate$Builder
