@@ -124,7 +124,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
                 }
 
                 if (match != null) {
-                    sslEngine.getSession().putValue(PROTOCOL_KEY, match);
+                    sslEngine.getHandshakeSession().putValue(PROTOCOL_KEY, match);
                     return potentialConnection.selected = match;
                 }
 
