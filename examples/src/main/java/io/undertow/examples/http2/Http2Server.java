@@ -60,11 +60,12 @@ public class Http2Server {
             System.out.println("See section 9.2.2 of the HTTP2 specification for details");
             System.exit(1);
         }
+        String bindAddress = System.getProperty("bind.address", "localhost");
         Undertow server = Undertow.builder()
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.ENABLE_SPDY, true)
-                .addHttpListener(8080, "localhost")
-                .addHttpsListener(8443, "localhost", createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore")))
+                .addHttpListener(8080, bindAddress)
+                .addHttpsListener(8443, bindAddress, createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore")))
                 .setHandler(predicate(secure(), resource(new FileResourceManager(new File(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
                         .setDirectoryListingEnabled(true), new HttpHandler() {
                     @Override
