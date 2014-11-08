@@ -209,17 +209,20 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     protected void lastDataRead() {
         if(!peerGoneAway && !thisGoneAway) {
             //the peer has performed an unclean close
-            //we assume something happened to the underlying connection
-            //we attempt to send our own GOAWAY, however it will probably fail,
-            //which will trigger a forces close of our write side
-            sendGoAway(CLOSE_PROTOCOL_ERROR);
+            //if they have streams that are still expecting data then this is an error condition
+            if(incomingStreams.size() > 0) {
+                //we assume something happened to the underlying connection
+                //we attempt to send our own GOAWAY, however it will probably fail,
+                //which will trigger a forces close of our write side
+                sendGoAway(CLOSE_PROTOCOL_ERROR);
+            }
             peerGoneAway = true;
         }
     }
 
     @Override
     public boolean isOpen() {
-        return super.isOpen() && !peerGoneAway && !thisGoneAway;
+        return super.isOpen() && !thisGoneAway;
     }
 
     @Override
@@ -229,7 +232,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     @Override
     protected boolean isLastFrameSent() {
-        return peerGoneAway || thisGoneAway;
+        return thisGoneAway;
     }
 
     @Override
@@ -421,6 +424,9 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     void removeStreamSink(int streamId) {
         outgoingStreams.remove(streamId);
+        if(isLastFrameReceived() && outgoingStreams.isEmpty()) {
+            sendGoAway(CLOSE_OK);
+        }
     }
 
     public boolean isClient() {
