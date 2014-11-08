@@ -339,19 +339,22 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     }
 
     protected void lastDataRead() {
-        if (!peerGoneAway && !thisGoneAway) {
+        if(!peerGoneAway && !thisGoneAway) {
             //the peer has performed an unclean close
-            //we assume something happened to the underlying connection
-            //we attempt to send our own GOAWAY, however it will probably fail,
-            //which will trigger a forces close of our write side
-            sendGoAway(ERROR_CONNECT_ERROR);
+            //if they have streams that are still expecting data then this is an error condition
+            if(incomingStreams.size() > 0) {
+                //we assume something happened to the underlying connection
+                //we attempt to send our own GOAWAY, however it will probably fail,
+                //which will trigger a forces close of our write side
+                sendGoAway(ERROR_CONNECT_ERROR);
+            }
             peerGoneAway = true;
         }
     }
 
     @Override
     public boolean isOpen() {
-        return super.isOpen() && !peerGoneAway && !thisGoneAway;
+        return super.isOpen() && !thisGoneAway;
     }
 
     @Override
@@ -361,7 +364,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     @Override
     protected boolean isLastFrameSent() {
-        return peerGoneAway || thisGoneAway;
+        return thisGoneAway;
     }
 
     @Override
@@ -605,6 +608,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     void removeStreamSink(int streamId) {
         outgoingStreams.remove(streamId);
+        if(isLastFrameReceived() && outgoingStreams.isEmpty()) {
+            sendGoAway(ERROR_NO_ERROR);
+        }
     }
 
     Map<Integer, Http2StreamSourceChannel> getIncomingStreams() {
