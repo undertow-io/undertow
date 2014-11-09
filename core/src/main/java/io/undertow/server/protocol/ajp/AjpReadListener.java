@@ -27,6 +27,7 @@ import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -67,6 +68,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     private final ConnectorStatisticsImpl connectorStatistics;
     private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
 
+    private ParseTimeoutUpdater parseTimeoutUpdater;
 
     AjpReadListener(final AjpServerConnection connection, final String scheme, AjpRequestParser parser, ConnectorStatisticsImpl connectorStatistics) {
         this.connection = connection;
@@ -77,6 +79,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<>(connection.getChannel().getSinkChannel());
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
+        int requestParseTimeout = connection.getUndertowOptions().get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
+        int requestIdleTimeout = connection.getUndertowOptions().get(UndertowOptions.NO_REQUEST_TIMEOUT, -1);
+        if(requestIdleTimeout < 0 && requestParseTimeout < 0) {
+            this.parseTimeoutUpdater = null;
+        } else {
+            this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection, requestParseTimeout, requestIdleTimeout);
+            connection.addCloseListener(parseTimeoutUpdater);
+        }
     }
 
     public void startRequest() {
@@ -84,6 +94,9 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         state = new AjpRequestParseState();
         httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
         read = 0;
+        if(parseTimeoutUpdater != null) {
+            parseTimeoutUpdater.connectionIdle();
+        }
     }
 
     public void handleEvent(final StreamSourceChannel channel) {
@@ -97,7 +110,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         final Pooled<ByteBuffer> pooled = existing == null ? connection.getBufferPool().allocate() : existing;
         final ByteBuffer buffer = pooled.getResource();
         boolean free = true;
-
+        boolean bytesRead = false;
         try {
             int res;
             do {
@@ -114,6 +127,10 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     res = buffer.remaining();
                 }
                 if (res == 0) {
+
+                    if(bytesRead && parseTimeoutUpdater != null) {
+                        parseTimeoutUpdater.failedParse();
+                    }
                     if (!channel.isReadResumed()) {
                         channel.getReadSetter().set(this);
                         channel.resumeReads();
@@ -134,6 +151,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     }
                     return;
                 }
+                bytesRead = true;
                 //TODO: we need to handle parse errors
                 if (existing != null) {
                     existing = null;
@@ -143,6 +161,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 }
                 int begin = buffer.remaining();
                 parser.parse(buffer, state, httpServerExchange);
+
                 read += begin - buffer.remaining();
                 if (buffer.hasRemaining()) {
                     free = false;
@@ -155,7 +174,9 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 }
             } while (!state.isComplete());
 
-
+            if(parseTimeoutUpdater != null) {
+                parseTimeoutUpdater.requestStarted();
+            }
             if (state.prefix != AjpRequestParser.FORWARD_REQUEST) {
                 if (state.prefix == AjpRequestParser.CPING) {
                     UndertowLogger.REQUEST_LOGGER.debug("Received CPING, sending CPONG");
