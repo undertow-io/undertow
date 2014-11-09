@@ -417,7 +417,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             if (setting.getId() == Http2Setting.SETTINGS_INITIAL_WINDOW_SIZE) {
                 int old = initialSendWindowSize;
                 initialSendWindowSize = setting.getValue();
-                int difference = old - initialSendWindowSize;
+                int difference = initialSendWindowSize - old;
                 sendWindowSize += difference;
             } else if (setting.getId() == Http2Setting.SETTINGS_MAX_FRAME_SIZE) {
                 sendMaxFrameSize = setting.getValue();
