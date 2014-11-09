@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package io.undertow.server.protocol.http;
+package io.undertow.server.protocol;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.ServerConnection;
@@ -31,9 +31,9 @@ import java.util.concurrent.TimeUnit;
  * @author Sebastian Laskawiec
  * @see io.undertow.UndertowOptions#REQUEST_PARSE_TIMEOUT
  */
-final class ParseTimeoutUpdater implements Runnable, ServerConnection.CloseListener {
+public final class ParseTimeoutUpdater implements Runnable, ServerConnection.CloseListener {
 
-    private final HttpServerConnection connection;
+    private final ServerConnection connection;
     private final long requestParseTimeout;
     private final long requestIdleTimeout;
     private volatile XnioExecutor.Key handle;
@@ -50,7 +50,7 @@ final class ParseTimeoutUpdater implements Runnable, ServerConnection.CloseListe
      * @param requestParseTimeout Timeout value. Negative value will indicate that this updated is disabled.
      * @param requestIdleTimeout
      */
-    public ParseTimeoutUpdater(HttpServerConnection channel, long requestParseTimeout, long requestIdleTimeout) {
+    public ParseTimeoutUpdater(ServerConnection channel, long requestParseTimeout, long requestIdleTimeout) {
         this.connection = channel;
         this.requestParseTimeout = requestParseTimeout;
         this.requestIdleTimeout = requestIdleTimeout;
@@ -120,7 +120,7 @@ final class ParseTimeoutUpdater implements Runnable, ServerConnection.CloseListe
             if(expireTime > now) {
                 handle = connection.getIoThread().executeAfter(this, (expireTime - now) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
             } else {
-                UndertowLogger.REQUEST_LOGGER.parseRequestTimedOut(connection.getChannel().getPeerAddress());
+                UndertowLogger.REQUEST_LOGGER.parseRequestTimedOut(connection.getPeerAddress());
                 IoUtils.safeClose(connection);
             }
         }
