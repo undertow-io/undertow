@@ -354,7 +354,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     @Override
     public boolean isOpen() {
-        return super.isOpen() && !thisGoneAway;
+        return super.isOpen() && !thisGoneAway && !peerGoneAway;
     }
 
     @Override

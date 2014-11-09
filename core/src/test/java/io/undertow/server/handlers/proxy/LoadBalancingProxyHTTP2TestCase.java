@@ -18,12 +18,17 @@
 
 package io.undertow.server.handlers.proxy;
 
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-
+import io.undertow.Undertow;
+import io.undertow.UndertowOptions;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.JvmRouteHandler;
+import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.protocol.http2.Http2ServerConnection;
+import io.undertow.server.session.InMemorySessionManager;
+import io.undertow.server.session.SessionAttachmentHandler;
+import io.undertow.server.session.SessionCookieConfig;
+import io.undertow.testutils.DefaultServer;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -31,16 +36,11 @@ import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.ssl.JsseXnioSsl;
 
-import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.JvmRouteHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
-import io.undertow.testutils.DefaultServer;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import static io.undertow.Handlers.jvmRoute;
+import static io.undertow.Handlers.path;
 
 /**
  * Tests the load balancing proxy
@@ -48,7 +48,7 @@ import io.undertow.testutils.DefaultServer;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTestCase {
+public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyTestCase {
 
     @BeforeClass
     public static void setup() throws URISyntaxException {
@@ -59,13 +59,13 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
                 .addPrefixPath("/name", new StringSendHandler("server1")));
         server1 = Undertow.builder()
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
-                .setServerOption(UndertowOptions.ENABLE_SPDY, true)
+                .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if (!exchange.getRequestHeaders().contains(":method")) {
-                            throw new RuntimeException("Not SPDY");
+                        if (!(exchange.getConnection() instanceof Http2ServerConnection)) {
+                            throw new RuntimeException("Not HTTP2");
                         }
                         System.out.println(exchange.getRequestHeaders());
                         handler1.handleRequest(exchange);
@@ -78,13 +78,13 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
                 .addPrefixPath("/name", new StringSendHandler("server2")));
         server2 = Undertow.builder()
                 .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
-                .setServerOption(UndertowOptions.ENABLE_SPDY, true)
+                .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if (!exchange.getRequestHeaders().contains(":method")) {
-                            throw new RuntimeException("Not SPDY");
+                        if (!(exchange.getConnection() instanceof Http2ServerConnection)) {
+                            throw new RuntimeException("Not HTTP2");
                         }
                         System.out.println(exchange.getRequestHeaders());
                         handler2.handleRequest(exchange);
@@ -97,8 +97,8 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
         JsseXnioSsl ssl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext());
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, true))
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, true))
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
                 , 10000, ResponseCodeHandler.HANDLE_404));
     }
 

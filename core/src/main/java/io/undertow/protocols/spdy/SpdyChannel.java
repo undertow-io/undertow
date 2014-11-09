@@ -222,7 +222,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     @Override
     public boolean isOpen() {
-        return super.isOpen() && !thisGoneAway;
+        return super.isOpen() && !thisGoneAway && !peerGoneAway;
     }
 
     @Override
