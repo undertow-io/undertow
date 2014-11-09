@@ -278,7 +278,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
             if (setting.getId() == SpdySetting.SETTINGS_INITIAL_WINDOW_SIZE) {
                 int old = initialWindowSize;
                 initialWindowSize = setting.getValue();
-                int difference = old - initialWindowSize;
+                int difference = initialWindowSize - old;
                 receiveWindowSize += difference;
                 sendWindowSize += difference;
             }
