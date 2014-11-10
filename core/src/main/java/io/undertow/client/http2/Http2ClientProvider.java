@@ -60,7 +60,7 @@ public class Http2ClientProvider implements ClientProvider {
 
     private static final String PROTOCOL_KEY = Http2ClientProvider.class.getName() + ".protocol";
 
-    private static final String HTTP2 = "h2-14";
+    private static final String HTTP2 = "h2-15";
     private static final String HTTP_1_1 = "http/1.1";
 
     private static final List<String> PROTOCOLS = Collections.unmodifiableList(Arrays.asList(new String[]{HTTP2, HTTP_1_1}));
