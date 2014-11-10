@@ -223,11 +223,10 @@ public final class ProxyHandler implements HttpHandler {
         HeaderValues values;
         while (f != -1L) {
             values = from.fiCurrent(f);
-            if(to.contains(values.getHeaderName())) {
+            if(!to.contains(values.getHeaderName())) {
                 //don't over write existing headers, normally the map will be empty, if it is not we assume it is not for a reason
-                continue;
+                to.putAll(values.getHeaderName(), values);
             }
-            to.putAll(values.getHeaderName(), values);
             f = from.fiNextNonEmpty(f);
         }
     }
