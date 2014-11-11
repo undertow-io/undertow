@@ -24,3 +24,4 @@ io.undertow.attribute.SslCipherAttribute$Builder
 io.undertow.attribute.SslSessionIdAttribute$Builder
 io.undertow.attribute.ResponseTimeAttribute$Builder
 io.undertow.attribute.PathParameterAttribute$Builder
+io.undertow.attribute.TransportProtocolAttribute$Builder

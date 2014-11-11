@@ -33,14 +33,15 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
+import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.xnio.IoUtils;
 
@@ -67,38 +68,16 @@ public class Http2Server {
                 .setServerOption(UndertowOptions.ENABLE_SPDY, true)
                 .addHttpListener(8080, bindAddress)
                 .addHttpsListener(8443, bindAddress, createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore")))
-                .setHandler(transport(predicate(secure(), resource(new FileResourceManager(new File(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
+                .setHandler(Handlers.header(predicate(secure(), resource(new FileResourceManager(new File(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
                         .setDirectoryListingEnabled(true), new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseHeaders().add(Headers.LOCATION, "https://" + exchange.getHostName() + ":" + (exchange.getHostPort() + 363) + exchange.getRelativePath());
                         exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
                     }
-                }))).build();
+                }), "X-Undertow-Transport", ExchangeAttributes.transportProtocol())).build();
         server.start();
     }
-
-    private static HttpHandler transport(HttpHandler next) {
-        return new AddTransportProtocolHandler(next);
-    }
-
-    private static class AddTransportProtocolHandler implements HttpHandler {
-        private static final HttpString TRANSPORT = new HttpString("X-Undertow-Transport");
-
-        private final HttpHandler next;
-
-        private AddTransportProtocolHandler(HttpHandler next) {
-            this.next = next;
-        }
-
-        @Override
-        public void handleRequest(HttpServerExchange exchange) throws Exception {
-            exchange.getResponseHeaders().put(TRANSPORT, exchange.getConnection().getTransportProtocol());
-            next.handleRequest(exchange);
-
-        }
-    }
-
 
     private static KeyStore loadKeyStore(String name) throws Exception {
         String storeLoc = System.getProperty(name);

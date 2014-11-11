@@ -273,6 +273,20 @@ public class Handlers {
         return new SetHeaderHandler(next, headerName, headerValue);
     }
 
+
+    /**
+     * Returns a handler that sets a response header
+     *
+     * @param next        The next handler in the chain
+     * @param headerName  The name of the header
+     * @param headerValue The header value
+     * @return A new set header handler
+     */
+    public static SetHeaderHandler header(final HttpHandler next, final String headerName, final ExchangeAttribute headerValue) {
+        return new SetHeaderHandler(next, headerName, headerValue);
+    }
+
+
     /**
      * Returns a new handler that can allow or deny access to a resource based on IP address
      *

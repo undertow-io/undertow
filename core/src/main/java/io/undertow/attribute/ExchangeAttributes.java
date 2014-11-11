@@ -107,6 +107,10 @@ public class ExchangeAttributes {
         return new ResponseHeaderAttribute(header);
     }
 
+    public static ExchangeAttribute transportProtocol() {
+        return TransportProtocolAttribute.INSTANCE;
+    }
+
     public static ExchangeAttribute threadName() {
         return ThreadNameAttribute.INSTANCE;
     }

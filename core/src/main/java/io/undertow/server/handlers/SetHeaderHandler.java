@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
@@ -30,24 +32,29 @@ import io.undertow.util.HttpString;
 public class SetHeaderHandler implements HttpHandler {
 
     private final HttpString header;
-    private final String value;
+    private final ExchangeAttribute value;
     private final HttpHandler next;
 
     public SetHeaderHandler(final String header, final String value) {
         this.next = ResponseCodeHandler.HANDLE_404;
+        this.value = ExchangeAttributes.constant(value);
+        this.header = new HttpString(header);
+    }
+
+    public SetHeaderHandler(final HttpHandler next, final String header, final ExchangeAttribute value) {
+        this.next = next;
         this.value = value;
         this.header = new HttpString(header);
     }
 
     public SetHeaderHandler(final HttpHandler next, final String header, final String value) {
         this.next = next;
-        this.value = value;
+        this.value = ExchangeAttributes.constant(value);
         this.header = new HttpString(header);
     }
-
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.getResponseHeaders().put(header, value);
+        exchange.getResponseHeaders().put(header, value.readAttribute(exchange));
         next.handleRequest(exchange);
     }
 }

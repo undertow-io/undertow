@@ -463,6 +463,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         @Override
         protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
         }
+
+        @Override
+        public String getTransportProtocol() {
+            return "mock";
+        }
     }
 
 }
