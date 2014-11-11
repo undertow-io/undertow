@@ -200,6 +200,14 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
     protected abstract void maxEntitySizeUpdated(HttpServerExchange exchange);
 
     /**
+     * Returns a string representation describing the protocol used to transmit messages
+     * on this connection.
+     *
+     * @return the transport protocol
+     */
+    public abstract String getTransportProtocol();
+
+    /**
      * Attempts to push a resource if this connection supports server push. Otherwise the request is ignored.
      *
      * Note that push is always done on a best effort basis, even if this method returns true it is possible that

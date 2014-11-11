@@ -150,4 +150,9 @@ public final class AjpServerConnection extends AbstractServerConnection {
     void setCurrentExchange(HttpServerExchange exchange) {
         this.current = exchange;
     }
+
+    @Override
+    public String getTransportProtocol() {
+        return "ajp";
+    }
 }

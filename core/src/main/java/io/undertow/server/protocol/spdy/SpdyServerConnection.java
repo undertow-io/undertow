@@ -262,4 +262,9 @@ public class SpdyServerConnection extends ServerConnection {
     public <T> T getAttachment(AttachmentKey<T> key) {
         return channel.getAttachment(key);
     }
+
+    @Override
+    public String getTransportProtocol() {
+        return SpdyOpenListener.SPDY_3_1;
+    }
 }

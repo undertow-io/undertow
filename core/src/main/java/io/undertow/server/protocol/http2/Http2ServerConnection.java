@@ -323,4 +323,9 @@ public class Http2ServerConnection extends ServerConnection {
             return false;
         }
     }
+
+    @Override
+    public String getTransportProtocol() {
+        return Http2OpenListener.HTTP2;
+    }
 }

@@ -253,4 +253,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
         this.responseConduit = new HttpResponseConduit(pipelineBuffer, bufferPool);
         this.fixedLengthStreamSinkConduit = new ServerFixedLengthStreamSinkConduit(responseConduit, false, false);
     }
+
+    @Override
+    public String getTransportProtocol() {
+        return "http/1.1";
+    }
 }
