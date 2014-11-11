@@ -21,6 +21,7 @@ import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.function.ChannelFunction;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
@@ -31,7 +32,7 @@ import java.nio.ByteBuffer;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class UTF8Checker implements ChannelFunction {
+public class UTF8Checker implements ChannelFunction {
 
 
     private static final int UTF8_ACCEPT = 0;
@@ -86,7 +87,7 @@ public final class UTF8Checker implements ChannelFunction {
     }
 
     @Override
-    public void afterRead(ByteBuffer buf, int position, int length) throws UnsupportedEncodingException{
+    public void afterRead(ByteBuffer buf, int position, int length) throws IOException{
         checkUTF8(buf, position, length);
     }
 

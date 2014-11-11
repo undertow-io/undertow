@@ -30,13 +30,8 @@ import io.undertow.websockets.core.protocol.version07.Masker;
 import io.undertow.websockets.core.protocol.version07.UTF8Checker;
 import io.undertow.websockets.extensions.ExtensionByteBuffer;
 import io.undertow.websockets.extensions.ExtensionFunction;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
@@ -87,6 +82,8 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         this.extensionResult = null;
     }
 
+
+
     /**
      * Return the {@link WebSocketFrameType} or {@code null} if its not known at the calling time.
      */
@@ -111,33 +108,6 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
 
     int getWebSocketFrameCount() {
         return getReadFrameCount();
-    }
-
-    /**
-     * Discard the frame, which means all data that would be part of the frame will be discarded.
-     * <p/>
-     * Once all is discarded it will call {@link #close()}
-     */
-    public void discard() throws IOException {
-        if (isOpen()) {
-            ChannelListener<StreamSourceChannel> drainListener = ChannelListeners.drainListener(Long.MAX_VALUE,
-                    new ChannelListener<StreamSourceChannel>() {
-                        @Override
-                        public void handleEvent(StreamSourceChannel channel) {
-                            IoUtils.safeClose(StreamSourceFrameChannel.this);
-                        }
-                    }, new ChannelExceptionHandler<StreamSourceChannel>() {
-                        @Override
-                        public void handleException(StreamSourceChannel channel, IOException exception) {
-                            getFramedChannel().markReadsBroken(exception);
-                        }
-                    }
-            );
-            getReadSetter().set(drainListener);
-            resumeReads();
-        } else {
-            close();
-        }
     }
 
     @Override

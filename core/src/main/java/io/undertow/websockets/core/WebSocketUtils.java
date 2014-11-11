@@ -142,7 +142,7 @@ public final class WebSocketUtils {
         switch (ws.getType()) {
             case PONG:
                 // pong frames must be discarded
-                ws.discard();
+                ws.close();
                 return;
             case PING:
                 // if a ping is send the autobahn testsuite expects a PONG when echo back

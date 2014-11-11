@@ -29,126 +29,50 @@ import java.nio.ByteBuffer;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07CloseFrameSourceChannel extends StreamSourceFrameChannel {
-    private final ByteBuffer status = ByteBuffer.allocate(2);
-    private boolean statusValidated;
-    private final Masker masker;
-    enum State {
-        EOF,
-        DONE,
-        VALIDATE
-    }
 
     WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
         // no fragmentation allowed per spec
-        super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, masker, new UTF8Checker());
-        this.masker = masker;
+        super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, masker, new CloseFrameValidatorChannelFunction(wsChannel));
     }
 
     WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
         // no fragmentation allowed per spec
-        super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, new UTF8Checker());
-        masker = null;
+        super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, new CloseFrameValidatorChannelFunction(wsChannel));
     }
 
-    @Override
-    public int read(ByteBuffer dst) throws IOException {
-        switch (validateStatus()) {
-            case DONE:
-                if (status.hasRemaining()) {
-                    int copied = 0;
-                    while(dst.hasRemaining() && status.hasRemaining()) {
-                        dst.put(status.get());
-                        copied++;
+    public static class CloseFrameValidatorChannelFunction extends UTF8Checker {
+
+        private final WebSocket07Channel wsChannel;
+        private int statusBytesRead;
+        private int status;
+
+        public CloseFrameValidatorChannelFunction(WebSocket07Channel wsChannel) {
+            this.wsChannel = wsChannel;
+        }
+
+
+        @Override
+        public void afterRead(ByteBuffer buf, int position, int length) throws IOException {
+            int i = 0;
+            if(statusBytesRead < 2) {
+                while (statusBytesRead < 2 && i < length) {
+                    status <<= 8;
+                    status += buf.get(position + i) & 0xFF;
+                    statusBytesRead ++;
+                    ++i;
+                }
+                if(statusBytesRead == 2) {
+                    // Must have 2 byte integer within the valid range
+                    if (status >= 0 && status <= 999 || status >= 1004 && status <= 1006
+                            || status >= 1012 && status <= 2999) {
+                        IOException exception =  WebSocketMessages.MESSAGES.invalidCloseFrameStatusCode(status);
+                        wsChannel.markReadsBroken(exception);
+                        throw exception;
                     }
-                    return copied;
-                } else {
-                    return super.read(dst);
                 }
-            case EOF:
-                return -1;
-            default:
-                return 0;
-        }
-    }
-
-    @Override
-    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        switch (validateStatus()) {
-            case DONE:
-                if (status.hasRemaining()) {
-                    int copied = 0;
-                    for (int i = offset; i < length; i++) {
-                        ByteBuffer dst = dsts[i];
-                        while(dst.hasRemaining() && status.hasRemaining()) {
-                            dst.put(status.get());
-                            copied++;
-                        }
-                        if (dst.hasRemaining()) {
-                            return copied + super.read(dsts, offset, length);
-                        }
-                    }
-
-                    return copied;
-                } else {
-                    return super.read(dsts, offset, length);
-                }
-            case EOF:
-                return -1;
-            default:
-                return 0;
-        }
-    }
-
-    private State validateStatus() throws IOException{
-        if (statusValidated) {
-            return State.DONE;
-        }
-        for (;;) {
-            int r = super.read(status);
-            if (r == -1) {
-                return State.EOF;
             }
-            if (!status.hasRemaining()) {
-                statusValidated = true;
-
-                status.flip();
-                // Must have 2 byte integer within the valid range
-                int statusCode = status.getShort(0);
-
-                if (statusCode >= 0 && statusCode <= 999 || statusCode >= 1004 && statusCode <= 1006
-                        || statusCode >= 1012 && statusCode <= 2999) {
-                    IOException exception =  WebSocketMessages.MESSAGES.invalidCloseFrameStatusCode(statusCode);
-                    ((WebSocket07Channel)getFramedChannel()).markReadsBroken(exception);
-                    throw exception;
-                }
-                return State.DONE;
-            }
-            if (r == 0) {
-                return State.VALIDATE;
-            }
+            super.afterRead(buf, position + i, length - i);
         }
     }
 
-    @Override
-    protected void afterRead(ByteBuffer buffer, int position, int length) throws IOException {
-        // not check for utf8 when read the status code
-        if (!statusValidated) {
-            if (masker != null) {
-                masker.afterRead(buffer, position, length);
-            }
-            return;
-        }
-        super.afterRead(buffer, position, length);
-    }
-
-    @Override
-    protected void checker(ByteBuffer buffer, int position, int length, boolean complete) throws IOException {
-        /*
-            Not check for UTF8 when read the status code
-         */
-        if (!statusValidated) {
-            return;
-        }
-        super.checker(buffer, position, length, complete);
-    }
 }
