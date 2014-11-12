@@ -75,7 +75,7 @@ public class Http2Server {
                         exchange.getResponseHeaders().add(Headers.LOCATION, "https://" + exchange.getHostName() + ":" + (exchange.getHostPort() + 363) + exchange.getRelativePath());
                         exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
                     }
-                }), "X-Undertow-Transport", ExchangeAttributes.transportProtocol())).build();
+                }), "x-undertow-transport", ExchangeAttributes.transportProtocol())).build();
         server.start();
     }
 
