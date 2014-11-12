@@ -91,7 +91,8 @@
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.0.Final</version.io.undertow.build.checkstyle-config>
         <version.org.mortbay.jetty.alpn.jdk7>7.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk7>
-        <version.org.mortbay.jetty.alpn.jdk8>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8>
+        <version.org.mortbay.jetty.alpn.jdk8.old>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8.old>
+        <version.org.mortbay.jetty.alpn.jdk8>8.1.1.v20141016</version.org.mortbay.jetty.alpn.jdk8>
         <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk7}</version.org.mortbay.jetty.alpn>
         <version.org.eclipse.jetty.alpn>1.0.0</version.org.eclipse.jetty.alpn>
         <alpn-boot-string></alpn-boot-string>
@@ -445,6 +446,66 @@
             </activation>
             <properties>
                 <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8}</version.org.mortbay.jetty.alpn>
+                <alpn-boot-string>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</alpn-boot-string>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mortbay.jetty.alpn</groupId>
+                    <artifactId>alpn-boot</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <modules>
+                <module>http2-test-suite</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>jdk8.old</id>
+            <activation>
+                <jdk>1.8.0_05</jdk>
+            </activation>
+            <properties>
+                <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8.old}</version.org.mortbay.jetty.alpn>
+                <alpn-boot-string>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</alpn-boot-string>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mortbay.jetty.alpn</groupId>
+                    <artifactId>alpn-boot</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <modules>
+                <module>http2-test-suite</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>jdk8.old2</id>
+            <activation>
+                <jdk>1.8.0_11</jdk>
+            </activation>
+            <properties>
+                <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8.old}</version.org.mortbay.jetty.alpn>
+                <alpn-boot-string>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</alpn-boot-string>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mortbay.jetty.alpn</groupId>
+                    <artifactId>alpn-boot</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <modules>
+                <module>http2-test-suite</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>jdk8.old3</id>
+            <activation>
+                <jdk>1.8.0_20</jdk>
+            </activation>
+            <properties>
+                <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8.old}</version.org.mortbay.jetty.alpn>
                 <alpn-boot-string>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</alpn-boot-string>
             </properties>
             <dependencies>
