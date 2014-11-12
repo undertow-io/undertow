@@ -43,8 +43,8 @@ import java.nio.ByteBuffer;
  * @author Stuart Douglas
  */
 public final class Http2OpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
-
-    public  static final String HTTP2 = "h2-15";
+    public static final String HTTP2 = "h2-15";
+    public static final String HTTP2_14 = "h2-14";
 
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
@@ -54,12 +54,17 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     private volatile OptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
+    private final String protocol;
 
     public Http2OpenListener(final Pool<ByteBuffer> pool) {
         this(pool, OptionMap.EMPTY);
     }
 
     public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+        this(pool, undertowOptions, HTTP2);
+    }
+
+    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, String protocol) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
         Pooled<ByteBuffer> buf = pool.allocate();
@@ -67,6 +72,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         buf.free();
         connectorStatistics = new ConnectorStatisticsImpl();
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        this.protocol = protocol;
     }
 
     public void handleEvent(final StreamConnection channel, Pooled<ByteBuffer> buffer) {
@@ -75,7 +81,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         }
 
         //cool, we have a Http2 connection.
-        Http2Channel http2Channel = new Http2Channel(channel, bufferPool, buffer, false, false, undertowOptions);
+        Http2Channel http2Channel = new Http2Channel(channel, protocol, bufferPool, buffer, false, false, undertowOptions);
         Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
         if (idleTimeout != null && idleTimeout > 0) {
             http2Channel.setIdleTimeout(idleTimeout);

@@ -175,7 +175,7 @@ public class Http2ClearClientProvider implements ClientProvider {
 
         @Override
         public void handleEvent(StreamConnection channel) {
-            Http2Channel http2Channel = new Http2Channel(channel, bufferPool, null, true, true, options);
+            Http2Channel http2Channel = new Http2Channel(channel, null, bufferPool, null, true, true, options);
             Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, true);
 
             listener.completed(http2ClientConnection);

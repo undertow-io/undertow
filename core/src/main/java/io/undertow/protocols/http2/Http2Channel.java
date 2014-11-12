@@ -23,6 +23,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
@@ -116,7 +117,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private Http2FrameHeaderParser frameParser;
     private final Map<Integer, Http2StreamSourceChannel> incomingStreams = new ConcurrentHashMap<>();
     private final Map<Integer, Http2StreamSinkChannel> outgoingStreams = new ConcurrentHashMap<>();
-
+    private final String protocol;
 
     //local
     private int encoderHeaderTableSize;
@@ -154,14 +155,15 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
 
-    public Http2Channel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
-        this(connectedStreamChannel, bufferPool, data, clientSide, fromUpgrade, null, settings);
+    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
+        this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, null, settings);
     }
 
-    public Http2Channel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, ByteBuffer initialOtherSideSettings, OptionMap settings) {
+    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, ByteBuffer initialOtherSideSettings, OptionMap settings) {
         super(connectedStreamChannel, bufferPool, Http2FramePriority.INSTANCE, data);
         streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
+        this.protocol = protocol == null ? Http2OpenListener.HTTP2 : protocol;
         if (initialOtherSideSettings != null) {
             Http2SettingsParser parser = new Http2SettingsParser(initialOtherSideSettings.remaining());
             try {
@@ -734,5 +736,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     public int getSendMaxFrameSize() {
         return sendMaxFrameSize;
+    }
+
+    public String getProtocol() {
+        return protocol;
     }
 }

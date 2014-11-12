@@ -234,7 +234,7 @@ public class Http2ClientProvider implements ClientProvider {
     }
 
     private static Http2ClientConnection createHttp2Channel(StreamConnection connection, Pool<ByteBuffer> bufferPool, OptionMap options) {
-        Http2Channel http2Channel = new Http2Channel(connection, bufferPool, null, true, false, options);
+        Http2Channel http2Channel = new Http2Channel(connection, null, bufferPool, null, true, false, options);
         return new Http2ClientConnection(http2Channel, false);
     }
 
