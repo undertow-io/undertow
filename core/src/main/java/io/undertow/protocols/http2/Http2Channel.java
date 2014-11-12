@@ -59,8 +59,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHttp2StreamSourceChannel, AbstractHttp2StreamSinkChannel> implements Attachable {
 
-    public static final String CLEARTEXT_UPGRADE_STRING = "h2c-14";
-    public static final String SSL_UPGRADE_STRING = "h2-14";
+    public static final String CLEARTEXT_UPGRADE_STRING = "h2c-15";
 
     static final int FRAME_TYPE_DATA = 0x00;
     static final int FRAME_TYPE_HEADERS = 0x01;
