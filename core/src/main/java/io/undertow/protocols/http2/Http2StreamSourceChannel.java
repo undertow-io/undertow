@@ -164,13 +164,12 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
     }
 
     @Override
-    void rstStream() {
+    void rstStream(int error) {
         if (rst) {
             return;
         }
         rst = true;
         markStreamBroken();
-        getHttp2Channel().sendRstStream(streamId, Http2Channel.ERROR_CANCEL);
     }
 
     @Override
@@ -178,7 +177,7 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
         if (completionListener != null) {
             completionListener.handleEvent(this);
         }
-        rstStream();
+        getHttp2Channel().sendRstStream(streamId, Http2Channel.ERROR_CANCEL);
     }
 
     public int getStreamId() {

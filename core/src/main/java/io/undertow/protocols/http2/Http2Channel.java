@@ -249,11 +249,19 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 } else {
                     incomingStreams.put(frameParser.streamId, (Http2StreamSourceChannel) channel);
                 }
+                if(parser.isInvalid()) {
+                    channel.rstStream(ERROR_PROTOCOL_ERROR);
+                    sendRstStream(frameParser.streamId, Http2Channel.ERROR_CANCEL);
+                    channel = null;
+                }
                 break;
             }
             case FRAME_TYPE_RST_STREAM: {
                 Http2RstStreamParser parser = (Http2RstStreamParser) frameParser.parser;
                 if (frameParser.streamId == 0) {
+                    if(frameData != null) {
+                        frameData.free();
+                    }
                     throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(FRAME_TYPE_RST_STREAM));
                 }
                 channel = new Http2RstStreamStreamSourceChannel(this, frameData, parser.getErrorCode(), frameParser.streamId);

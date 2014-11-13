@@ -29,13 +29,23 @@ import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.ssl.JsseXnioSsl;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -67,6 +77,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
                         if (!(exchange.getConnection() instanceof Http2ServerConnection)) {
                             throw new RuntimeException("Not HTTP2");
                         }
+                        exchange.getResponseHeaders().add(new HttpString("X-Custom-Header"), "foo");
                         System.out.println(exchange.getRequestHeaders());
                         handler1.handleRequest(exchange);
                     }
@@ -86,6 +97,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
                         if (!(exchange.getConnection() instanceof Http2ServerConnection)) {
                             throw new RuntimeException("Not HTTP2");
                         }
+                        exchange.getResponseHeaders().add(new HttpString("X-Custom-Header"), "foo");
                         System.out.println(exchange.getRequestHeaders());
                         handler2.handleRequest(exchange);
                     }
@@ -106,5 +118,21 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
     @Before
     public void requireAlpn() {
         DefaultServer.assumeAlpnEnabled();
+    }
+
+
+    @Test
+    public void testHeadersAreLowercase() throws IOException {
+            TestHttpClient client = new TestHttpClient();
+            try {
+                HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
+                HttpResponse result = client.execute(get);
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                HttpClientUtils.readResponse(result);
+                Header header = result.getFirstHeader("x-custom-header");
+                Assert.assertEquals("x-custom-header", header.getName());
+            } finally {
+                client.getConnectionManager().shutdown();
+            }
     }
 }

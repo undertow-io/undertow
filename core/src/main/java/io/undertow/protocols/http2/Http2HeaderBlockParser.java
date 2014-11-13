@@ -20,6 +20,8 @@ package io.undertow.protocols.http2;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import io.undertow.UndertowLogger;
 import org.xnio.Bits;
 
 import io.undertow.util.HeaderMap;
@@ -37,6 +39,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
 
     private final HpackDecoder decoder;
     private int frameRemaining = -1;
+    private boolean invalid = false;
 
     public Http2HeaderBlockParser(int frameLength, HpackDecoder decoder) {
         super(frameLength);
@@ -80,11 +83,23 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     @Override
     public void emitHeader(HttpString name, String value, boolean neverIndex) {
         headerMap.add(name, value);
+        for(int i = 0; i < name.length(); ++i) {
+            byte c = name.byteAt(i);
+            if(c>= 'A' && c <= 'Z') {
+                invalid = true;
+                UndertowLogger.REQUEST_LOGGER.debugf("Malformed request, header %s contains uppercase characters", name);
+            }
+        }
+
     }
 
     @Override
     protected void moreData(int data) {
         super.moreData(data);
         frameRemaining += data;
+    }
+
+    public boolean isInvalid() {
+        return invalid;
     }
 }

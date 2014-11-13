@@ -29,6 +29,7 @@ import io.undertow.protocols.spdy.SpdySynReplyStreamSinkChannel;
 import io.undertow.protocols.spdy.SpdySynStreamStreamSourceChannel;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
+import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
@@ -212,6 +213,7 @@ public class SpdyServerConnection extends ServerConnection {
     @Override
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
         HeaderMap headers = responseChannel.getHeaders();
+        DateUtils.addDateHeaderIfRequired(exchange);
 
         headers.add(STATUS, exchange.getResponseCode() + " " + StatusCodes.getReason(exchange.getResponseCode()));
         headers.add(VERSION, exchange.getProtocol().toString());

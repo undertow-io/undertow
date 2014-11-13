@@ -27,6 +27,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.server.HttpHandler;
+import io.undertow.util.DateUtils;
 import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
@@ -238,6 +239,7 @@ public class Http2ServerConnection extends ServerConnection {
     @Override
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
         HeaderMap headers = responseChannel.getHeaders();
+        DateUtils.addDateHeaderIfRequired(exchange);
         headers.add(STATUS, exchange.getResponseCode());
         Connectors.flattenCookies(exchange);
         return originalSinkConduit;

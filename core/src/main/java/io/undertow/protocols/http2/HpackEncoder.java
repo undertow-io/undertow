@@ -39,6 +39,8 @@ import java.util.Map;
  */
 public class HpackEncoder extends Hpack {
 
+    private static final byte LOWER_DIFF = 'a' - 'A';
+
     public static final IndexFunction DEFAULT_INDEX_FUNCTION = new IndexFunction() {
         @Override
         public boolean shouldUseIndexing(HttpString headerName, String value) {
@@ -151,7 +153,7 @@ public class HpackEncoder extends Hpack {
                         target.put((byte) 0);
                         encodeInteger(target, headerName.length(), 7);
                         for (int j = 0; j < headerName.length(); ++j) {
-                            target.put(headerName.byteAt(j));
+                            target.put(toLower(headerName.byteAt(j)));
                         }
 
                         target.put((byte) 0); //to use encodeInteger we need to place the first byte in the buffer.
@@ -165,7 +167,9 @@ public class HpackEncoder extends Hpack {
                         target.put((byte) (1 << 4));
                         target.put((byte) 0); //to use encodeInteger we need to place the first byte in the buffer.
                         encodeInteger(target, headerName.length(), 7);
-                        headerName.appendTo(target);
+                        for (int j = 0; j < headerName.length(); ++j) {
+                            target.put(toLower(headerName.byteAt(j)));
+                        }
 
                         target.put((byte) 0); //to use encodeInteger we need to place the first byte in the buffer.
                         encodeInteger(target, val.length(), 7);
@@ -216,6 +220,13 @@ public class HpackEncoder extends Hpack {
         headersIterator = -1;
         firstPass = true;
         return State.COMPLETE;
+    }
+
+    private byte toLower(byte b) {
+        if(b >= 'A' && b <= 'Z') {
+            return (byte) (b + LOWER_DIFF);
+        }
+        return b;
     }
 
     private void addToDynamicTable(HttpString headerName, String val) {
