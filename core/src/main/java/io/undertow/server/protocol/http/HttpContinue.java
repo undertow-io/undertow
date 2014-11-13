@@ -178,6 +178,7 @@ public class HttpContinue {
                         }
                 ));
                 responseChannel.resumeWrites();
+                exchange.dispatch();
             } else {
                 callback.onComplete(exchange, null);
             }
