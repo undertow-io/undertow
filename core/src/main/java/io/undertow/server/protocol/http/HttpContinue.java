@@ -20,6 +20,7 @@ package io.undertow.server.protocol.http;
 
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
@@ -168,18 +169,26 @@ public class HttpContinue {
                             @Override
                             public void handleEvent(StreamSinkChannel channel) {
                                 channel.suspendWrites();
-                                callback.onComplete(exchange, null);
+                                exchange.dispatch(new HttpHandler() {
+                                    @Override
+                                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                        callback.onComplete(exchange, null);
+                                    }
+                                });
                             }
                         }, new ChannelExceptionHandler<Channel>() {
                             @Override
-                            public void handleException(Channel channel, IOException e) {
-                                callback.onException(exchange, null, e);
-                            }
-                        }
-                ));
-                responseChannel.resumeWrites();
-                exchange.dispatch();
-            } else {
+                            public void handleException(Channel channel, final IOException e) {
+                                exchange.dispatch(new HttpHandler() {
+                                    @Override
+                                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                        callback.onException(exchange, null, e);
+                                    }
+                                });
+                            }}));
+                            responseChannel.resumeWrites();
+                            exchange.dispatch();
+                        }else {
                 callback.onComplete(exchange, null);
             }
         } catch (IOException e) {
