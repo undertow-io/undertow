@@ -39,10 +39,12 @@ import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.proxy.ExclusivityChecker;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.FlexBase64;
+
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
+import org.ietf.jgss.Oid;
 
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.HOST;
@@ -82,12 +84,31 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
     private static final String NEGOTIATION_PLAIN = NEGOTIATE.toString();
     private static final String NEGOTIATE_PREFIX = NEGOTIATE + " ";
+
+    private static final Oid[] DEFAULT_MECHANISMS;
+
+    static {
+        try {
+            Oid spnego = new Oid("1.3.6.1.5.5.2");
+            Oid kerberos = new Oid("1.2.840.113554.1.2.2");
+            DEFAULT_MECHANISMS = new Oid[] { spnego, kerberos };
+        } catch (GSSException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private final String name = "SPNEGO";
 
     private final GSSAPIServerSubjectFactory subjectFactory;
+    private final Oid[] mechanisms;
+
+    public GSSAPIAuthenticationMechanism(final GSSAPIServerSubjectFactory subjectFactory, Oid ...supportedMechanisms) {
+        this.subjectFactory = subjectFactory;
+        this.mechanisms = supportedMechanisms;
+    }
 
     public GSSAPIAuthenticationMechanism(final GSSAPIServerSubjectFactory subjectFactory) {
-        this.subjectFactory = subjectFactory;
+        this(subjectFactory, DEFAULT_MECHANISMS);
     }
 
     @Override
@@ -213,7 +234,10 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             GSSContext gssContext = negContext.getGssContext();
             if (gssContext == null) {
                 GSSManager manager = GSSManager.getInstance();
-                gssContext = manager.createContext((GSSCredential) null);
+
+                GSSCredential credential = manager.createCredential(null, GSSCredential.INDEFINITE_LIFETIME, mechanisms, GSSCredential.ACCEPT_ONLY);
+
+                gssContext = manager.createContext(credential);
 
                 negContext.setGssContext(gssContext);
             }
