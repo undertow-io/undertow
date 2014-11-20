@@ -100,23 +100,23 @@ public class ServletOutputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString();
-                runTest(message, BLOCKING_SERVLET, false, false, 1, false);
-                runTest(message, BLOCKING_SERVLET, true, false, 10, false);
-                runTest(message, BLOCKING_SERVLET, false, true, 3, false);
-                runTest(message, BLOCKING_SERVLET, true, true, 7, false);
+                runTest(message, BLOCKING_SERVLET, false, false, 1, false, false);
+                runTest(message, BLOCKING_SERVLET, true, false, 10, false, false);
+                runTest(message, BLOCKING_SERVLET, false, true, 3, false, false);
+                runTest(message, BLOCKING_SERVLET, true, true, 7, false, false);
             } catch (Throwable e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
         message = HELLO_WORLD;
-        runTest(message, BLOCKING_SERVLET, false, true, 1, true);
+        runTest(message, BLOCKING_SERVLET, false, true, 1, true, false);
     }
 
 
     @Test
     public void testChunkedResponseWithInitialFlush() throws IOException {
         message = HELLO_WORLD;
-        runTest(message, BLOCKING_SERVLET, false, true, 1, true);
+        runTest(message, BLOCKING_SERVLET, false, true, 1, true, false);
     }
 
     @Test
@@ -128,17 +128,38 @@ public class ServletOutputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString();
-                runTest(message, ASYNC_SERVLET, false, false, 1, false);
-                runTest(message, ASYNC_SERVLET, true, false, 10, false);
-                runTest(message, ASYNC_SERVLET, false, true, 3, false);
-                runTest(message, ASYNC_SERVLET, true, true, 7, false);
+                runTest(message, ASYNC_SERVLET, false, false, 1, false, false);
+                runTest(message, ASYNC_SERVLET, true, false, 10, false, false);
+                runTest(message, ASYNC_SERVLET, false, true, 3, false, false);
+                runTest(message, ASYNC_SERVLET, true, true, 7, false, false);
             } catch (Exception e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
     }
 
-    public void runTest(final String message, String url, final boolean flush, final boolean close, int reps, boolean initialFlush) throws IOException {
+
+    @Test
+    public void testAsyncServletOutputStreamWithPreable() {
+        StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
+        for (int i = 0; i < 10; ++i) {
+            try {
+                for (int j = 0; j < 10000; ++j) {
+                    builder.append(HELLO_WORLD);
+                }
+                String message = builder.toString();
+                runTest(message, ASYNC_SERVLET, false, false, 1, false, true);
+                runTest(message, ASYNC_SERVLET, true, false, 10, false, true);
+                runTest(message, ASYNC_SERVLET, false, true, 3, false, true);
+                runTest(message, ASYNC_SERVLET, true, true, 7, false, true);
+            } catch (Exception e) {
+                throw new RuntimeException("test failed with i equal to " + i, e);
+            }
+        }
+    }
+
+
+    public void runTest(final String message, String url, final boolean flush, final boolean close, int reps, boolean initialFlush, boolean writePreable) throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             ServletOutputStreamTestCase.message = message;
@@ -152,12 +173,18 @@ public class ServletOutputStreamTestCase {
             if(initialFlush) {
                 uri = uri + "initialFlush=true&";
             }
+            if(writePreable) {
+                uri = uri + "preamble=true&";
+            }
             HttpGet get = new HttpGet(uri);
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             StringBuilder builder = new StringBuilder(reps * message.length());
             for (int j = 0; j < reps; ++j) {
                 builder.append(message);
+            }
+            if(writePreable) {
+                builder.append(builder.toString()); //content gets written twice in this case
             }
             final String response = HttpClientUtils.readResponse(result);
             String expected = builder.toString();

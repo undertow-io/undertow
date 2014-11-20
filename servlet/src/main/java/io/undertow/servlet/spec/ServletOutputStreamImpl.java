@@ -670,9 +670,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private void createChannel() {
         if (channel == null) {
             channel = servletRequestContext.getExchange().getResponseChannel();
-            channel.getWriteSetter().set(internalListener);
             if(internalListener != null) {
-                channel.resumeWrites();
+                channel.getWriteSetter().set(internalListener);
             }
         }
     }
@@ -743,16 +742,23 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         //so we don't have to force the creation of the response channel
         //under normal circumstances this will break write listener delegation
         this.internalListener = new WriteChannelListener();
+        if(this.channel != null) {
+            this.channel.getWriteSetter().set(internalListener);
+        }
         //we resume from an async task, after the request has been dispatched
         asyncContext.addAsyncTask(new Runnable() {
             @Override
             public void run() {
-                servletRequestContext.getExchange().getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        internalListener.handleEvent(null);
-                    }
-                });
+                if(channel == null) {
+                    servletRequestContext.getExchange().getIoThread().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            internalListener.handleEvent(null);
+                        }
+                    });
+                } else {
+                    channel.resumeWrites();
+                }
             }
         });
     }
@@ -840,6 +846,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     //this is no longer an async request
                     //we just return for now
                     //TODO: what do we do here? Revert back to blocking mode?
+                    channel.suspendWrites();
                     return;
                 }
 
@@ -859,6 +866,10 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                         //isReady returns true
                         if(channel != null) {
                             channel.suspendWrites();
+                        }
+                    } else {
+                        if(channel != null) {
+                            channel.resumeWrites();
                         }
                     }
                 } catch (Throwable e) {
