@@ -23,3 +23,4 @@ io.undertow.server.handlers.ResponseRateLimitingHandler$Builder
 io.undertow.server.handlers.URLDecodingHandler$Builder
 io.undertow.server.handlers.PathSeparatorHandler$Builder
 io.undertow.server.handlers.IPAddressAccessControlHandler$Builder
+io.undertow.server.handlers.ByteRangeHandler$Builder
