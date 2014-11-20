@@ -38,12 +38,18 @@ public class AsyncOutputStreamServlet extends HttpServlet {
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         final boolean flush = req.getParameter("flush") != null;
         final boolean close = req.getParameter("close") != null;
+        final boolean preable = req.getParameter("preamble") != null;
         final int reps = Integer.parseInt(req.getParameter("reps"));
 
         final AtomicInteger count = new AtomicInteger();
 
         final AsyncContext context = req.startAsync();
         final ServletOutputStream outputStream = resp.getOutputStream();
+        if(preable) {
+            for(int i = 0; i < reps; ++i) {
+                outputStream.write(ServletOutputStreamTestCase.message.getBytes());
+            }
+        }
         outputStream.setWriteListener(new WriteListener() {
             @Override
             public synchronized void onWritePossible() throws IOException {
