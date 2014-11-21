@@ -28,6 +28,7 @@ import io.undertow.client.spdy.SpdyClientProvider;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
+import org.xnio.Options;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
@@ -70,10 +71,11 @@ public class HttpClientProvider implements ClientProvider {
                 listener.failed(UndertowMessages.MESSAGES.sslWasNull());
                 return;
             }
+            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
             if (bindAddress == null) {
-                ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+                ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
             } else {
-                ssl.openSslConnection(worker, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+                ssl.openSslConnection(worker, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
             }
         } else {
             if (bindAddress == null) {
@@ -91,10 +93,11 @@ public class HttpClientProvider implements ClientProvider {
                 listener.failed(UndertowMessages.MESSAGES.sslWasNull());
                 return;
             }
+            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
             if (bindAddress == null) {
-                ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+                ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
             } else {
-                ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+                ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
             }
         } else {
             if (bindAddress == null) {
@@ -149,7 +152,14 @@ public class HttpClientProvider implements ClientProvider {
             } catch (Exception e) {
                 listener.failed(new IOException(e));
             }
-        } else {
+        }  else {
+            if(connection instanceof SslConnection) {
+                try {
+                    ((SslConnection) connection).startHandshake();
+                } catch (IOException e) {
+                    listener.failed(new IOException(e));
+                }
+            }
             listener.completed(new HttpClientConnection(connection, options, bufferPool));
         }
     }
