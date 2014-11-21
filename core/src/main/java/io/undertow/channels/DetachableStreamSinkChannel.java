@@ -18,6 +18,7 @@
 
 package io.undertow.channels;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -140,9 +141,9 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
             writeSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
                 if(delegate instanceof ConduitStreamSinkChannel) {
-                    ((ConduitStreamSinkChannel) delegate).setWriteListener(ChannelListeners.delegatingChannelListener(this, writeSetter));
+                    ((ConduitStreamSinkChannel) delegate).setWriteListener(new SetterDelegatingListener((ChannelListener.SimpleSetter)writeSetter, this));
                 } else {
-                    delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
+                    delegate.getWriteSetter().set(new SetterDelegatingListener((ChannelListener.SimpleSetter)writeSetter, this));
                 }
             }
         }
@@ -267,4 +268,30 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
             delegate.suspendWrites();
         }
     }
+
+    private static class SetterDelegatingListener implements ChannelListener<StreamSinkChannel> {
+
+        private final SimpleSetter<StreamSinkChannel> setter;
+        private final StreamSinkChannel channel;
+
+        public SetterDelegatingListener(final SimpleSetter<StreamSinkChannel> setter, final StreamSinkChannel channel) {
+            this.setter = setter;
+            this.channel = channel;
+        }
+
+        public void handleEvent(final StreamSinkChannel channel) {
+            ChannelListener<? super StreamSinkChannel> channelListener = setter.get();
+            if(channelListener != null) {
+                ChannelListeners.invokeChannelListener(this.channel, channelListener);
+            } else {
+                UndertowLogger.REQUEST_LOGGER.debugf("suspending writes on %s to prevent listener runaway", channel);
+                channel.suspendWrites();
+            }
+        }
+
+        public String toString() {
+            return "Setter delegating channel listener -> " + setter;
+        }
+    }
+
 }
