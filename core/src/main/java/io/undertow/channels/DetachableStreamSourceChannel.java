@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+
+import io.undertow.UndertowLogger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -124,9 +126,9 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
             readSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
                 if(delegate instanceof ConduitStreamSourceChannel) {
-                    ((ConduitStreamSourceChannel)delegate).setReadListener(ChannelListeners.delegatingChannelListener(this, readSetter));
+                    ((ConduitStreamSourceChannel)delegate).setReadListener(new SetterDelegatingListener((ChannelListener.SimpleSetter)readSetter, this));
                 } else {
-                    delegate.getReadSetter().set(ChannelListeners.delegatingChannelListener(this, readSetter));
+                    delegate.getReadSetter().set(new SetterDelegatingListener((ChannelListener.SimpleSetter)readSetter, this));
                 }
             }
         }
@@ -210,5 +212,31 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     @Override
     public XnioIoThread getIoThread() {
         return delegate.getIoThread();
+    }
+
+
+    private static class SetterDelegatingListener implements ChannelListener<StreamSourceChannel> {
+
+        private final SimpleSetter<StreamSourceChannel> setter;
+        private final StreamSourceChannel channel;
+
+        public SetterDelegatingListener(final SimpleSetter<StreamSourceChannel> setter, final StreamSourceChannel channel) {
+            this.setter = setter;
+            this.channel = channel;
+        }
+
+        public void handleEvent(final StreamSourceChannel channel) {
+            ChannelListener<? super StreamSourceChannel> channelListener = setter.get();
+            if(channelListener != null) {
+                ChannelListeners.invokeChannelListener(this.channel, channelListener);
+            } else {
+                UndertowLogger.REQUEST_LOGGER.debugf("suspending reads on %s to prevent listener runaway", channel);
+                channel.suspendReads();
+            }
+        }
+
+        public String toString() {
+            return "Setter delegating channel listener -> " + setter;
+        }
     }
 }
