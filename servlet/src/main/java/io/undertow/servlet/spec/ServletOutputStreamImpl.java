@@ -789,18 +789,20 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 long toWrite = Buffers.remaining(buffersToWrite);
                 long written = 0;
                 long res;
-                do {
-                    try {
-                        res = channel.write(buffersToWrite);
-                        written += res;
-                        if (res == 0) {
+                if(toWrite > 0) { //should always be true, but just to be defensive
+                    do {
+                        try {
+                            res = channel.write(buffersToWrite);
+                            written += res;
+                            if (res == 0) {
+                                return;
+                            }
+                        } catch (IOException e) {
+                            handleError(e);
                             return;
                         }
-                    } catch (IOException e) {
-                        handleError(e);
-                        return;
-                    }
-                } while (written < toWrite);
+                    } while (written < toWrite);
+                }
                 buffersToWrite = null;
                 buffer.clear();
             }
@@ -840,7 +842,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     return;
                 }
             } else {
-
 
                 if (asyncContext.isDispatched()) {
                     //this is no longer an async request

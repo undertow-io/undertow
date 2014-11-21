@@ -181,6 +181,11 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     }
 
     public Pooled<ByteBuffer> getExtraBytes() {
+        if(extraBytes != null && !extraBytes.getResource().hasRemaining()) {
+            extraBytes.free();
+            extraBytes = null;
+            return null;
+        }
         return extraBytes;
     }
 
@@ -287,17 +292,24 @@ public abstract class AbstractServerConnection  extends ServerConnection {
 
         @Override
         public void handleEvent(StreamConnection channel) {
-            for (CloseListener l : closeListeners) {
-                try {
-                    l.closed(AbstractServerConnection.this);
-                } catch (Throwable e) {
-                    UndertowLogger.REQUEST_LOGGER.exceptionInvokingCloseListener(l, e);
+            try {
+                for (CloseListener l : closeListeners) {
+                    try {
+                        l.closed(AbstractServerConnection.this);
+                    } catch (Throwable e) {
+                        UndertowLogger.REQUEST_LOGGER.exceptionInvokingCloseListener(l, e);
+                    }
+                }
+                if (current != null) {
+                    current.endExchange();
+                }
+                ChannelListeners.invokeChannelListener(AbstractServerConnection.this, listener);
+            } finally {
+                if(extraBytes != null) {
+                    extraBytes.free();
+                    extraBytes = null;
                 }
             }
-            if(current != null) {
-                current.endExchange();
-            }
-            ChannelListeners.invokeChannelListener(AbstractServerConnection.this, listener);
         }
     }
 }
