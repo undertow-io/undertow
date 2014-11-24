@@ -110,6 +110,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     private boolean thisGoneAway = false;
     private boolean peerGoneAway = false;
+    private boolean lastDataRead = false;
 
     private int streamIdCounter;
     private int lastGoodStreamId;
@@ -207,6 +208,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     }
 
     protected void lastDataRead() {
+        lastDataRead = true;
         if(!peerGoneAway && !thisGoneAway) {
             //the peer has performed an unclean close
             //if they have streams that are still expecting data then this is an error condition
@@ -227,7 +229,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     @Override
     protected boolean isLastFrameReceived() {
-        return peerGoneAway;
+        return lastDataRead;
     }
 
     @Override

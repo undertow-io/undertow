@@ -19,6 +19,7 @@
 package io.undertow.testutils;
 
 import io.undertow.UndertowOptions;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -64,7 +65,6 @@ import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
-import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
 
 import javax.net.ssl.KeyManager;
@@ -101,7 +101,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final int PROXY_OFFSET = 1111;
     public static final int APACHE_PORT = 9080;
     public static final int APACHE_SSL_PORT = 9443;
-    public static final int BUFFER_SIZE = Integer.getInteger("test.bufferSize", 8192);
+    public static final int BUFFER_SIZE = Integer.getInteger("test.bufferSize", 8192 * 3);
 
     private static boolean first = true;
     private static OptionMap serverOptions;
@@ -136,6 +136,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
 
     private static final Logger log = Logger.getLogger(DefaultServer.class);
+
+    private static final DebuggingSlicePool pool = new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, 100 * BUFFER_SIZE));
 
     private static KeyStore loadKeyStore(final String name) throws IOException {
         final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(name);
@@ -222,7 +224,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static Pool<ByteBuffer> getBufferPool() {
-        return openListener.getBufferPool();
+        return pool;
     }
 
     @Override
@@ -285,7 +287,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         .set(Options.BALANCING_TOKENS, 1)
                         .set(Options.BALANCING_CONNECTIONS, 2)
                         .getMap();
-                DebuggingSlicePool pool = new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, 100 * BUFFER_SIZE));
+                final SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
+                UndertowXnioSsl ssl = new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, getBufferPool(), serverContext);
                 if (ajp) {
                     openListener = new AjpOpenListener(pool);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
@@ -306,16 +309,16 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     openListener = new SpdyOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(SpdyOpenListener.SPDY_3_1, (io.undertow.server.DelegateOpenListener) openListener, 5)));
 
-                    SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
                     SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
-                    XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, serverContext);
-                    server = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
+
+                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
+                    server.getAcceptSetter().set(acceptListener);
                     server.resumeAccepts();
 
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext), OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new UndertowXnioSsl(xnio, OptionMap.EMPTY, pool, clientContext), OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404);
                     setupProxyHandlerForSSL(proxyHandler);
                     proxyOpenListener.setRootHandler(proxyHandler);
                     proxyServer.resumeAccepts();
@@ -325,16 +328,14 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     openListener = new Http2OpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10)));
 
-                    SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
                     SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
-                    XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, serverContext);
-                    server = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
+                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
                     server.resumeAccepts();
 
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new JsseXnioSsl(xnio, OptionMap.EMPTY, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 120000, HANDLE_404);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new UndertowXnioSsl(xnio, OptionMap.EMPTY, pool, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 120000, HANDLE_404);
                     setupProxyHandlerForSSL(proxyHandler);
                     proxyOpenListener.setRootHandler(proxyHandler);
                     proxyServer.resumeAccepts();
@@ -373,13 +374,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                 } else if (https) {
 
-                    XnioSsl xnioSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, getServerSslContext());
-                    XnioSsl clientSsl = new JsseXnioSsl(xnio, OptionMap.EMPTY, createClientSslContext());
+                    XnioSsl clientSsl = new UndertowXnioSsl(xnio, OptionMap.EMPTY, pool, createClientSslContext());
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
-
-                    InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
-                    server = xnioSsl.createSslConnectionServer(worker, targetAddress, acceptListener, serverOptions);
+                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
+                    server.getAcceptSetter().set(acceptListener);
+                    server.resumeAccepts();
 
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
@@ -697,9 +697,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 .set(Options.USE_DIRECT_BUFFERS, true)
                 .getMap();
 
-        XnioSsl xnioSsl = new JsseXnioSsl(xnio, combined, context);
-        sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)),
-                port), openListener, combined);
+        UndertowXnioSsl ssl = new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, getBufferPool(), context);
+        sslServer = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), port), openListener, options);
+        sslServer.getAcceptSetter().set(openListener);
         sslServer.resumeAccepts();
     }
 

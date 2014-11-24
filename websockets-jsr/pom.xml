@@ -129,6 +129,7 @@
                     <enableAssertions>true</enableAssertions>
                     <runOrder>reversealphabetical</runOrder>
                     <skip>${test.spdy}</skip>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <systemPropertyVariables>
                         <proxy>${proxy}</proxy>
                         <default.server.address>localhost</default.server.address>

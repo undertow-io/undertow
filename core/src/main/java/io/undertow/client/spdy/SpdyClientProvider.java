@@ -29,6 +29,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.net.ssl.SSLEngine;
+
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
@@ -42,7 +44,6 @@ import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.PushBackStreamSourceConduit;
-import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
@@ -201,7 +202,7 @@ public class SpdyClientProvider implements ClientProvider {
     public static void handlePotentialSpdyConnection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> spdyFailedListener) {
 
         final SslConnection sslConnection = (SslConnection) connection;
-        final SSLEngine sslEngine = JsseXnioSsl.getSslEngine(sslConnection);
+        final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(sslConnection);
 
         final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(sslEngine);
         try {

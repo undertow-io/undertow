@@ -159,8 +159,9 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
             }
             channel.shutdownWrites();
             Channels.flushBlocking(channel);
-        } finally {
+        } catch (IOException e){
             channel.close();
+            throw e;
         }
     }
 

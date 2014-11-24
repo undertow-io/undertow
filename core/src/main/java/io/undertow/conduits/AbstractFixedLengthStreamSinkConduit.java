@@ -262,6 +262,15 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
 
     }
 
+    @Override
+    public void truncateWrites() throws IOException {
+        if (!anyAreSet(state, FLAG_FINISHED_CALLED)) {
+            state |= FLAG_FINISHED_CALLED;
+            channelFinished();
+        }
+        super.truncateWrites();
+    }
+
     public void awaitWritable() throws IOException {
         next.awaitWritable();
     }

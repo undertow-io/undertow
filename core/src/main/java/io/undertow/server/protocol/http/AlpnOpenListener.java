@@ -27,6 +27,7 @@ import java.util.Map;
 import javax.net.ssl.SSLEngine;
 
 import io.undertow.UndertowLogger;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.DelegateOpenListener;
 import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.ChannelListener;
@@ -35,7 +36,6 @@ import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
-import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 
 /**
@@ -92,7 +92,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection> {
         }
         final AlpnConnectionListener potentialConnection = new AlpnConnectionListener(channel);
         channel.getSourceChannel().setReadListener(potentialConnection);
-        final SSLEngine sslEngine = JsseXnioSsl.getSslEngine((SslConnection) channel);
+        final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine((SslConnection) channel);
         ALPN.put(sslEngine, new ALPN.ServerProvider() {
             @Override
             public void unsupported() {

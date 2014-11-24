@@ -29,6 +29,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.net.ssl.SSLEngine;
+
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
@@ -40,7 +42,6 @@ import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.PushBackStreamSourceConduit;
-import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
@@ -173,11 +174,11 @@ public class Http2ClientProvider implements ClientProvider {
     public static void handlePotentialHttp2Connection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> http2FailedListener) {
 
         final SslConnection sslConnection = (SslConnection) connection;
-        final SSLEngine sslEngine = JsseXnioSsl.getSslEngine(sslConnection);
+        final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(sslConnection);
 
-        final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(sslEngine);
+        final Http2SelectionProvider http2SelectionProvider = new Http2SelectionProvider(sslEngine);
         try {
-            ALPN_PUT_METHOD.invoke(null, sslEngine, spdySelectionProvider);
+            ALPN_PUT_METHOD.invoke(null, sslEngine, http2SelectionProvider);
         } catch (Exception e) {
             http2FailedListener.handleEvent(sslConnection);
             return;
@@ -189,12 +190,12 @@ public class Http2ClientProvider implements ClientProvider {
                 @Override
                 public void handleEvent(StreamSourceChannel channel) {
 
-                    if (spdySelectionProvider.selected != null) {
-                        if (spdySelectionProvider.selected.equals(HTTP_1_1)) {
+                    if (http2SelectionProvider.selected != null) {
+                        if (http2SelectionProvider.selected.equals(HTTP_1_1)) {
                             sslConnection.getSourceChannel().suspendReads();
                             http2FailedListener.handleEvent(sslConnection);
                             return;
-                        } else if (spdySelectionProvider.selected.equals(HTTP2)) {
+                        } else if (http2SelectionProvider.selected.equals(HTTP2)) {
                             listener.completed(createHttp2Channel(connection, bufferPool, options));
                         }
                     } else {
@@ -206,16 +207,16 @@ public class Http2ClientProvider implements ClientProvider {
                                 pb.pushBack(new ImmediatePooled<>(buf));
                                 connection.getSourceChannel().setConduit(pb);
                             }
-                            if (spdySelectionProvider.selected == null) {
-                                spdySelectionProvider.selected = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
+                            if (http2SelectionProvider.selected == null) {
+                                http2SelectionProvider.selected = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
                             }
-                            if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
+                            if ((http2SelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(http2SelectionProvider.selected)) {
                                 sslConnection.getSourceChannel().suspendReads();
                                 http2FailedListener.handleEvent(sslConnection);
                                 return;
-                            } else if (spdySelectionProvider.selected != null) {
+                            } else if (http2SelectionProvider.selected != null) {
                                 //we have spdy
-                                if (spdySelectionProvider.selected.equals(HTTP2)) {
+                                if (http2SelectionProvider.selected.equals(HTTP2)) {
                                     listener.completed(createHttp2Channel(connection, bufferPool, options));
                                 }
                             }
@@ -241,11 +242,11 @@ public class Http2ClientProvider implements ClientProvider {
         return new Http2ClientConnection(http2Channel, false);
     }
 
-    private static class SpdySelectionProvider implements ALPN.ClientProvider {
+    private static class Http2SelectionProvider implements ALPN.ClientProvider {
         private String selected;
         private final SSLEngine sslEngine;
 
-        private SpdySelectionProvider(SSLEngine sslEngine) {
+        private Http2SelectionProvider(SSLEngine sslEngine) {
             this.sslEngine = sslEngine;
         }
 

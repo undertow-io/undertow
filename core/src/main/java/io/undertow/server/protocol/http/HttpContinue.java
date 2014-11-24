@@ -22,6 +22,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelExceptionHandler;
@@ -63,7 +64,12 @@ public class HttpContinue {
                 return false;
             }
         }
-        List<String> expect = exchange.getRequestHeaders().get(Headers.EXPECT);
+        HeaderMap requestHeaders = exchange.getRequestHeaders();
+        return requiresContinueResponse(requestHeaders);
+    }
+
+    public static boolean requiresContinueResponse(HeaderMap requestHeaders) {
+        List<String> expect = requestHeaders.get(Headers.EXPECT);
         if (expect != null) {
             for (String header : expect) {
                 if (header.equalsIgnoreCase(CONTINUE)) {
@@ -73,6 +79,7 @@ public class HttpContinue {
         }
         return false;
     }
+
 
     /**
      * Sends a continuation using async IO, and calls back when it is complete.

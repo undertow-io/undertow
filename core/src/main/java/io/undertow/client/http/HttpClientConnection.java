@@ -29,6 +29,7 @@ import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
+import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -99,6 +100,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private final ClientReadListener clientReadListener = new ClientReadListener();
 
     private final Pool<ByteBuffer> bufferPool;
+    private Pooled<ByteBuffer> pooledBuffer;
     private final StreamSinkConduit originalSinkConduit;
 
     private static final int UPGRADED = 1 << 28;
@@ -124,6 +126,11 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             public void handleEvent(StreamConnection channel) {
                 HttpClientConnection.this.state |= CLOSED;
                 ChannelListeners.invokeChannelListener(HttpClientConnection.this, closeSetter.get());
+                try {
+                    if (pooledBuffer != null) {
+                        pooledBuffer.free();
+                    }
+                } catch (Throwable ignored){}
             }
         });
     }
@@ -444,6 +451,11 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     channel.suspendReads();
                     pendingResponse = null;
                     currentRequest.setResponse(response);
+                    if(response.getResponseCode() == StatusCodes.EXPECTATION_FAILED) {
+                        if(HttpContinue.requiresContinueResponse(currentRequest.getRequest().getRequestHeaders())) {
+                            HttpClientConnection.this.state |= CLOSE_REQ;
+                        }
+                    }
                 }
 
 
@@ -452,7 +464,12 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 safeClose(connection);
                 currentRequest.setFailed(new IOException(e));
             } finally {
-                if (free) pooled.free();
+                if (free) {
+                    pooled.free();
+                    pooledBuffer = null;
+                } else {
+                    pooledBuffer = pooled;
+                }
             }
 
 

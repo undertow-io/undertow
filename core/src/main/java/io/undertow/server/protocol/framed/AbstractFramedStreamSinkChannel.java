@@ -452,8 +452,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         }
         try {
             state |= STATE_CLOSED;
-            buffer.free();
-            buffer = null;
+            if(buffer != null) {
+                buffer.free();
+                buffer = null;
+            }
             if (header != null && header.getByteBuffer() != null) {
                 header.getByteBuffer().free();
             }

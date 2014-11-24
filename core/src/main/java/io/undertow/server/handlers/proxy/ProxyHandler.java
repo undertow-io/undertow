@@ -479,6 +479,7 @@ public final class ProxyHandler implements HttpHandler {
                                     @Override
                                     public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
                                         IoUtils.safeClose(clientConnection.getConnection());
+                                        exchange.endExchange();
                                     }
                                 });
                             }
@@ -535,7 +536,6 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void completed(final ClientExchange result) {
-            HttpServerExchange exchange = result.getAttachment(EXCHANGE);
             final ClientResponse response = result.getResponse();
             final HeaderMap inboundResponseHeaders = response.getResponseHeaders();
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
@@ -559,7 +559,7 @@ public final class ProxyHandler implements HttpHandler {
                     }
                 });
             }
-            IoExceptionHandler handler = new IoExceptionHandler(exchange, result.getConnection());
+            final IoExceptionHandler handler = new IoExceptionHandler(exchange, result.getConnection());
             ChannelListeners.initiateTransfer(Long.MAX_VALUE, result.getResponseChannel(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(result, exchange), handler, handler, exchange.getConnection().getBufferPool());
 
         }

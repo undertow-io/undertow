@@ -140,6 +140,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private boolean thisGoneAway = false;
     private boolean peerGoneAway = false;
+    private boolean lastDataRead = false;
 
     private int streamIdCounter;
     private int lastGoodStreamId;
@@ -348,6 +349,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     }
 
     protected void lastDataRead() {
+        lastDataRead = true;
         if(!peerGoneAway && !thisGoneAway) {
             //the peer has performed an unclean close
             //if they have streams that are still expecting data then this is an error condition
@@ -368,7 +370,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     @Override
     protected boolean isLastFrameReceived() {
-        return peerGoneAway;
+        return lastDataRead;
     }
 
     @Override
