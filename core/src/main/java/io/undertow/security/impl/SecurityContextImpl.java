@@ -349,16 +349,17 @@ public class SecurityContextImpl implements SecurityContext {
                 return transition();
 
             } else {
-                // Iterated all mechanisms, now need to select a suitable status code.
-                if (atLeastOneChallenge) {
-                    if (chosenStatusCode != null) {
-                        exchange.setResponseCode(chosenStatusCode);
+                if(!exchange.isResponseStarted()) {
+                    // Iterated all mechanisms, now need to select a suitable status code.
+                    if (atLeastOneChallenge) {
+                        if (chosenStatusCode != null) {
+                            exchange.setResponseCode(chosenStatusCode);
+                        }
+                    } else {
+                        // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
+                        exchange.setResponseCode(FORBIDDEN);
                     }
-                } else {
-                    // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
-                    exchange.setResponseCode(FORBIDDEN);
                 }
-
                 return AuthenticationState.CHALLENGE_SENT;
 
             }
