@@ -408,12 +408,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 throw UndertowServletMessages.MESSAGES.authenticationFailed();
             }
         } else {
-            if(exchange.isResponseStarted()) {
-                //the auth mechanism commited the response, so we return false
-                return false;
-            } else {
-                //as the response was not commited we throw an exception as per the javadoc
+            if(!exchange.isResponseStarted() && exchange.getResponseCode() == 200) {
                 throw UndertowServletMessages.MESSAGES.authenticationFailed();
+            } else {
+                return false;
             }
         }
     }
