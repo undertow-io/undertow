@@ -92,7 +92,6 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     public AbstractFramedStreamSourceChannel(C framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining) {
         this.framedChannel = framedChannel;
         this.waitingForFrame = data == null && frameDataRemaining <= 0;
-        this.data = data;
         this.frameDataRemaining = frameDataRemaining;
         this.currentStreamSize = frameDataRemaining;
         if (data != null) {
@@ -100,6 +99,8 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                 data.free();
                 this.data = null;
                 this.waitingForFrame = frameDataRemaining <= 0;
+            } else {
+                dataReady(null, data);
             }
         }
     }

@@ -37,7 +37,7 @@ class WebSocket07CloseFrameSourceChannel extends StreamSourceFrameChannel {
 
     WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
         // no fragmentation allowed per spec
-        super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, new CloseFrameValidatorChannelFunction(wsChannel));
+        super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, null, new CloseFrameValidatorChannelFunction(wsChannel));
     }
 
     public static class CloseFrameValidatorChannelFunction extends UTF8Checker {

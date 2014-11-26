@@ -34,6 +34,6 @@ class WebSocket07BinaryFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     WebSocket07BinaryFrameSourceChannel(WebSocketChannel wsChannel, int rsv, boolean finalFragment, Pooled<ByteBuffer> pooled, long frameLength) {
-        super(wsChannel, WebSocketFrameType.BINARY, rsv, finalFragment, pooled, frameLength);
+        super(wsChannel, WebSocketFrameType.BINARY, rsv, finalFragment, pooled, frameLength, null);
     }
 }

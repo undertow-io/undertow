@@ -35,6 +35,6 @@ class WebSocket07PongFrameSourceChannel extends StreamSourceFrameChannel {
 
     WebSocket07PongFrameSourceChannel(WebSocketChannel wsChannel, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
         // can not be fragmented
-        super(wsChannel, WebSocketFrameType.PONG, rsv, true, pooled, frameLength);
+        super(wsChannel, WebSocketFrameType.PONG, rsv, true, pooled, frameLength, null);
     }
 }

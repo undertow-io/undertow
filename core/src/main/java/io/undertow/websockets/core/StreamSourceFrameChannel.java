@@ -54,22 +54,19 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
     private UTF8Checker checker;
 
     protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, Pooled<ByteBuffer> pooled, long frameLength) {
-        this(wsChannel, type, 0, true, pooled, frameLength);
+        this(wsChannel, type, 0, true, pooled, frameLength, null);
     }
 
-    protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, Pooled<ByteBuffer> pooled, long frameLength, ChannelFunction... functions) {
+    protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, Pooled<ByteBuffer> pooled, long frameLength, Masker masker, ChannelFunction... functions) {
         super(wsChannel, pooled, frameLength);
         this.type = type;
         this.finalFragment = finalFragment;
         this.rsv = rsv;
 
         this.functions = functions;
-        masker = null;
+        this.masker = masker;
         checker = null;
         for (ChannelFunction func : functions) {
-            if (func instanceof Masker) {
-                masker = (Masker) func;
-            }
             if (func instanceof UTF8Checker) {
                 checker = (UTF8Checker) func;
             }
@@ -162,9 +159,6 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         int position = dst.position();
         if (extensionResult == null) {
             r = super.read(dst);
-            if (r > 0) {
-                masker(dst, position, r);
-            }
             if (getRsv() > 0) {
                 extensionResult = applyExtensions(dst, position, r);
             }
@@ -238,13 +232,6 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         }
     }
 
-    protected void masker(ByteBuffer buffer, int position, int length) throws IOException {
-        if (masker == null) {
-            return;
-        }
-        masker.afterRead(buffer, position, length);
-    }
-
     protected void checker(ByteBuffer buffer, int position, int length, boolean complete) throws IOException {
         if (checker == null) {
             return;
@@ -263,6 +250,14 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
             getFramedChannel().markReadsBroken(e);
             throw e;
         }
+    }
+
+    @Override
+    protected long handleFrameData(Pooled<ByteBuffer> frameData, long frameDataRemaining) {
+        if(masker != null) {
+            masker.afterRead(frameData.getResource(), frameData.getResource().position(), frameData.getResource().remaining());
+        }
+        return frameDataRemaining;
     }
 
     /**

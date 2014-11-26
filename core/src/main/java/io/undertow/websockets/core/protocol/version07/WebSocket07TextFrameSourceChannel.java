@@ -33,6 +33,6 @@ class WebSocket07TextFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     WebSocket07TextFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, boolean finalFragment, UTF8Checker checker, Pooled<ByteBuffer> pooled, long frameLength) {
-        super(wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, pooled, frameLength, checker);
+        super(wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, pooled, frameLength, null, checker);
     }
 }
