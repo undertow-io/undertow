@@ -38,7 +38,7 @@ import java.util.Random;
  */
 public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel {
 
-    private final int maskingKey;
+    private int maskingKey;
     private final Masker masker;
     private long payloadSize;
     private boolean dataWritten = false;
@@ -118,11 +118,6 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
 
     @Override
     protected SendFrameHeader createFrameHeader() {
-        if(masker != null) {
-            //do any required masking
-            ByteBuffer buf = getBuffer();
-            masker.beforeWrite(buf, buf.position(), buf.remaining());
-        }
         if (getRsv() == 0) {
             /*
                 Case:
@@ -130,6 +125,12 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
                 - For fixed length we do not need more that one header.
              */
             if(payloadSize >= 0 && dataWritten) {
+                if(masker != null) {
+                    //do any required masking
+                    //this is all one frame, so we don't call setMaskingKey
+                    ByteBuffer buf = getBuffer();
+                    masker.beforeWrite(buf, buf.position(), buf.remaining());
+                }
                 return null;
             }
         } else {
@@ -182,12 +183,22 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
             header.putLong(payloadSize);
         }
         if(masker != null) {
+            maskingKey = new Random().nextInt(); //generate a new key for this frame
             header.put((byte)((maskingKey >> 24) & 0xFF));
             header.put((byte)((maskingKey >> 16) & 0xFF));
             header.put((byte)((maskingKey >> 8) & 0xFF));
             header.put((byte)((maskingKey & 0xFF)));
         }
         header.flip();
+
+
+        if(masker != null) {
+            masker.setMaskingKey(maskingKey);
+            //do any required masking
+            ByteBuffer buf = getBuffer();
+            masker.beforeWrite(buf, buf.position(), buf.remaining());
+        }
+
         return new SendFrameHeader(0, start);
     }
 
