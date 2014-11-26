@@ -118,6 +118,11 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
 
     @Override
     protected SendFrameHeader createFrameHeader() {
+        if(masker != null) {
+            //do any required masking
+            ByteBuffer buf = getBuffer();
+            masker.beforeWrite(buf, buf.position(), buf.remaining());
+        }
         if (getRsv() == 0) {
             /*
                 Case:
@@ -216,23 +221,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     }
 
     private int writeNoExtensions(final ByteBuffer src) throws IOException {
-        if (masker == null) {
-            return super.write(src);
-        } else {
-            final Pooled<ByteBuffer> buffer = getChannel().getBufferPool().allocate();
-            try {
-                ByteBuffer copy = src.duplicate();
-                Buffers.copy(buffer.getResource(), copy);
-                buffer.getResource().flip();
-                masker.beforeWrite(buffer.getResource(), 0, buffer.getResource().remaining());
-                int written = super.write(buffer.getResource());
-                src.position(src.position() + written);
-                toWrite -= written;
-                return written;
-            } finally {
-                buffer.free();
-            }
-        }
+        return super.write(src);
     }
 
     private int writeExtensions(final ByteBuffer src) throws IOException {
@@ -254,15 +243,6 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
                       buffer but an extension can expand it internally to 20K but we should return that we write 10K.
                  */
                 extensionResult = applyExtensions(buffer.getResource(), 0, buffer.getResource().remaining());
-                if (masker != null) {
-                    masker.beforeWrite(buffer.getResource(), 0, buffer.getResource().remaining());
-                    if (extensionResult != null) {
-                        for (int i = 0; i < extensionResult.getExtra(); i++) {
-                            ByteBuffer extraBuffer = extensionResult.getExtraBuffer(i);
-                            masker.beforeWrite(extraBuffer, 0, extraBuffer.remaining());
-                        }
-                    }
-                }
                 int written = super.write(buffer.getResource());
                 if (written == 0) {
                     /*
@@ -399,36 +379,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     }
 
     private long writeNoExtensions(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
-        if(masker == null) {
-            return super.write(srcs, offset, length);
-        } else {
-            final Pooled<ByteBuffer> buffer = getChannel().getBufferPool().allocate();
-            try {
-                ByteBuffer[] copy = new ByteBuffer[length];
-                for (int i = 0; i < length; ++i) {
-                    copy[i] = srcs[offset + i].duplicate();
-                }
-                Buffers.copy(buffer.getResource(), copy, 0, length);
-                buffer.getResource().flip();
-                masker.beforeWrite(buffer.getResource(), 0, buffer.getResource().remaining());
-                long written = super.write(buffer.getResource());
-                long toAllocate = written;
-                for (int i = offset; i < length; ++i) {
-                    ByteBuffer thisBuf = srcs[i];
-                    if (toAllocate <= thisBuf.remaining()) {
-                        thisBuf.position((int) (thisBuf.position() + toAllocate));
-                        break;
-                    } else {
-                        toAllocate -= thisBuf.remaining();
-                        thisBuf.position(thisBuf.limit());
-                    }
-                }
-                toWrite -= toAllocate;
-                return toAllocate;
-            } finally {
-                buffer.free();
-            }
-        }
+        return super.write(srcs, offset, length);
     }
 
     private long writeExtensions(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
@@ -454,16 +405,6 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
                       buffer but an extension can expand it internally to 20K but we should return that we write 10K.
                  */
                 extensionResult = applyExtensions(buffer.getResource(), 0, buffer.getResource().remaining());
-
-                if (masker != null) {
-                    masker.beforeWrite(buffer.getResource(), 0, buffer.getResource().remaining());
-                    if (extensionResult != null) {
-                        for (int i = 0; i < extensionResult.getExtra(); i++) {
-                            ByteBuffer extraBuffer = extensionResult.getExtraBuffer(i);
-                            masker.beforeWrite(extraBuffer, 0, extraBuffer.remaining());
-                        }
-                    }
-                }
 
                 long written = super.write(buffer.getResource());
                 if (written == 0) {
@@ -686,9 +627,6 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
             ByteBuffer buffer = pooledPadding.getResource();
             ExtensionByteBuffer extPadding = applyExtensionsFlush(buffer, 0, buffer.remaining());
             try {
-                if (masker != null) {
-                    masker.beforeWrite(buffer, 0, buffer.remaining());
-                }
                 while (buffer.hasRemaining()) {
                     super.write(buffer);
                 }
