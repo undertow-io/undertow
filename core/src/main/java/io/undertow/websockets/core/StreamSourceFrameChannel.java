@@ -127,6 +127,9 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         if (((WebSocketFrame) headerData).isFinalFragment()) {
             finalFrame();
         }
+        if(masker != null) {
+            masker.newFrame(headerData);
+        }
         if(functions != null) {
             for(ChannelFunction func : functions) {
                 func.newFrame(headerData);
