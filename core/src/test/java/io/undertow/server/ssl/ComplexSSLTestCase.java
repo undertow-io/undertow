@@ -118,15 +118,12 @@ public class ComplexSSLTestCase {
                 }
                 exchange.startBlocking();
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
-                StringBuilder sb = new StringBuilder();
                 byte[] buf = new byte[100];
                 int res = 0;
                 while ((res = exchange.getInputStream().read(buf)) > 0) {
-                    sb.append(new String(buf, 0, res));
                     out.write(buf, 0, res);
                 }
                 System.out.println("WRITE " + out.size());
-                Assert.assertEquals(message, sb.toString());
                 exchange.getOutputStream().write(out.toByteArray());
                 System.out.println("DONE " + out.size());
             }
