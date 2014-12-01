@@ -104,21 +104,25 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(clientSSLContext);
-        HttpPost post = new HttpPost(DefaultServer.getDefaultServerSSLAddress());
-        post.setEntity(new StringEntity("hi"));
-        HttpResponse result = client.execute(post);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        try {
+            client.setSSLContext(clientSSLContext);
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerSSLAddress());
+            post.setEntity(new StringEntity("hi"));
+            HttpResponse result = client.execute(post);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
-        Header[] values = result.getHeaders("ProcessedBy");
-        assertEquals("ProcessedBy Headers", 1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());
+            Header[] values = result.getHeaders("ProcessedBy");
+            assertEquals("ProcessedBy Headers", 1, values.length);
+            assertEquals("ResponseHandler", values[0].getValue());
 
-        values = result.getHeaders("AuthenticatedUser");
-        assertEquals("AuthenticatedUser Headers", 1, values.length);
-        assertEquals("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB", values[0].getValue());
-        HttpClientUtils.readResponse(result);
-        assertSingleNotificationType(EventType.AUTHENTICATED);
+            values = result.getHeaders("AuthenticatedUser");
+            assertEquals("AuthenticatedUser Headers", 1, values.length);
+            assertEquals("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB", values[0].getValue());
+            HttpClientUtils.readResponse(result);
+            assertSingleNotificationType(EventType.AUTHENTICATED);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
 

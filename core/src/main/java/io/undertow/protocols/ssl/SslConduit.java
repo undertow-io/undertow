@@ -49,6 +49,8 @@ import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.allAreClear;
@@ -123,7 +125,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private int state = 0;
 
-    private int outstandingTasks = 0;
+    private volatile int outstandingTasks = 0;
 
     /**
      * Data that has been wrapped and is ready to be sent to the underlying channel.
@@ -543,9 +545,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @throws IOException
      */
     private void doHandshake() throws IOException {
-        if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
-            doUnwrap(null, 0, 0);
-        }
+        doUnwrap(null, 0, 0);
         doWrap(null, 0, 0);
     }
 
@@ -563,6 +563,9 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
+        }
+        if(outstandingTasks > 0) {
+            return 0;
         }
         if(anyAreSet(state, FLAG_READ_REQUIRES_WRITE)) {
             doWrap(null, 0, 0);
@@ -705,6 +708,9 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
+        if(outstandingTasks > 0) {
+            return 0;
+        }
         if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
             doUnwrap(null, 0, 0);
             if(allAreClear(state, FLAG_READ_REQUIRES_WRITE)) { //unless a wrap is immediatly required we just return
@@ -721,11 +727,13 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             wrappedData = bufferPool.allocate();
         }
         try {
-            SSLEngineResult result;
-            if(userBuffers == null) {
-                result = engine.wrap(ByteBuffer.allocate(0), wrappedData.getResource());
-            } else {
-                result = engine.wrap(userBuffers, off, len, wrappedData.getResource());
+            SSLEngineResult result = null;
+            while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP && wrappedData.getResource().remaining() > 1024)) {
+                if (userBuffers == null) {
+                    result = engine.wrap(ByteBuffer.allocate(0), wrappedData.getResource());
+                } else {
+                    result = engine.wrap(userBuffers, off, len, wrappedData.getResource());
+                }
             }
             wrappedData.getResource().flip();
 
@@ -869,38 +877,52 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         //don't run anything in the IO thread till the tasks are done
         delegate.getSinkChannel().suspendWrites();
         delegate.getSourceChannel().suspendReads();
+        List<Runnable> tasks = new ArrayList<>();
+        Runnable t = engine.getDelegatedTask();
+        while (t != null) {
+            tasks.add(t);
+            t = engine.getDelegatedTask();
+        }
+
         synchronized (this) {
-            Runnable task = engine.getDelegatedTask();
-            while (task != null) {
-                outstandingTasks++;
-                final Runnable fTask = task;
+            outstandingTasks += tasks.size();
+            for (final Runnable task : tasks) {
                 getWorker().execute(new Runnable() {
                     @Override
                     public void run() {
-                            try {
-                                fTask.run();
-                            } finally {
-                                synchronized (SslConduit.this) {
-                                    if(--outstandingTasks == 0) {
-                                        SslConduit.this.notifyAll();
-                                        getWriteThread().execute(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                if(anyAreSet(state, FLAG_READS_RESUMED)) {
+                        try {
+                            task.run();
+                        } finally {
+                            synchronized (SslConduit.this) {
+                                if (outstandingTasks == 1) {
+                                    getWriteThread().execute(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            synchronized (SslConduit.this) {
+                                                SslConduit.this.notifyAll();
+                                                if (anyAreSet(state, FLAG_READS_RESUMED)) {
                                                     wakeupReads(); //wakeup, because we need to run an unwrap even if there is no data to be read
                                                 }
-                                                if(anyAreSet(state, FLAG_WRITES_RESUMED)) {
+                                                if (anyAreSet(state, FLAG_WRITES_RESUMED)) {
                                                     resumeWrites(); //we don't need to wakeup, as the channel should be writable
                                                 }
+                                                --outstandingTasks;
+                                                try {
+                                                    doHandshake();
+                                                } catch (IOException e) {
+                                                    IoUtils.safeClose(connection);
+                                                }
                                             }
-                                        });
-                                    }
+                                        }
+                                    });
+                                } else {
+                                    outstandingTasks--;
                                 }
                             }
+                        }
 
                     }
                 });
-                task = engine.getDelegatedTask();
             }
         }
     }
