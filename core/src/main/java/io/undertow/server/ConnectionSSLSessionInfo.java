@@ -153,6 +153,7 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                 channel.setOption(Options.SSL_CLIENT_AUTH_MODE, newAuthMode);
                 channel.getSslSession().invalidate();
                 channel.startHandshake();
+                serverConnection.getOriginalSinkConduit().flush();
                 ByteBuffer buff = ByteBuffer.wrap(new byte[1]);
                 while (!waiter.isDone() && serverConnection.isOpen()) {
                     int read = serverConnection.getSourceChannel().read(buff);
