@@ -668,6 +668,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
             if (unwrappedData != null && !unwrappedData.getResource().hasRemaining()) {
                 unwrappedData.free();
+                this.unwrappedData = null;
             } else if (unwrappedData != null) {
                 this.unwrappedData = unwrappedData;
                 requiresListenerInvocation = true;
