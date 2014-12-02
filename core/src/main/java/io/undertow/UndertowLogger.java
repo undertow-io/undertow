@@ -174,8 +174,8 @@ public interface UndertowLogger extends BasicLogger {
     void couldNotInitiateHttp2Connection();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5034, value = "Remote endpoint failed to send initial settings frame in HTTP2 connection")
-    void remoteEndpointFailedToSendInitialSettings();
+    @Message(id = 5034, value = "Remote endpoint failed to send initial settings frame in HTTP2 connection, frame type %s")
+    void remoteEndpointFailedToSendInitialSettings(int type);
 
     @LogMessage(level = Logger.Level.DEBUG)
     @Message(id = 5035, value = "Closing channel because of parse timeout for remote address %s")
