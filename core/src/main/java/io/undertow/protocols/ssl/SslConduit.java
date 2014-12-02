@@ -113,6 +113,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private static final int FLAG_CLOSED = 1 << 12;
     private static final int FLAG_WRITE_CLOSED = 1 << 13;
     private static final int FLAG_READ_CLOSED = 1 << 14;
+    public static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
 
     private final UndertowSslConnection connection;
@@ -730,7 +731,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             SSLEngineResult result = null;
             while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP && wrappedData.getResource().remaining() > 1024)) {
                 if (userBuffers == null) {
-                    result = engine.wrap(ByteBuffer.allocate(0), wrappedData.getResource());
+                    result = engine.wrap(EMPTY_BUFFER, wrappedData.getResource());
                 } else {
                     result = engine.wrap(userBuffers, off, len, wrappedData.getResource());
                 }
