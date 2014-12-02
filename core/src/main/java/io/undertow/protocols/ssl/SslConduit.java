@@ -601,6 +601,8 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 }
                 dataToUnwrap.getResource().flip();
                 if(res == -1) {
+                    dataToUnwrap.free();
+                    dataToUnwrap = null;
                     notifyReadClosed();
                     return -1;
                 } else if(res == 0 && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
