@@ -74,7 +74,7 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
         @Override
         public ByteBuffer getResource() throws IllegalStateException {
             if(free) {
-                throw new RuntimeException("Buffer already freed, free point: ", freePoint);
+                throw new IllegalStateException("Buffer already freed, free point: ", freePoint);
             }
             return delegate.getResource();
         }
