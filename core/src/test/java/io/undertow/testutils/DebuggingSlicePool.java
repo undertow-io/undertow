@@ -42,6 +42,8 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
         private final RuntimeException allocationPoint;
         private final Pooled<ByteBuffer> delegate;
         private final String label;
+        private volatile boolean free = false;
+        private RuntimeException freePoint;
 
         public DebuggingBuffer(Pooled<ByteBuffer> delegate, String label) {
             this.delegate = delegate;
@@ -60,12 +62,20 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
 
         @Override
         public void free() {
+            if(free) {
+                throw new RuntimeException("Buffer already freed, free point: ", freePoint);
+            }
+            freePoint = new RuntimeException("FREE POINT");
+            free = true;
             BUFFERS.remove(this);
             delegate.free();
         }
 
         @Override
         public ByteBuffer getResource() throws IllegalStateException {
+            if(free) {
+                throw new RuntimeException("Buffer already freed, free point: ", freePoint);
+            }
             return delegate.getResource();
         }
 
