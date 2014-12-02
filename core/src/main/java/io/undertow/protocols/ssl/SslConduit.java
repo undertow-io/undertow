@@ -579,6 +579,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         //copy any exiting data
         if(unwrappedData != null && userBuffers != null) {
             long copied = Buffers.copy(userBuffers, off, len, unwrappedData.getResource());
+            System.out.println("copied " + copied);
             if(!unwrappedData.getResource().hasRemaining()) {
                 unwrappedData.free();
                 this.unwrappedData = null;
@@ -616,33 +617,38 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             //if none are supplied or this results in a buffer overflow then we allocate our own
             SSLEngineResult result;
             boolean unwrapBufferUsed = false;
-            if (userBuffers != null) {
-                result = engine.unwrap(dataToUnwrap.getResource(), userBuffers, off, len);
-                if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
-                    //not enough space in the user buffers
-                    //we use our own
-                    unwrappedData = bufferPool.allocate();
-                    ByteBuffer[] d = new ByteBuffer[len + 1];
-                    System.arraycopy(userBuffers, off, d, 0, len);
-                    d[len] = unwrappedData.getResource();
-                    result = engine.unwrap(dataToUnwrap.getResource(), d);
-                    unwrapBufferUsed = true;
-                }
-            } else {
-                unwrapBufferUsed = true;
-                if (unwrappedData == null) {
-                    unwrappedData = bufferPool.allocate();
+            try {
+                if (userBuffers != null) {
+                    result = engine.unwrap(dataToUnwrap.getResource(), userBuffers, off, len);
+                    if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
+                        //not enough space in the user buffers
+                        //we use our own
+                        unwrappedData = bufferPool.allocate();
+                        ByteBuffer[] d = new ByteBuffer[len + 1];
+                        System.arraycopy(userBuffers, off, d, 0, len);
+                        d[len] = unwrappedData.getResource();
+                        result = engine.unwrap(dataToUnwrap.getResource(), d);
+                        unwrapBufferUsed = true;
+                    }
                 } else {
-                    unwrappedData.getResource().compact();
+                    unwrapBufferUsed = true;
+                    if (unwrappedData == null) {
+                        unwrappedData = bufferPool.allocate();
+                    } else {
+                        unwrappedData.getResource().compact();
+                    }
+                    result = engine.unwrap(dataToUnwrap.getResource(), unwrappedData.getResource());
                 }
-                result = engine.unwrap(dataToUnwrap.getResource(), unwrappedData.getResource());
-            }
-            if(unwrapBufferUsed) {
-                unwrappedData.getResource().flip();
-                if(!unwrappedData.getResource().hasRemaining()) {
-                    unwrappedData.free();
-                    unwrappedData = null;
+            } finally {
+                if(unwrapBufferUsed) {
+                    unwrappedData.getResource().flip();
+                    System.out.println("unwrapped " + unwrappedData.getResource().remaining());
+                    if(!unwrappedData.getResource().hasRemaining()) {
+                        unwrappedData.free();
+                        unwrappedData = null;
+                    }
                 }
+                this.unwrappedData = unwrappedData;
             }
 
             if (!handleHandshakeResult(result)) {
@@ -669,7 +675,6 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
-            this.unwrappedData = unwrappedData;
             if (unwrappedData != null && unwrappedData.getResource().hasRemaining()) {
                 requiresListenerInvocation = true;
             }
