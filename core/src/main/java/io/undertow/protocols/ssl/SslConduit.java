@@ -570,7 +570,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         if(anyAreSet(state, FLAG_READ_REQUIRES_WRITE)) {
             doWrap(null, 0, 0);
-            if(allAreClear(state, FLAG_WRITE_REQUIRES_READ)) { //unless a wrap is immediatly required we just return
+            if(allAreClear(state, FLAG_WRITE_REQUIRES_READ)) { //unless a wrap is immediately required we just return
                 return 0;
             }
         }
@@ -585,7 +585,6 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
             return copied;
         }
-        boolean unwrapBufferUsed = false;
         try {
             //try and read some data if we don't already have some
             if(allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
@@ -616,6 +615,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             //if possible this is done into the the user buffers, however
             //if none are supplied or this results in a buffer overflow then we allocate our own
             SSLEngineResult result;
+            boolean unwrapBufferUsed = false;
             if (userBuffers != null) {
                 result = engine.unwrap(dataToUnwrap.getResource(), userBuffers, off, len);
                 if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
@@ -639,8 +639,11 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
             if(unwrapBufferUsed) {
                 unwrappedData.getResource().flip();
+                if(!unwrappedData.getResource().hasRemaining()) {
+                    unwrappedData.free();
+                    unwrappedData = null;
+                }
             }
-
 
             if (!handleHandshakeResult(result)) {
                 if(dataToUnwrap.getResource().hasRemaining()) {
@@ -666,14 +669,9 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
-            if (unwrappedData != null && !unwrappedData.getResource().hasRemaining()) {
-                unwrappedData.free();
-                this.unwrappedData = null;
-            } else if (unwrappedData != null) {
-                this.unwrappedData = unwrappedData;
+            this.unwrappedData = unwrappedData;
+            if (unwrappedData != null && unwrappedData.getResource().hasRemaining()) {
                 requiresListenerInvocation = true;
-            } else {
-                this.unwrappedData = null;
             }
             if(dataToUnwrap != null) {
                 //if there is no data in the buffer we just free it
