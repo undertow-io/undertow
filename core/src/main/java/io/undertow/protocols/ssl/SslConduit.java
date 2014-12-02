@@ -585,6 +585,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
             return copied;
         }
+        boolean unwrapBufferUsed = false;
         try {
             //try and read some data if we don't already have some
             if(allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
@@ -625,14 +626,19 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     System.arraycopy(userBuffers, off, d, 0, len);
                     d[len] = unwrappedData.getResource();
                     result = engine.unwrap(dataToUnwrap.getResource(), d);
+                    unwrapBufferUsed = true;
                 }
             } else {
+                unwrapBufferUsed = true;
                 if (unwrappedData == null) {
                     unwrappedData = bufferPool.allocate();
                 } else {
                     unwrappedData.getResource().compact();
                 }
                 result = engine.unwrap(dataToUnwrap.getResource(), unwrappedData.getResource());
+            }
+            if(unwrapBufferUsed) {
+                unwrappedData.getResource().flip();
             }
 
 
@@ -660,18 +666,13 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
-            try {
-                if (unwrappedData != null && unwrappedData.getResource().position() == 0) {
-                    unwrappedData.free();
-                } else if (unwrappedData != null) {
-                    this.unwrappedData = unwrappedData;
-                    unwrappedData.getResource().flip();
-                    requiresListenerInvocation = true;
-                } else {
-                    this.unwrappedData = null;
-                }
-            } catch (Throwable e) {
-                System.out.print(e);
+            if (unwrappedData != null && !unwrappedData.getResource().hasRemaining()) {
+                unwrappedData.free();
+            } else if (unwrappedData != null) {
+                this.unwrappedData = unwrappedData;
+                requiresListenerInvocation = true;
+            } else {
+                this.unwrappedData = null;
             }
             if(dataToUnwrap != null) {
                 //if there is no data in the buffer we just free it
