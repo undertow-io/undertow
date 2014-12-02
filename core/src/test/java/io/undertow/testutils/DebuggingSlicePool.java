@@ -63,7 +63,7 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
         @Override
         public void free() {
             if(free) {
-                throw new RuntimeException("Buffer already freed, free point: ", freePoint);
+                return;
             }
             freePoint = new RuntimeException("FREE POINT");
             free = true;
