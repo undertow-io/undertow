@@ -203,6 +203,7 @@ public class Http2ClientProvider implements ClientProvider {
                         try {
                             int read = channel.read(buf);
                             if (read > 0) {
+                                buf.flip();
                                 PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
                                 pb.pushBack(new ImmediatePooled<>(buf));
                                 connection.getSourceChannel().setConduit(pb);

@@ -579,7 +579,6 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         //copy any exiting data
         if(unwrappedData != null && userBuffers != null) {
             long copied = Buffers.copy(userBuffers, off, len, unwrappedData.getResource());
-            System.out.println("copied " + copied);
             if(!unwrappedData.getResource().hasRemaining()) {
                 unwrappedData.free();
                 this.unwrappedData = null;
@@ -642,7 +641,6 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             } finally {
                 if(unwrapBufferUsed) {
                     unwrappedData.getResource().flip();
-                    System.out.println("unwrapped " + unwrappedData.getResource().remaining());
                     if(!unwrappedData.getResource().hasRemaining()) {
                         unwrappedData.free();
                         unwrappedData = null;
