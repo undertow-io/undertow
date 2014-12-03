@@ -18,6 +18,7 @@
 package io.undertow.util;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Calendar;
@@ -79,6 +80,7 @@ public class DateUtilsTestCase {
     }
 
     @Test
+    @Ignore("This test can fail if the machine pauses/swaps at the wrong time")
     public void testPerformance() {
 
         String ie9Header = "Wed, 12 Feb 2014 04:43:29 GMT; length=142951";
