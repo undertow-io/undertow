@@ -206,13 +206,13 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         } else {
             delegate.getSourceChannel().resumeReads();
             if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) || wakeup) {
-                runReadListener(wakeup);
+                runReadListener();
             }
         }
     }
 
 
-    private void runReadListener(final boolean force) {
+    private void runReadListener() {
         delegate.getIoThread().execute(new Runnable() {
             @Override
             public void run() {
@@ -693,7 +693,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 }
             }
             if(requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED)) {
-                runReadListener(false);
+                runReadListener();
             }
         }
     }
@@ -794,7 +794,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     source.resumeReads();
                 }
                 if (anyAreSet(state, FLAG_DATA_TO_UNWRAP) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED)) {
-                    runReadListener(false);
+                    runReadListener();
                 }
 
                 return false;
@@ -988,7 +988,13 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 } else {
                     //there is data in the buffers so we do a wakeup
                     //as we may not get an actual read notification
-                    runReadListener(false);
+                    try {
+                        runReadListener();
+                    } catch (Exception e) {
+                        //will only happen on shutdown
+                        IoUtils.safeClose(connection);
+                        UndertowLogger.REQUEST_IO_LOGGER.debugf(e, "Failed to queue read listener invocation");
+                    }
                 }
             }
         }
