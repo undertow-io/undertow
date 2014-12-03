@@ -469,7 +469,7 @@ public class AsyncContextImpl implements AsyncContext {
         @Override
         public void run() {
             synchronized (AsyncContextImpl.this) {
-                if (!dispatched) {
+                if (!dispatched && !complete) {
                     addAsyncTask(new Runnable() {
                         @Override
                         public void run() {
