@@ -751,7 +751,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             } else {
                 final ChannelListener listener = receiveSetter.get();
                 if (listener != null) {
-                    WebSocketLogger.REQUEST_LOGGER.debugf("Invoking receive listener", receiver);
+                    WebSocketLogger.REQUEST_LOGGER.tracef("Invoking receive listener", receiver);
                     ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
                 } else {
                     channel.suspendReads();
