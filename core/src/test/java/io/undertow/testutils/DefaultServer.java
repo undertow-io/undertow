@@ -698,7 +698,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 .getMap();
 
         UndertowXnioSsl ssl = new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, getBufferPool(), context);
-        sslServer = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), port), openListener, options);
+        sslServer = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), port), openListener, combined);
         sslServer.getAcceptSetter().set(openListener);
         sslServer.resumeAccepts();
     }
