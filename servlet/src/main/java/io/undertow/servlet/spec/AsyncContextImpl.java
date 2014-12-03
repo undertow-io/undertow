@@ -119,9 +119,11 @@ public class AsyncContextImpl implements AsyncContext {
         if (key != null) {
             if (!key.remove()) {
                 return;
+            } else {
+                this.timeoutKey = null;
             }
         }
-        if (timeout > 0) {
+        if (timeout > 0 && !complete) {
             this.timeoutKey = exchange.getIoThread().executeAfter(timeoutTask, timeout, TimeUnit.MILLISECONDS);
         }
     }
@@ -266,6 +268,10 @@ public class AsyncContextImpl implements AsyncContext {
             return;
         }
         complete = true;
+        if(timeoutKey != null) {
+            timeoutKey.remove();
+            timeoutKey = null;
+        }
         onAsyncComplete();
         if(!dispatched) {
             completeInternal();
