@@ -217,6 +217,9 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                 //we attempt to send our own GOAWAY, however it will probably fail,
                 //which will trigger a forces close of our write side
                 sendGoAway(CLOSE_PROTOCOL_ERROR);
+            } else {
+                //we just close the connection, as the peer has performed an unclean close
+                IoUtils.safeClose(this);
             }
             peerGoneAway = true;
         }
