@@ -213,12 +213,18 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
 
     private void runReadListener() {
-        delegate.getIoThread().execute(new Runnable() {
-            @Override
-            public void run() {
-                readReadyHandler.readReady();
-            }
-        });
+        try {
+            delegate.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    readReadyHandler.readReady();
+                }
+            });
+        } catch (Exception e) {
+            //will only happen on shutdown
+            IoUtils.safeClose(connection, delegate);
+            UndertowLogger.REQUEST_IO_LOGGER.debugf(e, "Failed to queue read listener invocation");
+        }
     }
 
     @Override
@@ -988,13 +994,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 } else {
                     //there is data in the buffers so we do a wakeup
                     //as we may not get an actual read notification
-                    try {
-                        runReadListener();
-                    } catch (Exception e) {
-                        //will only happen on shutdown
-                        IoUtils.safeClose(connection);
-                        UndertowLogger.REQUEST_IO_LOGGER.debugf(e, "Failed to queue read listener invocation");
-                    }
+                    runReadListener();
                 }
             }
         }
