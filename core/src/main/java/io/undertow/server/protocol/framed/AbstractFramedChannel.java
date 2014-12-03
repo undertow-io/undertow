@@ -33,8 +33,10 @@ import java.util.ListIterator;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -758,7 +760,16 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
             }
             if (readData != null && channel.isOpen()) {
-                ChannelListeners.invokeChannelListener(channel.getIoThread(), channel, this);
+                try {
+                    channel.getIoThread().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            ChannelListeners.invokeChannelListener(channel, FrameReadListener.this);
+                        }
+                    });
+                } catch (RejectedExecutionException e) {
+                    IoUtils.safeClose(AbstractFramedChannel.this);
+                }
             }
         }
     }
