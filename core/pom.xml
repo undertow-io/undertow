@@ -194,6 +194,8 @@
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                        <!-- to make testsuite pass on windows -->
+                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                     </systemPropertyVariables>
                     <argLine>${alpn-boot-string} ${jacoco.agent.argLine}</argLine>
                 </configuration>
