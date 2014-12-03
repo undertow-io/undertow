@@ -216,7 +216,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         delegate.getIoThread().execute(new Runnable() {
             @Override
             public void run() {
-                readReadyHandler.readReady(force);
+                readReadyHandler.readReady();
             }
         });
     }
@@ -951,7 +951,8 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             this.delegateHandler = delegateHandler;
         }
 
-        public void readReady(boolean wakeup) {
+        @Override
+        public void readReady() {
             if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
                 try {
                     doHandshake();
@@ -1008,10 +1009,6 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             ChannelListeners.invokeChannelListener(connection.getSourceChannel(), connection.getSourceChannel().getCloseListener());
         }
 
-        @Override
-        public void readReady() {
-            readReady(false);
-        }
     }
 
     /**
