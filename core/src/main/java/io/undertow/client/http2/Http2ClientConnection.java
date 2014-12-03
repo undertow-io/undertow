@@ -252,7 +252,7 @@ public class Http2ClientConnection implements ClientConnection {
 
     @Override
     public boolean isOpen() {
-        return http2Channel.isOpen();
+        return http2Channel.isOpen() && !http2Channel.isPeerGoneAway() && !http2Channel.isThisGoneAway();
     }
 
     @Override

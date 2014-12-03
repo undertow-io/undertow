@@ -364,14 +364,12 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 //we attempt to send our own GOAWAY, however it will probably fail,
                 //which will trigger a forces close of our write side
                 sendGoAway(ERROR_CONNECT_ERROR);
+            } else {
+                //we just close the connection, as the peer has performed an unclean close
+                IoUtils.safeClose(this);
             }
             peerGoneAway = true;
         }
-    }
-
-    @Override
-    public boolean isOpen() {
-        return super.isOpen() && !thisGoneAway && !peerGoneAway;
     }
 
     @Override
@@ -736,6 +734,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         return pushEnabled;
     }
 
+    public boolean isPeerGoneAway() {
+        return peerGoneAway;
+    }
+
+    public boolean isThisGoneAway() {
+        return thisGoneAway;
+    }
 
     private class Http2ControlMessageExceptionHandler implements ChannelExceptionHandler<AbstractHttp2StreamSinkChannel> {
         @Override
