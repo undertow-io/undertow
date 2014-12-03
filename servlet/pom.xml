@@ -173,6 +173,7 @@
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                     </systemPropertyVariables>
                     <argLine>${alpn-boot-string} -Xmx1024m ${jacoco.agent.argLine}</argLine>
                 </configuration>
@@ -208,6 +209,7 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                   <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
                                 </configuration>
@@ -232,6 +234,7 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-ajp-reports</reportsDirectory>
                                 </configuration>
@@ -256,6 +259,7 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-spdy-reports</reportsDirectory>
                                 </configuration>
@@ -280,6 +284,7 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
                                 </configuration>
@@ -304,6 +309,7 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-h2-reports</reportsDirectory>
                                 </configuration>
@@ -328,6 +334,7 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-h2c-reports</reportsDirectory>
                                 </configuration>
