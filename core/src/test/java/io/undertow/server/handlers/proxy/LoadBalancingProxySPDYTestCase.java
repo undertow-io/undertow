@@ -24,12 +24,12 @@ import static io.undertow.Handlers.path;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.ssl.JsseXnioSsl;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
@@ -94,7 +94,7 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
         server1.start();
         server2.start();
 
-        JsseXnioSsl ssl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext());
+        UndertowXnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getBufferPool(), DefaultServer.createClientSslContext());
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
                 .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, true))

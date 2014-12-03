@@ -31,6 +31,7 @@ import java.util.List;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.client.UndertowClient;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
@@ -55,7 +56,6 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
 
 /**
@@ -84,7 +84,7 @@ public abstract class AbstractModClusterTestBase {
         port = getHostPort("default");
         hostName = getHostAddress("default");
 
-        xnioSsl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, getClientSSLContext());
+        xnioSsl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getBufferPool(), getClientSSLContext());
     }
 
     protected List<NodeTestConfig> nodes;
@@ -200,6 +200,9 @@ public abstract class AbstractModClusterTestBase {
     }
 
     static void startServers(final NodeTestConfig... configs) {
+        if(servers != null) {
+            throw new IllegalStateException();
+        }
         final int l = configs.length;
         servers = new Undertow[l];
         for (int i = 0; i < l; i++) {

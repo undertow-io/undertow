@@ -25,6 +25,7 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.UndertowClient;
 import io.undertow.io.Sender;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
@@ -47,7 +48,6 @@ import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
 
 import javax.net.ssl.SSLContext;
@@ -168,7 +168,7 @@ public class HttpClientTestCase {
         final CountDownLatch latch = new CountDownLatch(10);
         DefaultServer.startSSLServer();
         SSLContext context = DefaultServer.getClientSSLContext();
-        XnioSsl ssl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, context);
+        XnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getBufferPool(), context);
 
         final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
         try {

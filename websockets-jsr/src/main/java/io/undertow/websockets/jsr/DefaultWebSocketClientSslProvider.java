@@ -18,9 +18,9 @@
 
 package io.undertow.websockets.jsr;
 
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
-import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
 
 import javax.net.ssl.SSLContext;
@@ -65,7 +65,7 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
         SSLContext sslContext = (SSLContext) cec.getUserProperties().get(SSL_CONTEXT);
 
         if (sslContext != null) {
-            return new JsseXnioSsl(worker.getXnio(), OptionMap.EMPTY, sslContext);
+            return new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, sslContext);
         }
         return null;
     }
@@ -77,7 +77,7 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
         SSLContext val = LOCAL_SSL_CONTEXT.get();
         if (val != null) {
             LOCAL_SSL_CONTEXT.remove();
-            return new JsseXnioSsl(worker.getXnio(), OptionMap.EMPTY, val);
+            return new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, val);
         }
         return null;
     }

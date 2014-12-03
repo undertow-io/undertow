@@ -734,7 +734,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         try {
             SSLEngineResult result = null;
-            while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP && wrappedData.getResource().remaining() > 1024)) {
+            while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP && result.getStatus() != SSLEngineResult.Status.BUFFER_OVERFLOW)) {
                 if (userBuffers == null) {
                     result = engine.wrap(EMPTY_BUFFER, wrappedData.getResource());
                 } else {
@@ -746,7 +746,9 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
                 throw new IOException("underflow"); //todo: can this happen?
             } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
-                throw new IOException("overflow"); //todo: handle properly
+                if(!wrappedData.getResource().hasRemaining()) { //if an earlier wrap suceeded we ignore this
+                    throw new IOException("overflow"); //todo: handle properly
+                }
             }
             //attempt to write it out, if we fail we just return
             //we ignore the handshake status, as wrap will get called again
@@ -906,17 +908,18 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                                         public void run() {
                                             synchronized (SslConduit.this) {
                                                 SslConduit.this.notifyAll();
-                                                if (anyAreSet(state, FLAG_READS_RESUMED)) {
-                                                    wakeupReads(); //wakeup, because we need to run an unwrap even if there is no data to be read
-                                                }
-                                                if (anyAreSet(state, FLAG_WRITES_RESUMED)) {
-                                                    resumeWrites(); //we don't need to wakeup, as the channel should be writable
-                                                }
+
                                                 --outstandingTasks;
                                                 try {
                                                     doHandshake();
                                                 } catch (IOException e) {
                                                     IoUtils.safeClose(connection);
+                                                }
+                                                if (anyAreSet(state, FLAG_READS_RESUMED)) {
+                                                    wakeupReads(); //wakeup, because we need to run an unwrap even if there is no data to be read
+                                                }
+                                                if (anyAreSet(state, FLAG_WRITES_RESUMED)) {
+                                                    resumeWrites(); //we don't need to wakeup, as the channel should be writable
                                                 }
                                             }
                                         }

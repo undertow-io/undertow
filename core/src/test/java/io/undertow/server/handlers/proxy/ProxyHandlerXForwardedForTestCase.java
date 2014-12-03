@@ -2,6 +2,7 @@ package io.undertow.server.handlers.proxy;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
@@ -20,7 +21,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.ssl.JsseXnioSsl;
 
 import java.net.URI;
 
@@ -39,7 +39,7 @@ public class ProxyHandlerXForwardedForTestCase {
     protected static int port;
     protected static int sslPort;
     protected static int handlerPort;
-    protected static JsseXnioSsl ssl;
+    protected static UndertowXnioSsl ssl;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -49,7 +49,7 @@ public class ProxyHandlerXForwardedForTestCase {
         handlerPort = port + 2;
 
         DefaultServer.startSSLServer();
-        ssl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext());
+        ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getBufferPool(), DefaultServer.getClientSSLContext());
 
         server = Undertow.builder()
             .addHttpsListener(handlerPort, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())

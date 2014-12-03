@@ -18,6 +18,8 @@
 
 package io.undertow.protocols.ssl;
 
+import org.xnio.BufferAllocator;
+import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
@@ -59,8 +61,33 @@ import static org.xnio.IoUtils.safeClose;
  */
 public class UndertowXnioSsl extends XnioSsl {
 
+    private static final Pool<ByteBuffer> DEFAULT_BUFFER_POOL = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 17 * 1024, 17 * 1024 * 128);
+
     private final Pool<ByteBuffer> bufferPool;
     private final SSLContext sslContext;
+
+    /**
+     * Construct a new instance.
+     *
+     * @param xnio the XNIO instance to associate with
+     * @param optionMap the options for this provider
+     * @throws java.security.NoSuchProviderException if the given SSL provider is not found
+     * @throws java.security.NoSuchAlgorithmException if the given SSL algorithm is not supported
+     * @throws java.security.KeyManagementException if the SSL context could not be initialized
+     */
+    public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap) throws NoSuchProviderException, NoSuchAlgorithmException, KeyManagementException {
+        this(xnio, optionMap, DEFAULT_BUFFER_POOL, JsseSslUtils.createSSLContext(optionMap));
+    }
+
+    /**
+     * Construct a new instance.
+     *  @param xnio the XNIO instance to associate with
+     * @param optionMap the options for this provider
+     * @param sslContext the SSL context to use for this instance
+     */
+    public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, final SSLContext sslContext) {
+        this(xnio, optionMap, DEFAULT_BUFFER_POOL, sslContext);
+    }
 
     /**
      * Construct a new instance.

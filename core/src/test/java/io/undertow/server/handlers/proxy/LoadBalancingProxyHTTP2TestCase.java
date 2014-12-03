@@ -20,6 +20,7 @@ package io.undertow.server.handlers.proxy;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.JvmRouteHandler;
@@ -43,7 +44,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.ssl.JsseXnioSsl;
 
 import java.io.IOException;
 import java.net.URI;
@@ -106,7 +106,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
         server1.start();
         server2.start();
 
-        JsseXnioSsl ssl = new JsseXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext());
+        UndertowXnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getBufferPool(), DefaultServer.createClientSslContext());
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
                 .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
@@ -123,16 +123,16 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
 
     @Test
     public void testHeadersAreLowercase() throws IOException {
-            TestHttpClient client = new TestHttpClient();
-            try {
-                HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                HttpClientUtils.readResponse(result);
-                Header header = result.getFirstHeader("x-custom-header");
-                Assert.assertEquals("x-custom-header", header.getName());
-            } finally {
-                client.getConnectionManager().shutdown();
-            }
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            Header header = result.getFirstHeader("x-custom-header");
+            Assert.assertEquals("x-custom-header", header.getName());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 }
