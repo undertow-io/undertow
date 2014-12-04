@@ -175,7 +175,7 @@
                         <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                     </systemPropertyVariables>
-                    <argLine>${alpn-boot-string} -Xmx1024m ${jacoco.agent.argLine}</argLine>
+                    <argLine>${alpn-boot-string} ${jacoco.agent.argLine} ${surefire.system.args}</argLine>
                 </configuration>
             </plugin>
         </plugins>

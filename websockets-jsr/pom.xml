@@ -139,7 +139,7 @@
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                     </systemPropertyVariables>
-                    <argLine>-Xmx1024m ${jacoco.agent.argLine}</argLine>
+                    <argLine>${surefire.system.args} ${jacoco.agent.argLine}</argLine>
                 </configuration>
             </plugin>
         </plugins>

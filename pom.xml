@@ -85,7 +85,7 @@
 
         <!-- Surefire args -->
         <surefire.jpda.args/>
-        <surefire.system.args>-da ${surefire.jpda.args}</surefire.system.args>
+        <surefire.system.args>-ea ${surefire.jpda.args} -Xmx1024m</surefire.system.args>
 
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
