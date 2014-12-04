@@ -68,6 +68,7 @@ public class RequestLimit {
             try {
                 final SuspendedRequest task = queue.poll();
                 if (task != null) {
+                    task.exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
                     task.exchange.dispatch(task.next);
                 } else {
                     decrementRequests();
@@ -99,7 +100,6 @@ public class RequestLimit {
     }
 
     public void handleRequest(final HttpServerExchange exchange, final HttpHandler next) throws Exception {
-        exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
         long oldVal, newVal;
         do {
             oldVal = state;
@@ -118,6 +118,7 @@ public class RequestLimit {
             }
             newVal = oldVal + 1;
         } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
         next.handleRequest(exchange);
     }
 
