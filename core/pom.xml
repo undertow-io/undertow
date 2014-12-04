@@ -244,7 +244,6 @@
                                     <enableAssertions>true</enableAssertions>
                                     <runOrder>reversealphabetical</runOrder>
                                     <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
                                         <test.ajp>true</test.ajp>
                                         <test.dump>${dump}</test.dump>
                                         <default.server.address>localhost</default.server.address>
@@ -269,7 +268,6 @@
                                     <enableAssertions>true</enableAssertions>
                                     <runOrder>reversealphabetical</runOrder>
                                     <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
                                         <test.spdy>true</test.spdy>
                                         <test.dump>${dump}</test.dump>
                                         <default.server.address>localhost</default.server.address>
@@ -294,7 +292,6 @@
                                     <enableAssertions>true</enableAssertions>
                                     <runOrder>reversealphabetical</runOrder>
                                     <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
                                         <test.https>true</test.https>
                                         <test.dump>${dump}</test.dump>
                                         <default.server.address>localhost</default.server.address>
@@ -319,7 +316,6 @@
                                     <enableAssertions>true</enableAssertions>
                                     <runOrder>reversealphabetical</runOrder>
                                     <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
                                         <test.h2>true</test.h2>
                                         <test.dump>${dump}</test.dump>
                                         <default.server.address>localhost</default.server.address>
@@ -344,7 +340,6 @@
                                     <enableAssertions>true</enableAssertions>
                                     <runOrder>reversealphabetical</runOrder>
                                     <systemPropertyVariables>
-                                        <test.proxy>true</test.proxy>
                                         <test.h2c>true</test.h2c>
                                         <test.dump>${dump}</test.dump>
                                         <default.server.address>localhost</default.server.address>

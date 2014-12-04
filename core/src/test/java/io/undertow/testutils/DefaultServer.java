@@ -129,6 +129,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final boolean spdyPlain = Boolean.getBoolean("test.spdy-plain");
     private static final boolean https = Boolean.getBoolean("test.https");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
+    private static final boolean apache = Boolean.getBoolean("test.apache");
     private static final boolean dump = Boolean.getBoolean("test.dump");
     private static final boolean single = Boolean.getBoolean("test.single");
     private static final int runs = Integer.getInteger("test.runs", 1);
@@ -292,7 +293,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 if (ajp) {
                     openListener = new AjpOpenListener(pool);
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
-                    if (!proxy) {
+                    if (apache) {
                         int port = 8888;
                         server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), port), acceptListener, serverOptions);
                     } else {
@@ -479,7 +480,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             ajpIgnore = method.getMethod().getDeclaringClass().getAnnotation(AjpIgnore.class);
         }
         if (ajp && ajpIgnore != null) {
-            if (!proxy || !ajpIgnore.apacheOnly()) {
+            if (apache || !ajpIgnore.apacheOnly()) {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
             }
@@ -504,7 +505,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        if (proxy) {
+        if (isProxy()) {
             if (method.getAnnotation(ProxyIgnore.class) != null ||
                     method.getMethod().getDeclaringClass().isAnnotationPresent(ProxyIgnore.class) ||
                     getTestClass().getJavaClass().isAnnotationPresent(ProxyIgnore.class)) {
@@ -529,11 +530,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     @Override
     protected String testName(FrameworkMethod method) {
-        if (!proxy && !ajp) {
+        if (!isProxy()) {
             return super.testName(method);
         } else {
             StringBuilder sb = new StringBuilder(super.testName(method));
-            if (proxy) {
+            if (isProxy()) {
                 sb.append("{proxy}");
             }
             if (ajp) {
@@ -565,7 +566,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @param handler The handler to use
      */
     public static void setRootHandler(HttpHandler handler) {
-        if ((proxy || spdy || spdyPlain) && !ajp) {
+        if ((isProxy()) && !ajp) {
             //if we are testing HTTP proxy we always add the SSLHeaderHandler
             //this allows the SSL information to be propagated to be backend
             handler = new SSLHeaderHandler(new ProxyPeerAddressHandler(handler));
@@ -704,7 +705,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     private static boolean isApacheTest() {
-        return ajp && !proxy;
+        return apache;
     }
 
     /**
@@ -767,7 +768,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static boolean isProxy() {
-        return proxy || spdy || https;
+        return proxy || spdy || https || h2 || h2c|| spdyPlain || ajp;
     }
 
     public static boolean isSpdy() {
