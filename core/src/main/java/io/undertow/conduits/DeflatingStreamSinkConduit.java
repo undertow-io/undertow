@@ -310,11 +310,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                             state |= WRITTEN_TRAILER;
                             byte[] data = getTrailer();
                             if (data != null) {
-                                if (data.length <= buffer.remaining()) {
-                                    buffer.put(data);
-                                } else if (additionalBuffer == null) {
-                                    additionalBuffer = ByteBuffer.wrap(data);
-                                } else {
+                                if(additionalBuffer != null) {
                                     byte[] newData = new byte[additionalBuffer.remaining() + data.length];
                                     int pos = 0;
                                     while (additionalBuffer.hasRemaining()) {
@@ -324,6 +320,14 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                                         newData[pos++] = aData;
                                     }
                                     this.additionalBuffer = ByteBuffer.wrap(newData);
+                                } else if(anyAreSet(state, FLUSHING_BUFFER) && buffer.capacity() - buffer.remaining() >= data.length) {
+                                    buffer.compact();
+                                    buffer.put(data);
+                                    buffer.flip();
+                                } else if (data.length <= buffer.remaining() && !anyAreSet(state, FLUSHING_BUFFER)) {
+                                    buffer.put(data);
+                                } else {
+                                    additionalBuffer = ByteBuffer.wrap(data);
                                 }
                             }
                         }
