@@ -300,6 +300,11 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 //we don't return window update notifications, they are handled internally
                 return null;
             }
+            case FRAME_TYPE_PUSH_PROMISE: {
+                Http2PushPromiseParser pushPromiseParser = (Http2PushPromiseParser) frameParser.parser;
+                channel = new Http2PushPromiseStreamSourceChannel(this, frameData, frameParser.getFrameLength(), pushPromiseParser.getHeaderMap(), pushPromiseParser.getPromisedStreamId(), frameParser.streamId);
+                break;
+            }
             default: {
                 UndertowLogger.REQUEST_LOGGER.tracef("Dropping frame of length %s and type %s for stream %s as we do not understand this type of frame", frameParser.getFrameLength(), frameParser.type, frameParser.streamId);
                 return null;

@@ -92,8 +92,8 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_PUSH_PROMISE: {
-                    throw new RuntimeException("NYI"); //TODO: push promise
-                    // break;
+                    parser = new Http2PushPromiseParser(length, http2Channel.getDecoder());
+                    break;
                 }
                 case FRAME_TYPE_GOAWAY: {
                     parser = new Http2GoAwayParser(length);
