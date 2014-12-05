@@ -56,6 +56,7 @@ public class PushHandler implements HttpHandler {
 
     public PushHandler addRequestHeader(HttpString name, String value) {
         requestHeaders.put(name, value);
+        return this;
     }
 
     public PushHandler addRoute(String url, String ... resourcesToPush) {
