@@ -126,6 +126,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private int maxConcurrentStreams = -1;
     private int sendMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int receiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private int unackedReceiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE; //the old max frame size, this gets updated when our setting frame is acked
     private int maxHeaderListSize = -1;
 
     /**
@@ -223,6 +224,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     @Override
     protected AbstractHttp2StreamSourceChannel createChannel(FrameHeaderData frameHeaderData, Pooled<ByteBuffer> frameData) throws IOException {
+
         Http2FrameHeaderParser frameParser = (Http2FrameHeaderParser) frameHeaderData;
         AbstractHttp2StreamSourceChannel channel;
         if (frameParser.type == FRAME_TYPE_DATA) {
@@ -240,7 +242,21 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         //note that not all frame types are covered here, as some are only relevant to already active streams
         //if which case they are handled by the existing channel support
         switch (frameParser.type) {
-            case FRAME_TYPE_CONTINUATION:
+            case FRAME_TYPE_PUSH_PROMISE:
+            case FRAME_TYPE_CONTINUATION: {
+                //this is some 'clever' code to deal with both types continuation (push_promise and headers)
+                //if the continuation is not a push promise it falls through to the headers code
+                if(frameParser.parser instanceof Http2PushPromiseParser) {
+                    if(!isClient()) {
+                        sendGoAway(ERROR_PROTOCOL_ERROR);
+                        throw UndertowMessages.MESSAGES.serverReceivedPushPromise();
+                    }
+                    Http2PushPromiseParser pushPromiseParser = (Http2PushPromiseParser) frameParser.parser;
+                    channel = new Http2PushPromiseStreamSourceChannel(this, frameData, frameParser.getFrameLength(), pushPromiseParser.getHeaderMap(), pushPromiseParser.getPromisedStreamId(), frameParser.streamId);
+                    break;
+                }
+                //fall through
+            }
             case FRAME_TYPE_HEADERS: {
                 Http2HeadersParser parser = (Http2HeadersParser) frameParser.parser;
                 channel = new Http2StreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), parser.getHeaderMap(), frameParser.streamId);
@@ -275,6 +291,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     sendSettingsAck();
                 }
                 channel = new Http2SettingsStreamSourceChannel(this, frameData, frameParser.getFrameLength(), ((Http2SettingsParser) frameParser.parser).getSettings());
+                unackedReceiveMaxFrameSize = receiveMaxFrameSize;
                 break;
             }
             case FRAME_TYPE_PING: {
@@ -299,11 +316,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 frameData.free();
                 //we don't return window update notifications, they are handled internally
                 return null;
-            }
-            case FRAME_TYPE_PUSH_PROMISE: {
-                Http2PushPromiseParser pushPromiseParser = (Http2PushPromiseParser) frameParser.parser;
-                channel = new Http2PushPromiseStreamSourceChannel(this, frameData, frameParser.getFrameLength(), pushPromiseParser.getHeaderMap(), pushPromiseParser.getPromisedStreamId(), frameParser.streamId);
-                break;
             }
             default: {
                 UndertowLogger.REQUEST_LOGGER.tracef("Dropping frame of length %s and type %s for stream %s as we do not understand this type of frame", frameParser.getFrameLength(), frameParser.type, frameParser.streamId);
@@ -347,7 +359,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             }
         }
         this.frameParser = null;
-        if (frameParser.getFrameLength() > receiveMaxFrameSize) {
+        if (frameParser.getFrameLength() > receiveMaxFrameSize && frameParser.getFrameLength() > unackedReceiveMaxFrameSize) {
             sendGoAway(ERROR_FRAME_SIZE_ERROR);
             throw UndertowMessages.MESSAGES.http2FrameTooLarge();
         }

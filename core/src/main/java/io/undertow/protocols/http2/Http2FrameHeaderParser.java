@@ -93,6 +93,9 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                 }
                 case FRAME_TYPE_PUSH_PROMISE: {
                     parser = new Http2PushPromiseParser(length, http2Channel.getDecoder());
+                    if(allAreClear(flags, Http2Channel.HEADERS_FLAG_END_HEADERS)) {
+                        continuationParser = (Http2HeadersParser) parser;
+                    }
                     break;
                 }
                 case FRAME_TYPE_GOAWAY: {

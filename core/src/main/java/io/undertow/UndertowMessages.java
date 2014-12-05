@@ -370,4 +370,7 @@ public interface UndertowMessages {
 
     @Message(id = 114, value = "Invalid IP access control rule %s. Format is: [ip-match] allow|deny")
     IllegalArgumentException invalidAclRule(String rule);
+
+    @Message(id = 115, value = "Server received PUSH_PROMISE frame from client")
+    IOException serverReceivedPushPromise();
 }
