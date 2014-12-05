@@ -249,6 +249,11 @@ public class SpdyClientConnection implements ClientConnection {
         return false;
     }
 
+    @Override
+    public boolean isPushSupported() {
+        return true;
+    }
+
     private class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
 
         @Override
@@ -256,11 +261,20 @@ public class SpdyClientConnection implements ClientConnection {
             try {
                 SpdyStreamSourceChannel result = channel.receive();
                 if (result instanceof SpdySynReplyStreamSourceChannel) {
-                    SpdyClientExchange request = currentExchanges.remove(((SpdySynReplyStreamSourceChannel) result).getStreamId());
+                    final int streamId = ((SpdySynReplyStreamSourceChannel) result).getStreamId();
+                    SpdyClientExchange request = currentExchanges.get(streamId);
+                    result.addCloseTask(new ChannelListener<SpdyStreamSourceChannel>() {
+                        @Override
+                        public void handleEvent(SpdyStreamSourceChannel channel) {
+                            currentExchanges.remove(streamId);
+                        }
+                    });
                     if (request == null) {
+
                         //server side initiated stream, we can't deal with that at the moment
                         //just fail
                         //TODO: either handle this properly or at the very least send RST_STREAM
+                        channel.sendGoAway(SpdyChannel.CLOSE_PROTOCOL_ERROR);
                         IoUtils.safeClose(SpdyClientConnection.this);
                         return;
                     }

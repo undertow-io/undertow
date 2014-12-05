@@ -83,6 +83,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     private int readFrameCount = 0;
     private long maxStreamSize = -1;
     private long currentStreamSize;
+    private ChannelListener[] closeListeners = null;
 
     public AbstractFramedStreamSourceChannel(C framedChannel) {
         this.framedChannel = framedChannel;
@@ -229,6 +230,17 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         resumeReadsInternal(true);
     }
 
+    public void addCloseTask(ChannelListener<R> channelListener) {
+        if(closeListeners == null) {
+            closeListeners = new ChannelListener[]{channelListener};
+        } else {
+            ChannelListener[] old = closeListeners;
+            closeListeners = new ChannelListener[old.length + 1];
+            System.arraycopy(old, 0, closeListeners, 0, old.length);
+            closeListeners[old.length] = channelListener;
+        }
+    }
+
     /**
      * For this class there is no difference between a resume and a wakeup
      */
@@ -280,6 +292,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             state |= STATE_DONE | STATE_CLOSED;
             getFramedChannel().notifyFrameReadComplete(this);
             getFramedChannel().notifyClosed(this);
+            IoUtils.safeClose(this);
         }
     }
 
@@ -525,6 +538,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                             state |= STATE_DONE;
                             getFramedChannel().notifyClosed(this);
                             complete();
+                            close();
                         } else {
                             waitingForFrame = true;
                         }
@@ -544,7 +558,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         if(anyAreSet(state, STATE_CLOSED)) {
             return;
         }
@@ -561,7 +575,13 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         while (!pendingFrameData.isEmpty()) {
             pendingFrameData.poll().frameData.free();
         }
+
         ChannelListeners.invokeChannelListener(this, (ChannelListener<? super AbstractFramedStreamSourceChannel<C, R, S>>) closeSetter.get());
+        if(closeListeners != null) {
+            for(int i = 0; i < closeListeners.length; ++i) {
+                closeListeners[i].handleEvent(this);
+            }
+        }
     }
 
     protected void channelForciblyClosed() {

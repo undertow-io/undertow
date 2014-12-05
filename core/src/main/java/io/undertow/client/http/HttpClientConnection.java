@@ -207,6 +207,11 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
 
     @Override
+    public boolean isPushSupported() {
+        return false;
+    }
+
+    @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
         count++;
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
@@ -276,7 +281,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         }
         sinkChannel.setConduit(conduit);
 
-        httpClientExchange.invokeReadReadyCallback(httpClientExchange);
+        httpClientExchange.invokeReadReadyCallback();
         if (!hasContent) {
             //if there is no content we flush the response channel.
             //otherwise it is up to the user

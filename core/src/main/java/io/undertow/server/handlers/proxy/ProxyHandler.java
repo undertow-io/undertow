@@ -48,6 +48,7 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
 import io.undertow.client.ProxiedRequestAttachments;
+import io.undertow.client.PushCallback;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
@@ -421,6 +422,12 @@ public final class ProxyHandler implements HttpHandler {
                 request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, remoteHost);
             }
 
+            //if we don't support push set a header saying so
+            //this is non standard, and a problem with the HTTP2 spec, but they did not want to listen
+            if(!exchange.getConnection().isPushSupported() && clientConnection.getConnection().isPushSupported()) {
+                request.getRequestHeaders().put(Headers.X_DISABLE_PUSH, "true");
+            }
+
             // Set the protocol header and attachment
             final String proto = exchange.getRequestScheme().equals("https") ? "https" : "http";
             request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, proto);
@@ -486,8 +493,31 @@ public final class ProxyHandler implements HttpHandler {
                                 });
                             }
                         });
-
                     }
+
+                    //handle server push
+                    if(exchange.getConnection().isPushSupported() && result.getConnection().isPushSupported()) {
+                        result.setPushHandler(new PushCallback() {
+                            @Override
+                            public boolean handlePush(ClientExchange originalRequest, final ClientExchange pushedRequest) {
+                                final ClientRequest request = pushedRequest.getRequest();
+                                exchange.getConnection().pushResource(request.getPath(), request.getMethod(), request.getRequestHeaders(), new HttpHandler() {
+                                    @Override
+                                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                                        String path = request.getPath();
+                                        int i = path.indexOf("?");
+                                        if(i > 0) {
+                                            path = path.substring(0, i);
+                                        }
+
+                                        exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(new ProxyConnection(pushedRequest.getConnection(), path), exchange, requestHeaders, rewriteHostHeader, reuseXForwarded));
+                                    }
+                                });
+                                return true;
+                            }
+                        });
+                    }
+
 
                     result.setResponseListener(new ResponseCallback(exchange));
                     final IoExceptionHandler handler = new IoExceptionHandler(exchange, clientConnection.getConnection());

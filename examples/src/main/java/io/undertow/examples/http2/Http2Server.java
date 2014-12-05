@@ -25,6 +25,7 @@ import static io.undertow.predicate.Predicates.secure;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URI;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManager;
@@ -38,12 +39,18 @@ import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.examples.UndertowExample;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
+import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Xnio;
 
 /**
  * @author Stuart Douglas
@@ -63,11 +70,12 @@ public class Http2Server {
             System.exit(1);
         }
         String bindAddress = System.getProperty("bind.address", "localhost");
+        SSLContext sslContext = createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore"));
         Undertow server = Undertow.builder()
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.ENABLE_SPDY, true)
                 .addHttpListener(8080, bindAddress)
-                .addHttpsListener(8443, bindAddress, createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore")))
+                .addHttpsListener(8443, bindAddress, sslContext)
                 .setHandler(Handlers.header(predicate(secure(), resource(new FileResourceManager(new File(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
                         .setDirectoryListingEnabled(true), new HttpHandler() {
                     @Override
@@ -76,7 +84,23 @@ public class Http2Server {
                         exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
                     }
                 }), "x-undertow-transport", ExchangeAttributes.transportProtocol())).build();
+
         server.start();
+
+        SSLContext clientSslContext = createSSLContext(loadKeyStore("client.keystore"), loadKeyStore("client.truststore"));
+        LoadBalancingProxyClient proxy = new LoadBalancingProxyClient()
+                .addHost(new URI("https://localhost:8443"), null, new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, clientSslContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
+                .setConnectionsPerThread(20);
+
+        Undertow reverseProxy = Undertow.builder()
+                .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
+                .setServerOption(UndertowOptions.ENABLE_SPDY, true)
+                .addHttpListener(8081, bindAddress)
+                .addHttpsListener(8444, bindAddress, sslContext)
+                .setHandler(new ProxyHandler(proxy, 30000, ResponseCodeHandler.HANDLE_404))
+                .build();
+        reverseProxy.start();
+
     }
 
     private static KeyStore loadKeyStore(String name) throws Exception {

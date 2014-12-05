@@ -28,6 +28,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.server.HttpHandler;
 import io.undertow.util.DateUtils;
+import io.undertow.util.Headers;
 import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
@@ -80,6 +81,7 @@ public class Http2ServerConnection extends ServerConnection {
     private final int bufferSize;
     private SSLSessionInfo sessionInfo;
     private final HttpHandler rootHandler;
+    private HttpServerExchange exchange;
 
     public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
@@ -92,6 +94,10 @@ public class Http2ServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(channel, originalSourceConduit);
+    }
+
+    void setExchange(HttpServerExchange exchange) {
+        this.exchange = exchange;
     }
 
     /**
@@ -293,30 +299,37 @@ public class Http2ServerConnection extends ServerConnection {
 
     @Override
     public boolean isPushSupported() {
-        return channel.isPushEnabled();
+        return channel.isPushEnabled() && !exchange.getRequestHeaders().contains(Headers.X_DISABLE_PUSH);
     }
 
     @Override
-    public boolean pushResource(String path, HttpString method, HeaderMap requestHeaders, HttpServerExchange associatedRequest) {
+    public boolean pushResource(String path, HttpString method, HeaderMap requestHeaders) {
+        return pushResource(path, method, requestHeaders, rootHandler);
+    }
+
+    @Override
+    public boolean pushResource(String path, HttpString method, HeaderMap requestHeaders, final HttpHandler handler) {
         HeaderMap responseHeaders = new HeaderMap();
         try {
             requestHeaders.put(Http2ReceiveListener.METHOD, method.toString());
             requestHeaders.put(Http2ReceiveListener.PATH, path.toString());
-            requestHeaders.put(Http2ReceiveListener.AUTHORITY, associatedRequest.getHostAndPort());
-            requestHeaders.put(Http2ReceiveListener.SCHEME, associatedRequest.getRequestScheme());
+            requestHeaders.put(Http2ReceiveListener.AUTHORITY, exchange.getHostAndPort());
+            requestHeaders.put(Http2ReceiveListener.SCHEME, exchange.getRequestScheme());
 
             Http2HeadersStreamSinkChannel sink = channel.sendPushPromise(responseChannel.getStreamId(), requestHeaders, responseHeaders);
             Http2ServerConnection newConnection = new Http2ServerConnection(channel, sink, getUndertowOptions(), getBufferSize(), rootHandler);
             final HttpServerExchange exchange = new HttpServerExchange(newConnection, requestHeaders, responseHeaders, getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE));
+            newConnection.setExchange(exchange);
             exchange.setRequestMethod(method);
             exchange.setProtocol(Protocols.HTTP_1_1);
+            exchange.setRequestScheme(this.exchange.getRequestScheme());
             Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, "UTF-8"), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false), new StringBuilder());
 
             Connectors.terminateRequest(exchange);
             getIoThread().execute(new Runnable() {
                 @Override
                 public void run() {
-                    Connectors.executeRootHandler(rootHandler, exchange);
+                    Connectors.executeRootHandler(handler, exchange);
                 }
             });
             return true;

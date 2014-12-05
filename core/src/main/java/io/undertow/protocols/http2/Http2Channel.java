@@ -73,19 +73,19 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     static final int FRAME_TYPE_CONTINUATION = 0x09; //hopefully this goes away
 
 
-    static final int ERROR_NO_ERROR = 0x00;
-    static final int ERROR_PROTOCOL_ERROR = 0x01;
-    static final int ERROR_INTERNAL_ERROR = 0x02;
-    static final int ERROR_FLOW_CONTROL_ERROR = 0x03;
-    static final int ERROR_SETTINGS_TIMEOUT = 0x04;
-    static final int ERROR_STREAM_CLOSED = 0x05;
-    static final int ERROR_FRAME_SIZE_ERROR = 0x06;
-    static final int ERROR_REFUSED_STREAM = 0x07;
-    static final int ERROR_CANCEL = 0x08;
-    static final int ERROR_COMPRESSION_ERROR = 0x09;
-    static final int ERROR_CONNECT_ERROR = 0x0a;
-    static final int ERROR_ENHANCE_YOUR_CALM = 0x0b;
-    static final int ERROR_INADEQUATE_SECURITY = 0x0c;
+    public static final int ERROR_NO_ERROR = 0x00;
+    public static final int ERROR_PROTOCOL_ERROR = 0x01;
+    public static final int ERROR_INTERNAL_ERROR = 0x02;
+    public static final int ERROR_FLOW_CONTROL_ERROR = 0x03;
+    public static final int ERROR_SETTINGS_TIMEOUT = 0x04;
+    public static final int ERROR_STREAM_CLOSED = 0x05;
+    public static final int ERROR_FRAME_SIZE_ERROR = 0x06;
+    public static final int ERROR_REFUSED_STREAM = 0x07;
+    public static final int ERROR_CANCEL = 0x08;
+    public static final int ERROR_COMPRESSION_ERROR = 0x09;
+    public static final int ERROR_CONNECT_ERROR = 0x0a;
+    public static final int ERROR_ENHANCE_YOUR_CALM = 0x0b;
+    public static final int ERROR_INADEQUATE_SECURITY = 0x0c;
 
     static final int DATA_FLAG_END_STREAM = 0x1;
     static final int DATA_FLAG_END_SEGMENT = 0x2;

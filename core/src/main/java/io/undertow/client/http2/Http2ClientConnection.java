@@ -26,6 +26,10 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Protocols;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -280,6 +284,11 @@ public class Http2ClientConnection implements ClientConnection {
         return false;
     }
 
+    @Override
+    public boolean isPushSupported() {
+        return true;
+    }
+
     private class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         @Override
@@ -287,20 +296,24 @@ public class Http2ClientConnection implements ClientConnection {
             try {
                 AbstractHttp2StreamSourceChannel result = channel.receive();
                 if (result instanceof Http2StreamSourceChannel) {
-                    Http2ClientExchange request = currentExchanges.remove(((Http2StreamSourceChannel) result).getStreamId());
+                    final Http2StreamSourceChannel streamSourceChannel = (Http2StreamSourceChannel) result;
+                    Http2ClientExchange request = currentExchanges.get(streamSourceChannel.getStreamId());
+                    result.addCloseTask(new ChannelListener<AbstractHttp2StreamSourceChannel>() {
+                        @Override
+                        public void handleEvent(AbstractHttp2StreamSourceChannel channel) {
+                            currentExchanges.remove(streamSourceChannel.getStreamId());
+                        }
+                    });
                     if (request == null && initialUpgradeRequest) {
                         Channels.drain(result, Long.MAX_VALUE);
                         initialUpgradeRequest = false;
                         return;
                     } else if(request == null) {
-
-                        //server side initiated stream, we can't deal with that at the moment
-                        //just fail
-                        //TODO: either handle this properly or at the very least send RST_STREAM
-                        IoUtils.safeClose(channel);
+                        channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
+                        IoUtils.safeClose(Http2ClientConnection.this);
                         return;
                     }
-                    request.responseReady((Http2StreamSourceChannel) result);
+                    request.responseReady(streamSourceChannel);
                 } else if (result instanceof Http2PingStreamSourceChannel) {
                     handlePing((Http2PingStreamSourceChannel) result);
                 } else if (result instanceof Http2RstStreamStreamSourceChannel) {
@@ -310,6 +323,32 @@ public class Http2ClientConnection implements ClientConnection {
 
                     if(exchange != null) {
                         exchange.failed(UndertowMessages.MESSAGES.http2StreamWasReset());
+                    }
+                    Channels.drain(result, Long.MAX_VALUE);
+                } else if (result instanceof Http2PushPromiseStreamSourceChannel) {
+                    Http2PushPromiseStreamSourceChannel stream = (Http2PushPromiseStreamSourceChannel) result;
+                    Http2ClientExchange request = currentExchanges.get(stream.getAssociatedStreamId());
+                    if(request == null) {
+                        channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR); //according to the spec this is a connection error
+                    } else if(request.getPushCallback() == null) {
+                        channel.sendRstStream(stream.getPushedStreamId(), Http2Channel.ERROR_REFUSED_STREAM);
+                    } else {
+                        ClientRequest cr = new ClientRequest();
+                        cr.setMethod(new HttpString(stream.getHeaders().getFirst(METHOD)));
+                        cr.setPath(stream.getHeaders().getFirst(PATH));
+                        cr.setProtocol(Protocols.HTTP_1_1);
+                        for (HeaderValues header : stream.getHeaders()) {
+                            cr.getRequestHeaders().putAll(header.getHeaderName(), header);
+                        }
+
+                        Http2ClientExchange newExchange = new Http2ClientExchange(Http2ClientConnection.this, null, cr);
+
+                        if(!request.getPushCallback().handlePush(request, newExchange)) {
+                            channel.sendRstStream(stream.getPushedStreamId(), Http2Channel.ERROR_REFUSED_STREAM);
+                            IoUtils.safeClose(stream);
+                        } else {
+                            currentExchanges.put(stream.getPushedStreamId(), newExchange);
+                        }
                     }
                     Channels.drain(result, Long.MAX_VALUE);
                 } else if(!channel.isOpen()) {

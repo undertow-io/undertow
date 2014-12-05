@@ -163,8 +163,8 @@ public class DirectoryUtils {
 
         if(exchange.getConnection().isPushSupported()) {
             //try and push our resources to the remote endpoint
-            exchange.getConnection().pushResource(exchange.getRequestURI() + "?js", Methods.GET, new HeaderMap(), exchange);
-            exchange.getConnection().pushResource(exchange.getRequestURI() + "?css", Methods.GET, new HeaderMap(), exchange);
+            exchange.getConnection().pushResource(exchange.getRequestURI() + "?js", Methods.GET, new HeaderMap());
+            exchange.getConnection().pushResource(exchange.getRequestURI() + "?css", Methods.GET, new HeaderMap());
         }
 
         StringBuilder builder = renderDirectoryListing(requestPath, resource);

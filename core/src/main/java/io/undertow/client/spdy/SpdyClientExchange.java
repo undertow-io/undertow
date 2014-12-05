@@ -24,6 +24,7 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
+import io.undertow.client.PushCallback;
 import io.undertow.protocols.spdy.SpdyStreamSinkChannel;
 import io.undertow.protocols.spdy.SpdyStreamSourceChannel;
 import io.undertow.protocols.spdy.SpdySynReplyStreamSourceChannel;
@@ -47,6 +48,7 @@ public class SpdyClientExchange extends AbstractAttachable implements ClientExch
     private final SpdyStreamSinkChannel request;
     private final ClientRequest clientRequest;
     private IOException failedReason;
+    private PushCallback pushCallback;
 
     public SpdyClientExchange(ClientConnection clientConnection, SpdyStreamSinkChannel request, ClientRequest clientRequest) {
         this.clientConnection = clientConnection;
@@ -72,6 +74,15 @@ public class SpdyClientExchange extends AbstractAttachable implements ClientExch
         if ("100-continue".equalsIgnoreCase(expect)) {
             continueHandler.handleContinue(this);
         }
+    }
+
+    @Override
+    public void setPushHandler(PushCallback pushCallback) {
+        this.pushCallback = pushCallback;
+    }
+
+    PushCallback getPushCallback() {
+        return pushCallback;
     }
 
     @Override

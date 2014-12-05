@@ -47,7 +47,7 @@ public class PushHandler implements HttpHandler {
             if(result != null) {
                 String[] value = result.getValue();
                 for(int i = 0; i < value.length; ++i) {
-                    exchange.getConnection().pushResource(value[i], Methods.GET, requestHeaders, exchange);
+                    exchange.getConnection().pushResource(value[i], Methods.GET, requestHeaders);
                 }
             }
         }

@@ -26,6 +26,7 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
+import io.undertow.client.PushCallback;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
 import org.xnio.channels.StreamSinkChannel;
@@ -121,6 +122,11 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
         this.continueNotification = continueHandler;
     }
 
+    @Override
+    public void setPushHandler(PushCallback pushCallback) {
+
+    }
+
     void setFailed(IOException e) {
         this.failedReason = e;
         if (readyCallback != null) {
@@ -173,9 +179,9 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
         return clientConnection;
     }
 
-    void invokeReadReadyCallback(final ClientExchange result) {
+    void invokeReadReadyCallback() {
         if(readyCallback != null) {
-            readyCallback.completed(result);
+            readyCallback.completed(this);
             readyCallback = null;
         }
     }

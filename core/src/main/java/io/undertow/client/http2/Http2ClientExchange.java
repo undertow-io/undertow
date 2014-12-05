@@ -19,6 +19,8 @@
 package io.undertow.client.http2;
 
 import java.io.IOException;
+
+import io.undertow.client.PushCallback;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -47,6 +49,8 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
     private final ClientRequest clientRequest;
     private IOException failedReason;
 
+    private PushCallback pushCallback;
+
     public Http2ClientExchange(ClientConnection clientConnection, Http2StreamSinkChannel request, ClientRequest clientRequest) {
         this.clientConnection = clientConnection;
         this.request = request;
@@ -68,6 +72,15 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
         if ("100-continue".equalsIgnoreCase(expect)) {
             continueHandler.handleContinue(this);
         }
+    }
+
+    @Override
+    public void setPushHandler(PushCallback pushCallback) {
+        this.pushCallback = pushCallback;
+    }
+
+    PushCallback getPushCallback() {
+        return pushCallback;
     }
 
     @Override

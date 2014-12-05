@@ -31,6 +31,8 @@ public interface ClientExchange extends Attachable {
 
     void setContinueHandler(final ContinueNotification continueHandler);
 
+    void setPushHandler(PushCallback pushCallback);
+
     /**
      * Returns the request channel that can be used to send data to the server.
      *

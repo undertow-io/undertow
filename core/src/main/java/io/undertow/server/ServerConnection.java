@@ -217,10 +217,27 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      * @param path The path of the resource
      * @param method The request method
      * @param requestHeaders The request headers
-     * @param associatedRequest The associated request that initiated the push
      * @return <code>true</code> if the server attempted the push, false otherwise
      */
-    public boolean pushResource(final String path, final HttpString method, final HeaderMap requestHeaders, HttpServerExchange associatedRequest) {
+    public boolean pushResource(final String path, final HttpString method, final HeaderMap requestHeaders) {
+        return false;
+    }
+
+    /**
+     * Attempts to push a resource if this connection supports server push. Otherwise the request is ignored.
+     *
+     * Note that push is always done on a best effort basis, even if this method returns true it is possible that
+     * the remote endpoint will reset the stream.
+     *
+     * The {@link io.undertow.server.HttpHandler} passed in will be used to generate the pushed response
+     *
+     *
+     * @param path The path of the resource
+     * @param method The request method
+     * @param requestHeaders The request headers
+     * @return <code>true</code> if the server attempted the push, false otherwise
+     */
+    public boolean pushResource(final String path, final HttpString method, final HeaderMap requestHeaders, HttpHandler handler) {
         return false;
     }
 

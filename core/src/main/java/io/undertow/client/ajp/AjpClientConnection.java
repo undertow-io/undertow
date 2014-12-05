@@ -32,6 +32,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
+
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -175,6 +176,11 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     @Override
     public boolean isUpgraded() {
         return anyAreSet(state, UPGRADE_REQUESTED | UPGRADED);
+    }
+
+    @Override
+    public boolean isPushSupported() {
+        return false;
     }
 
     @Override
