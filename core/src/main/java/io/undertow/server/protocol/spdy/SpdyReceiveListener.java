@@ -49,11 +49,11 @@ import java.io.IOException;
  */
 public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
 
-    private static final HttpString METHOD = new HttpString(":method");
-    private static final HttpString PATH = new HttpString(":path");
-    private static final HttpString SCHEME = new HttpString(":scheme");
-    private static final HttpString VERSION = new HttpString(":version");
-    private static final HttpString HOST = new HttpString(":host");
+    static final HttpString METHOD = new HttpString(":method");
+    static final HttpString PATH = new HttpString(":path");
+    static final HttpString SCHEME = new HttpString(":scheme");
+    static final HttpString VERSION = new HttpString(":version");
+    static final HttpString HOST = new HttpString(":host");
 
     private final HttpHandler rootHandler;
     private final long maxEntitySize;
@@ -94,10 +94,11 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
             } else if (frame instanceof SpdySynStreamStreamSourceChannel) {
                 //we have a request
                 final SpdySynStreamStreamSourceChannel dataChannel = (SpdySynStreamStreamSourceChannel) frame;
-                final SpdyServerConnection connection = new SpdyServerConnection(channel, dataChannel, undertowOptions, bufferSize);
+                final SpdyServerConnection connection = new SpdyServerConnection(rootHandler, channel, dataChannel, undertowOptions, bufferSize);
 
 
                 final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
+                connection.setExchange(exchange);
                 dataChannel.setMaxStreamSize(maxEntitySize);
                 exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
                 exchange.setProtocol(new HttpString(exchange.getRequestHeaders().getFirst(VERSION)));

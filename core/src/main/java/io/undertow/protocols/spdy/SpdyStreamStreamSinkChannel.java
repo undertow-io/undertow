@@ -96,7 +96,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
         }
     }
 
-    protected Pooled<ByteBuffer>[] createHeaderBlock(Pooled<ByteBuffer> firstHeaderBuffer, Pooled<ByteBuffer>[] allHeaderBuffers, ByteBuffer firstBuffer, HeaderMap headers) {
+    protected Pooled<ByteBuffer>[] createHeaderBlock(Pooled<ByteBuffer> firstHeaderBuffer, Pooled<ByteBuffer>[] allHeaderBuffers, ByteBuffer firstBuffer, HeaderMap headers, boolean unidirectional) {
         Pooled<ByteBuffer> outPooled = getChannel().getHeapBufferPool().allocate();
         Pooled<ByteBuffer> inPooled = getChannel().getHeapBufferPool().allocate();
         try {
@@ -160,7 +160,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
                 totalLength = firstBuffer.position() - 8;
             }
 
-            SpdyProtocolUtils.putInt(firstBuffer, ((isWritesShutdown() && !getBuffer().hasRemaining() ? SpdyChannel.FLAG_FIN : 0) << 24) | totalLength, 4);
+            SpdyProtocolUtils.putInt(firstBuffer, ((isWritesShutdown() && !getBuffer().hasRemaining() ? SpdyChannel.FLAG_FIN : 0) << 24) | (unidirectional ? SpdyChannel.FLAG_UNIDIRECTIONAL : 0) << 24 | totalLength, 4);
 
         } finally {
             inPooled.free();

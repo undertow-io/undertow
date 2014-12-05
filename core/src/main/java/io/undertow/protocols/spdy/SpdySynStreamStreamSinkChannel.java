@@ -35,11 +35,13 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
     private final HeaderMap headers;
     private boolean first = true;
     private final Deflater deflater;
+    private final int associatedStreamId;
 
-    SpdySynStreamStreamSinkChannel(SpdyChannel channel, HeaderMap headers, int streamId, Deflater deflater) {
+    SpdySynStreamStreamSinkChannel(SpdyChannel channel, HeaderMap headers, int streamId, Deflater deflater, int associatedStreamId) {
         super(channel, streamId);
         this.headers = headers;
         this.deflater = deflater;
+        this.associatedStreamId = associatedStreamId;
     }
 
     @Override
@@ -63,7 +65,7 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
             HeaderMap headers = this.headers;
 
             SpdyProtocolUtils.putInt(firstBuffer, getStreamId());
-            SpdyProtocolUtils.putInt(firstBuffer, 0);
+            SpdyProtocolUtils.putInt(firstBuffer, associatedStreamId);
             firstBuffer.put((byte) 0);
             firstBuffer.put((byte) 0);
 
@@ -72,7 +74,7 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
             headers.remove(Headers.KEEP_ALIVE);
             headers.remove(Headers.TRANSFER_ENCODING);
 
-            allHeaderBuffers = createHeaderBlock(firstHeaderBuffer, allHeaderBuffers, firstBuffer, headers);
+            allHeaderBuffers = createHeaderBlock(firstHeaderBuffer, allHeaderBuffers, firstBuffer, headers, associatedStreamId > 0);
         }
         Pooled<ByteBuffer> currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
         ByteBuffer currentBuffer = currentPooled.getResource();
@@ -117,6 +119,10 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
                 }
             }
         }
+    }
+
+    public HeaderMap getHeaders() {
+        return headers;
     }
 
     @Override

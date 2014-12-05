@@ -400,15 +400,18 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     }
 
     public synchronized SpdySynStreamStreamSinkChannel createStream(HeaderMap requestHeaders) throws IOException {
+        return createStream(0, requestHeaders);
+    }
+
+    public synchronized SpdySynStreamStreamSinkChannel createStream(int associatedStreamId, HeaderMap requestHeaders) throws IOException {
         if(!isOpen()) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         int streamId = streamIdCounter;
         streamIdCounter += 2;
-        SpdySynStreamStreamSinkChannel spdySynStreamStreamSinkChannel = new SpdySynStreamStreamSinkChannel(this, requestHeaders, streamId, deflater);
+        SpdySynStreamStreamSinkChannel spdySynStreamStreamSinkChannel = new SpdySynStreamStreamSinkChannel(this, requestHeaders, streamId, deflater, associatedStreamId);
         outgoingStreams.put(streamId, spdySynStreamStreamSinkChannel);
         return spdySynStreamStreamSinkChannel;
-
     }
 
     /**

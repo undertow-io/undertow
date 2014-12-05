@@ -73,7 +73,7 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
             headers.remove(Headers.KEEP_ALIVE);
             headers.remove(Headers.TRANSFER_ENCODING);
 
-            allHeaderBuffers = createHeaderBlock(firstHeaderBuffer, allHeaderBuffers, firstBuffer, headers);
+            allHeaderBuffers = createHeaderBlock(firstHeaderBuffer, allHeaderBuffers, firstBuffer, headers, false);
         }
 
         Pooled<ByteBuffer> currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];

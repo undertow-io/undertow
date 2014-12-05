@@ -18,8 +18,13 @@
 
 package io.undertow.server.protocol.spdy;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.protocols.spdy.SpdyStreamSinkChannel;
+import io.undertow.protocols.spdy.SpdySynStreamStreamSinkChannel;
 import io.undertow.server.Connectors;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
@@ -32,6 +37,7 @@ import io.undertow.util.AttachmentList;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
@@ -65,9 +71,10 @@ public class SpdyServerConnection extends ServerConnection {
     private static final HttpString STATUS = new HttpString(":status");
     private static final HttpString VERSION = new HttpString(":version");
 
+    private final HttpHandler rootHandler;
     private final SpdyChannel channel;
     private final SpdySynStreamStreamSourceChannel requestChannel;
-    private final SpdySynReplyStreamSinkChannel responseChannel;
+    private final SpdyStreamSinkChannel responseChannel;
     private final ConduitStreamSinkChannel conduitStreamSinkChannel;
     private final ConduitStreamSourceChannel conduitStreamSourceChannel;
     private final StreamSinkConduit originalSinkConduit;
@@ -75,8 +82,10 @@ public class SpdyServerConnection extends ServerConnection {
     private final OptionMap undertowOptions;
     private final int bufferSize;
     private SSLSessionInfo sessionInfo;
+    private HttpServerExchange exchange;
 
-    public SpdyServerConnection(SpdyChannel channel, SpdySynStreamStreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize) {
+    public SpdyServerConnection(HttpHandler rootHandler, SpdyChannel channel, SpdySynStreamStreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize) {
+        this.rootHandler = rootHandler;
         this.channel = channel;
         this.requestChannel = requestChannel;
         this.undertowOptions = undertowOptions;
@@ -86,6 +95,23 @@ public class SpdyServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(requestChannel, originalSourceConduit);
+    }
+    public SpdyServerConnection(HttpHandler rootHandler, SpdyChannel channel, SpdySynStreamStreamSinkChannel responseChannel, OptionMap undertowOptions, int bufferSize) {
+        this.rootHandler = rootHandler;
+        this.channel = channel;
+        this.requestChannel = null;
+        this.undertowOptions = undertowOptions;
+        this.bufferSize = bufferSize;
+        this.responseChannel = responseChannel;
+        originalSinkConduit = new StreamSinkChannelWrappingConduit(responseChannel);
+        originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
+        this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
+        this.conduitStreamSourceChannel = null;
+    }
+
+
+    void setExchange(HttpServerExchange exchange) {
+        this.exchange = exchange;
     }
 
     @Override
@@ -212,11 +238,17 @@ public class SpdyServerConnection extends ServerConnection {
 
     @Override
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
-        HeaderMap headers = responseChannel.getHeaders();
+        HeaderMap headers;
+        if(responseChannel instanceof SpdySynReplyStreamSinkChannel) {
+            headers = ((SpdySynReplyStreamSinkChannel)responseChannel).getHeaders();
+        } else {
+            headers = ((SpdySynStreamStreamSinkChannel)responseChannel).getHeaders();
+        }
         DateUtils.addDateHeaderIfRequired(exchange);
 
         headers.add(STATUS, exchange.getResponseCode() + " " + StatusCodes.getReason(exchange.getResponseCode()));
         headers.add(VERSION, exchange.getProtocol().toString());
+
         Connectors.flattenCookies(exchange);
         return originalSinkConduit;
     }
@@ -268,5 +300,49 @@ public class SpdyServerConnection extends ServerConnection {
     @Override
     public String getTransportProtocol() {
         return SpdyOpenListener.SPDY_3_1;
+    }
+
+    @Override
+    public boolean pushResource(String path, HttpString method, HeaderMap requestHeaders) {
+        return pushResource(path, method, requestHeaders, rootHandler);
+    }
+
+    @Override
+    public boolean pushResource(String path, HttpString method, HeaderMap requestHeaders, final HttpHandler handler) {
+        HeaderMap responseHeaders = new HeaderMap();
+        try {
+            responseHeaders.put(SpdyReceiveListener.PATH, path.toString());
+            responseHeaders.put(SpdyReceiveListener.HOST, exchange.getHostAndPort());
+            responseHeaders.put(SpdyReceiveListener.SCHEME, exchange.getRequestScheme());
+            responseHeaders.put(SpdyReceiveListener.METHOD, method.toString());
+            responseHeaders.put(SpdyReceiveListener.VERSION, Protocols.HTTP_1_1_STRING);
+
+            SpdySynStreamStreamSinkChannel sink = channel.createStream(requestChannel.getStreamId(),responseHeaders);
+            SpdyServerConnection newConnection = new SpdyServerConnection(rootHandler, channel, sink, getUndertowOptions(), getBufferSize());
+
+            final HttpServerExchange exchange = new HttpServerExchange(newConnection, requestHeaders, responseHeaders, getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE));
+            newConnection.setExchange(exchange);
+            exchange.setRequestMethod(method);
+            exchange.setProtocol(Protocols.HTTP_1_1);
+            exchange.setRequestScheme(this.exchange.getRequestScheme());
+            Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, "UTF-8"), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false), new StringBuilder());
+
+            Connectors.terminateRequest(exchange);
+            getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    Connectors.executeRootHandler(handler, exchange);
+                }
+            });
+            return true;
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean isPushSupported() {
+        return true;
     }
 }
