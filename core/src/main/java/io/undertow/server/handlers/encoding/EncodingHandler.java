@@ -19,9 +19,15 @@
 package io.undertow.server.handlers.encoding;
 
 import io.undertow.Handlers;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.builder.HandlerBuilder;
+
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Handler that serves as the basis for content encoding implementations.
@@ -89,5 +95,39 @@ public class EncodingHandler implements HttpHandler {
         return this;
     }
 
+    public static class Builder  implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "compress";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new HandlerWrapper() {
+                @Override
+                public HttpHandler wrap(HttpHandler handler) {
+                    return new EncodingHandler(handler, new ContentEncodingRepository()
+                            .addEncodingHandler("gzip", new GzipEncodingProvider(), 100)
+                            .addEncodingHandler("deflate", new DeflateEncodingProvider(), 10));
+                }
+            };
+        }
+    }
 
 }
