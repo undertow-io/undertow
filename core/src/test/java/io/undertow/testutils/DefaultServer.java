@@ -19,6 +19,7 @@
 package io.undertow.testutils;
 
 import io.undertow.UndertowOptions;
+import io.undertow.protocols.ssl.SslConduit;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
@@ -84,7 +85,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
-import java.util.Map;
 
 import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
 import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
@@ -245,16 +245,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
             @Override
             public void testFailure(Failure failure) throws Exception {
-                //dump stack on test failure
-                //useful for debugging intermittent failures
-                for(Map.Entry<Thread, StackTraceElement[]> entry : Thread.getAllStackTraces().entrySet()) {
-                    System.out.println();
-                    System.out.println(entry.getKey());
-                    for(StackTraceElement element : entry.getValue()) {
-                        System.out.println( element.toString());
-                    }
+                System.out.println("SSL Conduit State");
+                for(SslConduit a: SslConduit.TEMP) {
+                    System.out.println(a);
                 }
-
                 super.testFailure(failure);
             }
 

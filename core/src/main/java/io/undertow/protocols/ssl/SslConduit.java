@@ -51,6 +51,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.allAreClear;
@@ -60,7 +61,9 @@ import static org.xnio.Bits.anyAreSet;
 /**
  * @author Stuart Douglas
  */
-class SslConduit implements StreamSourceConduit, StreamSinkConduit {
+public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
+
+    public static final List<SslConduit> TEMP = new CopyOnWriteArrayList<>();
 
     /**
      * If this is set we are in the middle of a handshake, and we cannot
@@ -169,6 +172,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         } else {
             state = FLAG_IN_HANDSHAKE | FLAG_WRITE_REQUIRES_READ;
         }
+        TEMP.add(this);
     }
 
     @Override
@@ -854,6 +858,7 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_CLOSED)) {
             return;
         }
+        TEMP.remove(this);
         state |= FLAG_CLOSED | FLAG_DELEGATE_SINK_SHUTDOWN | FLAG_DELEGATE_SOURCE_SHUTDOWN | FLAG_WRITE_SHUTDOWN | FLAG_READ_SHUTDOWN;
         notifyReadClosed();
         notifyWriteClosed();
@@ -1070,5 +1075,16 @@ class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 delegate.getSinkChannel().suspendWrites();
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return "SslConduit{" +
+                "state=" + state +
+                ", outstandingTasks=" + outstandingTasks +
+                ", wrappedData=" + wrappedData +
+                ", dataToUnwrap=" + dataToUnwrap +
+                ", unwrappedData=" + unwrappedData +
+                '}';
     }
 }
