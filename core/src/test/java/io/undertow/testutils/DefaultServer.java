@@ -84,6 +84,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.Map;
 
 import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
 import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
@@ -240,6 +241,21 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             public void testStarted(Description description) throws Exception {
                 DebuggingSlicePool.currentLabel = description.getClassName() + "." + description.getMethodName();
                 super.testStarted(description);
+            }
+
+            @Override
+            public void testFailure(Failure failure) throws Exception {
+                //dump stack on test failure
+                //useful for debugging intermittent failures
+                for(Map.Entry<Thread, StackTraceElement[]> entry : Thread.getAllStackTraces().entrySet()) {
+                    System.out.println();
+                    System.out.println(entry.getKey());
+                    for(StackTraceElement element : entry.getValue()) {
+                        System.out.println( element.toString());
+                    }
+                }
+
+                super.testFailure(failure);
             }
 
             @Override
