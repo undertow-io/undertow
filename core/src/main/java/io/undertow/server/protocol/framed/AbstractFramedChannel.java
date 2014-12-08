@@ -111,7 +111,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> readsBrokenUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "readsBroken");
     private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> writesBrokenUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "writesBroken");
 
-    private ReferenceCountedPooled<ByteBuffer> readData = null;
+    private ReferenceCountedPooled readData = null;
     private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<>();
     private boolean flushingSenders = false;
 
@@ -130,7 +130,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         this.framePriority = framePriority;
         if (readData != null) {
             if(readData.getResource().hasRemaining()) {
-                this.readData = new ReferenceCountedPooled<>(readData, 1);
+                this.readData = new ReferenceCountedPooled(readData, 1);
             } else {
                 readData.free();
             }
@@ -258,11 +258,20 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             channel.getSourceChannel().shutdownReads();
             return null;
         }
-        ReferenceCountedPooled<ByteBuffer> pooled = this.readData;
+        ReferenceCountedPooled pooled = this.readData;
         boolean hasData;
         if (pooled == null) {
             Pooled<ByteBuffer> buf = bufferPool.allocate();
-            this.readData = pooled = new ReferenceCountedPooled<>(buf, 1);
+            this.readData = pooled = new ReferenceCountedPooled(buf, 1);
+            hasData = false;
+        } else if(pooled.isFreed()) {
+            //we attempt to re-used an existing buffer
+            if(!pooled.tryUnfree()) {
+                Pooled<ByteBuffer> buf = bufferPool.allocate();
+                this.readData = pooled = new ReferenceCountedPooled(buf, 1);
+            } else {
+                pooled.getResource().limit(pooled.getResource().capacity());
+            }
             hasData = false;
         } else {
             hasData = pooled.getResource().hasRemaining();
@@ -374,8 +383,14 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             //which will make readData null
             if (readData != null) {
                 if (!pooled.getResource().hasRemaining() || forceFree) {
+                    if(pooled.getResource().limit() * 2 > pooled.getResource().capacity() || forceFree) {
+                        //if we have used more than half the buffer we don't allow it to be re-aquired
+                        readData = null;
+                    }
+                    //even though this is freed we may un-free it if we get a new packet
+                    //this prevents many small reads resulting in a large number of allocated buffers
                     pooled.free();
-                    this.readData = null;
+
                 }
             }
         }
@@ -614,7 +629,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     public synchronized void resumeReceives() {
         receivesSuspended = false;
-        if (readData != null) {
+        if (readData != null && !readData.isFreed()) {
             channel.getSourceChannel().wakeupReads();
         } else {
             channel.getSourceChannel().resumeReads();
@@ -759,7 +774,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     channel.suspendReads();
                 }
             }
-            if (readData != null && channel.isOpen()) {
+            if (readData != null  && !readData.isFreed() && channel.isOpen()) {
                 try {
                     channel.getIoThread().execute(new Runnable() {
                         @Override
@@ -798,19 +813,17 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
             if(!sourceClosed || !sinkClosed) {
                 return; //both sides need to be closed
-            } else if(readData != null) {
+            } else if(readData != null && !readData.isFreed()) {
                 //we make sure there is no data left to receive, if there is then we invoke the receive listener
                 final ChannelListener<? super C> listener = receiveSetter.get();
                 if(listener != null) {
                     channel.getIoThread().execute(new Runnable() {
                         @Override
                         public void run() {
-                            while (readData != null) {
+                            while (readData != null  && !readData.isFreed()) {
                                 int rem = readData.getResource().remaining();
                                 ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, (ChannelListener) receiveSetter.get());
                                 if(readData != null && rem == readData.getResource().remaining()) {
-                                    readData.free();
-                                    readData = null;
                                     break;//make sure we are making progress
                                 }
                             }
