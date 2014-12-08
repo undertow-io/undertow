@@ -207,7 +207,11 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public DeploymentInfo setContextPath(final String contextPath) {
-        this.contextPath = contextPath;
+        if(contextPath != null && contextPath.isEmpty()) {
+            this.contextPath = "/"; //we represent the root context as / instead of "", but both work
+        } else {
+            this.contextPath = contextPath;
+        }
         return this;
     }
 
