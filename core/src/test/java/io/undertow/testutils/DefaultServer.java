@@ -19,7 +19,6 @@
 package io.undertow.testutils;
 
 import io.undertow.UndertowOptions;
-import io.undertow.protocols.ssl.SslConduit;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
@@ -241,15 +240,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             public void testStarted(Description description) throws Exception {
                 DebuggingSlicePool.currentLabel = description.getClassName() + "." + description.getMethodName();
                 super.testStarted(description);
-            }
-
-            @Override
-            public void testFailure(Failure failure) throws Exception {
-                System.out.println("SSL Conduit State");
-                for(SslConduit a: SslConduit.TEMP) {
-                    System.out.println(a);
-                }
-                super.testFailure(failure);
             }
 
             @Override
