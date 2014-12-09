@@ -65,7 +65,7 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
                 handle = connection.getIoThread().executeAfter(timeoutCommand, (expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
                 return;
             }
-            UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity");
+            UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity", connection.getSourceChannel());
             IoUtils.safeClose(connection);
             if (connection.getSourceChannel().isReadResumed()) {
                 ChannelListeners.invokeChannelListener(connection.getSourceChannel(), connection.getSourceChannel().getReadListener());
