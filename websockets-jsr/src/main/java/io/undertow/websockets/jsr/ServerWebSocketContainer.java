@@ -53,6 +53,7 @@ import javax.websocket.server.ServerEndpoint;
 import javax.websocket.server.ServerEndpointConfig;
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -96,6 +97,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final Pool<ByteBuffer> bufferPool;
     private final ThreadSetupAction threadSetupAction;
     private final boolean dispatchToWorker;
+    private final InetSocketAddress clientBindAddress;
 
     private volatile long defaultAsyncSendTimeout;
     private volatile long defaultMaxSessionIdleTimeout;
@@ -108,15 +110,20 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final List<WebsocketClientSslProvider> clientSslProviders;
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
-        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker);
+        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, null);
     }
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker) {
+        this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, null);
+    }
+
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, InetSocketAddress clientBindAddress) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
         this.threadSetupAction = threadSetupAction;
         this.dispatchToWorker = dispatchToWorker;
+        this.clientBindAddress = clientBindAddress;
         List<WebsocketClientSslProvider> clientSslProviders = new ArrayList<>();
         for (WebsocketClientSslProvider provider : ServiceLoader.load(WebsocketClientSslProvider.class, classLoader)) {
             clientSslProviders.add(provider);
@@ -190,7 +197,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
         }
 
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation);
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, clientBindAddress, path, WebSocketVersion.V13, clientNegotiation, null);
         Number timeout = (Number) cec.getUserProperties().get(TIMEOUT);
         if(session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS: timeout.intValue(), TimeUnit.SECONDS) == IoFuture.Status.WAITING) {
             //add a notifier to close the channel if the connection actually completes
@@ -250,7 +257,8 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
 
 
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13, clientNegotiation); //TODO: fix this
+
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, clientBindAddress, path, WebSocketVersion.V13, clientNegotiation, null); //TODO: fix this
         Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
         IoFuture.Status result = session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS : timeout.intValue(), TimeUnit.SECONDS);
         if(result == IoFuture.Status.WAITING) {

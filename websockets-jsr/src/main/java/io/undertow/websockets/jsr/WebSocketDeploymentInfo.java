@@ -43,6 +43,7 @@ public class WebSocketDeploymentInfo {
     private final List<ServerEndpointConfig> programaticEndpoints = new ArrayList<>();
     private final List<ContainerReadyListener> containerReadyListeners = new ArrayList<>();
     private final List<ExtensionHandshake> extensions = new ArrayList<>();
+    private String clientBindAddress = null;
 
     public XnioWorker getWorker() {
         return worker;
@@ -121,5 +122,13 @@ public class WebSocketDeploymentInfo {
      */
     public List<ExtensionHandshake> getExtensions() {
         return extensions;
+    }
+
+    public String getClientBindAddress() {
+        return clientBindAddress;
+    }
+
+    public void setClientBindAddress(String clientBindAddress) {
+        this.clientBindAddress = clientBindAddress;
     }
 }
