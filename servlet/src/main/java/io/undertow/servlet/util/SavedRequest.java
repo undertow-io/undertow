@@ -37,7 +37,11 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Saved servlet request.
@@ -52,14 +56,16 @@ public class SavedRequest implements Serializable {
     private final int dataLength;
     private final HttpString method;
     private final String requestUri;
-    private final HeaderMap headerMap;
+    private final HashMap<HttpString, List<String>> headerMap = new HashMap<>();
 
     public SavedRequest(byte[] data, int dataLength, HttpString method, String requestUri, HeaderMap headerMap) {
         this.data = data;
         this.dataLength = dataLength;
         this.method = method;
         this.requestUri = requestUri;
-        this.headerMap = headerMap;
+        for(HeaderValues val : headerMap) {
+            this.headerMap.put(val.getHeaderName(), new ArrayList<>(val));
+        }
     }
 
     public static void trySaveRequest(final HttpServerExchange exchange) {
@@ -137,8 +143,8 @@ public class SavedRequest implements Serializable {
                             headerIterator.remove();
                         }
                     }
-                    for(HeaderValues header : request.headerMap) {
-                        exchange.getRequestHeaders().putAll(header.getHeaderName(), header);
+                    for(Map.Entry<HttpString, List<String>> header : request.headerMap.entrySet()) {
+                        exchange.getRequestHeaders().putAll(header.getKey(), header.getValue());
                     }
                 }
             }
