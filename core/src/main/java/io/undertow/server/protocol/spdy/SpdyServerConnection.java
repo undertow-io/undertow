@@ -246,8 +246,8 @@ public class SpdyServerConnection extends ServerConnection {
         }
         DateUtils.addDateHeaderIfRequired(exchange);
 
-        headers.add(STATUS, exchange.getResponseCode() + " " + StatusCodes.getReason(exchange.getResponseCode()));
-        headers.add(VERSION, exchange.getProtocol().toString());
+        headers.put(STATUS, exchange.getResponseCode() + " " + StatusCodes.getReason(exchange.getResponseCode()));
+        headers.put(VERSION, exchange.getProtocol().toString());
 
         Connectors.flattenCookies(exchange);
         return originalSinkConduit;
@@ -315,7 +315,6 @@ public class SpdyServerConnection extends ServerConnection {
             responseHeaders.put(SpdyReceiveListener.HOST, exchange.getHostAndPort());
             responseHeaders.put(SpdyReceiveListener.SCHEME, exchange.getRequestScheme());
             responseHeaders.put(SpdyReceiveListener.METHOD, method.toString());
-            responseHeaders.put(SpdyReceiveListener.VERSION, Protocols.HTTP_1_1_STRING);
 
             SpdySynStreamStreamSinkChannel sink = channel.createStream(requestChannel.getStreamId(),responseHeaders);
             SpdyServerConnection newConnection = new SpdyServerConnection(rootHandler, channel, sink, getUndertowOptions(), getBufferSize());
