@@ -152,6 +152,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private int prefaceCount;
     private boolean initialSettingsReceived; //settings frame must be the first frame we relieve
     private Http2HeadersParser continuationParser = null; //state for continuation frames
+    /**
+     * We send the settings frame lazily, which is basically a big hack to work around broken IE support for push (it
+     * dies if you send a settings frame with push enabled).
+     *
+     * Once IE is no longer broken this should be removed.
+     */
+    private boolean initialSettingsSent = false;
 
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
@@ -185,8 +192,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if (clientSide) {
             sendPreface();
             prefaceCount = PREFACE_BYTES.length;
+            sendSettings();
         }
-        sendSettings();
     }
 
     private void sendSettings() {
@@ -199,6 +206,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     }
 
     private void sendSettingsAck() {
+        if(!initialSettingsSent) {
+            sendSettings();
+            initialSettingsSent = true;
+        }
         Http2SettingsStreamSinkChannel stream = new Http2SettingsStreamSinkChannel(this);
         flushChannel(stream);
     }
