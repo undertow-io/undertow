@@ -59,14 +59,17 @@ public class LearningPushHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        String path;
+        String fullPath;
+        String requestPath;
         if(exchange.getQueryString().isEmpty()) {
-            path = exchange.getRequestURL();
+            fullPath = exchange.getRequestURL();
+            requestPath = exchange.getRequestPath();
         } else{
-            path = exchange.getRequestURL() + "?" + exchange.getQueryString();
+            fullPath = exchange.getRequestURL() + "?" + exchange.getQueryString();
+            requestPath = exchange.getRequestPath() + "?" + exchange.getQueryString();
         }
 
-        doPush(exchange, path);
+        doPush(exchange, fullPath);
         String referrer = exchange.getRequestHeaders().getFirst(Headers.REFERER);
         if (referrer != null) {
             String accept = exchange.getRequestHeaders().getFirst(Headers.ACCEPT);
@@ -75,15 +78,15 @@ public class LearningPushHandler implements HttpHandler {
                 //a link to move to a new page, and is not a resource load for the current page
                 //we only care about resources for the current page
 
-                exchange.addExchangeCompleteListener(new PushCompletionListener(path, referrer));
+                exchange.addExchangeCompleteListener(new PushCompletionListener(fullPath, requestPath, referrer));
             }
         }
         next.handleRequest(exchange);
     }
 
-    private void doPush(HttpServerExchange exchange, String path) {
+    private void doPush(HttpServerExchange exchange, String fullPath) {
         if (exchange.getConnection().isPushSupported()) {
-            Map<String, PushedRequest> toPush = cache.get(path);
+            Map<String, PushedRequest> toPush = cache.get(fullPath);
             if (toPush != null) {
                 Session session = getSession(exchange);
                 if (session == null) {
@@ -134,11 +137,13 @@ public class LearningPushHandler implements HttpHandler {
 
     private final class PushCompletionListener implements ExchangeCompletionListener {
 
-        private final String path;
+        private final String fullPath;
+        private final String requestPath;
         private final String referer;
 
-        private PushCompletionListener(String path, String referer) {
-            this.path = path;
+        private PushCompletionListener(String fullPath, String requestPath, String referer) {
+            this.fullPath = fullPath;
+            this.requestPath = requestPath;
             this.referer = referer;
         }
 
@@ -164,7 +169,7 @@ public class LearningPushHandler implements HttpHandler {
                         }
                     }
                 }
-                pushes.put(path, new PushedRequest(new HeaderMap(), path, etag, lastModified));
+                pushes.put(fullPath, new PushedRequest(new HeaderMap(), requestPath, etag, lastModified));
             }
 
             nextListener.proceed();
