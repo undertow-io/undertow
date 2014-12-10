@@ -30,13 +30,13 @@ import io.undertow.util.PathMatcher;
  *
  * @author Stuart Douglas
  */
-public class PushHandler implements HttpHandler {
+public class ConfiguredPushHandler implements HttpHandler {
 
     private final PathMatcher<String[]> pathMatcher = new PathMatcher<>();
     private final HttpHandler next;
     private final HeaderMap requestHeaders = new HeaderMap();
 
-    public PushHandler(HttpHandler next) {
+    public ConfiguredPushHandler(HttpHandler next) {
         this.next = next;
     }
 
@@ -54,12 +54,12 @@ public class PushHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
-    public PushHandler addRequestHeader(HttpString name, String value) {
+    public ConfiguredPushHandler addRequestHeader(HttpString name, String value) {
         requestHeaders.put(name, value);
         return this;
     }
 
-    public PushHandler addRoute(String url, String ... resourcesToPush) {
+    public ConfiguredPushHandler addRoute(String url, String ... resourcesToPush) {
         if(url.endsWith("/*")) {
             String partial = url.substring(0, url.length() - 1);
             pathMatcher.addPrefixPath(partial, resourcesToPush);

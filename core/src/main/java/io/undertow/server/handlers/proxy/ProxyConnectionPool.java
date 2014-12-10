@@ -73,7 +73,6 @@ public class ProxyConnectionPool implements Closeable {
     private final int maxConnections;
     private final int maxCachedConnections;
     private final int sMaxConnections;
-    private final int maxRequestQueueSize;
     private final long ttl;
 
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<>();
@@ -95,7 +94,6 @@ public class ProxyConnectionPool implements Closeable {
         this.maxConnections = Math.max(connectionPoolManager.getMaxConnections(), 1);
         this.maxCachedConnections = Math.max(connectionPoolManager.getMaxCachedConnections(), 0);
         this.sMaxConnections = Math.max(connectionPoolManager.getSMaxConnections(), 0);
-        this.maxRequestQueueSize = Math.max(connectionPoolManager.getMaxQueueSize(), 0);
         this.ttl = connectionPoolManager.getTtl();
         this.bindAddress = bindAddress;
         this.uri = uri;
@@ -277,7 +275,7 @@ public class ProxyConnectionPool implements Closeable {
         if (!data.availableConnections.isEmpty()) {
             return AvailabilityType.AVAILABLE;
         }
-        if (data.awaitingConnections.size() >= maxRequestQueueSize) {
+        if (data.awaitingConnections.size() >= connectionPoolManager.getMaxQueueSize()) {
             return AvailabilityType.FULL_QUEUE;
         }
         return AvailabilityType.FULL;
@@ -419,7 +417,7 @@ public class ProxyConnectionPool implements Closeable {
             openConnection(exchange, callback, data, exclusive);
         } else {
             // Reject the request directly if we reached the max request queue size
-            if (data.awaitingConnections.size() >= maxRequestQueueSize) {
+            if (data.awaitingConnections.size() >= connectionPoolManager.getMaxQueueSize()) {
                 callback.queuedRequestFailed(exchange);
                 return;
             }

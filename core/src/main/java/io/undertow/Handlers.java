@@ -26,6 +26,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.RoutingHandler;
 import io.undertow.server.handlers.AccessControlListHandler;
+import io.undertow.server.handlers.LearningPushHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.DisableCacheHandler;
 import io.undertow.server.handlers.ExceptionHandler;
@@ -527,6 +528,29 @@ public class Handlers {
      */
     public static ResponseRateLimitingHandler responseRateLimitingHandler(HttpHandler next, int bytes,long time, TimeUnit timeUnit) {
         return new ResponseRateLimitingHandler(next, bytes, time, timeUnit);
+    }
+
+    /**
+     * Creates a handler that automatically learns which resources to push based on the referer header
+     *
+     * @param maxEntries The maximum number of entries to store
+     * @param maxAge The maximum age of the entries
+     * @param next The next handler
+     * @return A caching push handler
+     */
+    public static LearningPushHandler learningPushHandler(int maxEntries, int maxAge, HttpHandler next) {
+        return new LearningPushHandler(maxEntries, maxAge, next);
+    }
+
+    /**
+     * Creates a handler that automatically learns which resources to push based on the referer header
+     *
+     * @param maxEntries The maximum number of entries to store
+     * @param next The next handler
+     * @return A caching push handler
+     */
+    public static LearningPushHandler learningPushHandler(int maxEntries, HttpHandler next) {
+        return new LearningPushHandler(maxEntries, -1, next);
     }
 
     private Handlers() {

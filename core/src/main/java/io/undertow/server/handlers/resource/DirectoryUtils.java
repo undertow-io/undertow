@@ -33,7 +33,6 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.FlexBase64;
-import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
@@ -159,12 +158,6 @@ public class DirectoryUtils {
             exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             exchange.endExchange();
             return;
-        }
-
-        if(exchange.getConnection().isPushSupported()) {
-            //try and push our resources to the remote endpoint
-            exchange.getConnection().pushResource(exchange.getRequestURI() + "?js", Methods.GET, new HeaderMap());
-            exchange.getConnection().pushResource(exchange.getRequestURI() + "?css", Methods.GET, new HeaderMap());
         }
 
         StringBuilder builder = renderDirectoryListing(requestPath, resource);
