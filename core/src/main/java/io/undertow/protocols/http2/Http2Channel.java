@@ -193,6 +193,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             sendPreface();
             prefaceCount = PREFACE_BYTES.length;
             sendSettings();
+            initialSettingsSent = true;
+        } else if(fromUpgrade) {
+            sendSettings();
+            initialSettingsSent = true;
         }
     }
 
