@@ -191,7 +191,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                     WebSockets.sendBinary(ByteBuffer.wrap((byte[])o), webSocketChannel, callback, sendTimeout);
                 } else if(o instanceof ByteBuffer) {
                     WebSockets.sendBinary((ByteBuffer)o, webSocketChannel, callback, sendTimeout);
-                } if (encoding.canEncodeText(o.getClass())) {
+                } else if (encoding.canEncodeText(o.getClass())) {
                     WebSockets.sendText(encoding.encodeText(o), webSocketChannel, callback, sendTimeout);
                 } else if (encoding.canEncodeBinary(o.getClass())) {
                     WebSockets.sendBinary(encoding.encodeBinary(o), webSocketChannel, callback, sendTimeout);
