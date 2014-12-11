@@ -492,7 +492,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     data[j * 3] = frameHeaderByteBuffer != null
                             ? frameHeaderByteBuffer.getResource()
                             : Buffers.EMPTY_BYTE_BUFFER;
-                    data[(j * 3) + 1] = next.getBuffer();
+                    data[(j * 3) + 1] = next.getBuffer() == null ? Buffers.EMPTY_BYTE_BUFFER : next.getBuffer();
                     data[(j * 3) + 2] = next.getFrameFooter();
                     ++j;
                 }
@@ -508,7 +508,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     S sinkChannel = pendingFrames.get(0);
                     Pooled<ByteBuffer> frameHeaderByteBuffer = sinkChannel.getFrameHeader().getByteBuffer();
                     if (frameHeaderByteBuffer != null && frameHeaderByteBuffer.getResource().hasRemaining()
-                            || sinkChannel.getBuffer().hasRemaining()
+                            || sinkChannel.getBuffer() != null && sinkChannel.getBuffer().hasRemaining()
                             || sinkChannel.getFrameFooter().hasRemaining()) {
                         break;
                     }

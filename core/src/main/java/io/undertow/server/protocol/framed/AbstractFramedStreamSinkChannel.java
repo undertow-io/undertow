@@ -59,7 +59,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     private static final Pooled<ByteBuffer> EMPTY_BYTE_BUFFER = new ImmediatePooled<>(ByteBuffer.allocateDirect(0));
 
-    private Pooled<ByteBuffer> buffer;
+    private Pooled<ByteBuffer> pooled = null;
     private final C channel;
     private final ChannelListener.SimpleSetter<S> writeSetter = new ChannelListener.SimpleSetter<>();
     private final ChannelListener.SimpleSetter<S> closeSetter = new ChannelListener.SimpleSetter<>();
@@ -108,7 +108,6 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected AbstractFramedStreamSinkChannel(C channel) {
         this.channel = channel;
-        this.buffer = channel.getBufferPool().allocate();
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
@@ -243,7 +242,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private void queueFinalFrame() throws IOException {
         if (!readyForFlush && !fullyFlushed && allAreClear(state, STATE_CLOSED)  && !broken && !finalFrameQueued) {
             readyForFlush = true;
-            buffer.getResource().flip();
+            getBuffer().flip();
             state |=  STATE_FIRST_DATA_WRITTEN;
             finalFrameQueued = true;
             channel.queueFrame((S) this);
@@ -352,7 +351,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(anyAreSet(state, STATE_WRITES_SHUTDOWN)) {
             return false;
         }
-        if(buffer != null && buffer.getResource().position() > 0) {
+        if(pooled != null && pooled.getResource().position() > 0) {
             handleBufferFull();
             return !readyForFlush;
         }
@@ -368,8 +367,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if (anyAreSet(state, STATE_CLOSED | STATE_WRITES_SHUTDOWN) || broken) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
-        long copied = Buffers.copy(this.buffer.getResource(), srcs, offset, length);
-        if (!buffer.getResource().hasRemaining()) {
+        if(pooled == null) {
+            pooled = getChannel().getBufferPool().allocate();
+        }
+        long copied = Buffers.copy(this.pooled.getResource(), srcs, offset, length);
+        if (!pooled.getResource().hasRemaining()) {
             handleBufferFull();
         }
         return copied;
@@ -389,8 +391,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if (anyAreSet(state, STATE_CLOSED | STATE_WRITES_SHUTDOWN) || broken) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
-        int copied = Buffers.copy(this.buffer.getResource(), src);
-        if (!buffer.getResource().hasRemaining()) {
+        if(pooled == null) {
+            pooled = getChannel().getBufferPool().allocate();
+        }
+        int copied = Buffers.copy(this.pooled.getResource(), src);
+        if (!pooled.getResource().hasRemaining()) {
             handleBufferFull();
         }
         return copied;
@@ -452,9 +457,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         }
         try {
             state |= STATE_CLOSED;
-            if(buffer != null) {
-                buffer.free();
-                buffer = null;
+            if(pooled != null) {
+                pooled.free();
+                pooled = null;
             }
             if (header != null && header.getByteBuffer() != null) {
                 header.getByteBuffer().free();
@@ -508,7 +513,13 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     public ByteBuffer getBuffer() {
-        return buffer.getResource();
+        if(anyAreSet(state, STATE_CLOSED)) {
+            throw new IllegalStateException();
+        }
+        if(pooled == null) {
+            pooled = getChannel().getBufferPool().allocate();
+        }
+        return pooled.getResource();
     }
 
     /**
@@ -520,7 +531,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             boolean finalFrame = finalFrameQueued;
             boolean channelClosed = finalFrame && remaining == 0 && !header.isAnotherFrameRequired();
             if(remaining > 0) {
-                buffer.getResource().limit(buffer.getResource().limit() + remaining);
+                pooled.getResource().limit(pooled.getResource().limit() + remaining);
                 if(finalFrame) {
                     //we clear the final frame flag, as it could not actually be written out
                     //note that we don't attempt to requeue, as whatever stopped it from being written will likely still
@@ -529,13 +540,22 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 }
             } else if(header.isAnotherFrameRequired()) {
                 this.finalFrameQueued = false;
+                if(pooled != null) {
+                    pooled.free();
+                    pooled = null;
+                }
+            } else if(pooled != null){
+                pooled.free();
+                pooled = null;
             }
             if (channelClosed) {
                 fullyFlushed = true;
-                buffer.free();
-                buffer = null;
-            } else {
-                buffer.getResource().compact();
+                if(pooled != null) {
+                    pooled.free();
+                    pooled = null;
+                }
+            } else if (pooled != null) {
+                pooled.getResource().compact();
             }
             if (header.getByteBuffer() != null) {
                 header.getByteBuffer().free();
@@ -593,9 +613,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if(trailer != null) {
                 trailer.free();
             }
-            if(buffer != null) {
-                buffer.free();
-                buffer = null;
+            if(pooled != null) {
+                pooled.free();
+                pooled = null;
             }
         }
     }
