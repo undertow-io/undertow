@@ -88,7 +88,7 @@ public class ComplexSSLTestCase {
             String responseList = HttpClientUtils.readResponse(resultList);
             Assert.assertTrue(responseList, responseList.contains("page.html"));
             Header[] headersList = resultList.getHeaders("Content-Type");
-            Assert.assertEquals("text/html", headersList[0].getValue());
+            Assert.assertEquals("text/html; charset=UTF-8", headersList[0].getValue());
 
             //get file itself, breaks
             HttpGet getFile = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/page.html");
@@ -96,7 +96,7 @@ public class ComplexSSLTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html; charset=UTF-8", headers[0].getValue());
+            Assert.assertEquals("text/html", headers[0].getValue());
             Assert.assertTrue(response, response.contains("A web page"));
 
 
