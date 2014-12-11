@@ -50,28 +50,30 @@ public class HttpSessionImpl implements HttpSession {
     private final ServletContext servletContext;
     private final boolean newSession;
     private volatile boolean invalid;
+    private final ServletRequestContext servletRequestContext;
 
-    private HttpSessionImpl(final Session session, final ServletContext servletContext, final boolean newSession) {
+    private HttpSessionImpl(final Session session, final ServletContext servletContext, final boolean newSession, ServletRequestContext servletRequestContext) {
         this.session = session;
         this.servletContext = servletContext;
         this.newSession = newSession;
+        this.servletRequestContext = servletRequestContext;
     }
 
     public static HttpSessionImpl forSession(final Session session, final ServletContext servletContext, final boolean newSession) {
         // forSession is called by privileged actions only so no need to do it again
         ServletRequestContext current = ServletRequestContext.current();
         if (current == null) {
-            return new HttpSessionImpl(session, servletContext, newSession);
+            return new HttpSessionImpl(session, servletContext, newSession, null);
         } else {
             HttpSessionImpl httpSession = current.getSession();
             if (httpSession == null) {
-                httpSession = new HttpSessionImpl(session, servletContext, newSession);
+                httpSession = new HttpSessionImpl(session, servletContext, newSession, current);
                 current.setSession(httpSession);
             } else {
                 if(httpSession.session != session) {
                     //in some rare cases it may be that there are two different service contexts involved in the one request
                     //in this case we just return a new session rather than using the thread local version
-                    httpSession = new HttpSessionImpl(session, servletContext, newSession);
+                    httpSession = new HttpSessionImpl(session, servletContext, newSession, current);
                 }
             }
             return httpSession;
@@ -190,11 +192,10 @@ public class HttpSessionImpl implements HttpSession {
     @Override
     public void invalidate() {
         invalid = true;
-        ServletRequestContext current = SecurityActions.currentServletRequestContext();
-        if (current == null) {
+        if (servletRequestContext == null) {
             session.invalidate(null);
         } else {
-            session.invalidate(current.getOriginalRequest().getExchange());
+            session.invalidate(servletRequestContext.getOriginalRequest().getExchange());
         }
     }
 
