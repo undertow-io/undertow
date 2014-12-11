@@ -47,6 +47,9 @@ public interface ClientConnection extends Channel {
      * Request objects can be queued. Once the request is in a state that it is ready to be sent the {@code clientCallback}
      * is invoked to provide the caller with the {@link ClientExchange}
      * <p/>
+     * If {@link #isMultiplexingSupported()} returns true then multiple requests may be active at the same time, and a later
+     * request may complete before an earlier one.
+     * <p/>
      * Note that the request header may not be written out until after the callback has been invoked. This allows the
      * client to write out a header with a gathering write if the request contains content.
      *
@@ -63,6 +66,10 @@ public interface ClientConnection extends Channel {
      */
     StreamConnection performUpgrade() throws IOException;
 
+    /**
+     *
+     * @return The buffer pool used by the client
+     */
     Pool<ByteBuffer> getBufferPool();
 
     SocketAddress getPeerAddress();
@@ -94,4 +101,10 @@ public interface ClientConnection extends Channel {
      * @return <code>true</code> if this connection support server push
      */
     boolean isPushSupported();
+
+    /**
+     *
+     * @return <code>true</code> if this client supports multiplexing
+     */
+    boolean isMultiplexingSupported();
 }

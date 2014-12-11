@@ -254,6 +254,11 @@ public class SpdyClientConnection implements ClientConnection {
         return true;
     }
 
+    @Override
+    public boolean isMultiplexingSupported() {
+        return true;
+    }
+
     private class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
 
         @Override

@@ -289,6 +289,11 @@ public class Http2ClientConnection implements ClientConnection {
         return true;
     }
 
+    @Override
+    public boolean isMultiplexingSupported() {
+        return true;
+    }
+
     private class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         @Override

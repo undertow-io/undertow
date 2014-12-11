@@ -212,6 +212,11 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
 
     @Override
+    public boolean isMultiplexingSupported() {
+        return false;
+    }
+
+    @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
         count++;
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
