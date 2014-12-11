@@ -203,7 +203,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private void sendSettings() {
         List<Http2Setting> settings = new ArrayList<>();
         settings.add(new Http2Setting(Http2Setting.SETTINGS_HEADER_TABLE_SIZE, encoderHeaderTableSize));
-        settings.add(new Http2Setting(Http2Setting.SETTINGS_ENABLE_PUSH, pushEnabled ? 1 : 0));
+        if(isClient()) {
+            settings.add(new Http2Setting(Http2Setting.SETTINGS_ENABLE_PUSH, pushEnabled ? 1 : 0));
+        }
         settings.add(new Http2Setting(Http2Setting.SETTINGS_MAX_FRAME_SIZE, receiveMaxFrameSize));
         Http2SettingsStreamSinkChannel stream = new Http2SettingsStreamSinkChannel(this, settings);
         flushChannel(stream);
