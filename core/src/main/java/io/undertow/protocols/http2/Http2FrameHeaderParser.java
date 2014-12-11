@@ -22,6 +22,7 @@ import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_CONTINUATION;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_DATA;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_GOAWAY;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_HEADERS;
+import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_PRIORITY;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_PUSH_PROMISE;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_RST_STREAM;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_SETTINGS;
@@ -118,6 +119,10 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                 }
                 case FRAME_TYPE_WINDOW_UPDATE: {
                     parser = new Http2WindowUpdateParser(length);
+                    break;
+                }
+                case FRAME_TYPE_PRIORITY: {
+                    parser = new Http2PriorityParser(length);
                     break;
                 }
                 default: {

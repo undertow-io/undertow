@@ -187,4 +187,11 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
     boolean isHeadersEndStream() {
         return headersEndStream;
     }
+
+    @Override
+    public String toString() {
+        return "Http2StreamSourceChannel{" +
+                "headers=" + headers +
+                '}';
+    }
 }

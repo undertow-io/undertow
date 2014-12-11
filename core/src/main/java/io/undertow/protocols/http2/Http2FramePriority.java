@@ -22,6 +22,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.protocol.framed.FramePriority;
 import io.undertow.server.protocol.framed.SendFrameHeader;
 
@@ -41,12 +42,16 @@ class Http2FramePriority implements FramePriority<Http2Channel, AbstractHttp2Str
             if(newFrame.isBroken()) {
                 return true; //just quietly drop the frame
             }
-            SendFrameHeader header = ((Http2StreamSinkChannel) newFrame).generateSendFrameHeader();
-            //if no header is generated then flow control means we can't send anything
-            if (header.getByteBuffer() == null) {
-                //we clear the header, as we want to generate a new real header when the flow control window is updated
-                ((Http2StreamSinkChannel) newFrame).clearHeader();
-                return false;
+            try {
+                SendFrameHeader header = ((Http2StreamSinkChannel) newFrame).generateSendFrameHeader();
+                //if no header is generated then flow control means we can't send anything
+                if (header.getByteBuffer() == null) {
+                    //we clear the header, as we want to generate a new real header when the flow control window is updated
+                    ((Http2StreamSinkChannel) newFrame).clearHeader();
+                    return false;
+                }
+            } catch (Exception e) {
+                UndertowLogger.REQUEST_LOGGER.debugf("Failed to generate header %s", newFrame);
             }
         }
 
