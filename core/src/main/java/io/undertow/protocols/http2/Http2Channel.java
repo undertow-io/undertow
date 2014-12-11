@@ -111,7 +111,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,
             0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
             0x0d, 0x0a, 0x53, 0x4d, 0x0d, 0x0a, 0x0d, 0x0a};
-    public static final int DEFAULT_MAX_FRAME_SIZE = 16777215;
+    public static final int DEFAULT_MAX_FRAME_SIZE = 16384;
+    public static final int MAX_FRAME_SIZE = 16777215;
+
 
     private Http2FrameHeaderParser frameParser;
     private final Map<Integer, Http2StreamSourceChannel> incomingStreams = new ConcurrentHashMap<>();
@@ -469,6 +471,11 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 int difference = initialSendWindowSize - old;
                 sendWindowSize += difference;
             } else if (setting.getId() == Http2Setting.SETTINGS_MAX_FRAME_SIZE) {
+                if(sendMaxFrameSize > MAX_FRAME_SIZE) {
+                    UndertowLogger.REQUEST_IO_LOGGER.debug("Invalid value received for SETTINGS_MAX_FRAME_SIZE " + setting.getValue());
+                    sendGoAway(ERROR_PROTOCOL_ERROR);
+                    return;
+                }
                 sendMaxFrameSize = setting.getValue();
             } else if (setting.getId() == Http2Setting.SETTINGS_HEADER_TABLE_SIZE) {
                 encoder.setMaxTableSize(setting.getValue());
