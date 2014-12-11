@@ -61,7 +61,7 @@ public class FileHandlerIndexTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html", headers[0].getValue());
+            Assert.assertEquals("text/html; charset=UTF-8", headers[0].getValue());
             Assert.assertTrue(response, response.contains("A web page"));
 
         } finally {
