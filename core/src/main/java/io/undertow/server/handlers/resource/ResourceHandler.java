@@ -36,6 +36,7 @@ import io.undertow.predicate.Predicates;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.server.handlers.encoding.ContentEncodedResource;
@@ -95,8 +96,18 @@ public class ResourceHandler implements HttpHandler {
 
     private volatile ContentEncodedResourceManager contentEncodedResourceManager;
 
+    /**
+     * Handler that is called if no resource is found
+     */
+    private final HttpHandler next;
+
     public ResourceHandler(ResourceManager resourceManager) {
+        this(resourceManager, ResponseCodeHandler.HANDLE_404);
+    }
+
+    public ResourceHandler(ResourceManager resourceManager, HttpHandler next) {
         this.resourceManager = resourceManager;
+        this.next = next;
     }
 
 
@@ -105,6 +116,7 @@ public class ResourceHandler implements HttpHandler {
      */
     @Deprecated
     public ResourceHandler() {
+        this.next = ResponseCodeHandler.HANDLE_404;
     }
 
     @Override
@@ -120,7 +132,7 @@ public class ResourceHandler implements HttpHandler {
         }
     }
 
-    private void serveResource(final HttpServerExchange exchange, final boolean sendContent) {
+    private void serveResource(final HttpServerExchange exchange, final boolean sendContent) throws Exception {
 
         if (DirectoryUtils.sendRequestedBlobs(exchange)) {
             return;
@@ -155,12 +167,12 @@ public class ResourceHandler implements HttpHandler {
 
         //we now dispatch to a worker thread
         //as resource manager methods are potentially blocking
-        exchange.dispatch(new Runnable() {
+        HttpHandler dispatchTask = new HttpHandler() {
             @Override
-            public void run() {
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
                 Resource resource = null;
                 try {
-                    if(File.separatorChar == '/' || !exchange.getRelativePath().contains(File.separator)) {
+                    if (File.separatorChar == '/' || !exchange.getRelativePath().contains(File.separator)) {
                         //we don't process resources that contain the sperator character if this is not /
                         //this prevents attacks where people use windows path seperators in file URLS's
                         resource = resourceManager.getResource(canonicalize(exchange.getRelativePath()));
@@ -172,8 +184,8 @@ public class ResourceHandler implements HttpHandler {
                     return;
                 }
                 if (resource == null) {
-                    exchange.setResponseCode(StatusCodes.NOT_FOUND);
-                    exchange.endExchange();
+                    //usually a 404 handler
+                    next.handleRequest(exchange);
                     return;
                 }
 
@@ -223,7 +235,7 @@ public class ResourceHandler implements HttpHandler {
                 //we are going to proceed. Set the appropriate headers
                 final String contentType = resource.getContentType(mimeMappings);
 
-                if(!exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
+                if (!exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
                     if (contentType != null) {
                         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
                     } else {
@@ -267,7 +279,12 @@ public class ResourceHandler implements HttpHandler {
                     resource.serve(exchange.getResponseSender(), exchange, IoCallback.END_EXCHANGE);
                 }
             }
-        });
+        };
+        if(exchange.isInIoThread()) {
+            exchange.dispatch(dispatchTask);
+        } else {
+            dispatchTask.handleRequest(exchange);
+        }
 
 
     }
