@@ -44,7 +44,7 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
     private final int bytes;
     private boolean writesResumed = false;
 
-    private long byteCount = 0;
+    private int byteCount = 0;
     private long startTime = 0;
     private long nextSendTime = 0;
 
@@ -68,6 +68,7 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
         if (!canSend()) {
             return 0;
         }
+        int bytes = this.bytes - this.byteCount;
         int old = src.limit();
         if (src.remaining() > bytes) {
             src.limit(src.position() + bytes);
@@ -86,6 +87,7 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
         if (!canSend()) {
             return 0;
         }
+        int bytes = this.bytes - this.byteCount;
         long written = super.transferFrom(src, position, Math.min(count, bytes));
         handleWritten(written);
         return written;
@@ -96,6 +98,7 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
         if (!canSend()) {
             return 0;
         }
+        int bytes = this.bytes - this.byteCount;
         long written = super.transferFrom(source, Math.min(count, bytes), throughBuffer);
         handleWritten(written);
         return written;
@@ -141,6 +144,7 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
         if (!canSend()) {
             return 0;
         }
+        int bytes = this.bytes - this.byteCount;
         int old = src.limit();
         if (src.remaining() > bytes) {
             src.limit(src.position() + bytes);
@@ -273,11 +277,10 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
             }
         } else {
             //we have gone over, we need to wait till we are allowed to send again
-            long units = ((byteCount - 1) / bytes) + 1;
             if (startTime == 0) {
                 startTime = System.currentTimeMillis();
             }
-            nextSendTime = startTime + (units * time);
+            nextSendTime = startTime + time;
             if (writesResumed) {
                 handleWritesResumedWhenBlocked();
             }
