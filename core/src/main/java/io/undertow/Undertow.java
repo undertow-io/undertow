@@ -56,7 +56,7 @@ import java.util.List;
  *
  * @author Stuart Douglas
  */
-public class Undertow {
+public final class Undertow {
 
     private final int bufferSize;
     private final int buffersPerRegion;
