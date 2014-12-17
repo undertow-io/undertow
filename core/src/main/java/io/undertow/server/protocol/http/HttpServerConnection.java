@@ -34,6 +34,7 @@ import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooled;
+import io.undertow.util.Methods;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -62,6 +63,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
     private ReadDataStreamSourceConduit readDataStreamSourceConduit;
 
     private HttpUpgradeListener upgradeListener;
+    private boolean connectHandled;
 
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
@@ -190,11 +192,21 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     @Override
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
+        if(exchange.getRequestMethod().equals(Methods.CONNECT) && !connectHandled) {
+            //make sure that any unhandled CONNECT requests result in a connection close
+            exchange.setPersistent(false);
+            exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+        }
         return HttpTransferEncoding.createSinkConduit(exchange);
     }
 
     @Override
     protected boolean isUpgradeSupported() {
+        return true;
+    }
+
+    @Override
+    protected boolean isConnectSupported() {
         return true;
     }
 
@@ -240,6 +252,12 @@ public final class HttpServerConnection extends AbstractServerConnection {
         this.upgradeListener = upgradeListener;
     }
 
+    @Override
+    protected void setConnectListener(HttpUpgradeListener connectListener) {
+        this.upgradeListener = connectListener;
+        connectHandled = true;
+    }
+
     void setCurrentExchange(HttpServerExchange exchange) {
         this.current = exchange;
     }
@@ -253,5 +271,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
     @Override
     public String getTransportProtocol() {
         return "http/1.1";
+    }
+
+    boolean isConnectHandled() {
+        return connectHandled;
     }
 }

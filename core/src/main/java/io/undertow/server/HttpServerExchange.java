@@ -38,6 +38,7 @@ import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
@@ -854,6 +855,20 @@ public final class HttpServerExchange extends AbstractAttachable {
         return this;
     }
 
+    /**
+     *
+     * @param connectListener
+     * @return
+     */
+    public HttpServerExchange acceptConnectRequest(HttpUpgradeListener connectListener) {
+        if(!getRequestMethod().equals(Methods.CONNECT)) {
+            throw UndertowMessages.MESSAGES.notAConnectRequest();
+        }
+        connection.setConnectListener(connectListener);
+        return this;
+    }
+
+
     public HttpServerExchange addExchangeCompleteListener(final ExchangeCompletionListener listener) {
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
@@ -1529,7 +1544,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         try {
             if (isResponseChannelAvailable()) {
-                getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+                if(!getRequestMethod().equals(Methods.CONNECT)) {
+                    //according to
+                    getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+                }
                 getResponseChannel();
             }
             responseChannel.shutdownWrites();

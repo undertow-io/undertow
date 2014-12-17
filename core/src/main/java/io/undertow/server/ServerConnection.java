@@ -186,11 +186,19 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
     protected abstract boolean isUpgradeSupported();
 
     /**
+     *
+     * @return <code>true</code> if this connection supports the HTTP CONNECT verb
+     */
+    protected abstract boolean isConnectSupported();
+
+    /**
      * Invoked when the exchange is complete.
      */
     protected abstract void exchangeComplete(HttpServerExchange exchange);
 
     protected abstract void setUpgradeListener(HttpUpgradeListener upgradeListener);
+
+    protected abstract void setConnectListener(HttpUpgradeListener connectListener);
 
     /**
      * Callback that is invoked if the max entity size is updated.

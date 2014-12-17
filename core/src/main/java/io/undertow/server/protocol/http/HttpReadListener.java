@@ -26,6 +26,7 @@ import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.util.ClosingChannelExceptionHandler;
+import io.undertow.util.Methods;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -238,7 +239,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     public void exchangeComplete(final HttpServerExchange exchange) {
         connection.clearChannel();
         final HttpServerConnection connection = this.connection;
-        if (exchange.isPersistent() && !exchange.isUpgrade()) {
+        if (exchange.isPersistent() && !isUpgradeOrConnect(exchange)) {
             final StreamConnection channel = connection.getChannel();
             if (connection.getExtraBytes() == null) {
                 //if we are not pipelining we just register a listener
@@ -296,7 +297,8 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             }
         } else if (!exchange.isPersistent()) {
             IoUtils.safeClose(connection);
-        } else if (exchange.isUpgrade()) {
+        } else {
+            //upgrade or connect handling
             if (connection.getExtraBytes() != null) {
                 connection.getChannel().getSourceChannel().setConduit(new ReadDataStreamSourceConduit(connection.getChannel().getSourceChannel().getConduit(), connection));
             }
@@ -317,6 +319,10 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 IoUtils.safeClose(connection);
             }
         }
+    }
+
+    private boolean isUpgradeOrConnect(HttpServerExchange exchange) {
+        return exchange.isUpgrade() || (exchange.getRequestMethod().equals(Methods.CONNECT) && ((HttpServerConnection)exchange.getConnection()).isConnectHandled() );
     }
 
     @Override

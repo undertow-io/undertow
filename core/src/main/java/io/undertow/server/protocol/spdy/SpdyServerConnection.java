@@ -259,12 +259,22 @@ public class SpdyServerConnection extends ServerConnection {
     }
 
     @Override
+    protected boolean isConnectSupported() {
+        return false;
+    }
+
+    @Override
     protected void exchangeComplete(HttpServerExchange exchange) {
     }
 
     @Override
     protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
         throw UndertowMessages.MESSAGES.upgradeNotSupported();
+    }
+
+    @Override
+    protected void setConnectListener(HttpUpgradeListener connectListener) {
+        throw UndertowMessages.MESSAGES.connectNotSupported();
     }
 
     @Override

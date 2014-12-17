@@ -373,4 +373,10 @@ public interface UndertowMessages {
 
     @Message(id = 115, value = "Server received PUSH_PROMISE frame from client")
     IOException serverReceivedPushPromise();
+
+    @Message(id = 116, value = "CONNECT not supported by this connector")
+    IllegalStateException connectNotSupported();
+
+    @Message(id = 117, value = "Request was not a CONNECT request")
+    IllegalStateException notAConnectRequest();
 }

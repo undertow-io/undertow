@@ -19,10 +19,10 @@
 package io.undertow.server.protocol.ajp;
 
 import io.undertow.UndertowMessages;
-import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.BasicSSLSessionInfo;
 import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -120,11 +120,7 @@ public final class AjpServerConnection extends AbstractServerConnection {
 
     @Override
     protected StreamConnection upgradeChannel() {
-        resetChannel();
-        if (extraBytes != null) {
-            channel.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this));
-        }
-        return channel;
+        throw UndertowMessages.MESSAGES.upgradeNotSupported();
     }
 
     @Override
@@ -135,7 +131,12 @@ public final class AjpServerConnection extends AbstractServerConnection {
 
     @Override
     protected boolean isUpgradeSupported() {
-        return true; //TODO: should we support this?
+        return false;
+    }
+
+    @Override
+    protected boolean isConnectSupported() {
+        return false;
     }
 
     void setAjpReadListener(AjpReadListener ajpReadListener) {
@@ -145,6 +146,11 @@ public final class AjpServerConnection extends AbstractServerConnection {
     @Override
     protected void exchangeComplete(HttpServerExchange exchange) {
         ajpReadListener.exchangeComplete(exchange);
+    }
+
+    @Override
+    protected void setConnectListener(HttpUpgradeListener connectListener) {
+        throw UndertowMessages.MESSAGES.connectNotSupported();
     }
 
     void setCurrentExchange(HttpServerExchange exchange) {

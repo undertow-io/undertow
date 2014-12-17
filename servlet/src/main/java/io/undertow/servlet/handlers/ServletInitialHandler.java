@@ -452,11 +452,21 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
 
         @Override
+        protected boolean isConnectSupported() {
+            return false;
+        }
+
+        @Override
         protected void exchangeComplete(HttpServerExchange exchange) {
         }
 
         @Override
         protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
+            //ignore
+        }
+
+        @Override
+        protected void setConnectListener(HttpUpgradeListener connectListener) {
             //ignore
         }
 
