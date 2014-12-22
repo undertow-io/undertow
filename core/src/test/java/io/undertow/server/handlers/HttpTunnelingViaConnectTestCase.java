@@ -22,7 +22,6 @@ import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
-import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.impl.client.ProxyClient;
@@ -34,7 +33,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -75,7 +73,7 @@ public class HttpTunnelingViaConnectTestCase {
     }
 
     @Test
-    public void testConnectViaProxy() throws IOException, InterruptedException, HttpException {
+    public void testConnectViaProxy() throws Exception {
 
         final HttpHost proxy = new HttpHost(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default") + 1, "http");
         final HttpHost target = new HttpHost(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default"), "http");
