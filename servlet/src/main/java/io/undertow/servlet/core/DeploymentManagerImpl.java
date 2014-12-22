@@ -22,7 +22,6 @@ import io.undertow.Handlers;
 import io.undertow.predicate.Predicates;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
-import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
@@ -365,7 +364,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (contextFactory == null) {
             contextFactory = SecurityContextFactoryImpl.INSTANCE;
         }
-        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), mechName,
+        current = new SecurityInitialHandler(deploymentInfo.getAuthenticationMode(), deploymentInfo.getIdentityManager(), mechName,
                 contextFactory, current);
         return current;
     }

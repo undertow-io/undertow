@@ -37,6 +37,7 @@ import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
+import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.idm.IdentityManager;
@@ -96,6 +97,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean eagerFilterInit = false;
     private boolean disableCachingForSecuredPages = true;
     private boolean escapeErrorMessage = true;
+    private AuthenticationMode authenticationMode = AuthenticationMode.PRO_ACTIVE;
     private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
     private final Map<String, FilterInfo> filters = new HashMap<>();
@@ -1065,6 +1067,26 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(sessionListeners);
     }
 
+    public AuthenticationMode getAuthenticationMode() {
+        return authenticationMode;
+    }
+
+    /**
+     * Sets if this deployment should use pro-active authentication and always authenticate if the credentials are present
+     * or constraint driven auth which will only call the authentication mechanisms for protected resources.
+     *
+     * Pro active auth means that requests for unprotected resources will still be associated with a user, which may be
+     * useful for access logging.
+     *
+     *
+     * @param authenticationMode The authentication mode to use
+     * @return
+     */
+    public DeploymentInfo setAuthenticationMode(AuthenticationMode authenticationMode) {
+        this.authenticationMode = authenticationMode;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1140,6 +1162,7 @@ public class DeploymentInfo implements Cloneable {
         info.escapeErrorMessage = escapeErrorMessage;
         info.sessionListeners.addAll(sessionListeners);
         info.lifecycleInterceptors.addAll(lifecycleInterceptors);
+        info.authenticationMode = authenticationMode;
         return info;
     }
 
