@@ -326,7 +326,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         synchronized void bumpTimeout() {
             final int maxInactiveInterval = getMaxInactiveInterval();
             if (maxInactiveInterval > 0) {
-                long newExpireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000);
+                long newExpireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000L);
                 if(timerCancelKey != null && (newExpireTime < expireTime)) {
                     // We have to re-schedule as the new maxInactiveInterval is lower than the old one
                     if (!timerCancelKey.remove()) {
@@ -339,7 +339,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                     //+1 second, to make sure that the time has actually expired
                     //we don't re-schedule every time, as it is expensive
                     //instead when it expires we check if the timeout has been bumped, and if so we re-schedule
-                    timerCancelKey = executor.executeAfter(cancelTask, (maxInactiveInterval * 1000) + 1, TimeUnit.MILLISECONDS);
+                    timerCancelKey = executor.executeAfter(cancelTask, (maxInactiveInterval * 1000L) + 1, TimeUnit.MILLISECONDS);
                 }
             }
             if (evictionToken != null) {
