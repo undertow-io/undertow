@@ -48,7 +48,7 @@ public abstract class AbstractAjpParser {
         }
     }
 
-    protected StringHolder parseString(ByteBuffer buf, AbstractAjpParseState state, boolean header) {
+    protected StringHolder parseString(ByteBuffer buf, AbstractAjpParseState state, String encoding, boolean header) {
         boolean containsUrlCharacters = state.containsUrlCharacters;
         if (!buf.hasRemaining()) {
             return new StringHolder(null, false, false);
@@ -83,18 +83,28 @@ public abstract class AbstractAjpParser {
             state.currentString = builder;
         }
         int length = builder.length();
+
+        byte[] b = new byte[stringLength];
+        int count = 0;
+
         while (length < stringLength) {
             if (!buf.hasRemaining()) {
                 state.stringLength = stringLength;
                 state.containsUrlCharacters = containsUrlCharacters;
                 return new StringHolder(null, false, false);
             }
-            char c = (char) buf.get();
-            if(c == '+' || c == '%') {
+            byte c = buf.get();
+            if((char)c == '+' || (char)c == '%') {
                 containsUrlCharacters = true;
             }
-            builder.append(c);
+            b[count++] = c;
             ++length;
+        }
+
+        try {
+            builder.append(new String(b, encoding));
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         if (buf.hasRemaining()) {
