@@ -20,7 +20,9 @@ package io.undertow.server.protocol.ajp;
 
 import io.undertow.util.HttpString;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 /**
  * @author Stuart Douglas
@@ -48,10 +50,10 @@ public abstract class AbstractAjpParser {
         }
     }
 
-    protected StringHolder parseString(ByteBuffer buf, AbstractAjpParseState state, String encoding, boolean header) {
+    protected StringHolder parseString(ByteBuffer buf, AbstractAjpParseState state, boolean header, boolean isAttribute) {
         boolean containsUrlCharacters = state.containsUrlCharacters;
         if (!buf.hasRemaining()) {
-            return new StringHolder(null, false, false);
+            return new StringHolder(null, null, false, false);
         }
         int stringLength = state.stringLength;
         if (stringLength == -1) {
@@ -61,7 +63,7 @@ public abstract class AbstractAjpParser {
                 stringLength = ((0xFF & number) << 8) + (b & 0xFF);
             } else {
                 state.stringLength = number | STRING_LENGTH_MASK;
-                return new StringHolder(null, false, false);
+                return new StringHolder(null, null, false, false);
             }
         } else if ((stringLength & STRING_LENGTH_MASK) != 0) {
             int number = stringLength & ~STRING_LENGTH_MASK;
@@ -74,37 +76,37 @@ public abstract class AbstractAjpParser {
         if (stringLength == 0xFFFF) {
             //OxFFFF means null
             state.stringLength = -1;
-            return new StringHolder(null, true, false);
+            return new StringHolder(null, null, true, false);
         }
         StringBuilder builder = state.currentString;
-
         if (builder == null) {
             builder = new StringBuilder();
             state.currentString = builder;
         }
+
+        ArrayList<Byte> byteArray = state.currentBytes;
+        if( byteArray == null ) {
+            byteArray = new ArrayList<Byte>();
+            state.currentBytes = byteArray;
+        }
+
         int length = builder.length();
-
-        byte[] b = new byte[stringLength];
-        int count = 0;
-
         while (length < stringLength) {
             if (!buf.hasRemaining()) {
                 state.stringLength = stringLength;
                 state.containsUrlCharacters = containsUrlCharacters;
-                return new StringHolder(null, false, false);
+                return new StringHolder(null, null, false, false);
             }
             byte c = buf.get();
             if((char)c == '+' || (char)c == '%') {
                 containsUrlCharacters = true;
             }
-            b[count++] = c;
-            ++length;
-        }
 
-        try {
-            builder.append(new String(b, encoding));
-        } catch (Exception e) {
-            e.printStackTrace();
+            if( isAttribute ) {
+                byteArray.add(c);
+            }
+            builder.append((char)c);
+            ++length;
         }
 
         if (buf.hasRemaining()) {
@@ -112,11 +114,11 @@ public abstract class AbstractAjpParser {
             state.currentString = null;
             state.stringLength = -1;
             state.containsUrlCharacters = false;
-            return new StringHolder(builder.toString(), true, containsUrlCharacters);
+            return new StringHolder(builder.toString(), byteArray, true, containsUrlCharacters);
         } else {
             state.stringLength = stringLength;
             state.containsUrlCharacters = containsUrlCharacters;
-            return new StringHolder(null, false, false);
+            return new StringHolder(null, null, false, false);
         }
     }
 
@@ -134,12 +136,14 @@ public abstract class AbstractAjpParser {
 
     protected static class StringHolder {
         public final String value;
+        public ArrayList<Byte> bytes = new ArrayList<Byte>();
         public final HttpString header;
         public final boolean readComplete;
         public final boolean containsUrlCharacters;
 
-        private StringHolder(String value, boolean readComplete, boolean containsUrlCharacters) {
+        private StringHolder(String value, ArrayList<Byte> byteValue, boolean readComplete, boolean containsUrlCharacters) {
             this.value = value;
+            this.bytes = byteValue;
             this.readComplete = readComplete;
             this.containsUrlCharacters = containsUrlCharacters;
             this.header = null;
@@ -150,6 +154,22 @@ public abstract class AbstractAjpParser {
             this.readComplete = true;
             this.header = value;
             this.containsUrlCharacters = false;
+        }
+
+        public String getByteString(String encoding) {
+            byte[] data = new byte[bytes.size()];
+            for (int i = 0; i < data.length; i++) {
+                data[i] = (byte) bytes.get(i);
+            }
+
+            String str = null;
+            try {
+                str = new String(data, encoding);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+
+            return str;
         }
     }
 }
