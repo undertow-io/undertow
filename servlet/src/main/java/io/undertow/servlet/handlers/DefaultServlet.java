@@ -278,7 +278,11 @@ public class DefaultServlet extends HttpServlet {
             Long contentLength = resource.getContentLength();
             if (contentLength != null) {
                 resp.getOutputStream();
-                resp.setContentLengthLong(contentLength);
+                if(contentLength > Integer.MAX_VALUE) {
+                    resp.setContentLengthLong(contentLength);
+                } else {
+                    resp.setContentLength(contentLength.intValue());
+                }
             }
         } catch (IllegalStateException e) {
 
