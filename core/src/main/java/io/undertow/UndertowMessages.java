@@ -379,4 +379,7 @@ public interface UndertowMessages {
 
     @Message(id = 117, value = "Request was not a CONNECT request")
     IllegalStateException notAConnectRequest();
+
+    @Message(id = 118, value = "Cannot reset buffer, response has already been commited")
+    IllegalStateException cannotResetBuffer();
 }
