@@ -22,6 +22,7 @@ import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.ProxyIgnore;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.impl.client.ProxyClient;
@@ -42,6 +43,7 @@ import java.net.Socket;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@ProxyIgnore
 public class HttpTunnelingViaConnectTestCase {
 
     private static Undertow server;
