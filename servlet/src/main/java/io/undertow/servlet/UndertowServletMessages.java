@@ -206,4 +206,7 @@ public interface UndertowServletMessages {
     @Message(id = 10053, value = "No confidential port is available to redirect the current request.")
     IllegalStateException noConfidentialPortAvailable();
 
+    @Message(id = 10054, value = "Unable to create an instance factory for %s")
+    RuntimeException couldNotCreateFactory(String className, @Cause Exception e);
+
 }
