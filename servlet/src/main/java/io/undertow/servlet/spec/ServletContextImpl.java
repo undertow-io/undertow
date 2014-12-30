@@ -15,7 +15,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package io.undertow.servlet.spec;
 
 import io.undertow.Version;
@@ -112,7 +111,6 @@ public class ServletContextImpl implements ServletContext {
     private volatile boolean initialized = false;
     private int filterMappingInsertPosition = 0;
 
-
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
         this.deployment = deployment;
@@ -152,7 +150,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public String getContextPath() {
         String contextPath = deploymentInfo.getContextPath();
-        if(contextPath.equals("/")) {
+        if (contextPath.equals("/")) {
             return "";
         }
         return contextPath;
@@ -414,13 +412,16 @@ public class ServletContextImpl implements ServletContext {
             if (deploymentInfo.getServlets().containsKey(servletName)) {
                 return null;
             }
-            ServletInfo servlet = new ServletInfo(servletName, (Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className));
+            Class<? extends Servlet> servletClass=(Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className);
+            ServletInfo servlet = new ServletInfo(servletName, servletClass, deploymentInfo.getClassIntrospecter().createInstanceFactory(servletClass));
             readServletAnnotations(servlet);
             deploymentInfo.addServlet(servlet);
             ServletHandler handler = deployment.getServlets().addServlet(servlet);
             return new ServletRegistrationImpl(servlet, handler.getManagedServlet(), deployment);
         } catch (ClassNotFoundException e) {
             throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e);
+        } catch (NoSuchMethodException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotCreateFactory(className,e);
         }
     }
 
@@ -439,19 +440,22 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass) {
+    public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass){
         ensureNotProgramaticListener();
         ensureNotInitialized();
         if (deploymentInfo.getServlets().containsKey(servletName)) {
             return null;
         }
-        ServletInfo servlet = new ServletInfo(servletName, servletClass);
-        readServletAnnotations(servlet);
-        deploymentInfo.addServlet(servlet);
-        ServletHandler handler = deployment.getServlets().addServlet(servlet);
-        return new ServletRegistrationImpl(servlet, handler.getManagedServlet(), deployment);
+        try {
+            ServletInfo servlet = new ServletInfo(servletName, servletClass, deploymentInfo.getClassIntrospecter().createInstanceFactory(servletClass));
+            readServletAnnotations(servlet);
+            deploymentInfo.addServlet(servlet);
+            ServletHandler handler = deployment.getServlets().addServlet(servlet);
+            return new ServletRegistrationImpl(servlet, handler.getManagedServlet(), deployment);
+        } catch (NoSuchMethodException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotCreateFactory(servletClass.getName(),e);
+        }
     }
-
 
     @Override
     public <T extends Servlet> T createServlet(final Class<T> clazz) throws ServletException {
@@ -491,12 +495,15 @@ public class ServletContextImpl implements ServletContext {
             return null;
         }
         try {
-            FilterInfo filter = new FilterInfo(filterName, (Class<? extends Filter>) deploymentInfo.getClassLoader().loadClass(className));
+            Class<? extends Filter> filterClass=(Class<? extends Filter>) deploymentInfo.getClassLoader().loadClass(className);
+            FilterInfo filter = new FilterInfo(filterName, filterClass, deploymentInfo.getClassIntrospecter().createInstanceFactory(filterClass));
             deploymentInfo.addFilter(filter);
             deployment.getFilters().addFilter(filter);
             return new FilterRegistrationImpl(filter, deployment, this);
         } catch (ClassNotFoundException e) {
             throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e);
+        }catch (NoSuchMethodException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotCreateFactory(className,e);
         }
     }
 
@@ -522,10 +529,14 @@ public class ServletContextImpl implements ServletContext {
         if (deploymentInfo.getFilters().containsKey(filterName)) {
             return null;
         }
-        FilterInfo filter = new FilterInfo(filterName, filterClass);
-        deploymentInfo.addFilter(filter);
-        deployment.getFilters().addFilter(filter);
-        return new FilterRegistrationImpl(filter, deployment, this);
+        try {
+            FilterInfo filter = new FilterInfo(filterName, filterClass,deploymentInfo.getClassIntrospecter().createInstanceFactory(filterClass));
+            deploymentInfo.addFilter(filter);
+            deployment.getFilters().addFilter(filter);
+            return new FilterRegistrationImpl(filter, deployment, this);
+        } catch (NoSuchMethodException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotCreateFactory(filterClass.getName(),e);
+        }
     }
 
     @Override
@@ -601,8 +612,8 @@ public class ServletContextImpl implements ServletContext {
     public <T extends EventListener> void addListener(final T t) {
         ensureNotInitialized();
         ensureNotProgramaticListener();
-        if (ApplicationListeners.listenerState() != NO_LISTENER &&
-                ServletContextListener.class.isAssignableFrom(t.getClass())) {
+        if (ApplicationListeners.listenerState() != NO_LISTENER
+                && ServletContextListener.class.isAssignableFrom(t.getClass())) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
         ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
@@ -614,8 +625,8 @@ public class ServletContextImpl implements ServletContext {
     public void addListener(final Class<? extends EventListener> listenerClass) {
         ensureNotInitialized();
         ensureNotProgramaticListener();
-        if (ApplicationListeners.listenerState() != NO_LISTENER &&
-                ServletContextListener.class.isAssignableFrom(listenerClass)) {
+        if (ApplicationListeners.listenerState() != NO_LISTENER
+                && ServletContextListener.class.isAssignableFrom(listenerClass)) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
         InstanceFactory<? extends EventListener> factory = null;
@@ -774,6 +785,7 @@ public class ServletContextImpl implements ServletContext {
     }
 
     private static final class ReadServletAnnotationsTask implements PrivilegedAction<Void> {
+
         private final ServletInfo servletInfo;
         private final DeploymentInfo deploymentInfo;
 
@@ -819,20 +831,20 @@ public class ServletContextImpl implements ServletContext {
     void addMappingForServletNames(FilterInfo filterInfo, final EnumSet<DispatcherType> dispatcherTypes, final boolean isMatchAfter, final String... servletNames) {
         DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
 
-        for(final String servlet : servletNames){
-            if(isMatchAfter) {
-                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
+        for (final String servlet : servletNames) {
+            if (isMatchAfter) {
+                if (dispatcherTypes == null || dispatcherTypes.isEmpty()) {
                     deploymentInfo.addFilterServletNameMapping(filterInfo.getName(), servlet, DispatcherType.REQUEST);
                 } else {
-                    for(final DispatcherType dispatcher : dispatcherTypes) {
+                    for (final DispatcherType dispatcher : dispatcherTypes) {
                         deploymentInfo.addFilterServletNameMapping(filterInfo.getName(), servlet, dispatcher);
                     }
                 }
             } else {
-                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
+                if (dispatcherTypes == null || dispatcherTypes.isEmpty()) {
                     deploymentInfo.insertFilterServletNameMapping(filterMappingInsertPosition++, filterInfo.getName(), servlet, DispatcherType.REQUEST);
                 } else {
-                    for(final DispatcherType dispatcher : dispatcherTypes) {
+                    for (final DispatcherType dispatcher : dispatcherTypes) {
                         deploymentInfo.insertFilterServletNameMapping(filterMappingInsertPosition++, filterInfo.getName(), servlet, dispatcher);
                     }
                 }
@@ -843,20 +855,20 @@ public class ServletContextImpl implements ServletContext {
 
     void addMappingForUrlPatterns(FilterInfo filterInfo, final EnumSet<DispatcherType> dispatcherTypes, final boolean isMatchAfter, final String... urlPatterns) {
         DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
-        for(final String url : urlPatterns){
-            if(isMatchAfter) {
-                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
+        for (final String url : urlPatterns) {
+            if (isMatchAfter) {
+                if (dispatcherTypes == null || dispatcherTypes.isEmpty()) {
                     deploymentInfo.addFilterUrlMapping(filterInfo.getName(), url, DispatcherType.REQUEST);
                 } else {
-                    for(final DispatcherType dispatcher : dispatcherTypes) {
+                    for (final DispatcherType dispatcher : dispatcherTypes) {
                         deploymentInfo.addFilterUrlMapping(filterInfo.getName(), url, dispatcher);
                     }
                 }
             } else {
-                if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
+                if (dispatcherTypes == null || dispatcherTypes.isEmpty()) {
                     deploymentInfo.insertFilterUrlMapping(filterMappingInsertPosition++, filterInfo.getName(), url, DispatcherType.REQUEST);
                 } else {
-                    for(final DispatcherType dispatcher : dispatcherTypes) {
+                    for (final DispatcherType dispatcher : dispatcherTypes) {
                         deploymentInfo.insertFilterUrlMapping(filterMappingInsertPosition++, filterInfo.getName(), url, dispatcher);
                     }
                 }
