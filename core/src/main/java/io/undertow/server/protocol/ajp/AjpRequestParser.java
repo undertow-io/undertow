@@ -222,7 +222,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                 }
             }
             case AjpRequestParseState.READING_PROTOCOL: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, false, false);
                 if (result.readComplete) {
                     //TODO: more efficient way of doing this
                     exchange.setProtocol(HttpString.tryFromString(result.value));
@@ -232,7 +232,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                 }
             }
             case AjpRequestParseState.READING_REQUEST_URI: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, false, false);
                 if (result.readComplete) {
                     int colon = result.value.indexOf(';');
                     if (colon == -1) {
@@ -254,7 +254,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                 }
             }
             case AjpRequestParseState.READING_REMOTE_ADDR: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, false, false);
                 if (result.readComplete) {
                     state.remoteAddress = result.value;
                 } else {
@@ -263,7 +263,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                 }
             }
             case AjpRequestParseState.READING_REMOTE_HOST: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, false, false);
                 if (result.readComplete) {
                     //exchange.setRequestURI(result.value);
                 } else {
@@ -272,7 +272,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                 }
             }
             case AjpRequestParseState.READING_SERVER_NAME: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, false, false);
                 if (result.readComplete) {
                     state.serverAddress = result.value;
                 } else {
@@ -315,7 +315,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                 int readHeaders = state.readHeaders;
                 while (readHeaders < state.numHeaders) {
                     if (state.currentHeader == null) {
-                        StringHolder result = parseString(buf, state, true);
+                        StringHolder result = parseString(buf, state, true, false);
                         if (!result.readComplete) {
                             state.state = AjpRequestParseState.READING_HEADERS;
                             state.readHeaders = readHeaders;
@@ -327,7 +327,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                             state.currentHeader = HttpString.tryFromString(result.value);
                         }
                     }
-                    StringHolder result = parseString(buf, state, false);
+                    StringHolder result = parseString(buf, state, false, false);
                     if (!result.readComplete) {
                         state.state = AjpRequestParseState.READING_HEADERS;
                         state.readHeaders = readHeaders;
@@ -357,7 +357,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                         }
                     }
                     if (state.currentIntegerPart == 1) {
-                        StringHolder result = parseString(buf, state, false);
+                        StringHolder result = parseString(buf, state, false, true);
                         if (!result.readComplete) {
                             state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
@@ -374,12 +374,13 @@ public class AjpRequestParser extends AbstractAjpParser {
                         }
                         result = Integer.toString(resultHolder.value);
                     } else {
-                        StringHolder resultHolder = parseString(buf, state, false);
+                        StringHolder resultHolder = parseString(buf, state, false, true);
                         if (!resultHolder.readComplete) {
                             state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
                         }
-                        result = resultHolder.value;
+//                        result = resultHolder.value;
+                        result = resultHolder.getByteString(encoding);
                     }
                     //query string.
                     if (state.currentAttribute.equals(QUERY_STRING)) {
