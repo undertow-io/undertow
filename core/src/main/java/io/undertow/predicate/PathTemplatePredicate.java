@@ -44,7 +44,11 @@ public class PathTemplatePredicate implements Predicate {
     @Override
     public boolean resolve(final HttpServerExchange exchange) {
         final Map<String, String> params = new HashMap<>();
-        boolean result = this.value.matches(attribute.readAttribute(exchange), params);
+        String path = attribute.readAttribute(exchange);
+        if(path == null) {
+            return false;
+        }
+        boolean result = this.value.matches(path, params);
         if (result) {
             Map<String, Object> context = exchange.getAttachment(PREDICATE_CONTEXT);
             if (context != null) {

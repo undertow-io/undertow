@@ -56,7 +56,11 @@ public class RegularExpressionPredicate implements Predicate {
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        Matcher matcher = pattern.matcher(matchAttribute.readAttribute(value));
+        String input = matchAttribute.readAttribute(value);
+        if(input == null) {
+            return false;
+        }
+        Matcher matcher = pattern.matcher(input);
         final boolean matches;
         if (requireFullMatch) {
             matches = matcher.matches();
