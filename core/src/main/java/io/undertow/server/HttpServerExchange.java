@@ -586,7 +586,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     public String getHostName() {
         String host = requestHeaders.getFirst(Headers.HOST);
         if (host == null) {
-            host = getDestinationAddress().getAddress().getHostAddress();
+            host = getDestinationAddress().getHostString();
         } else {
             if (host.startsWith("[")) {
                 host = host.substring(1, host.indexOf(']'));
@@ -609,8 +609,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     public String getHostAndPort() {
         String host = requestHeaders.getFirst(Headers.HOST);
         if (host == null) {
-            host = NetworkUtils.formatPossibleIpv6Address(getDestinationAddress().getAddress().getHostAddress());
-            int port = getDestinationAddress().getPort();
+            InetSocketAddress address = getDestinationAddress();
+            host = NetworkUtils.formatPossibleIpv6Address(address.getHostString());
+            int port = address.getPort();
             if (!((getRequestScheme().equals("http") && port == 80)
                     || (getRequestScheme().equals("https") && port == 8080))) {
                 host = host + ":" + port;
