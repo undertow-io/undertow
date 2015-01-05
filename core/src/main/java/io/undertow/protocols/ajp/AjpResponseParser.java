@@ -34,7 +34,7 @@ import io.undertow.util.HttpString;
  *
  * @author Stuart Douglas
  */
-class AjpResponseParser extends AbstractAjpParser {
+class AjpResponseParser {
 
     public static final AjpResponseParser INSTANCE = new AjpResponseParser();
 
@@ -68,19 +68,6 @@ class AjpResponseParser extends AbstractAjpParser {
 
     public boolean isComplete() {
         return state == DONE;
-    }
-
-    public void reset() {
-        super.reset();
-        state = 0;
-        prefix = 0;
-        dataSize = 0;
-        numHeaders = 0;
-        currentHeader = null;
-
-        statusCode = 0;
-        reasonPhrase = null;
-        headers = new HeaderMap();
     }
 
     public void parse(final ByteBuffer buf) throws IOException {
@@ -214,7 +201,6 @@ class AjpResponseParser extends AbstractAjpParser {
         }
     }
 
-    @Override
     protected HttpString headers(int offset) {
         return AjpConstants.HTTP_HEADERS_ARRAY[offset];
     }
@@ -233,5 +219,154 @@ class AjpResponseParser extends AbstractAjpParser {
 
     public int getReadBodyChunkSize() {
         return readBodyChunkSize;
+    }
+
+    public static final int STRING_LENGTH_MASK = 1 << 31;
+
+    /**
+     * The length of the string being read
+     */
+    public int stringLength = -1;
+
+    /**
+     * The current string being read
+     */
+    public StringBuilder currentString;
+
+    /**
+     * when reading the first byte of an integer this stores the first value. It is set to -1 to signify that
+     * the first byte has not been read yet.
+     */
+    public int currentIntegerPart = -1;
+    boolean containsUrlCharacters = false;
+    public int readHeaders = 0;
+
+    public void reset() {
+
+        state = 0;
+        prefix = 0;
+        dataSize = 0;
+        numHeaders = 0;
+        currentHeader = null;
+
+        statusCode = 0;
+        reasonPhrase = null;
+        headers = new HeaderMap();
+        stringLength = -1;
+        currentString = null;
+        currentIntegerPart = -1;
+        readHeaders = 0;
+    }
+
+    protected IntegerHolder parse16BitInteger(ByteBuffer buf) {
+        if (!buf.hasRemaining()) {
+            return new IntegerHolder(-1, false);
+        }
+        int number = this.currentIntegerPart;
+        if (number == -1) {
+            number = (buf.get() & 0xFF);
+        }
+        if (buf.hasRemaining()) {
+            final byte b = buf.get();
+            int result = ((0xFF & number) << 8) + (b & 0xFF);
+            this.currentIntegerPart = -1;
+            return new IntegerHolder(result, true);
+        } else {
+            this.currentIntegerPart = number;
+            return new IntegerHolder(-1, false);
+        }
+    }
+
+    protected StringHolder parseString(ByteBuffer buf, boolean header) {
+        boolean containsUrlCharacters = this.containsUrlCharacters;
+        if (!buf.hasRemaining()) {
+            return new StringHolder(null, false, false);
+        }
+        int stringLength = this.stringLength;
+        if (stringLength == -1) {
+            int number = buf.get() & 0xFF;
+            if (buf.hasRemaining()) {
+                final byte b = buf.get();
+                stringLength = ((0xFF & number) << 8) + (b & 0xFF);
+            } else {
+                this.stringLength = number | STRING_LENGTH_MASK;
+                return new StringHolder(null, false, false);
+            }
+        } else if ((stringLength & STRING_LENGTH_MASK) != 0) {
+            int number = stringLength & ~STRING_LENGTH_MASK;
+            stringLength = ((0xFF & number) << 8) + (buf.get() & 0xFF);
+        }
+        if (header && (stringLength & 0xFF00) != 0) {
+            this.stringLength = -1;
+            return new StringHolder(headers(stringLength & 0xFF));
+        }
+        if (stringLength == 0xFFFF) {
+            //OxFFFF means null
+            this.stringLength = -1;
+            return new StringHolder(null, true, false);
+        }
+        StringBuilder builder = this.currentString;
+
+        if (builder == null) {
+            builder = new StringBuilder();
+            this.currentString = builder;
+        }
+        int length = builder.length();
+        while (length < stringLength) {
+            if (!buf.hasRemaining()) {
+                this.stringLength = stringLength;
+                this.containsUrlCharacters = containsUrlCharacters;
+                return new StringHolder(null, false, false);
+            }
+            char c = (char) buf.get();
+            if(c == '+' || c == '%') {
+                containsUrlCharacters = true;
+            }
+            builder.append(c);
+            ++length;
+        }
+
+        if (buf.hasRemaining()) {
+            buf.get(); //null terminator
+            this.currentString = null;
+            this.stringLength = -1;
+            this.containsUrlCharacters = false;
+            return new StringHolder(builder.toString(), true, containsUrlCharacters);
+        } else {
+            this.stringLength = stringLength;
+            this.containsUrlCharacters = containsUrlCharacters;
+            return new StringHolder(null, false, false);
+        }
+    }
+
+    protected static class IntegerHolder {
+        public final int value;
+        public final boolean readComplete;
+
+        private IntegerHolder(int value, boolean readComplete) {
+            this.value = value;
+            this.readComplete = readComplete;
+        }
+    }
+
+    protected static class StringHolder {
+        public final String value;
+        public final HttpString header;
+        public final boolean readComplete;
+        public final boolean containsUrlCharacters;
+
+        private StringHolder(String value, boolean readComplete, boolean containsUrlCharacters) {
+            this.value = value;
+            this.readComplete = readComplete;
+            this.containsUrlCharacters = containsUrlCharacters;
+            this.header = null;
+        }
+
+        private StringHolder(HttpString value) {
+            this.value = null;
+            this.readComplete = true;
+            this.header = value;
+            this.containsUrlCharacters = false;
+        }
     }
 }

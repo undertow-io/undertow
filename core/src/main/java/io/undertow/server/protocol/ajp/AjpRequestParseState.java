@@ -31,7 +31,7 @@ import io.undertow.util.HttpString;
 /**
  * @author Stuart Douglas
  */
-class AjpRequestParseState extends AbstractAjpParseState {
+class AjpRequestParseState {
 
     //states
     public static final int BEGIN = 0;
@@ -71,6 +71,31 @@ class AjpRequestParseState extends AbstractAjpParseState {
     int serverPort = 80;
     String serverAddress;
 
+    /**
+     * The length of the string being read
+     */
+    public int stringLength = -1;
+
+    /**
+     * The current string being read
+     */
+    public final StringBuilder currentString = new StringBuilder();
+
+    /**
+     * when reading the first byte of an integer this stores the first value. It is set to -1 to signify that
+     * the first byte has not been read yet.
+     */
+    public int currentIntegerPart = -1;
+
+    boolean containsUrlCharacters = false;
+    public int readHeaders = 0;
+
+    public void reset() {
+        stringLength = -1;
+        currentString.setLength(0);
+        currentIntegerPart = -1;
+        readHeaders = 0;
+    }
     public boolean isComplete() {
         return state == 15;
     }

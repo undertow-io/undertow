@@ -47,7 +47,7 @@ import io.undertow.util.HttpString;
  */
 public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, AbstractAjpClientStreamSourceChannel, AbstractAjpClientStreamSinkChannel> {
 
-    private final AbstractAjpParser ajpParser;
+    private final AjpResponseParser ajpParser;
 
     private AjpClientResponseStreamSourceChannel source;
     private AjpClientRequestClientStreamSinkChannel sink;
