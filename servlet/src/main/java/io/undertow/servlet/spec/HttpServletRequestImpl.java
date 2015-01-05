@@ -899,7 +899,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getLocalName() {
-        return exchange.getDestinationAddress().getHostName();
+        return exchange.getDestinationAddress().getHostString();
     }
 
     @Override
