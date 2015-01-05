@@ -195,7 +195,11 @@ public class HttpSessionImpl implements HttpSession {
         if (servletRequestContext == null) {
             session.invalidate(null);
         } else {
-            session.invalidate(servletRequestContext.getOriginalRequest().getExchange());
+            if(servletRequestContext.getOriginalRequest().getServletContext() == servletContext) {
+                session.invalidate(servletRequestContext.getOriginalRequest().getExchange());
+            } else {
+                session.invalidate(null);
+            }
         }
     }
 
