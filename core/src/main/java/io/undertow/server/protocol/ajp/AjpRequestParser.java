@@ -434,7 +434,7 @@ public class AjpRequestParser {
         }
     }
 
-    protected StringHolder parseString(ByteBuffer buf, AjpRequestParseState state, boolean header) {
+    protected StringHolder parseString(ByteBuffer buf, AjpRequestParseState state, boolean header) throws UnsupportedEncodingException {
         boolean containsUrlCharacters = state.containsUrlCharacters;
         if (!buf.hasRemaining()) {
             return new StringHolder(null, false, false);
@@ -462,26 +462,24 @@ public class AjpRequestParser {
             state.stringLength = -1;
             return new StringHolder(null, true, false);
         }
-        StringBuilder builder = state.currentString;
-        int length = builder.length();
+        int length = state.getCurrentStringLength();
         while (length < stringLength) {
             if (!buf.hasRemaining()) {
                 state.stringLength = stringLength;
                 state.containsUrlCharacters = containsUrlCharacters;
                 return new StringHolder(null, false, false);
             }
-            char c = (char) buf.get();
+            byte c = buf.get();
             if(c == '+' || c == '%') {
                 containsUrlCharacters = true;
             }
-            builder.append(c);
+            state.addStringByte(c);
             ++length;
         }
 
         if (buf.hasRemaining()) {
             buf.get(); //null terminator
-            String value = builder.toString();
-            state.currentString.setLength(0);
+            String value = state.getStringAndClear(encoding);
             state.stringLength = -1;
             state.containsUrlCharacters = false;
             return new StringHolder(value, true, containsUrlCharacters);

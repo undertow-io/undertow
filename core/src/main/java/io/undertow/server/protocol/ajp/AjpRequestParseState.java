@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.ajp;
 
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -79,7 +80,8 @@ class AjpRequestParseState {
     /**
      * The current string being read
      */
-    public final StringBuilder currentString = new StringBuilder();
+    private byte[] currentString = new byte[16];
+    private int currentStringLength = 0;
 
     /**
      * when reading the first byte of an integer this stores the first value. It is set to -1 to signify that
@@ -92,7 +94,7 @@ class AjpRequestParseState {
 
     public void reset() {
         stringLength = -1;
-        currentString.setLength(0);
+        currentStringLength = 0;
         currentIntegerPart = -1;
         readHeaders = 0;
     }
@@ -141,5 +143,24 @@ class AjpRequestParseState {
             return null;
         }
         return InetSocketAddress.createUnresolved(serverAddress, serverPort);
+    }
+
+    public void addStringByte(byte b) {
+        if(currentString.length == currentStringLength) {
+            byte[] old = currentString;
+            currentString = new byte[currentStringLength + 16];
+            System.arraycopy(old, 0, currentString, 0, currentStringLength);
+        }
+        currentString[currentStringLength++] = b;
+    }
+
+    public String getStringAndClear(String charset) throws UnsupportedEncodingException {
+        String ret = new String(currentString, 0, currentStringLength, charset);
+        currentStringLength = 0;
+        return ret;
+    }
+
+    public int getCurrentStringLength() {
+        return currentStringLength;
     }
 }
