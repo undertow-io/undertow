@@ -27,7 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.undertow.Undertow;
+import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.WebSocketConnectionCallback;
@@ -47,6 +47,7 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.OptionMap;
@@ -64,7 +65,8 @@ import static io.undertow.Handlers.path;
  * @author Lucas Ponce
  */
 @HttpOneOnly
-public class WebSocketExtensionBasicTest {
+@RunWith(DefaultServer.class)
+public class WebSocketExtensionBasicTestCase {
 
     public static WebSocketProtocolHandshakeHandler webSocketDebugHandler() {
         return new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
@@ -82,10 +84,9 @@ public class WebSocketExtensionBasicTest {
 
         final Pool<ByteBuffer> buffer = new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192);
 
-        Undertow server;
         XnioWorker client;
 
-        Xnio xnio = Xnio.getInstance(WebSocketExtensionBasicTest.class.getClassLoader());
+        Xnio xnio = Xnio.getInstance(WebSocketExtensionBasicTestCase.class.getClassLoader());
         client = xnio.createWorker(OptionMap.builder()
                 .set(Options.WORKER_IO_THREADS, 2)
                 .set(Options.CONNECTION_HIGH_WATER, 1000000)
@@ -101,11 +102,7 @@ public class WebSocketExtensionBasicTest {
 
         DebugExtensionsHeaderHandler debug = new DebugExtensionsHeaderHandler(handler);
 
-        server = Undertow.builder()
-                .addHttpListener(8080, "localhost")
-                .setHandler(path().addPrefixPath("/", debug))
-                .build();
-        server.start();
+        DefaultServer.setRootHandler(path().addPrefixPath("/", debug));
 
         final String SEC_WEBSOCKET_EXTENSIONS = "permessage-deflate; client_no_context_takeover; client_max_window_bits";
         List<WebSocketExtension> extensionsList = WebSocketExtension.parse(SEC_WEBSOCKET_EXTENSIONS);
@@ -115,7 +112,7 @@ public class WebSocketExtensionBasicTest {
         Set<ExtensionHandshake> extensionHandshakes = new HashSet<>();
         extensionHandshakes.add(new PerMessageDeflateHandshake(true));
 
-        final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, buffer, OptionMap.EMPTY, new URI("http://localhost:8080"), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
+        final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, buffer, OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();
@@ -131,6 +128,7 @@ public class WebSocketExtensionBasicTest {
 
             @Override
             protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+                message.getData().free();
                 WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
             }
 
@@ -160,7 +158,6 @@ public class WebSocketExtensionBasicTest {
         clientChannel.sendClose();
 
         client.shutdown();
-        server.stop();
     }
 
     @Test
@@ -169,10 +166,9 @@ public class WebSocketExtensionBasicTest {
 
         final Pool<ByteBuffer> buffer = new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192);
 
-        Undertow server;
         XnioWorker client;
 
-        Xnio xnio = Xnio.getInstance(WebSocketExtensionBasicTest.class.getClassLoader());
+        Xnio xnio = Xnio.getInstance(WebSocketExtensionBasicTestCase.class.getClassLoader());
         client = xnio.createWorker(OptionMap.builder()
                 .set(Options.WORKER_IO_THREADS, 2)
                 .set(Options.CONNECTION_HIGH_WATER, 1000000)
@@ -189,11 +185,7 @@ public class WebSocketExtensionBasicTest {
 
         DebugExtensionsHeaderHandler debug = new DebugExtensionsHeaderHandler(handler);
 
-        server = Undertow.builder()
-                .addHttpListener(8080, "localhost")
-                .setHandler(path().addPrefixPath("/", debug))
-                .build();
-        server.start();
+        DefaultServer.setRootHandler(path().addPrefixPath("/", debug));
 
         final WebSocketClientNegotiation negotiation = null;
 
@@ -213,6 +205,7 @@ public class WebSocketExtensionBasicTest {
 
             @Override
             protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+                message.getData().free();
                 WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
             }
 
@@ -243,7 +236,6 @@ public class WebSocketExtensionBasicTest {
         clientChannel.sendClose();
 
         client.shutdown();
-        server.stop();
     }
 
     /**
@@ -270,10 +262,9 @@ public class WebSocketExtensionBasicTest {
 
         final Pool<ByteBuffer> buffer = new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024 * 1024);
 
-        Undertow server;
         XnioWorker client;
 
-        Xnio xnio = Xnio.getInstance(WebSocketExtensionBasicTest.class.getClassLoader());
+        Xnio xnio = Xnio.getInstance(WebSocketExtensionBasicTestCase.class.getClassLoader());
         client = xnio.createWorker(OptionMap.builder()
                 .set(Options.WORKER_IO_THREADS, 2)
                 .set(Options.CONNECTION_HIGH_WATER, 1000000)
@@ -289,11 +280,7 @@ public class WebSocketExtensionBasicTest {
 
         DebugExtensionsHeaderHandler debug = new DebugExtensionsHeaderHandler(handler);
 
-        server = Undertow.builder()
-                .addHttpListener(8080, "localhost")
-                .setHandler(path().addPrefixPath("/", debug))
-                .build();
-        server.start();
+        DefaultServer.setRootHandler(path().addPrefixPath("/", debug));
 
         final String SEC_WEBSOCKET_EXTENSIONS = "permessage-deflate; client_no_context_takeover; client_max_window_bits";
         final String SEC_WEBSOCKET_EXTENSIONS_EXPECTED = "[permessage-deflate; client_no_context_takeover]";  // List format
@@ -304,7 +291,7 @@ public class WebSocketExtensionBasicTest {
         Set<ExtensionHandshake> extensionHandshakes = new HashSet<>();
         extensionHandshakes.add(new PerMessageDeflateHandshake(true));
 
-        final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, buffer, OptionMap.EMPTY, new URI("http://localhost:8080"), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
+        final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, buffer, OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();
@@ -320,6 +307,7 @@ public class WebSocketExtensionBasicTest {
 
             @Override
             protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+                message.getData().free();
                 WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
             }
 
@@ -342,7 +330,6 @@ public class WebSocketExtensionBasicTest {
         clientChannel.sendClose();
 
         client.shutdown();
-        server.stop();
 
         Assert.assertEquals(SEC_WEBSOCKET_EXTENSIONS_EXPECTED, debug.getResponseExtensions().toString());
     }

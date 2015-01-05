@@ -28,6 +28,7 @@ import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSockets;
+import org.xnio.Pooled;
 
 /**
  * A {@link AbstractReceiveListener} implementation used as echo server in Autobahn tests.
@@ -83,18 +84,23 @@ public class DebugExtensionsListener extends AbstractReceiveListener {
     @Override
     protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
         WebSocketLogger.EXTENSION_LOGGER.info("onFullCloseMessage() ");
-        ByteBuffer[] data = message.getData().getResource();
+        Pooled<ByteBuffer[]> pooled = message.getData();
+        try {
+            ByteBuffer[] data = pooled.getResource();
         /*
             Empty messages should be closed as NORMAL_CLOSURE.
          */
-        if (data.length == 1 || !data[0].hasRemaining()) {
-            for (WebSocketChannel peerChannel : channel.getPeerConnections()) {
-                WebSockets.sendClose(CloseMessage.NORMAL_CLOSURE, "", peerChannel, null);
+            if (data.length == 1 || !data[0].hasRemaining()) {
+                for (WebSocketChannel peerChannel : channel.getPeerConnections()) {
+                    WebSockets.sendClose(CloseMessage.NORMAL_CLOSURE, "", peerChannel, null);
+                }
+            } else {
+                for (WebSocketChannel peerChannel : channel.getPeerConnections()) {
+                    WebSockets.sendClose(data, peerChannel, null);
+                }
             }
-        } else {
-            for (WebSocketChannel peerChannel : channel.getPeerConnections()) {
-                WebSockets.sendClose(data, peerChannel, null);
-            }
+        } finally {
+            pooled.free();
         }
     }
 
