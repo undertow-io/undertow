@@ -17,6 +17,8 @@
  */
 package io.undertow.security.impl;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -45,7 +47,8 @@ import static io.undertow.UndertowMessages.MESSAGES;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  * @author Stuart Douglas
  */
-public class SecurityContextImpl implements SecurityContext {
+public class
+        SecurityContextImpl implements SecurityContext {
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("MODIFY_UNDERTOW_SECURITY_CONTEXT");
 
@@ -206,7 +209,20 @@ public class SecurityContextImpl implements SecurityContext {
 
     @Override
     public boolean login(final String username, final String password) {
-        final Account account = identityManager.verify(username, new PasswordCredential(password.toCharArray()));
+
+
+        final Account account;
+        if(System.getSecurityManager() == null) {
+            account = identityManager.verify(username, new PasswordCredential(password.toCharArray()));
+        } else {
+            account = AccessController.doPrivileged(new PrivilegedAction<Account>() {
+                @Override
+                public Account run() {
+                    return identityManager.verify(username, new PasswordCredential(password.toCharArray()));
+                }
+            });
+        }
+
         if (account == null) {
             return false;
         }
