@@ -46,6 +46,13 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
     private Http2HeadersStreamSinkChannel response;
     private int flowControlWindow;
     private ChannelListener<Http2StreamSourceChannel> completionListener;
+    /**
+     * This is a bit of a hack, basically it allows the container to delay sending a RST_STREAM on a channel that is knows is broken,
+     * because it wants to delay the RST until after the response has been set
+     *
+     * Used for handling the super nasty 100-continue logic
+     */
+    private boolean ignoreForceClose = false;
 
     Http2StreamSourceChannel(Http2Channel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, HeaderMap headers, int streamId) {
         super(framedChannel, data, frameDataRemaining);
@@ -177,7 +184,20 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
         if (completionListener != null) {
             completionListener.handleEvent(this);
         }
-        getHttp2Channel().sendRstStream(streamId, Http2Channel.ERROR_CANCEL);
+        if(!ignoreForceClose) {
+            getHttp2Channel().sendRstStream(streamId, Http2Channel.ERROR_CANCEL);
+        } else {
+            //normally sending the RST would mark this broken
+            markStreamBroken();
+        }
+    }
+
+    public void setIgnoreForceClose(boolean ignoreForceClose) {
+        this.ignoreForceClose = ignoreForceClose;
+    }
+
+    public boolean isIgnoreForceClose() {
+        return ignoreForceClose;
     }
 
     public int getStreamId() {

@@ -176,6 +176,10 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel {
 
     }
 
+    protected boolean isFlushRequiredOnEmptyBuffer() {
+        return first;
+    }
+
     public HeaderMap getHeaders() {
         return headers;
     }

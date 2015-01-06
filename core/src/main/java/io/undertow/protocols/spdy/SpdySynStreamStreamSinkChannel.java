@@ -121,6 +121,10 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
         }
     }
 
+    protected boolean isFlushRequiredOnEmptyBuffer() {
+        return first;
+    }
+
     public HeaderMap getHeaders() {
         return headers;
     }

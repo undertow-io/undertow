@@ -34,7 +34,6 @@ import io.undertow.protocols.http2.Http2StreamSinkChannel;
 import io.undertow.protocols.http2.Http2StreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
 
 /**
  * @author Stuart Douglas
@@ -44,6 +43,7 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
     private ContinueNotification continueNotification;
     private Http2StreamSourceChannel response;
     private ClientResponse clientResponse;
+    private ClientResponse continueResponse;
     private final ClientConnection clientConnection;
     private final Http2StreamSinkChannel request;
     private final ClientRequest clientRequest;
@@ -68,9 +68,13 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
 
     @Override
     public void setContinueHandler(ContinueNotification continueHandler) {
-        String expect = clientRequest.getRequestHeaders().getFirst(Headers.EXPECT);
-        if ("100-continue".equalsIgnoreCase(expect)) {
-            continueHandler.handleContinue(this);
+        this.continueNotification = continueHandler;
+    }
+
+    void setContinueResponse(ClientResponse response) {
+        this.continueResponse = response;
+        if (continueNotification != null) {
+            this.continueNotification.handleContinue(this);
         }
     }
 
@@ -105,7 +109,7 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
 
     @Override
     public ClientResponse getContinueResponse() {
-        return null;
+        return continueResponse;
     }
 
     @Override
@@ -122,13 +126,18 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
 
     void responseReady(Http2StreamSourceChannel result) {
         this.response = result;
+        ClientResponse clientResponse = createResponse(result);
+        this.clientResponse = clientResponse;
+        if (responseListener != null) {
+            responseListener.completed(this);
+        }
+    }
+
+    ClientResponse createResponse(Http2StreamSourceChannel result) {
         HeaderMap headers = result.getHeaders();
         final String status = result.getHeaders().getFirst(Http2ClientConnection.STATUS);
         int statusCode = Integer.parseInt(status);
         headers.remove(Http2ClientConnection.STATUS);
-        clientResponse = new ClientResponse(statusCode, status != null ? status.substring(3) : "", clientRequest.getProtocol(), headers);
-        if (responseListener != null) {
-            responseListener.completed(this);
-        }
+        return new ClientResponse(statusCode, status != null ? status.substring(3) : "", clientRequest.getProtocol(), headers);
     }
 }

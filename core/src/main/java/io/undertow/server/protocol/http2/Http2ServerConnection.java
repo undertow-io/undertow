@@ -26,7 +26,11 @@ import java.util.List;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
+import io.undertow.server.ConduitWrapper;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.protocol.http.HttpContinue;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Protocols;
@@ -82,6 +86,7 @@ public class Http2ServerConnection extends ServerConnection {
     private SSLSessionInfo sessionInfo;
     private final HttpHandler rootHandler;
     private HttpServerExchange exchange;
+    private boolean continueSent = false;
 
     public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
@@ -137,14 +142,57 @@ public class Http2ServerConnection extends ServerConnection {
 
     @Override
     public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
-        //Http2 does not really seem to support HTTP 100-continue
-        throw new RuntimeException("Not yet implemented");
+
+        if (exchange == null || !HttpContinue.requiresContinueResponse(exchange)) {
+            throw UndertowMessages.MESSAGES.outOfBandResponseOnlyAllowedFor100Continue();
+        }
+        final HttpServerExchange newExchange = new HttpServerExchange(this);
+        for (HttpString header : exchange.getRequestHeaders().getHeaderNames()) {
+            newExchange.getRequestHeaders().putAll(header, exchange.getRequestHeaders().get(header));
+        }
+        newExchange.setProtocol(exchange.getProtocol());
+        newExchange.setRequestMethod(exchange.getRequestMethod());
+        exchange.setRequestURI(exchange.getRequestURI(), exchange.isHostIncludedInRequestURI());
+        exchange.setRequestPath(exchange.getRequestPath());
+        exchange.setRelativePath(exchange.getRelativePath());
+        newExchange.setPersistent(true);
+
+        Connectors.terminateRequest(newExchange);
+        newExchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
+            @Override
+            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+
+                HeaderMap headers = newExchange.getResponseHeaders();
+                DateUtils.addDateHeaderIfRequired(exchange);
+                headers.add(STATUS, exchange.getResponseCode());
+                Connectors.flattenCookies(exchange);
+                Http2HeadersStreamSinkChannel sink = new Http2HeadersStreamSinkChannel(channel, requestChannel.getStreamId(), headers);
+                return new StreamSinkChannelWrappingConduit(sink);
+            }
+        });
+        continueSent = true;
+        return newExchange;
+
     }
 
     @Override
     public void terminateRequestChannel(HttpServerExchange exchange) {
-        //todo: should we RST_STREAM in this case
-        //channel.sendRstStream(responseChannel.getStreamId(), Http2Channel.RST_STATUS_CANCEL);
+        if(HttpContinue.requiresContinueResponse(exchange.getRequestHeaders()) && !continueSent) {
+            requestChannel.setIgnoreForceClose(true);
+            requestChannel.close();
+            //if this request requires a 100-continue and it was not sent we have to reset the stream
+            //we do it in a completion listener though, to make sure the response is sent first
+            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                @Override
+                public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                    try {
+                        channel.sendRstStream(responseChannel.getStreamId(), Http2Channel.ERROR_CANCEL);
+                    } finally {
+                        nextListener.proceed();
+                    }
+                }
+            });
+        }
     }
 
     @Override

@@ -7,6 +7,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Stuart Douglas
@@ -39,18 +40,21 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
 
     static class DebuggingBuffer implements Pooled<ByteBuffer> {
 
+        private static final AtomicInteger allocationCount = new AtomicInteger();
         private final RuntimeException allocationPoint;
         private final Pooled<ByteBuffer> delegate;
         private final String label;
+        private final int no;
         private volatile boolean free = false;
         private RuntimeException freePoint;
 
         public DebuggingBuffer(Pooled<ByteBuffer> delegate, String label) {
             this.delegate = delegate;
             this.label = label;
+            this.no = allocationCount.getAndIncrement();
             String ctx = ALLOCATION_CONTEXT.get();
             ALLOCATION_CONTEXT.remove();
-            allocationPoint = new RuntimeException(delegate.getResource() + (ctx == null ? "[NO_CONTEXT]" : ctx));
+            allocationPoint = new RuntimeException(delegate.getResource()  + " NO: " + no + " " + (ctx == null ? "[NO_CONTEXT]" : ctx));
             BUFFERS.add(this);
         }
 

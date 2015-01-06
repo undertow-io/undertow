@@ -32,7 +32,7 @@ public class Http2HeadersStreamSinkChannel extends Http2DataStreamSinkChannel {
         super(channel, streamId, Http2Channel.FRAME_TYPE_HEADERS);
     }
 
-    Http2HeadersStreamSinkChannel(Http2Channel channel, int streamId, HeaderMap headers) {
+    public Http2HeadersStreamSinkChannel(Http2Channel channel, int streamId, HeaderMap headers) {
         super(channel, streamId, headers, Http2Channel.FRAME_TYPE_HEADERS);
     }
 }

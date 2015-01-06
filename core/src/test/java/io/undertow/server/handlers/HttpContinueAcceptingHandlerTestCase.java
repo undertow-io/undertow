@@ -27,7 +27,6 @@ import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpHandler;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
@@ -37,6 +36,8 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpParams;
 import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,7 +46,6 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@HttpOneOnly
 public class HttpContinueAcceptingHandlerTestCase {
 
     private static volatile boolean accept = false;
@@ -79,6 +79,11 @@ public class HttpContinueAcceptingHandlerTestCase {
                 }
             }
         });
+    }
+
+    @Before
+    public void before() {
+        Assume.assumeFalse(DefaultServer.isAjp() || DefaultServer.isSpdy());
     }
 
     @Test

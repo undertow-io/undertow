@@ -127,6 +127,10 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
         }
     }
 
+    protected boolean isFlushRequiredOnEmptyBuffer() {
+        return first;
+    }
+
     @Override
     protected Deflater getDeflater() {
         return deflater;

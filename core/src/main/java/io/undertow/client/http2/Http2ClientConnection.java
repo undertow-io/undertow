@@ -302,7 +302,19 @@ public class Http2ClientConnection implements ClientConnection {
                 AbstractHttp2StreamSourceChannel result = channel.receive();
                 if (result instanceof Http2StreamSourceChannel) {
                     final Http2StreamSourceChannel streamSourceChannel = (Http2StreamSourceChannel) result;
+
+                    int statusCode = Integer.parseInt(streamSourceChannel.getHeaders().getFirst(STATUS));
                     Http2ClientExchange request = currentExchanges.get(streamSourceChannel.getStreamId());
+                    if(statusCode < 200) {
+                        //this is an informational response 1xx response
+                        if(statusCode == 100) {
+                            //a continue response
+                            request.setContinueResponse(request.createResponse(streamSourceChannel));
+                        }
+                        Channels.drain(result, Long.MAX_VALUE);
+                        return;
+                    }
+
                     result.addCloseTask(new ChannelListener<AbstractHttp2StreamSourceChannel>() {
                         @Override
                         public void handleEvent(AbstractHttp2StreamSourceChannel channel) {
@@ -322,11 +334,13 @@ public class Http2ClientConnection implements ClientConnection {
                 } else if (result instanceof Http2PingStreamSourceChannel) {
                     handlePing((Http2PingStreamSourceChannel) result);
                 } else if (result instanceof Http2RstStreamStreamSourceChannel) {
-                    int stream = ((Http2RstStreamStreamSourceChannel)result).getStreamId();
+                    Http2RstStreamStreamSourceChannel rstStream = (Http2RstStreamStreamSourceChannel) result;
+                    int stream = rstStream.getStreamId();
                     UndertowLogger.REQUEST_LOGGER.debugf("Client received RST_STREAM for stream %s", stream);
                     Http2ClientExchange exchange = currentExchanges.get(stream);
 
                     if(exchange != null) {
+                        //if we have not yet received a response we treat this as an error
                         exchange.failed(UndertowMessages.MESSAGES.http2StreamWasReset());
                     }
                     Channels.drain(result, Long.MAX_VALUE);
