@@ -18,9 +18,9 @@
 
 package io.undertow.conduits;
 
+import io.undertow.UndertowLogger;
 import org.xnio.Buffers;
 import org.xnio.channels.FixedLengthOverflowException;
-import org.xnio.channels.FixedLengthUnderflowException;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.Conduits;
@@ -251,11 +251,8 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
     public void terminateWrites() throws IOException {
         final long val = enterShutdown();
         if (anyAreSet(val, MASK_COUNT) && !broken) {
-            try {
-                throw new FixedLengthUnderflowException((val & MASK_COUNT) + " bytes remaining");
-            } finally {
-                next.truncateWrites();
-            }
+            UndertowLogger.REQUEST_IO_LOGGER.debugf("Fixed length stream closed with with %s bytes remaining", val & MASK_COUNT);
+            next.truncateWrites();
         } else if (allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
             next.terminateWrites();
         }

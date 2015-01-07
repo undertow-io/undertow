@@ -25,7 +25,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowMessages;
+import io.undertow.UndertowLogger;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
@@ -291,7 +291,8 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             return;
         }
         if (this.chunkleft != 0) {
-            throw UndertowMessages.MESSAGES.chunkedChannelClosedMidChunk();
+            UndertowLogger.REQUEST_IO_LOGGER.debugf("Channel closed mid-chunk");
+            next.truncateWrites();
         }
         if (!anyAreSet(state, FLAG_FIRST_DATA_WRITTEN)) {
             //if no data was actually sent we just remove the transfer encoding header, and set content length 0
