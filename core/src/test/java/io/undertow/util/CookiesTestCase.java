@@ -76,6 +76,30 @@ public class CookiesTestCase {
     }
 
     @Test
+    public void testInvalidCookie() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(1, false, Arrays.asList("\"; CUSTOMER=WILE_E_COYOTE"));
+
+        Assert.assertFalse(cookies.containsKey("$Domain"));
+        Assert.assertFalse(cookies.containsKey("$Version"));
+        Assert.assertFalse(cookies.containsKey("$Path"));
+
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+
+        cookies = Cookies.parseRequestCookies(1, false, Arrays.asList("; CUSTOMER=WILE_E_COYOTE"));
+
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+
+        cookies = Cookies.parseRequestCookies(1, false, Arrays.asList("foobar; CUSTOMER=WILE_E_COYOTE"));
+
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+    }
+    @Test
     public void testRequestCookieDomainPathVersion() {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(1, false, Arrays.asList(
                 "CUSTOMER=WILE_E_COYOTE; $Domain=LOONEY_TUNES; $Version=1; $Path=/"));

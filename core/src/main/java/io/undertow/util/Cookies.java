@@ -18,6 +18,7 @@
 
 package io.undertow.util;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
@@ -227,7 +228,11 @@ public class Cookies {
                         start = i + 1;
                         state = 2;
                     } else if (c == ';') {
-                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        if(name != null) {
+                            cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        } else if(UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
+                            UndertowLogger.REQUEST_LOGGER.trace("Ignoring invalid cookies in header " + cookie);
+                        }
                         state = 0;
                         start = i + 1;
                     }
