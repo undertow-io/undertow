@@ -151,18 +151,22 @@ public class UndertowInputStream extends InputStream {
         if (anyAreSet(state, FLAG_CLOSED)) {
             return;
         }
-        while (allAreClear(state, FLAG_FINISHED)) {
-            readIntoBuffer();
+        state |= FLAG_CLOSED;
+        try {
+            while (allAreClear(state, FLAG_FINISHED)) {
+                readIntoBuffer();
+                if (pooled != null) {
+                    pooled.free();
+                    pooled = null;
+                }
+            }
+        } finally {
             if (pooled != null) {
                 pooled.free();
                 pooled = null;
             }
+            channel.shutdownReads();
+            state |= FLAG_FINISHED;
         }
-        if (pooled != null) {
-            pooled.free();
-            pooled = null;
-        }
-        channel.shutdownReads();
-        state |= FLAG_FINISHED | FLAG_CLOSED;
     }
 }

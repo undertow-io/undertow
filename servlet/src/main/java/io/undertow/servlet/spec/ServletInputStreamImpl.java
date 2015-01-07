@@ -240,6 +240,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (anyAreSet(state, FLAG_CLOSED)) {
             return;
         }
+        this.state = state | FLAG_CLOSED;
         try {
             while (allAreClear(state, FLAG_FINISHED)) {
                 readIntoBuffer();
@@ -249,13 +250,13 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 }
             }
         } finally {
+            state |= FLAG_FINISHED;
             if (pooled != null) {
                 pooled.free();
                 pooled = null;
             }
+            channel.shutdownReads();
         }
-        channel.shutdownReads();
-        state |= FLAG_FINISHED | FLAG_CLOSED;
     }
 
     private class ServletInputStreamChannelListener implements ChannelListener<StreamSourceChannel> {
