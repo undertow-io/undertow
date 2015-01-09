@@ -20,6 +20,9 @@ package io.undertow.servlet.spec;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
@@ -80,6 +83,32 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
+        if(System.getSecurityManager() != null) {
+            try {
+                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
+                    @Override
+                    public Object run() throws Exception {
+                        forwardImpl(request, response);
+                        return null;
+                    }
+                });
+            } catch (PrivilegedActionException e) {
+                if(e.getCause() instanceof ServletException) {
+                    throw (ServletException)e.getCause();
+                } else if(e.getCause() instanceof IOException) {
+                    throw (IOException)e.getCause();
+                } else if(e.getCause() instanceof RuntimeException) {
+                    throw (RuntimeException)e.getCause();
+                } else {
+                    throw new RuntimeException(e.getCause());
+                }
+            }
+        } else {
+            forwardImpl(request, response);
+        }
+    }
+
+    private void forwardImpl(ServletRequest request, ServletResponse response) throws ServletException, IOException {
         final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
 
         ThreadSetupAction.Handle handle = null;
@@ -199,6 +228,32 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
+        if(System.getSecurityManager() != null) {
+            try {
+                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
+                    @Override
+                    public Object run() throws Exception {
+                        includeImpl(request, response);
+                        return null;
+                    }
+                });
+            } catch (PrivilegedActionException e) {
+                if(e.getCause() instanceof ServletException) {
+                    throw (ServletException)e.getCause();
+                } else if(e.getCause() instanceof IOException) {
+                    throw (IOException)e.getCause();
+                } else if(e.getCause() instanceof RuntimeException) {
+                    throw (RuntimeException)e.getCause();
+                } else {
+                    throw new RuntimeException(e.getCause());
+                }
+            }
+        } else {
+            includeImpl(request, response);
+        }
+    }
+
+    private void includeImpl(ServletRequest request, ServletResponse response) throws ServletException, IOException {
         final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
         final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
