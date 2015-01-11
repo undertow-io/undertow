@@ -287,11 +287,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_SHOULD_RESUME_WRITES = 1 << 19;
 
     /**
-     * Flag that indicates that that endExchange has been called
-     */
-    private static final int FLAG_END_EXCHANGE_CALLED = 1 << 20;
-
-    /**
      * The source address for the request. If this is null then the actual source address from the channel is used
      */
     private InetSocketAddress sourceAddress;
@@ -1438,10 +1433,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public HttpServerExchange endExchange() {
         final int state = this.state;
-        if(anyAreSet(state, FLAG_END_EXCHANGE_CALLED)) {
-            return this;
-        }
-        this.state |= FLAG_END_EXCHANGE_CALLED;
         if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
             if(blockingHttpExchange != null) {
                 //we still have to close the blocking exchange in this case,
