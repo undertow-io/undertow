@@ -947,6 +947,13 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     }
 
     /**
+     * forcibly closes the connection
+     */
+    public void close() {
+        closed();
+    }
+
+    /**
      * Read ready handler that deals with read-requires-write semantics
      */
     private class SslReadReadyHandler implements ReadReadyHandler {

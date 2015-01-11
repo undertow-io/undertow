@@ -143,6 +143,10 @@ class UndertowSslConnection extends SslConnection {
         return super.writeClosed();
     }
 
+    protected void closeAction() {
+        sslConduit.close();
+    }
+
     private final class HandshakeCallback implements Runnable {
 
         @Override
