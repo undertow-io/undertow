@@ -19,14 +19,19 @@
 package io.undertow.server.protocol.http;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.ParseTimeoutUpdater;
+import io.undertow.server.protocol.http2.Http2ReceiveListener;
 import io.undertow.util.ClosingChannelExceptionHandler;
+import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -49,6 +54,13 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class HttpReadListener implements ChannelListener<ConduitStreamSourceChannel>, Runnable {
+
+    /**
+     * used for HTTP2 prior knowledge support
+     */
+    private static final HttpString PRI = new HttpString("PRI");
+    private static final byte[] PRI_EXPECTED = new byte[] {'S', 'M', '\r', '\n', '\r', '\n'};
+
 
     private static final String BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 
@@ -178,6 +190,14 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
             this.httpServerExchange = null;
             requestStateUpdater.set(this, 1);
+
+            if(httpServerExchange.getProtocol() == Protocols.HTTP_2_0) {
+                if(httpServerExchange.getRequestMethod().equals(PRI) && connection.getUndertowOptions().get(UndertowOptions.ENABLE_HTTP2, false)) {
+                    handleHttp2PriorKnowledge(connection.getChannel(), connection, pooled);
+                    free = false;
+                    return;
+                }
+            }
             HttpTransferEncoding.setupRequest(httpServerExchange);
             if (recordRequestStartTime) {
                 Connectors.setRequestStartTime(httpServerExchange);
@@ -328,5 +348,64 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     @Override
     public void run() {
         handleEvent(connection.getChannel().getSourceChannel());
+    }
+
+
+    private void handleHttp2PriorKnowledge(final StreamConnection connection, final HttpServerConnection serverConnection, Pooled<ByteBuffer> readData) throws IOException {
+
+        final ConduitStreamSourceChannel request = connection.getSourceChannel();
+
+        byte[] data = new byte[PRI_EXPECTED.length];
+        final ByteBuffer buffer = ByteBuffer.wrap(data);
+        if(readData.getResource().hasRemaining()) {
+            while (readData.getResource().hasRemaining() && buffer.hasRemaining()) {
+                buffer.put(readData.getResource().get());
+            }
+        }
+        final Pooled<ByteBuffer> extraData;
+        if(readData.getResource().hasRemaining()) {
+            extraData = readData;
+        } else {
+            readData.free();
+            extraData = null;
+        }
+        if(!doHttp2PriRead(connection, buffer, serverConnection, extraData)) {
+            request.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+                @Override
+                public void handleEvent(StreamSourceChannel channel) {
+                    try {
+                        doHttp2PriRead(connection, buffer, serverConnection, extraData);
+                    } catch (IOException e) {
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                        IoUtils.safeClose(connection);
+                    }
+                }
+            });
+            request.resumeReads();
+        }
+    }
+
+    private boolean doHttp2PriRead(StreamConnection connection, ByteBuffer buffer, HttpServerConnection serverConnection, Pooled<ByteBuffer> extraData) throws IOException {
+        if(buffer.hasRemaining()) {
+            int res = connection.getSourceChannel().read(buffer);
+            if (res == -1) {
+                return true; //fail
+            }
+            if (buffer.hasRemaining()) {
+                return false;
+            }
+        }
+        buffer.flip();
+        for(int i = 0; i < PRI_EXPECTED.length; ++i) {
+            if(buffer.get() != PRI_EXPECTED[i]) {
+                throw UndertowMessages.MESSAGES.http2PriRequestFailed();
+            }
+        }
+
+        Http2Channel channel = new Http2Channel(connection, null, serverConnection.getBufferPool(), extraData, false, false, false, serverConnection.getUndertowOptions());
+        Http2ReceiveListener receiveListener = new Http2ReceiveListener(serverConnection.getRootHandler(), serverConnection.getUndertowOptions(), serverConnection.getBufferSize(), null);
+        channel.getReceiveSetter().set(receiveListener);
+        channel.resumeReceives();
+        return true;
     }
 }

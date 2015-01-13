@@ -35,6 +35,7 @@ import io.undertow.util.Headers;
  * mechanism as detailed in Section 3.2. This should always be the first handler in a handler
  * chain.
  *
+ * This handler also handles HTTP2 upgrade requests that are done via prior knowledge
  *
  * @author Stuart Douglas
  */
@@ -58,7 +59,7 @@ public class Http2UpgradeHandler implements HttpHandler {
                     @Override
                     public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
                         OptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
-                        Http2Channel channel = new Http2Channel(streamConnection, upgrade, exchange.getConnection().getBufferPool(), null, false, true, settingsFrame, undertowOptions);
+                        Http2Channel channel = new Http2Channel(streamConnection, upgrade, exchange.getConnection().getBufferPool(), null, false, true, true, settingsFrame, undertowOptions);
                         Http2ReceiveListener receiveListener = new Http2ReceiveListener(new HttpHandler() {
                             @Override
                             public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -81,4 +82,5 @@ public class Http2UpgradeHandler implements HttpHandler {
         }
         next.handleRequest(exchange);
     }
+
 }

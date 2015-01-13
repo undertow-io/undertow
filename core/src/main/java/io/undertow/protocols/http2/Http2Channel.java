@@ -166,10 +166,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
-        this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, null, settings);
+        this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, true, null, settings);
+    }
+    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, OptionMap settings) {
+        this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, prefaceRequired, null, settings);
     }
 
-    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, ByteBuffer initialOtherSideSettings, OptionMap settings) {
+    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, ByteBuffer initialOtherSideSettings, OptionMap settings) {
         super(connectedStreamChannel, bufferPool, Http2FramePriority.INSTANCE, data);
         streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
@@ -190,6 +193,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
         this.decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         this.encoder = new HpackEncoder(encoderHeaderTableSize);
+        if(!prefaceRequired) {
+            prefaceCount = PREFACE_BYTES.length;
+        }
 
         if (clientSide) {
             sendPreface();
