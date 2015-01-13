@@ -87,6 +87,7 @@ import static io.undertow.util.Methods.TRACE_STRING;
 import static io.undertow.util.Protocols.HTTP_0_9_STRING;
 import static io.undertow.util.Protocols.HTTP_1_0_STRING;
 import static io.undertow.util.Protocols.HTTP_1_1_STRING;
+import static io.undertow.util.Protocols.HTTP_2_0_STRING;
 
 /**
  * The basic HTTP parser. The actual parser is a sub class of this class that is generated as part of
@@ -108,7 +109,7 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
         TRACE_STRING,
         CONNECT_STRING},
         protocols = {
-                HTTP_0_9_STRING, HTTP_1_0_STRING, HTTP_1_1_STRING
+                HTTP_0_9_STRING, HTTP_1_0_STRING, HTTP_1_1_STRING, HTTP_2_0_STRING
         },
         headers = {
                 ACCEPT_STRING,

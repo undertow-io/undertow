@@ -343,7 +343,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
 
                 } else if (h2c) {
-                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
+                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
@@ -352,7 +352,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2c", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2c-prior", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
                     setupProxyHandlerForSSL(proxyHandler);
                     proxyOpenListener.setRootHandler(proxyHandler);
                     proxyServer.resumeAccepts();
