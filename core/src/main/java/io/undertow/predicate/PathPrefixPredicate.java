@@ -52,7 +52,9 @@ class PathPrefixPredicate implements Predicate {
         boolean matches = result.getValue() == Boolean.TRUE;
         if(matches) {
             Map<String, Object> context = value.getAttachment(PREDICATE_CONTEXT);
-            context.put("remaining", result.getRemaining());
+            if(context != null) {
+                context.put("remaining", result.getRemaining());
+            }
         }
         return matches;
     }

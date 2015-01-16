@@ -22,7 +22,7 @@ import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
-import java.util.HashMap;
+import java.util.TreeMap;
 
 /**
  * Handler that sets up the predicate context
@@ -39,7 +39,7 @@ public class PredicateContextHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        exchange.putAttachment(Predicate.PREDICATE_CONTEXT, new HashMap<String, Object>());
+        exchange.putAttachment(Predicate.PREDICATE_CONTEXT, new TreeMap<String, Object>());
         next.handleRequest(exchange);
     }
 }
