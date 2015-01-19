@@ -247,9 +247,11 @@ public class FileResourceManager implements ResourceManager {
                     /*
                      * Absolute path
                      */
-                    return safePath.length() > 0 &&
-                            canonicalPath.length() >= safePath.length() &&
-                            canonicalPath.startsWith(safePath);
+                    if (safePath.length() > 0 &&
+                        canonicalPath.length() >= safePath.length() &&
+                        canonicalPath.startsWith(safePath)) {
+                        return true;
+                    }
                 } else {
                     /*
                      * In relative path we build the path appending to base
@@ -257,9 +259,11 @@ public class FileResourceManager implements ResourceManager {
                     String absSafePath = base + '/' + safePath;
                     File absSafePathFile = new File(absSafePath);
                     String canonicalSafePath = absSafePathFile.getCanonicalPath();
-                    return canonicalSafePath.length() > 0 &&
-                            canonicalPath.length() >= canonicalSafePath.length() &&
-                            canonicalPath.startsWith(canonicalSafePath);
+                    if (canonicalSafePath.length() > 0 &&
+                        canonicalPath.length() >= canonicalSafePath.length() &&
+                        canonicalPath.startsWith(canonicalSafePath)) {
+                        return true;
+                    }
 
                 }
             }
