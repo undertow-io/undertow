@@ -114,6 +114,7 @@ public final class Undertow {
                     .set(Options.REUSE_ADDRESSES, true)
                     .set(Options.BALANCING_TOKENS, 1)
                     .set(Options.BALANCING_CONNECTIONS, 2)
+                    .set(Options.BACKLOG, 1000)
                     .addAll(this.socketOptions)
                     .getMap();
 
