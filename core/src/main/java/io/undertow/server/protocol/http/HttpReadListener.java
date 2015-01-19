@@ -220,20 +220,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             channel.setReadListener(this);
             channel.resumeReads();
         } else if (res == -1) {
-            handleConnectionClose(channel);
-        }
-    }
-
-    private void handleConnectionClose(StreamSourceChannel channel) {
-        try {
-            channel.suspendReads();
-            channel.shutdownReads();
-            final StreamSinkChannel responseChannel = this.connection.getChannel().getSinkChannel();
-            responseChannel.shutdownWrites();
-            IoUtils.safeClose(connection);
-        } catch (IOException e) {
-            UndertowLogger.REQUEST_IO_LOGGER.debug("Error reading request", e);
-            // fuck it, it's all ruined
             IoUtils.safeClose(connection);
         }
     }
