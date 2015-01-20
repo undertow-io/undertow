@@ -18,8 +18,10 @@
 
 package io.undertow.client.http2;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -71,19 +73,33 @@ public class Http2ClearClientProvider implements ClientProvider {
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        final URI upgradeUri;
+        try {
+            upgradeUri = new URI("http", uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+        } catch (URISyntaxException e) {
+            listener.failed(new IOException(e));
+            return;
+        }
         Map<String, String> headers = createHeaders(options, bufferPool, uri);
-        HttpUpgrade.performUpgrade(worker, bindAddress, uri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null, options, null).addNotifier(new FailedNotifier(listener), null);
+        HttpUpgrade.performUpgrade(worker, bindAddress, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null, options, null).addNotifier(new FailedNotifier(listener), null);
     }
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+        final URI upgradeUri;
+        try {
+            upgradeUri = new URI("http", uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+        } catch (URISyntaxException e) {
+            listener.failed(new IOException(e));
+            return;
+        }
 
         if (bindAddress != null) {
             ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort()), new ChannelListener<StreamConnection>() {
                 @Override
                 public void handleEvent(StreamConnection channel) {
                     Map<String, String> headers = createHeaders(options, bufferPool, uri);
-                    HttpUpgrade.performUpgrade(channel, uri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null).addNotifier(new FailedNotifier(listener), null);
+                    HttpUpgrade.performUpgrade(channel, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null).addNotifier(new FailedNotifier(listener), null);
                 }
             }, new ChannelListener<BoundChannel>() {
                 @Override
@@ -96,7 +112,7 @@ public class Http2ClearClientProvider implements ClientProvider {
                 @Override
                 public void handleEvent(StreamConnection channel) {
                     Map<String, String> headers = createHeaders(options, bufferPool, uri);
-                    HttpUpgrade.performUpgrade(channel, uri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null).addNotifier(new FailedNotifier(listener), null);
+                    HttpUpgrade.performUpgrade(channel, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null).addNotifier(new FailedNotifier(listener), null);
                 }
             }, new ChannelListener<BoundChannel>() {
                 @Override
