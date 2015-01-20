@@ -131,8 +131,7 @@ public class SpdyServerConnection extends ServerConnection {
 
     @Override
     public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
-        //SPDY does not really seem to support HTTP 100-continue
-        throw new RuntimeException("Not yet implemented");
+        throw UndertowMessages.MESSAGES.outOfBandResponseNotSupported();
     }
 
     @Override
