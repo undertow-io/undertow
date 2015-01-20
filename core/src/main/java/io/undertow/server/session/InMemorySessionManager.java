@@ -66,13 +66,18 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     private final AtomicLong createdSessionCount = new AtomicLong();
     private final AtomicLong expiredSessionCount = new AtomicLong();
+    private final AtomicLong rejectedSessionCount = new AtomicLong();
     private final AtomicLong averageSessionLifetime = new AtomicLong();
     private final AtomicLong longestSessionLifetime = new AtomicLong();
 
     private volatile long startTime;
 
-    public InMemorySessionManager(String deploymentName, int maxSessions) {
+    private final boolean exictOldestUnusedSessionOnMax;
+
+
+    public InMemorySessionManager(String deploymentName, int maxSessions, boolean exictOldestUnusedSessionOnMax) {
         this.deploymentName = deploymentName;
+        this.exictOldestUnusedSessionOnMax = exictOldestUnusedSessionOnMax;
         this.sessions = new ConcurrentHashMap<>();
         this.maxSize = maxSessions;
         ConcurrentDirectDeque<String> evictionQueue = null;
@@ -80,6 +85,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             evictionQueue = ConcurrentDirectDeque.newInstance();
         }
         this.evictionQueue = evictionQueue;
+    }
+
+    public InMemorySessionManager(String deploymentName, int maxSessions) {
+        this(deploymentName, maxSessions, true);
     }
 
     public InMemorySessionManager(String id) {
@@ -110,13 +119,19 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public Session createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (evictionQueue != null) {
-            while (sessions.size() >= maxSize && !evictionQueue.isEmpty()) {
-                String key = evictionQueue.poll();
-                UndertowLogger.REQUEST_LOGGER.debugf("Removing session %s as max size has been hit", key);
-                InMemorySession toRemove = sessions.get(key);
-                if (toRemove != null) {
-                    toRemove.session.invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT); //todo: better reason
+            if(exictOldestUnusedSessionOnMax) {
+                while (sessions.size() >= maxSize && !evictionQueue.isEmpty()) {
+
+                    String key = evictionQueue.poll();
+                    UndertowLogger.REQUEST_LOGGER.debugf("Removing session %s as max size has been hit", key);
+                    InMemorySession toRemove = sessions.get(key);
+                    if (toRemove != null) {
+                        toRemove.session.invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT); //todo: better reason
+                    }
                 }
+            } else if(sessions.size() >= maxSize) {
+                rejectedSessionCount.incrementAndGet();
+                throw UndertowMessages.MESSAGES.tooManySessions(maxSize);
             }
         }
         if (config == null) {
@@ -242,7 +257,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public long getRejectedSessions() {
-        return 0; //at the moment we evict old sessions rather than rejecting new ones
+        return rejectedSessionCount.get();
 
     }
 
