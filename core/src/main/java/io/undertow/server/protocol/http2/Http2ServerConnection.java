@@ -176,6 +176,11 @@ public class Http2ServerConnection extends ServerConnection {
     }
 
     @Override
+    public boolean isContinueResponseSupported() {
+        return true;
+    }
+
+    @Override
     public void terminateRequestChannel(HttpServerExchange exchange) {
         if(HttpContinue.requiresContinueResponse(exchange.getRequestHeaders()) && !continueSent) {
             requestChannel.setIgnoreForceClose(true);

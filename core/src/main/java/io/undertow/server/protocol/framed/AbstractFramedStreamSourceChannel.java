@@ -208,7 +208,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * @throws IOException
      */
     protected void complete() throws IOException {
-
+        close();
     }
 
     protected boolean isComplete() {

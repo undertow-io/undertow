@@ -77,6 +77,12 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
     public abstract HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange);
 
     /**
+     *
+     * @return <code>true</code> if this connection supports sending a 100-continue response
+     */
+    public abstract boolean isContinueResponseSupported();
+
+    /**
      * Invoked when the exchange is complete, and there is still data in the request channel. Some implementations
      * (such as SPDY and HTTP2) have more efficient ways to drain the request than simply reading all data
      * (e.g. RST_STREAM).
