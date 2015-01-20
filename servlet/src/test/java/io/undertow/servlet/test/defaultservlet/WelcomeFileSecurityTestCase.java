@@ -145,7 +145,7 @@ public class WelcomeFileSecurityTestCase {
             result = client.execute(get);
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path/default requestUri:/servletContext/path/default", response);
+            Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path/default requestUri:/servletContext/path/", response);
 
         } finally {
             client.getConnectionManager().shutdown();
