@@ -81,6 +81,11 @@ public final class AjpServerConnection extends AbstractServerConnection {
     }
 
     @Override
+    public boolean isContinueResponseSupported() {
+        return false;
+    }
+
+    @Override
     public void terminateRequestChannel(HttpServerExchange exchange) {
         //todo: terminate
     }

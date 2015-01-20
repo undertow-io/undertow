@@ -321,6 +321,12 @@ public class Http2ClientConnection implements ClientConnection {
                             currentExchanges.remove(streamSourceChannel.getStreamId());
                         }
                     });
+                    streamSourceChannel.setCompletionListener(new ChannelListener<Http2StreamSourceChannel>() {
+                        @Override
+                        public void handleEvent(Http2StreamSourceChannel channel) {
+                            currentExchanges.remove(streamSourceChannel.getStreamId());
+                        }
+                    });
                     if (request == null && initialUpgradeRequest) {
                         Channels.drain(result, Long.MAX_VALUE);
                         initialUpgradeRequest = false;

@@ -349,6 +349,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
 
         @Override
+        public boolean isContinueResponseSupported() {
+            return false;
+        }
+
+        @Override
         public void terminateRequestChannel(HttpServerExchange exchange) {
 
         }

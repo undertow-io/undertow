@@ -125,6 +125,11 @@ public final class HttpServerConnection extends AbstractServerConnection {
     }
 
     @Override
+    public boolean isContinueResponseSupported() {
+        return true;
+    }
+
+    @Override
     public void terminateRequestChannel(HttpServerExchange exchange) {
 
     }
