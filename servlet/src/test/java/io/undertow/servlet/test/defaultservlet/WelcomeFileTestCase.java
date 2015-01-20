@@ -124,7 +124,7 @@ public class WelcomeFileTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:null servletPath:/index.do requestUri:/servletContext2/index.do", response);
+            Assert.assertEquals("pathInfo:null queryString:null servletPath:/index.do requestUri:/servletContext2/", response);
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -139,7 +139,7 @@ public class WelcomeFileTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path/default requestUri:/servletContext/path/default", response);
+            Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path/default requestUri:/servletContext/path/", response);
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -154,7 +154,7 @@ public class WelcomeFileTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:/servletFile.xhtml queryString:a=b servletPath:/foo/servletPath requestUri:/servletContext/foo/servletPath/servletFile.xhtml", response);
+            Assert.assertEquals("pathInfo:/servletFile.xhtml queryString:a=b servletPath:/foo/servletPath requestUri:/servletContext/foo/", response);
 
         } finally {
             client.getConnectionManager().shutdown();
