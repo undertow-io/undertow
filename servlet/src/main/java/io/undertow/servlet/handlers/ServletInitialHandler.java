@@ -19,6 +19,7 @@
 package io.undertow.servlet.handlers;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
@@ -345,7 +346,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         @Override
         public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
-            throw new IllegalStateException();
+            throw UndertowMessages.MESSAGES.outOfBandResponseNotSupported();
         }
 
         @Override

@@ -385,4 +385,7 @@ public interface UndertowMessages {
 
     @Message(id = 119, value = "HTTP2 via prior knowledge failed")
     IOException http2PriRequestFailed();
+
+    @Message(id = 120, value = "Out of band responses are not allowed for this connector")
+    IllegalStateException outOfBandResponseNotSupported();
 }

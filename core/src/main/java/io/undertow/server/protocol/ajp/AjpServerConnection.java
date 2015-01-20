@@ -21,15 +21,11 @@ package io.undertow.server.protocol.ajp;
 import io.undertow.UndertowMessages;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.BasicSSLSessionInfo;
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpUpgradeListener;
-import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.util.DateUtils;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
@@ -57,27 +53,7 @@ public final class AjpServerConnection extends AbstractServerConnection {
 
     @Override
     public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
-        if (exchange == null || !HttpContinue.requiresContinueResponse(exchange)) {
-            throw UndertowMessages.MESSAGES.outOfBandResponseOnlyAllowedFor100Continue();
-        }
-        final ConduitState state = resetChannel();
-        HttpServerExchange newExchange = new HttpServerExchange(this);
-        for (HttpString header : exchange.getRequestHeaders().getHeaderNames()) {
-            newExchange.getRequestHeaders().putAll(header, exchange.getRequestHeaders().get(header));
-        }
-        newExchange.setProtocol(exchange.getProtocol());
-        newExchange.setRequestMethod(exchange.getRequestMethod());
-        newExchange.setRequestPath(exchange.getRequestPath());
-        newExchange.getRequestHeaders().put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
-        newExchange.getRequestHeaders().put(Headers.CONTENT_LENGTH, 0);
-
-        newExchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
-            @Override
-            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                restoreChannel(state);
-            }
-        });
-        return newExchange;
+        throw UndertowMessages.MESSAGES.outOfBandResponseNotSupported();
     }
 
     @Override
