@@ -388,4 +388,7 @@ public interface UndertowMessages {
 
     @Message(id = 120, value = "Out of band responses are not allowed for this connector")
     IllegalStateException outOfBandResponseNotSupported();
+
+    @Message(id = 121, value = "Session was rejected as the maximum number of sessions (%s) has been hit")
+    IllegalStateException tooManySessions(int maxSessions);
 }
