@@ -41,6 +41,7 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.server.handlers.encoding.ContentEncodedResource;
 import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
+import io.undertow.util.ByteRange;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
@@ -164,7 +165,6 @@ public class ResourceHandler implements HttpHandler {
             }
         }
 
-
         //we now dispatch to a worker thread
         //as resource manager methods are potentially blocking
         HttpHandler dispatchTask = new HttpHandler() {
@@ -231,7 +231,51 @@ public class ResourceHandler implements HttpHandler {
                     exchange.endExchange();
                     return;
                 }
-                //todo: handle range requests
+                final ContentEncodedResourceManager contentEncodedResourceManager = ResourceHandler.this.contentEncodedResourceManager;
+                Long contentLength = resource.getContentLength();
+
+                if (contentLength != null) {
+                    exchange.setResponseContentLength(contentLength);
+                }
+                ByteRange range = null;
+                long start = -1, end = -1;
+                if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported() && contentLength != null && contentEncodedResourceManager == null) {
+                    //TODO: figure out what to do with the content encoded resource manager
+                    range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
+                    if(range != null && range.getRanges() == 1) {
+                        start = range.getStart(0);
+                        end = range.getEnd(0);
+                        if(start == -1 ) {
+                            //suffix range
+                            long toWrite = end;
+                            if(toWrite >= 0) {
+                                exchange.setResponseContentLength(toWrite);
+                            } else {
+                                //ignore the range request
+                                range = null;
+                            }
+                            start = contentLength - end;
+                            end = contentLength;
+                        } else if(end == -1) {
+                            //prefix range
+                            long toWrite = contentLength - start;
+                            if(toWrite >= 0) {
+                                exchange.setResponseContentLength(toWrite);
+                            } else {
+                                //ignore the range request
+                                range = null;
+                            }
+                            end = contentLength;
+                        } else {
+                            long toWrite = end - start + 1;
+                            exchange.setResponseContentLength(toWrite);
+                        }
+                        if(range != null) {
+                            exchange.setResponseCode(StatusCodes.PARTIAL_CONTENT);
+                            exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
+                        }
+                    }
+                }
                 //we are going to proceed. Set the appropriate headers
                 final String contentType = resource.getContentType(mimeMappings);
 
@@ -248,12 +292,7 @@ public class ResourceHandler implements HttpHandler {
                 if (etag != null) {
                     exchange.getResponseHeaders().put(Headers.ETAG, etag.toString());
                 }
-                Long contentLength = resource.getContentLength();
-                if (contentLength != null) {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, contentLength.toString());
-                }
 
-                final ContentEncodedResourceManager contentEncodedResourceManager = ResourceHandler.this.contentEncodedResourceManager;
                 if (contentEncodedResourceManager != null) {
                     try {
                         ContentEncodedResource encoded = contentEncodedResourceManager.getResource(resource, exchange);
@@ -275,6 +314,8 @@ public class ResourceHandler implements HttpHandler {
 
                 if (!sendContent) {
                     exchange.endExchange();
+                } else if(range != null) {
+                    ((RangeAwareResource)resource).serveRange(exchange.getResponseSender(), exchange, start, end, IoCallback.END_EXCHANGE);
                 } else {
                     resource.serve(exchange.getResponseSender(), exchange, IoCallback.END_EXCHANGE);
                 }

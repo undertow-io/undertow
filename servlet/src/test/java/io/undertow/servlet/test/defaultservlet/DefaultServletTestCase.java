@@ -97,6 +97,21 @@ public class DefaultServletTestCase {
         }
     }
 
+    @Test
+    public void testRangeRequest() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/index.html");
+            get.addHeader("range", "bytes=2-3");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("--", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
     @Test
     public void testResourceWithFilter() throws IOException {

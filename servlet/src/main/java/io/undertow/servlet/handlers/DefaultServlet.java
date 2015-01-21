@@ -22,11 +22,13 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.DirectoryUtils;
+import io.undertow.server.handlers.resource.RangeAwareResource;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.ByteRange;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
@@ -254,7 +256,7 @@ public class DefaultServlet extends HttpServlet {
             resp.setStatus(StatusCodes.NOT_MODIFIED);
             return;
         }
-        //todo: handle range requests
+
         //we are going to proceed. Set the appropriate headers
         if(resp.getContentType() == null) {
             final String contentType = deployment.getServletContext().getMimeType(resource.getName());
@@ -270,11 +272,14 @@ public class DefaultServlet extends HttpServlet {
         if (etag != null) {
             resp.setHeader(Headers.ETAG_STRING, etag.toString());
         }
+        ByteRange range = null;
+        long start = -1, end = -1;
         try {
             //only set the content length if we are using a stream
             //if we are using a writer who knows what the length will end up being
             //todo: if someone installs a filter this can cause problems
             //not sure how best to deal with this
+            //we also can't deal with range requests if a writer is in use
             Long contentLength = resource.getContentLength();
             if (contentLength != null) {
                 resp.getOutputStream();
@@ -283,6 +288,55 @@ public class DefaultServlet extends HttpServlet {
                 } else {
                     resp.setContentLength(contentLength.intValue());
                 }
+                if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported()) {
+                    //TODO: figure out what to do with the content encoded resource manager
+                    range = ByteRange.parse(req.getHeader(Headers.RANGE_STRING));
+                    if(range != null && range.getRanges() == 1) {
+                        start = range.getStart(0);
+                        end = range.getEnd(0);
+                        if(start == -1 ) {
+                            //suffix range
+                            long toWrite = end;
+                            if(toWrite >= 0) {
+                                if(toWrite > Integer.MAX_VALUE) {
+                                    resp.setContentLengthLong(toWrite);
+                                } else {
+                                    resp.setContentLength((int)toWrite);
+                                }
+                            } else {
+                                //ignore the range request
+                                range = null;
+                            }
+                            start = contentLength - end;
+                            end = contentLength;
+                        } else if(end == -1) {
+                            //prefix range
+                            long toWrite = contentLength - start;
+                            if(toWrite >= 0) {
+                                if(toWrite > Integer.MAX_VALUE) {
+                                    resp.setContentLengthLong(toWrite);
+                                } else {
+                                    resp.setContentLength((int)toWrite);
+                                }
+                            } else {
+                                //ignore the range request
+                                range = null;
+                            }
+                            end = contentLength;
+                        } else {
+                            long toWrite = end - start + 1;
+                            if(toWrite > Integer.MAX_VALUE) {
+                                resp.setContentLengthLong(toWrite);
+                            } else {
+                                resp.setContentLength((int)toWrite);
+                            }
+                        }
+                        if(range != null) {
+                            resp.setStatus(StatusCodes.PARTIAL_CONTENT);
+                            resp.setHeader(Headers.CONTENT_RANGE_STRING, range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
+                        }
+                    }
+                }
             }
         } catch (IllegalStateException e) {
 
@@ -290,22 +344,30 @@ public class DefaultServlet extends HttpServlet {
         final boolean include = req.getDispatcherType() == DispatcherType.INCLUDE;
         if (!req.getMethod().equals(Methods.HEAD_STRING)) {
             HttpServerExchange exchange = SecurityActions.requireCurrentServletRequestContext().getOriginalRequest().getExchange();
-            resource.serve(exchange.getResponseSender(), exchange, new IoCallback() {
+            if(range == null) {
+                resource.serve(exchange.getResponseSender(), exchange, completionCallback(include));
+            } else {
+                ((RangeAwareResource)resource).serveRange(exchange.getResponseSender(), exchange, start, end, completionCallback(include));
+            }
+        }
+    }
 
-                @Override
-                public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                    if (!include) {
-                        sender.close();
-                    }
-                }
+    private IoCallback completionCallback(final boolean include) {
+        return new IoCallback() {
 
-                @Override
-                public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-                    //not much we can do here, the connection is broken
+            @Override
+            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                if (!include) {
                     sender.close();
                 }
-            });
-        }
+            }
+
+            @Override
+            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                //not much we can do here, the connection is broken
+                sender.close();
+            }
+        };
     }
 
     private String getPath(final HttpServletRequest request) {
