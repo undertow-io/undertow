@@ -94,6 +94,43 @@ public class FileHandlerTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+
+    @Test
+    public void testRangeRequests() throws IOException, URISyntaxException {
+        TestHttpClient client = new TestHttpClient();
+        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        try {
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPrefixPath("/path", new ResourceHandler()
+                                    // 1 byte = force transfer
+                                    .setResourceManager(new FileResourceManager(rootPath, 1))
+                                    .setDirectoryListingEnabled(true))));
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
+            get.addHeader("range", "bytes=2-3");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Header[] headers = result.getHeaders("Content-Type");
+            Assert.assertEquals("text/html", headers[0].getValue());
+            Assert.assertEquals("--", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
+            get.addHeader("range", "bytes=-7");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            headers = result.getHeaders("Content-Type");
+            Assert.assertEquals("text/html", headers[0].getValue());
+            Assert.assertEquals("</html>", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
     /*
     Starts simple file server, it is useful for testing directory browsing
      */

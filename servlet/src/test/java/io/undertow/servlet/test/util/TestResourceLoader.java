@@ -22,6 +22,7 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
+import io.undertow.server.handlers.resource.RangeAwareResource;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
@@ -47,76 +48,94 @@ public class TestResourceLoader extends ClassPathResourceManager {
         if(delegate == null) {
             return delegate;
         }
-        return new Resource() {
-            @Override
-            public String getPath() {
-                return delegate.getPath();
-            }
+        return new TestResource(delegate);
+    }
 
-            @Override
-            public Date getLastModified() {
-                return new Date(delegate.getLastModified().getTime() + 20); //file system dates may have a millisecond part, see UNDERTOW-341
-            }
+    private static class TestResource implements RangeAwareResource {
+        private final Resource delegate;
 
-            @Override
-            public String getLastModifiedString() {
-                return delegate.getLastModifiedString();
-            }
+        public TestResource(Resource delegate) {
+            this.delegate = delegate;
+        }
 
-            @Override
-            public ETag getETag() {
-                return delegate.getETag();
-            }
+        @Override
+        public String getPath() {
+            return delegate.getPath();
+        }
 
-            @Override
-            public String getName() {
-                return delegate.getName();
-            }
+        @Override
+        public Date getLastModified() {
+            return new Date(delegate.getLastModified().getTime() + 20); //file system dates may have a millisecond part, see UNDERTOW-341
+        }
 
-            @Override
-            public boolean isDirectory() {
-                return delegate.isDirectory();
-            }
+        @Override
+        public String getLastModifiedString() {
+            return delegate.getLastModifiedString();
+        }
 
-            @Override
-            public List<Resource> list() {
-                return delegate.list();
-            }
+        @Override
+        public ETag getETag() {
+            return delegate.getETag();
+        }
 
-            @Override
-            public String getContentType(MimeMappings mimeMappings) {
-                return delegate.getContentType(mimeMappings);
-            }
+        @Override
+        public String getName() {
+            return delegate.getName();
+        }
 
-            @Override
-            public void serve(Sender sender, HttpServerExchange exchange, IoCallback completionCallback) {
-                delegate.serve(sender, exchange, completionCallback);
-            }
+        @Override
+        public boolean isDirectory() {
+            return delegate.isDirectory();
+        }
 
-            @Override
-            public Long getContentLength() {
-                return delegate.getContentLength();
-            }
+        @Override
+        public List<Resource> list() {
+            return delegate.list();
+        }
 
-            @Override
-            public String getCacheKey() {
-                return delegate.getCacheKey();
-            }
+        @Override
+        public String getContentType(MimeMappings mimeMappings) {
+            return delegate.getContentType(mimeMappings);
+        }
 
-            @Override
-            public File getFile() {
-                return delegate.getFile();
-            }
+        @Override
+        public void serve(Sender sender, HttpServerExchange exchange, IoCallback completionCallback) {
+            delegate.serve(sender, exchange, completionCallback);
+        }
 
-            @Override
-            public File getResourceManagerRoot() {
-                return delegate.getResourceManagerRoot();
-            }
+        @Override
+        public Long getContentLength() {
+            return delegate.getContentLength();
+        }
 
-            @Override
-            public URL getUrl() {
-                return delegate.getUrl();
-            }
-        };
+        @Override
+        public String getCacheKey() {
+            return delegate.getCacheKey();
+        }
+
+        @Override
+        public File getFile() {
+            return delegate.getFile();
+        }
+
+        @Override
+        public File getResourceManagerRoot() {
+            return delegate.getResourceManagerRoot();
+        }
+
+        @Override
+        public URL getUrl() {
+            return delegate.getUrl();
+        }
+
+        @Override
+        public void serveRange(Sender sender, HttpServerExchange exchange, long start, long end, IoCallback completionCallback) {
+            ((RangeAwareResource)delegate).serveRange(sender, exchange, start, end, completionCallback);
+        }
+
+        @Override
+        public boolean isRangeSupported() {
+            return delegate instanceof RangeAwareResource && ((RangeAwareResource) delegate).isRangeSupported();
+        }
     }
 }

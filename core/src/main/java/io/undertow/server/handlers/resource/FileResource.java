@@ -46,7 +46,7 @@ import org.xnio.Pooled;
  *
  * @author Stuart Douglas
  */
-public class FileResource implements Resource {
+public class FileResource implements RangeAwareResource {
 
     private final File file;
     private final String path;
@@ -113,12 +113,25 @@ public class FileResource implements Resource {
 
     @Override
     public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback callback) {
+        serveImpl(sender, exchange, -1, -1, callback, false);
+    }
+    @Override
+    public void serveRange(final Sender sender, final HttpServerExchange exchange, final long start, final long end, final IoCallback callback) {
+        serveImpl(sender, exchange, start, end, callback, true);
+
+    }
+    private void serveImpl(final Sender sender, final HttpServerExchange exchange, final long start, final long end, final IoCallback callback, final boolean range) {
+
+
         abstract class BaseFileTask implements Runnable {
             protected volatile FileChannel fileChannel;
 
             protected boolean openFile() {
                 try {
                     fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+                    if(range) {
+                        fileChannel.position(start);
+                    }
                 } catch (FileNotFoundException e) {
                     exchange.setResponseCode(StatusCodes.NOT_FOUND);
                     callback.onException(exchange, sender, e);
@@ -136,8 +149,18 @@ public class FileResource implements Resource {
 
             private Pooled<ByteBuffer> pooled;
 
+            long remaining = end - start + 1;
+
             @Override
             public void run() {
+                if(range && remaining == 0) {
+                    //we are done
+                    pooled.free();
+                    pooled = null;
+                    IoUtils.safeClose(fileChannel);
+                    callback.onComplete(exchange, sender);
+                    return;
+                }
                 if (fileChannel == null) {
                     if (!openFile()) {
                         return;
@@ -157,6 +180,12 @@ public class FileResource implements Resource {
                             return;
                         }
                         buffer.flip();
+                        if(range) {
+                            if(buffer.remaining() > remaining) {
+                                buffer.limit((int) (buffer.position() + remaining));
+                            }
+                            remaining -= buffer.remaining();
+                        }
                         sender.send(buffer, this);
                     } catch (IOException e) {
                         onException(exchange, sender, e);
@@ -190,12 +219,12 @@ public class FileResource implements Resource {
         }
 
         class TransferTask extends BaseFileTask {
+
             @Override
             public void run() {
                 if (!openFile()) {
                     return;
                 }
-
                 sender.transferFrom(fileChannel, new IoCallback() {
                     @Override
                     public void onComplete(HttpServerExchange exchange, Sender sender) {
@@ -218,7 +247,7 @@ public class FileResource implements Resource {
             }
         }
 
-        BaseFileTask task = manager.getTransferMinSize() > file.length() ? new ServerTask() : new TransferTask();
+        BaseFileTask task = manager.getTransferMinSize() > file.length() || range ? new ServerTask() : new TransferTask();
         if (exchange.isInIoThread()) {
             exchange.dispatch(task);
         } else {
@@ -255,4 +284,8 @@ public class FileResource implements Resource {
         }
     }
 
+    @Override
+    public boolean isRangeSupported() {
+        return true;
+    }
 }
