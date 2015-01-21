@@ -411,8 +411,10 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         while (ri < len) {
             final Object item = table[ri];
             if (item != null) {
-                if (item instanceof HeaderValues && !((HeaderValues) item).isEmpty()) {
-                    return (long)ri << 32L;
+                if (item instanceof HeaderValues) {
+                    if(!((HeaderValues) item).isEmpty()) {
+                        return (long) ri << 32L;
+                    }
                 } else {
                     final HeaderValues[] row = (HeaderValues[]) item;
                     ci = 0;
