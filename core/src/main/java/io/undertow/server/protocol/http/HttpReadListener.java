@@ -32,7 +32,6 @@ import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
