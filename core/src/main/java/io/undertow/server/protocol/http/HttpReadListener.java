@@ -151,12 +151,13 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 } else {
                     buffer.flip();
                 }
+                int begin = buffer.remaining();
                 parser.handle(buffer, state, httpServerExchange);
                 if (buffer.hasRemaining()) {
                     free = false;
                     connection.setExtraBytes(pooled);
                 }
-                int total = read + res;
+                int total = read + (begin - buffer.remaining());
                 read = total;
                 if (read > maxRequestSize) {
                     UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);

@@ -32,7 +32,7 @@ public class UndertowOptions {
     /**
      * The default size we allow for the HTTP header.
      */
-    public static final int DEFAULT_MAX_HEADER_SIZE = 50 * 1024;
+    public static final int DEFAULT_MAX_HEADER_SIZE = 1024 * 1024;
 
     /**
      * The default maximum size of the HTTP entity body.
