@@ -54,7 +54,6 @@ import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.util.ReferenceCountedPooled;
@@ -371,14 +370,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
             }
             return null;
-        } catch (IOException e) {
+        } catch (IOException|RuntimeException e) {
             //something has code wrong with parsing, close the read side
             //we don't close the write side, as the underlying implementation will most likely want to send an error
-            UndertowLogger.REQUEST_LOGGER.ioException(e);
             markReadsBroken(e);
             forceFree = true;
             throw e;
-        } finally {
+        }finally {
             //if the receive caused the channel to break the close listener may be have been called
             //which will make readData null
             if (readData != null) {
