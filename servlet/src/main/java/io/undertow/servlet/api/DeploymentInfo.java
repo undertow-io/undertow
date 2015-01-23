@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.MultipartConfigElement;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.security.api.AuthenticationMechanism;
@@ -147,6 +148,10 @@ public class DeploymentInfo implements Cloneable {
      */
     private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<>();
 
+    /**
+     * Multipart config that will be applied to all servlets that do not have an explicit config
+     */
+    private MultipartConfigElement defaultMultipartConfig;
 
     public void validate() {
         if (deploymentName == null) {
@@ -1087,6 +1092,14 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public MultipartConfigElement getDefaultMultipartConfig() {
+        return defaultMultipartConfig;
+    }
+
+    public void setDefaultMultipartConfig(MultipartConfigElement defaultMultipartConfig) {
+        this.defaultMultipartConfig = defaultMultipartConfig;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1163,6 +1176,7 @@ public class DeploymentInfo implements Cloneable {
         info.sessionListeners.addAll(sessionListeners);
         info.lifecycleInterceptors.addAll(lifecycleInterceptors);
         info.authenticationMode = authenticationMode;
+        info.defaultMultipartConfig = defaultMultipartConfig;
         return info;
     }
 

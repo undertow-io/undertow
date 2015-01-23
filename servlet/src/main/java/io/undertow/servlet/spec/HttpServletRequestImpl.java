@@ -498,7 +498,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 if(formData != null) {
                     for (final String namedPart : formData) {
                         for (FormData.FormValue part : formData.get(namedPart)) {
-                            parts.add(new PartImpl(namedPart, part, requestContext.getOriginalServletPathMatch().getServletChain().getManagedServlet().getServletInfo().getMultipartConfig(), servletContext));
+                            parts.add(new PartImpl(namedPart, part, requestContext.getOriginalServletPathMatch().getServletChain().getManagedServlet().getMultipartConfig(), servletContext));
                         }
                     }
                 }

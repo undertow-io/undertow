@@ -57,6 +57,7 @@ public class ManagedServlet implements Lifecycle {
 
     private long maxRequestSize;
     private FormParserFactory formParserFactory;
+    private MultipartConfigElement multipartConfig;
 
     public ManagedServlet(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
@@ -72,9 +73,14 @@ public class ManagedServlet implements Lifecycle {
     public void setupMultipart(ServletContextImpl servletContext) {
         FormEncodedDataDefinition formDataParser = new FormEncodedDataDefinition()
                 .setDefaultEncoding(servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding());
-        if (servletInfo.getMultipartConfig() != null) {
+        MultipartConfigElement multipartConfig = servletInfo.getMultipartConfig();
+        if(multipartConfig == null) {
+            multipartConfig = servletContext.getDeployment().getDeploymentInfo().getDefaultMultipartConfig();
+        }
+        this.multipartConfig = multipartConfig;
+        if (multipartConfig != null) {
             //todo: fileSizeThreshold
-            MultipartConfigElement config = servletInfo.getMultipartConfig();
+            MultipartConfigElement config = multipartConfig;
             if (config.getMaxRequestSize() != -1) {
                 maxRequestSize = config.getMaxRequestSize();
             } else {
@@ -178,6 +184,10 @@ public class ManagedServlet implements Lifecycle {
 
     public FormParserFactory getFormParserFactory() {
         return formParserFactory;
+    }
+
+    public MultipartConfigElement getMultipartConfig() {
+        return multipartConfig;
     }
 
     /**
