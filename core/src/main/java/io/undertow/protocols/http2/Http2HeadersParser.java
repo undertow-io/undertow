@@ -31,8 +31,9 @@ class Http2HeadersParser extends Http2HeaderBlockParser {
     private static final int DEPENDENCY_MASK = ~(1 << 7);
     private int paddingLength = 0;
     private int dependentStreamId = 0;
-    private int weight;
+    private int weight = 16; //default weight as per spec
     private boolean headersEndStream = false;
+    private boolean exclusive;
 
     public Http2HeadersParser(int frameLength, HpackDecoder hpackDecoder) {
         super(frameLength, hpackDecoder);
@@ -57,7 +58,9 @@ class Http2HeadersParser extends Http2HeaderBlockParser {
             if (resource.remaining() < 4) {
                 return false;
             }
-            dependentStreamId = (resource.get() & DEPENDENCY_MASK & 0xFF) << 24;
+            byte b = resource.get();
+            exclusive = (b & (1 << 7)) != 0;
+            dependentStreamId = (b & DEPENDENCY_MASK & 0xFF) << 24;
             dependentStreamId += (resource.get() & 0xFF) << 16;
             dependentStreamId += (resource.get() & 0xFF) << 8;
             dependentStreamId += (resource.get() & 0xFF);
@@ -80,5 +83,9 @@ class Http2HeadersParser extends Http2HeaderBlockParser {
 
     boolean isHeadersEndStream() {
         return headersEndStream;
+    }
+
+    public boolean isExclusive() {
+        return exclusive;
     }
 }

@@ -190,12 +190,33 @@ public class UndertowOptions {
     public static final Option<Integer> HTTP2_SETTINGS_HEADER_TABLE_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_HEADER_TABLE_SIZE", Integer.class);
     public static final int HTTP2_SETTINGS_HEADER_TABLE_SIZE_DEFAULT = 4096;
 
+    /**
+     * If push should be enabled for this connection.
+     */
     public static final Option<Boolean> HTTP2_SETTINGS_ENABLE_PUSH = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_ENABLE_PUSH", Boolean.class);
+
+    /**
+     * The maximum number of concurrent
+     */
     public static final Option<Integer> HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS", Integer.class);
 
     public static final Option<Integer> HTTP2_SETTINGS_INITIAL_WINDOW_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_INITIAL_WINDOW_SIZE", Integer.class);
     public static final Option<Integer> HTTP2_SETTINGS_MAX_FRAME_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_FRAME_SIZE", Integer.class);
     public static final Option<Integer> HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE", Integer.class);
+
+    /**
+     * The maximum number of concurrent requests that will be processed at a time. This differs from max concurrent streams in that it is not sent to the remote client.
+     *
+     * If the number of pending requests exceeds this number then requests will be queued, the difference between this and max concurrent streams determins
+     * the maximum number of requests that will be queued.
+     *
+     * Queued requests are processed by a priority queue, rather than a FIFO based queue, using HTTP2 stream priority.
+     *
+     * If this number is smaller than or equal to zero then max concurrent streams determins the maximum number of streams that can be run.
+     *
+     *
+     */
+    public static final Option<Integer> MAX_CONCURRENT_REQUESTS_PER_CONNECTION = Option.simple(UndertowOptions.class, "MAX_CONCURRENT_REQUESTS_PER_CONNECTION", Integer.class);
 
     private UndertowOptions() {
 

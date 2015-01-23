@@ -19,6 +19,7 @@
 package io.undertow.server.protocol.http2;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.net.ssl.SSLSession;
 
 import io.undertow.server.ConnectorStatisticsImpl;
@@ -65,7 +66,17 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private final StringBuilder decodeBuffer = new StringBuilder();
     private final boolean allowEncodingSlash;
     private final int bufferSize;
+
+
+
     private final ConnectorStatisticsImpl connectorStatistics;
+
+    private static final AtomicIntegerFieldUpdater<Http2ReceiveListener> concurrentRequestsUpdater = AtomicIntegerFieldUpdater.newUpdater(Http2ReceiveListener.class, "concurrentRequests");
+
+    /**
+     * Field that is used to track concurrent requests. Only used if the max concurrent requests option is set
+     */
+    private volatile int concurrentRequests;
 
 
     public Http2ReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize, ConnectorStatisticsImpl connectorStatistics) {
@@ -92,59 +103,65 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
                 return;
             }
             if (frame instanceof Http2StreamSourceChannel) {
-                //we have a request
-                final Http2StreamSourceChannel dataChannel = (Http2StreamSourceChannel) frame;
-                final Http2ServerConnection connection = new Http2ServerConnection(channel, dataChannel, undertowOptions, bufferSize, rootHandler);
 
+                handleRequests(channel, (Http2StreamSourceChannel) frame);
 
-                final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
-                connection.setExchange(exchange);
-                dataChannel.setMaxStreamSize(maxEntitySize);
-                exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
-                exchange.setProtocol(Protocols.HTTP_1_1);
-                exchange.setRequestMethod(Methods.fromString(exchange.getRequestHeaders().getFirst(METHOD)));
-                exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
-
-                final String path = exchange.getRequestHeaders().getFirst(PATH);
-                Connectors.setExchangeRequestPath(exchange, path, encoding,decode, allowEncodingSlash, decodeBuffer);
-                SSLSession session = channel.getSslSession();
-                if(session != null) {
-                    connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
-                }
-                dataChannel.getResponseChannel().setCompletionListener(new ChannelListener<Http2DataStreamSinkChannel>() {
-                    @Override
-                    public void handleEvent(Http2DataStreamSinkChannel channel) {
-                        Connectors.terminateResponse(exchange);
-                    }
-                });
-                if(!dataChannel.isOpen()) {
-                    Connectors.terminateRequest(exchange);
-                } else {
-                    dataChannel.setCompletionListener(new ChannelListener<Http2StreamSourceChannel>() {
-                        @Override
-                        public void handleEvent(Http2StreamSourceChannel channel) {
-                            Connectors.terminateRequest(exchange);
-                        }
-                    });
-                }
-                if(connectorStatistics != null) {
-                    connectorStatistics.setup(exchange);
-                }
-
-                //TODO: we should never actually put these into the map in the first place
-                exchange.getRequestHeaders().remove(AUTHORITY);
-                exchange.getRequestHeaders().remove(PATH);
-                exchange.getRequestHeaders().remove(SCHEME);
-                exchange.getRequestHeaders().remove(METHOD);
-
-
-                Connectors.executeRootHandler(rootHandler, exchange);
             }
 
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(channel);
         }
+    }
+
+    private void handleRequests(Http2Channel channel, Http2StreamSourceChannel frame) {
+        //we have a request
+        final Http2StreamSourceChannel dataChannel = (Http2StreamSourceChannel) frame;
+        final Http2ServerConnection connection = new Http2ServerConnection(channel, dataChannel, undertowOptions, bufferSize, rootHandler);
+
+
+        final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
+        connection.setExchange(exchange);
+        dataChannel.setMaxStreamSize(maxEntitySize);
+        exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
+        exchange.setProtocol(Protocols.HTTP_1_1);
+        exchange.setRequestMethod(Methods.fromString(exchange.getRequestHeaders().getFirst(METHOD)));
+        exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
+
+        final String path = exchange.getRequestHeaders().getFirst(PATH);
+        Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer);
+        SSLSession session = channel.getSslSession();
+        if(session != null) {
+            connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
+        }
+        dataChannel.getResponseChannel().setCompletionListener(new ChannelListener<Http2DataStreamSinkChannel>() {
+            @Override
+            public void handleEvent(Http2DataStreamSinkChannel channel) {
+                Connectors.terminateResponse(exchange);
+            }
+        });
+        if(!dataChannel.isOpen()) {
+            Connectors.terminateRequest(exchange);
+        } else {
+            dataChannel.setCompletionListener(new ChannelListener<Http2StreamSourceChannel>() {
+                @Override
+                public void handleEvent(Http2StreamSourceChannel channel) {
+                    Connectors.terminateRequest(exchange);
+                }
+            });
+        }
+        if(connectorStatistics != null) {
+            connectorStatistics.setup(exchange);
+        }
+
+        //TODO: we should never actually put these into the map in the first place
+        exchange.getRequestHeaders().remove(AUTHORITY);
+        exchange.getRequestHeaders().remove(PATH);
+        exchange.getRequestHeaders().remove(SCHEME);
+        exchange.getRequestHeaders().remove(METHOD);
+
+
+        Connectors.executeRootHandler(rootHandler, exchange);
     }
 
     /**
