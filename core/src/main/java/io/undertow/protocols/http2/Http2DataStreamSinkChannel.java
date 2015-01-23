@@ -32,7 +32,7 @@ import io.undertow.util.ImmediatePooled;
  *
  * @author Stuart Douglas
  */
-public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel {
+public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implements Http2Stream {
 
     private final HeaderMap headers;
 

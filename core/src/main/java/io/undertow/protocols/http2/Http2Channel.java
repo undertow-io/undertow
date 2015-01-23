@@ -102,7 +102,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     static final int SETTINGS_FLAG_ACK = 0x1;
 
-
     static final int CONTINUATION_FLAG_END_HEADERS = 0x4;
 
     static final int DEFAULT_INITIAL_WINDOW_SIZE = 65535;
@@ -164,6 +163,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
+    private final Http2PriorityTree priorityTree;
+
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, true, null, settings);
@@ -206,6 +207,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             sendSettings();
             initialSettingsSent = true;
         }
+        priorityTree = clientSide ? null : new Http2PriorityTree();
     }
 
     private void sendSettings() {
@@ -284,6 +286,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             }
             case FRAME_TYPE_HEADERS: {
                 Http2HeadersParser parser = (Http2HeadersParser) frameParser.parser;
+
                 channel = new Http2StreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), parser.getHeaderMap(), frameParser.streamId);
                 lastGoodStreamId = Math.max(lastGoodStreamId, frameParser.streamId);
                 if (parser.isHeadersEndStream() && Bits.allAreSet(frameParser.flags, HEADERS_FLAG_END_HEADERS)) {
@@ -295,6 +298,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     channel.rstStream(ERROR_PROTOCOL_ERROR);
                     sendRstStream(frameParser.streamId, Http2Channel.ERROR_CANCEL);
                     channel = null;
+                }
+                if(parser.getDependentStreamId() == frameParser.streamId) {
+                    sendRstStream(frameParser.streamId, ERROR_PROTOCOL_ERROR);
+                    return null;
+                }
+                if(priorityTree != null) {
+                    priorityTree.registerStream(frameParser.streamId, parser.getDependentStreamId(), parser.getWeight(), parser.isExclusive());
                 }
                 break;
             }
@@ -340,6 +350,23 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 handleWindowUpdate(frameParser.streamId, parser.getDeltaWindowSize());
                 frameData.free();
                 //we don't return window update notifications, they are handled internally
+                return null;
+            }
+            case FRAME_TYPE_PRIORITY: {
+                Http2PriorityParser parser = (Http2PriorityParser) frameParser.parser;
+                if(parser.getStreamDependency() == frameParser.streamId) {
+                    //according to the spec this is a stream error
+                    sendRstStream(frameParser.streamId, ERROR_PROTOCOL_ERROR);
+                    return null;
+                }
+                frameData.free();
+                if(priorityTree == null) {
+                    //we don't care, because we are the client side
+                    //so this situation should never happen
+                    return null;
+                }
+                priorityTree.priorityFrame(frameParser.streamId, parser.getStreamDependency(), parser.getWeight(), parser.isExclusive());
+                //we don't return priority notifications, they are handled internally
                 return null;
             }
             default: {

@@ -18,6 +18,8 @@
 
 package io.undertow.protocols.http2;
 
+import org.xnio.Bits;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -29,6 +31,7 @@ class Http2PriorityParser extends Http2PushBackParser {
 
     private int streamDependency;
     private int weight;
+    private boolean exclusive;
 
     public Http2PriorityParser(int frameLength) {
         super(frameLength);
@@ -39,9 +42,15 @@ class Http2PriorityParser extends Http2PushBackParser {
         if (resource.remaining() < 5) {
             return;
         }
-        streamDependency = Http2ProtocolUtils.readInt(resource);
+        int read = Http2ProtocolUtils.readInt(resource);
+        if(Bits.anyAreSet(read, 1 << 31)) {
+            exclusive = true;
+            streamDependency = read & ~(1 << 31);
+        } else {
+            exclusive = false;
+            streamDependency = read;
+        }
         weight = resource.get();
-
     }
 
     public int getWeight() {
@@ -50,5 +59,9 @@ class Http2PriorityParser extends Http2PushBackParser {
 
     public int getStreamDependency() {
         return streamDependency;
+    }
+
+    public boolean isExclusive() {
+        return exclusive;
     }
 }

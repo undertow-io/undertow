@@ -33,7 +33,7 @@ import io.undertow.util.HeaderMap;
 /**
  * @author Stuart Douglas
  */
-public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel {
+public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel implements Http2Stream{
 
     /**
      * Flag that is set if the headers frame has the end stream flag set, but not end headers
