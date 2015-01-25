@@ -109,7 +109,8 @@ public class ServletContextImpl implements ServletContext {
     private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = new HashSet<>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
     private volatile SessionConfig sessionConfig;
     private volatile boolean initialized = false;
-    private int filterMappingInsertPosition = 0;
+    private int filterMappingUrlPatternInsertPosition = 0;
+    private int filterMappingServletNameInsertPosition = 0;
 
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
@@ -842,10 +843,10 @@ public class ServletContextImpl implements ServletContext {
                 }
             } else {
                 if (dispatcherTypes == null || dispatcherTypes.isEmpty()) {
-                    deploymentInfo.insertFilterServletNameMapping(filterMappingInsertPosition++, filterInfo.getName(), servlet, DispatcherType.REQUEST);
+                    deploymentInfo.insertFilterServletNameMapping(filterMappingServletNameInsertPosition++, filterInfo.getName(), servlet, DispatcherType.REQUEST);
                 } else {
                     for (final DispatcherType dispatcher : dispatcherTypes) {
-                        deploymentInfo.insertFilterServletNameMapping(filterMappingInsertPosition++, filterInfo.getName(), servlet, dispatcher);
+                        deploymentInfo.insertFilterServletNameMapping(filterMappingServletNameInsertPosition++, filterInfo.getName(), servlet, dispatcher);
                     }
                 }
             }
@@ -866,10 +867,10 @@ public class ServletContextImpl implements ServletContext {
                 }
             } else {
                 if (dispatcherTypes == null || dispatcherTypes.isEmpty()) {
-                    deploymentInfo.insertFilterUrlMapping(filterMappingInsertPosition++, filterInfo.getName(), url, DispatcherType.REQUEST);
+                    deploymentInfo.insertFilterUrlMapping(filterMappingUrlPatternInsertPosition++, filterInfo.getName(), url, DispatcherType.REQUEST);
                 } else {
                     for (final DispatcherType dispatcher : dispatcherTypes) {
-                        deploymentInfo.insertFilterUrlMapping(filterMappingInsertPosition++, filterInfo.getName(), url, dispatcher);
+                        deploymentInfo.insertFilterUrlMapping(filterMappingUrlPatternInsertPosition++, filterInfo.getName(), url, dispatcher);
                     }
                 }
             }
