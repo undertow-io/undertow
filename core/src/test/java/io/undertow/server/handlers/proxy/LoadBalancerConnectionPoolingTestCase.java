@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 public class LoadBalancerConnectionPoolingTestCase {
 
     public static final int TARGET_PORT = 18787;
+    public static final int SERVER_PORT = 18788;
     private static ChannelConnectCloseHttpHandler target = new ChannelConnectCloseHttpHandler();
     private static Undertow undertow;
 
@@ -43,7 +44,7 @@ public class LoadBalancerConnectionPoolingTestCase {
         // Default server uses 8 io threads which is hard to test against
         undertow = Undertow.builder()
                 .setIoThreads(2)
-                .addHttpListener(8888, "localhost")
+                .addHttpListener(SERVER_PORT, "localhost")
                 .setHandler(proxyHandler)
                 .build();
         undertow.start();
@@ -68,7 +69,7 @@ public class LoadBalancerConnectionPoolingTestCase {
                 executorService.submit(new Runnable() {
                     @Override
                     public void run() {
-                        HttpGet get = new HttpGet("http://localhost:8888");
+                        HttpGet get = new HttpGet("http://localhost:" + SERVER_PORT);
                         try {
                             client.execute(get, new ResponseHandler<HttpResponse>() {
                                 @Override
