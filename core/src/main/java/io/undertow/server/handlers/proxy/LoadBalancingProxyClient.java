@@ -69,6 +69,8 @@ public class LoadBalancingProxyClient implements ProxyClient {
      */
     private volatile int connectionsPerThread = 10;
     private volatile int maxQueueSize = 0;
+    private volatile int softMaxConnectionsPerThread = 5;
+    private volatile int ttl = -1;
 
     /**
      * The hosts list.
@@ -137,6 +139,16 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     public LoadBalancingProxyClient setMaxQueueSize(int maxQueueSize) {
         this.maxQueueSize = maxQueueSize;
+        return this;
+    }
+
+    public LoadBalancingProxyClient setTtl(int ttl) {
+        this.ttl = ttl;
+        return this;
+    }
+
+    public LoadBalancingProxyClient setSoftMaxConnectionsPerThread(int softMaxConnectionsPerThread) {
+        this.softMaxConnectionsPerThread = softMaxConnectionsPerThread;
         return this;
     }
 
@@ -366,12 +378,12 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
         @Override
         public int getSMaxConnections() {
-            return connectionsPerThread;
+            return softMaxConnectionsPerThread;
         }
 
         @Override
         public long getTtl() {
-            return -1;
+            return ttl;
         }
 
         @Override
