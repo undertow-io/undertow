@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.*;
 import static org.xnio.IoUtils.safeClose;
@@ -75,7 +74,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
      */
     private volatile Host[] hosts = {};
 
-    private final AtomicInteger currentHost = new AtomicInteger(0);
+    private HostPicker hostPicker = new RoundRobinHostPicker();
     private final UndertowClient client;
 
     private final Map<String, Host> routes = new CopyOnWriteMap<>();
@@ -137,6 +136,11 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     public LoadBalancingProxyClient setMaxQueueSize(int maxQueueSize) {
         this.maxQueueSize = maxQueueSize;
+        return this;
+    }
+
+    public LoadBalancingProxyClient setHostPicker(HostPicker hostPicker) {
+        this.hostPicker = hostPicker;
         return this;
     }
 
@@ -288,7 +292,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         if (sticky != null) {
             return sticky;
         }
-        int host = currentHost.incrementAndGet() % hosts.length;
+        int host = hostPicker.pick(hosts);
 
         final int startHost = host; //if the all hosts have problems we come back to this one
         Host full = null;
@@ -336,7 +340,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return null;
     }
 
-    protected final class Host extends ConnectionPoolErrorHandler.SimpleConnectionPoolErrorHandler implements ConnectionPoolManager {
+    public final class Host extends ConnectionPoolErrorHandler.SimpleConnectionPoolErrorHandler implements ConnectionPoolManager {
         final ProxyConnectionPool connectionPool;
         final String jvmRoute;
         final URI uri;
@@ -377,6 +381,10 @@ public class LoadBalancingProxyClient implements ProxyClient {
         @Override
         public int getMaxQueueSize() {
             return maxQueueSize;
+        }
+
+        public URI getUri() {
+            return uri;
         }
     }
 
