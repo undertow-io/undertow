@@ -75,7 +75,7 @@ public class LoadBalancingProxyWithCustomHostPickerTestCase {
 
     // https://issues.jboss.org/browse/UNDERTOW-289
     @Test
-    public void should() throws Throwable {
+    public void testDistributeLoadToGivenHost() throws Throwable {
         final StringBuilder resultString = new StringBuilder();
 
         for (int i = 0; i < 6; ++i) {
