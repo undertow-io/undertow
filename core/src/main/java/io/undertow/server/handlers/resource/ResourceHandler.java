@@ -234,7 +234,7 @@ public class ResourceHandler implements HttpHandler {
                 final ContentEncodedResourceManager contentEncodedResourceManager = ResourceHandler.this.contentEncodedResourceManager;
                 Long contentLength = resource.getContentLength();
 
-                if (contentLength != null) {
+                if (contentLength != null && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(contentLength);
                 }
                 ByteRange range = null;
