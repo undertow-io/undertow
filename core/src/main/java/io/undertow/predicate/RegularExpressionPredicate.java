@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -70,11 +71,12 @@ public class RegularExpressionPredicate implements Predicate {
 
         if (matches) {
             Map<String, Object> context = value.getAttachment(PREDICATE_CONTEXT);
-            if (context != null) {
-                int count = matcher.groupCount();
-                for (int i = 0; i <= count; ++i) {
-                    context.put(Integer.toString(i), matcher.group(i));
-                }
+            if(context == null) {
+                value.putAttachment(PREDICATE_CONTEXT, context = new TreeMap<>());
+            }
+            int count = matcher.groupCount();
+            for (int i = 0; i <= count; ++i) {
+                context.put(Integer.toString(i), matcher.group(i));
             }
         }
         return matches;

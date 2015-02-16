@@ -465,7 +465,8 @@ public class PredicateParser {
                         currentStringDelim = c;
                         break;
                     }
-                    case '%': {
+                    case '%':
+                    case '$': {
                         current.append(c);
                         if (string.charAt(pos + 1) == '{') {
                             inVariable = true;

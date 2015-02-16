@@ -21,6 +21,7 @@ package io.undertow.predicate;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.PathMatcher;
@@ -52,9 +53,10 @@ class PathPrefixPredicate implements Predicate {
         boolean matches = result.getValue() == Boolean.TRUE;
         if(matches) {
             Map<String, Object> context = value.getAttachment(PREDICATE_CONTEXT);
-            if(context != null) {
-                context.put("remaining", result.getRemaining());
+            if(context == null) {
+                value.putAttachment(PREDICATE_CONTEXT, context = new TreeMap<>());
             }
+            context.put("remaining", result.getRemaining());
         }
         return matches;
     }

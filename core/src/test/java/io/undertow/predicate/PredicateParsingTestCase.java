@@ -22,6 +22,7 @@ import java.util.HashMap;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -57,6 +58,17 @@ public class PredicateParsingTestCase {
                 throw new RuntimeException("String " + string, ex);
             }
         }
+    }
+
+    @Test
+    public void testPredicateContextVariable() {
+        Predicate predicate = PredicateParser.parse("regex[pattern=\"/publicdb/(.*?)/.*\", value=\"%R\", full-match=false] and equals[%{i,username}, ${1}]", PredicateParsingTestCase.class.getClassLoader());
+
+        HttpServerExchange e = new HttpServerExchange(null);
+        e.setRelativePath("/publicdb/foo/bar");
+        Assert.assertFalse(predicate.resolve(e));
+        e.getRequestHeaders().add(new HttpString("username"), "foo");
+        Assert.assertTrue(predicate.resolve(e));
     }
 
     @Test

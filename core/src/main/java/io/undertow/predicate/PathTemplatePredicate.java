@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
@@ -51,9 +52,10 @@ public class PathTemplatePredicate implements Predicate {
         boolean result = this.value.matches(path, params);
         if (result) {
             Map<String, Object> context = exchange.getAttachment(PREDICATE_CONTEXT);
-            if (context != null) {
-                context.putAll(params);
+            if(context == null) {
+                exchange.putAttachment(PREDICATE_CONTEXT, context = new TreeMap<>());
             }
+            context.putAll(params);
         }
         return result;
     }
