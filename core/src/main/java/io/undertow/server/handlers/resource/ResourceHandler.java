@@ -219,7 +219,6 @@ public class ResourceHandler implements HttpHandler {
                     exchange.endExchange();
                     return;
                 }
-                //todo: handle range requests
                 //we are going to proceed. Set the appropriate headers
                 final String contentType = resource.getContentType(mimeMappings);
 
@@ -237,7 +236,7 @@ public class ResourceHandler implements HttpHandler {
                     exchange.getResponseHeaders().put(Headers.ETAG, etag.toString());
                 }
                 Long contentLength = resource.getContentLength();
-                if (contentLength != null) {
+                if (contentLength != null && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, contentLength.toString());
                 }
 

@@ -25,6 +25,7 @@ import java.nio.charset.Charset;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -80,7 +81,7 @@ public class AsyncSenderImpl implements Sender {
                 StreamSinkChannel dest = channel;
                 if (dest == null) {
                     if (callback == IoCallback.END_EXCHANGE) {
-                        if (exchange.getResponseContentLength() == -1) {
+                        if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                             exchange.setResponseContentLength(size);
                         }
                     }
@@ -143,7 +144,7 @@ public class AsyncSenderImpl implements Sender {
         StreamSinkChannel channel = this.channel;
         if (channel == null) {
             if (callback == IoCallback.END_EXCHANGE) {
-                if (exchange.getResponseContentLength() == -1) {
+                if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(buffer.remaining());
                 }
             }
@@ -199,7 +200,7 @@ public class AsyncSenderImpl implements Sender {
         StreamSinkChannel channel = this.channel;
         if (channel == null) {
             if (callback == IoCallback.END_EXCHANGE) {
-                if (exchange.getResponseContentLength() == -1) {
+                if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(totalToWrite);
                 }
             }
@@ -310,7 +311,7 @@ public class AsyncSenderImpl implements Sender {
         try {
             StreamSinkChannel channel = this.channel;
             if (channel == null) {
-                if (exchange.getResponseContentLength() == -1) {
+                if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(0);
                 }
                 this.channel = channel = exchange.getResponseChannel();
