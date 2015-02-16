@@ -1078,4 +1078,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         return sessionCookieSource;
     }
+
+    @Override
+    public String toString() {
+        return "HttpServletRequestImpl [ " + getMethod() + ' ' + getRequestURI() + " ]";
+    }
+
 }
