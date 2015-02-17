@@ -34,6 +34,7 @@ import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 
+import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
@@ -73,6 +74,9 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     }
 
     void terminateRequest() {
+        if(anyAreSet(state, REQUEST_TERMINATED)) {
+            return;
+        }
         state |= REQUEST_TERMINATED;
         if (anyAreSet(state, RESPONSE_TERMINATED)) {
             clientConnection.requestDone();
@@ -80,6 +84,9 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     }
 
     void terminateResponse() {
+        if(anyAreSet(state, RESPONSE_TERMINATED)) {
+            return;
+        }
         state |= RESPONSE_TERMINATED;
         if (anyAreSet(state, REQUEST_TERMINATED)) {
             clientConnection.requestDone();

@@ -464,6 +464,13 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     if(response.getResponseCode() == StatusCodes.EXPECTATION_FAILED) {
                         if(HttpContinue.requiresContinueResponse(currentRequest.getRequest().getRequestHeaders())) {
                             HttpClientConnection.this.state |= CLOSE_REQ;
+                            ConduitStreamSinkChannel sinkChannel = HttpClientConnection.this.connection.getSinkChannel();
+                            sinkChannel.shutdownWrites();
+                            if(!sinkChannel.flush()) {
+                                sinkChannel.setWriteListener(ChannelListeners.flushingChannelListener(null, null));
+                                sinkChannel.resumeWrites();
+                            }
+                            currentRequest.terminateRequest();
                         }
                     }
                 }
