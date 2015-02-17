@@ -45,10 +45,14 @@ public class RegularExpressionPredicate implements Predicate {
     private final ExchangeAttribute matchAttribute;
     private final boolean requireFullMatch;
 
-    public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute, final boolean requireFullMatch) {
+    public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute, final boolean requireFullMatch, boolean caseSensitive) {
         this.requireFullMatch = requireFullMatch;
-        pattern = Pattern.compile(regex);
+        pattern = Pattern.compile(regex, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE);
         this.matchAttribute = matchAttribute;
+    }
+
+    public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute, final boolean requireFullMatch) {
+        this(regex, matchAttribute, requireFullMatch, true);
     }
 
     public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute) {
@@ -95,6 +99,7 @@ public class RegularExpressionPredicate implements Predicate {
             params.put("pattern", String.class);
             params.put("value", ExchangeAttribute.class);
             params.put("full-match", Boolean.class);
+            params.put("case-sensitive", Boolean.class);
             return params;
         }
 
@@ -117,8 +122,9 @@ public class RegularExpressionPredicate implements Predicate {
                 value = ExchangeAttributes.relativePath();
             }
             Boolean fullMatch = (Boolean) config.get("full-match");
+            Boolean caseSensitive = (Boolean) config.get("case-sensitive");
             String pattern = (String) config.get("pattern");
-            return new RegularExpressionPredicate(pattern, value, fullMatch == null ? false : fullMatch);
+            return new RegularExpressionPredicate(pattern, value, fullMatch == null ? false : fullMatch, caseSensitive == null ? true : caseSensitive);
         }
     }
 }
