@@ -98,7 +98,7 @@ public class RequestPathTestCase {
         runtest("/servletContext/somePath", false, "null", "/somePath", "http://localhost:" + port + "/servletContext/somePath", "/servletContext/somePath", "");
         runtest("/servletContext/somePath?foo=bar", false, "null", "/somePath", "http://localhost:" + port + "/servletContext/somePath", "/servletContext/somePath", "foo=bar");
         runtest("/servletContext/somePath?foo=b+a+r", false, "null", "/somePath", "http://localhost:" + port + "/servletContext/somePath", "/servletContext/somePath", "foo=b+a+r");
-        runtest("/servletContext/some+path?foo=b+a+r", false, "null", "/some path", "http://localhost:" + port + "/servletContext/some+path", "/servletContext/some+path", "foo=b+a+r");
+        runtest("/servletContext/some%20path?foo=b+a+r", false, "null", "/some path", "http://localhost:" + port + "/servletContext/some%20path", "/servletContext/some%20path", "foo=b+a+r");
         runtest("/servletContext/somePath.txt", true, "null", "/somePath.txt", "http://localhost:" + port + "/servletContext/somePath.txt", "/servletContext/somePath.txt", "");
         runtest("/servletContext/somePath.txt?foo=bar", true, "null", "/somePath.txt", "http://localhost:" + port + "/servletContext/somePath.txt", "/servletContext/somePath.txt", "foo=bar");
 
@@ -106,7 +106,7 @@ public class RequestPathTestCase {
         runtest("/servletContext/req/somePath", false, "/somePath", "/req", "http://localhost:" + port + "/servletContext/req/somePath", "/servletContext/req/somePath", "");
         runtest("/servletContext/req/somePath?foo=bar", false, "/somePath", "/req", "http://localhost:" + port + "/servletContext/req/somePath", "/servletContext/req/somePath", "foo=bar");
         runtest("/servletContext/req/somePath?foo=b+a+r", false, "/somePath", "/req", "http://localhost:" + port + "/servletContext/req/somePath", "/servletContext/req/somePath", "foo=b+a+r");
-        runtest("/servletContext/req/some+path?foo=b+a+r", false, "/some path", "/req", "http://localhost:" + port + "/servletContext/req/some+path", "/servletContext/req/some+path", "foo=b+a+r");
+        runtest("/servletContext/req/some%20path?foo=b+a+r", false, "/some path", "/req", "http://localhost:" + port + "/servletContext/req/some%20path", "/servletContext/req/some%20path", "foo=b+a+r");
         runtest("/servletContext/req/somePath.txt", true, "/somePath.txt", "/req", "http://localhost:" + port + "/servletContext/req/somePath.txt", "/servletContext/req/somePath.txt", "");
         runtest("/servletContext/req/somePath.txt?foo=bar", true, "/somePath.txt", "/req", "http://localhost:" + port + "/servletContext/req/somePath.txt", "/servletContext/req/somePath.txt", "foo=bar");
 

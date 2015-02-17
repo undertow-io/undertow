@@ -29,7 +29,9 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
@@ -39,6 +41,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.client.ClientCallback;
@@ -342,14 +345,14 @@ public final class ProxyHandler implements HttpHandler {
             StringBuilder requestURI = new StringBuilder();
             try {
                 if (exchange.getRelativePath().isEmpty()) {
-                    requestURI.append(encodeUrlPart(clientConnection.getTargetPath()));
+                    requestURI.append(encodeUrlPart(clientConnection.getTargetPath(), exchange));
                 } else {
                     if (clientConnection.getTargetPath().endsWith("/")) {
                         requestURI.append(clientConnection.getTargetPath().substring(0, clientConnection.getTargetPath().length() - 1));
-                        requestURI.append(encodeUrlPart(exchange.getRelativePath()));
+                        requestURI.append(encodeUrlPart(exchange.getRelativePath(), exchange));
                     } else {
                         requestURI = requestURI.append(clientConnection.getTargetPath());
-                        requestURI.append(encodeUrlPart(exchange.getRelativePath()));
+                        requestURI.append(encodeUrlPart(exchange.getRelativePath(), exchange));
                     }
                 }
                 boolean first = true;
@@ -701,33 +704,38 @@ public final class ProxyHandler implements HttpHandler {
      *
      * @return
      */
-    private static String encodeUrlPart(final String part) throws UnsupportedEncodingException {
+    private static String encodeUrlPart(final String part, HttpServerExchange exchange) throws UnsupportedEncodingException {
         //we need to go through and check part by part that a section does not need encoding
-
-        int pos = 0;
-        for (int i = 0; i < part.length(); ++i) {
+        StringBuilder sb = null;
+        Charset charset = null;
+        for(int i = 0; i < part.length(); ++i) {
             char c = part.charAt(i);
-            if (c == '/') {
-                if (pos != i) {
-                    String original = part.substring(pos, i - 1);
-                    String encoded = URLEncoder.encode(original, UTF_8);
-                    if (!encoded.equals(original)) {
-                        return realEncode(part, pos);
+            if((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+                    c == '.' || c == '-' || c == '*' || c == '_' || c == '/') {
+                if(sb != null) {
+                    sb.append(c);
+                }
+            } else {
+                if(sb == null) {
+                    sb = new StringBuilder(part.substring(0, i));
+                    charset = Charset.forName(exchange.getConnection().getUndertowOptions().get(UndertowOptions.URL_CHARSET, UTF_8));
+                }
+                if(c < 127 && charset.name().equals(UTF_8)) {
+                    //minor optimisation
+                    sb.append('%');
+                    sb.append(Integer.toHexString(c));
+                } else {
+                    ByteBuffer bytes = charset.encode(Character.toString(c));
+                    while (bytes.hasRemaining()) {
+                        byte b = bytes.get();
+                        sb.append('%');
+                        sb.append(Integer.toHexString(b & 0xFF));
                     }
                 }
-                pos = i + 1;
-            } else if (c == ' ') {
-                return realEncode(part, pos);
             }
         }
-        if (pos != part.length()) {
-            String original = part.substring(pos);
-            String encoded = URLEncoder.encode(original, UTF_8);
-            if (!encoded.equals(original)) {
-                return realEncode(part, pos);
-            }
-        }
-        return part;
+
+        return sb == null ? part : sb.toString();
     }
 
     private static String realEncode(String part, int startPos) throws UnsupportedEncodingException {

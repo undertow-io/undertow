@@ -222,7 +222,7 @@ public class AjpRequestParser {
                 }
             }
             case AjpRequestParseState.READING_PROTOCOL: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, StringType.OTHER);
                 if (result.readComplete) {
                     //TODO: more efficient way of doing this
                     exchange.setProtocol(HttpString.tryFromString(result.value));
@@ -232,7 +232,7 @@ public class AjpRequestParser {
                 }
             }
             case AjpRequestParseState.READING_REQUEST_URI: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, StringType.URL);
                 if (result.readComplete) {
                     int colon = result.value.indexOf(';');
                     if (colon == -1) {
@@ -254,7 +254,7 @@ public class AjpRequestParser {
                 }
             }
             case AjpRequestParseState.READING_REMOTE_ADDR: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, StringType.OTHER);
                 if (result.readComplete) {
                     state.remoteAddress = result.value;
                 } else {
@@ -263,7 +263,7 @@ public class AjpRequestParser {
                 }
             }
             case AjpRequestParseState.READING_REMOTE_HOST: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, StringType.OTHER);
                 if (result.readComplete) {
                     //exchange.setRequestURI(result.value);
                 } else {
@@ -272,7 +272,7 @@ public class AjpRequestParser {
                 }
             }
             case AjpRequestParseState.READING_SERVER_NAME: {
-                StringHolder result = parseString(buf, state, false);
+                StringHolder result = parseString(buf, state, StringType.OTHER);
                 if (result.readComplete) {
                     state.serverAddress = result.value;
                 } else {
@@ -315,7 +315,7 @@ public class AjpRequestParser {
                 int readHeaders = state.readHeaders;
                 while (readHeaders < state.numHeaders) {
                     if (state.currentHeader == null) {
-                        StringHolder result = parseString(buf, state, true);
+                        StringHolder result = parseString(buf, state, StringType.HEADER);
                         if (!result.readComplete) {
                             state.state = AjpRequestParseState.READING_HEADERS;
                             state.readHeaders = readHeaders;
@@ -327,7 +327,7 @@ public class AjpRequestParser {
                             state.currentHeader = HttpString.tryFromString(result.value);
                         }
                     }
-                    StringHolder result = parseString(buf, state, false);
+                    StringHolder result = parseString(buf, state, StringType.OTHER);
                     if (!result.readComplete) {
                         state.state = AjpRequestParseState.READING_HEADERS;
                         state.readHeaders = readHeaders;
@@ -357,7 +357,7 @@ public class AjpRequestParser {
                         }
                     }
                     if (state.currentIntegerPart == 1) {
-                        StringHolder result = parseString(buf, state, false);
+                        StringHolder result = parseString(buf, state, StringType.OTHER);
                         if (!result.readComplete) {
                             state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
@@ -374,7 +374,7 @@ public class AjpRequestParser {
                         }
                         result = Integer.toString(resultHolder.value);
                     } else {
-                        StringHolder resultHolder = parseString(buf, state, false);
+                        StringHolder resultHolder = parseString(buf, state, state.currentAttribute.equals(QUERY_STRING) ? StringType.QUERY_STRING : StringType.OTHER);
                         if (!resultHolder.readComplete) {
                             state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
@@ -434,7 +434,7 @@ public class AjpRequestParser {
         }
     }
 
-    protected StringHolder parseString(ByteBuffer buf, AjpRequestParseState state, boolean header) throws UnsupportedEncodingException {
+    protected StringHolder parseString(ByteBuffer buf, AjpRequestParseState state, StringType type) throws UnsupportedEncodingException {
         boolean containsUrlCharacters = state.containsUrlCharacters;
         if (!buf.hasRemaining()) {
             return new StringHolder(null, false, false);
@@ -453,7 +453,7 @@ public class AjpRequestParser {
             int number = stringLength & ~STRING_LENGTH_MASK;
             stringLength = ((0xFF & number) << 8) + (buf.get() & 0xFF);
         }
-        if (header && (stringLength & 0xFF00) != 0) {
+        if (type == StringType.HEADER && (stringLength & 0xFF00) != 0) {
             state.stringLength = -1;
             return new StringHolder(headers(stringLength & 0xFF));
         }
@@ -470,7 +470,9 @@ public class AjpRequestParser {
                 return new StringHolder(null, false, false);
             }
             byte c = buf.get();
-            if(c == '+' || c == '%') {
+            if(type == StringType.QUERY_STRING && (c == '+' || c == '%')) {
+                    containsUrlCharacters = true;
+            } else if(type == StringType.URL && c == '%') {
                 containsUrlCharacters = true;
             }
             state.addStringByte(c);
@@ -519,5 +521,13 @@ public class AjpRequestParser {
             this.header = value;
             this.containsUrlCharacters = false;
         }
+    }
+
+    enum StringType {
+        HEADER,
+        URL,
+        QUERY_STRING,
+        OTHER
+
     }
 }

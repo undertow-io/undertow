@@ -374,7 +374,7 @@ public abstract class HttpRequestParser {
                 return;
             } else {
 
-                if (decode && (next == '+' || next == '%' || next > 127)) {
+                if (decode && (next == '%' || next > 127)) {
                     urlDecodeRequired = true;
                 } else if (next == ':' && parseState == START) {
                     parseState = FIRST_COLON;
@@ -490,7 +490,7 @@ public abstract class HttpRequestParser {
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else {
-                if (decode && (next == '+' || next == '%' || next > 127)) {
+                if (decode && (next == '+' || next == '%' || next > 127)) { //+ is only a whitespace substitute in the query part of the URL
                     urlDecodeRequired = true;
                 } else if (next == '=' && nextQueryParam == null) {
                     nextQueryParam = decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true);
@@ -819,6 +819,7 @@ public abstract class HttpRequestParser {
      *
      * @return
      */
+    @SuppressWarnings("unused")
     protected static Map<String, HttpString> httpStrings() {
         final Map<String, HttpString> results = new HashMap<>();
         final Class[] classs = {Headers.class, Methods.class, Protocols.class};
