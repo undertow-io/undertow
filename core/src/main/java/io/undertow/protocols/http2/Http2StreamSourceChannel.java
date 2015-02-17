@@ -168,6 +168,9 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
 
     public void setCompletionListener(ChannelListener<Http2StreamSourceChannel> completionListener) {
         this.completionListener = completionListener;
+        if(isComplete()) {
+            ChannelListeners.invokeChannelListener(this, completionListener);
+        }
     }
 
     @Override
