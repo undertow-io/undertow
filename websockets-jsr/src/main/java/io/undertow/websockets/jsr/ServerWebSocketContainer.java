@@ -243,11 +243,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     @Override
     public Session connectToServer(final Class<? extends Endpoint> endpointClass, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
         try {
-            Endpoint endpoint = endpointClass.newInstance();
+            Endpoint endpoint = classIntrospecter.createInstanceFactory(endpointClass).createInstance().getInstance();
             return connectToServer(endpoint, cec, path);
-        } catch (InstantiationException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
+        } catch (InstantiationException | NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
     }
@@ -411,8 +409,8 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             ServerEndpointConfig.Configurator configurator;
             if (configuratorClass != ServerEndpointConfig.Configurator.class) {
                 try {
-                    configurator = configuratorClass.newInstance();
-                } catch (InstantiationException | IllegalAccessException e) {
+                    configurator = classIntrospecter.createInstanceFactory(configuratorClass).createInstance().getInstance();
+                } catch (InstantiationException | NoSuchMethodException e) {
                     throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
                 }
             } else {
@@ -456,8 +454,8 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
             ClientEndpointConfig.Configurator configurator = null;
             try {
-                configurator = clientEndpoint.configurator().newInstance();
-            } catch (InstantiationException | IllegalAccessException e) {
+                configurator = classIntrospecter.createInstanceFactory(clientEndpoint.configurator()).createInstance().getInstance();
+            } catch (InstantiationException | NoSuchMethodException e) {
                 throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
             }
             ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
