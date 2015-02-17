@@ -34,7 +34,6 @@ import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 
-import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
