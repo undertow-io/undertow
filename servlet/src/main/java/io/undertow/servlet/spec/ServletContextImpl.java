@@ -322,10 +322,26 @@ public class ServletContextImpl implements ServletContext {
         Resource resource = null;
         try {
             resource = deploymentInfo.getResourceManager().getResource(canonicalPath);
+
+            if (resource == null) {
+                //UNDERTOW-373 even though the resource does not exist we still need to return a path
+                Resource deploymentRoot = deploymentInfo.getResourceManager().getResource("/");
+                if(deploymentRoot == null) {
+                    return null;
+                }
+                File root = deploymentRoot.getFile();
+                if(root == null) {
+                    return null;
+                }
+                if(!canonicalPath.startsWith("/")) {
+                    canonicalPath = "/" + canonicalPath;
+                }
+                if(File.separatorChar != '/') {
+                    canonicalPath = canonicalPath.replace('/', File.separatorChar);
+                }
+                return root.getAbsolutePath() + canonicalPath;
+            }
         } catch (IOException e) {
-            return null;
-        }
-        if (resource == null) {
             return null;
         }
         File file = resource.getFile();
