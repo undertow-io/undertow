@@ -77,7 +77,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
      */
     private volatile Host[] hosts = {};
 
-    private final AtomicInteger currentHost = new AtomicInteger(0);
+    private final HostSelector hostSelector;
     private final UndertowClient client;
 
     private final Map<String, Host> routes = new CopyOnWriteMap<>();
@@ -92,17 +92,26 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     public LoadBalancingProxyClient(UndertowClient client) {
-        this(client, null);
+        this(client, null, null);
     }
 
     public LoadBalancingProxyClient(ExclusivityChecker client) {
-        this(UndertowClient.getInstance(), client);
+        this(UndertowClient.getInstance(), client, null);
     }
 
     public LoadBalancingProxyClient(UndertowClient client, ExclusivityChecker exclusivityChecker) {
+        this(client, exclusivityChecker, null);
+    }
+
+    public LoadBalancingProxyClient(UndertowClient client, ExclusivityChecker exclusivityChecker, HostSelector hostSelector) {
         this.client = client;
         this.exclusivityChecker = exclusivityChecker;
         sessionCookieNames.add("JSESSIONID");
+        if(hostSelector == null) {
+            this.hostSelector = new RoundRobinHostSelector();
+        } else {
+            this.hostSelector = hostSelector;
+        }
     }
 
     public LoadBalancingProxyClient addSessionCookieName(final String sessionCookieName) {
@@ -300,7 +309,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         if (sticky != null) {
             return sticky;
         }
-        int host = currentHost.incrementAndGet() % hosts.length;
+        int host = hostSelector.selectHost(hosts);
 
         final int startHost = host; //if the all hosts have problems we come back to this one
         Host full = null;
@@ -348,7 +357,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return null;
     }
 
-    protected final class Host extends ConnectionPoolErrorHandler.SimpleConnectionPoolErrorHandler implements ConnectionPoolManager {
+    public final class Host extends ConnectionPoolErrorHandler.SimpleConnectionPoolErrorHandler implements ConnectionPoolManager {
         final ProxyConnectionPool connectionPool;
         final String jvmRoute;
         final URI uri;
@@ -390,11 +399,30 @@ public class LoadBalancingProxyClient implements ProxyClient {
         public int getMaxQueueSize() {
             return maxQueueSize;
         }
+
+        public URI getUri() {
+            return uri;
+        }
     }
 
     private static class ExclusiveConnectionHolder {
 
         private ProxyConnection connection;
 
+    }
+
+    public interface HostSelector {
+
+        int selectHost(Host[] availableHosts);
+    }
+
+    static class RoundRobinHostSelector implements HostSelector {
+
+        private final AtomicInteger currentHost = new AtomicInteger(0);
+
+        @Override
+        public int selectHost(Host[] availableHosts) {
+            return currentHost.incrementAndGet() % availableHosts.length;
+        }
     }
 }
