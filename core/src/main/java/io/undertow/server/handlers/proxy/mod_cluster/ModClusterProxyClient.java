@@ -65,6 +65,7 @@ class ModClusterProxyClient implements ProxyClient {
         }
         if (! (target instanceof ModClusterProxyTarget)) {
             callback.couldNotResolveBackend(exchange);
+            return;
         }
 
         // Resolve the node

@@ -83,14 +83,12 @@ public class MCMPConfig {
         private final boolean allowCmd;
         private final boolean checkNonce;
         private final boolean reduceDisplay;
-        private final boolean displaySessionids;
 
         MCMPWebManagerConfig(WebBuilder builder) {
             super(builder);
             this.allowCmd = builder.allowCmd;
             this.checkNonce = builder.checkNonce;
             this.reduceDisplay = builder.reduceDisplay;
-            this.displaySessionids = builder.displaySessionids;
         }
 
         public boolean isAllowCmd() {
@@ -103,10 +101,6 @@ public class MCMPConfig {
 
         public boolean isReduceDisplay() {
             return reduceDisplay;
-        }
-
-        public boolean isDisplaySessionids() {
-            return displaySessionids;
         }
 
         @Override
@@ -216,7 +210,6 @@ public class MCMPConfig {
         boolean checkNonce = true;
         boolean reduceDisplay = false;
         boolean allowCmd = true;
-        boolean displaySessionids = false;
 
         public WebBuilder setCheckNonce(boolean checkNonce) {
             this.checkNonce = checkNonce;
@@ -230,11 +223,6 @@ public class MCMPConfig {
 
         public WebBuilder setAllowCmd(boolean allowCmd) {
             this.allowCmd = allowCmd;
-            return this;
-        }
-
-        public WebBuilder setDisplaySessionids(boolean displaySessionids) {
-            this.displaySessionids = displaySessionids;
             return this;
         }
 

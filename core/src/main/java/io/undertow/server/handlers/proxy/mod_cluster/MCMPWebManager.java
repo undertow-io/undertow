@@ -21,7 +21,6 @@ package io.undertow.server.handlers.proxy.mod_cluster;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,7 +45,6 @@ class MCMPWebManager extends MCMPHandler {
     private final boolean checkNonce;
     private final boolean reduceDisplay;
     private final boolean allowCmd;
-    private final boolean displaySessionIds;
 
     private final Random r = new SecureRandom();
     private String nonce = null;
@@ -56,7 +54,6 @@ class MCMPWebManager extends MCMPHandler {
         this.checkNonce = config.isCheckNonce();
         this.reduceDisplay = config.isReduceDisplay();
         this.allowCmd = config.isAllowCmd();
-        this.displaySessionIds = config.isDisplaySessionids();
     }
 
     String getNonce() {
@@ -218,22 +215,12 @@ class MCMPWebManager extends MCMPHandler {
                 } else {
                     buf.append("<br/>\n");
                 }
-                // the sessionid list is mostly for demos.
-                if (displaySessionIds) {
-                    // buf.append(",Num sessions: " + container.getJVMRouteSessionCount(nodeConfig.getJvmRoute()));
-                }
                 buf.append("\n");
 
                 // Process the virtual-host of the node
                 printInfoHost(buf, uri, reduceDisplay, allowCmd, node);
             }
         }
-
-        // Display the all the actives sessions
-        if (displaySessionIds) {
-            printInfoSessions(buf, Collections.<SessionId>emptyList());
-        }
-
         buf.append("</body></html>\n");
         resp.send(buf.toString());
     }
@@ -282,18 +269,6 @@ class MCMPWebManager extends MCMPHandler {
             }
         }
         processOK(exchange);
-    }
-
-    /*
-     * list the session information.
-     */
-    static void printInfoSessions(StringBuilder buf, List<SessionId> sessionids) {
-        buf.append("<h1>SessionIDs:</h1>");
-        buf.append("<pre>");
-        for (SessionId s : sessionids) {
-            buf.append("id: " + s.getSessionId() + " route: " + s.getJmvRoute() + "\n");
-        }
-        buf.append("</pre>");
     }
 
     /* based on manager_info_hosts */
