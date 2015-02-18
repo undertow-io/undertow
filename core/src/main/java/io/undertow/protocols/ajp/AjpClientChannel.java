@@ -85,7 +85,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
             return null;
         } else {
             frameData.free();
-            throw new RuntimeException("TODO: unkown frame");
+            throw new RuntimeException("TODO: unknown frame");
         }
 
     }

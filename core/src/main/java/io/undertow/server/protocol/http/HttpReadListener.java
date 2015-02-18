@@ -96,6 +96,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         if(parseTimeoutUpdater != null) {
             parseTimeoutUpdater.connectionIdle();
         }
+        connection.setCurrentExchange(null);
     }
 
     public void handleEvent(final ConduitStreamSourceChannel channel) {
