@@ -85,6 +85,7 @@ import static org.xnio.Bits.intBitMask;
  * fully parsed.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author Stuart Douglas
  */
 public final class HttpServerExchange extends AbstractAttachable {
 
@@ -613,7 +614,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             host = NetworkUtils.formatPossibleIpv6Address(address.getHostString());
             int port = address.getPort();
             if (!((getRequestScheme().equals("http") && port == 80)
-                    || (getRequestScheme().equals("https") && port == 8080))) {
+                    || (getRequestScheme().equals("https") && port == 443))) {
                 host = host + ":" + port;
             }
         }
