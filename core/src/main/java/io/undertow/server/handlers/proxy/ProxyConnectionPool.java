@@ -18,15 +18,6 @@
 
 package io.undertow.server.handlers.proxy;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.client.ClientCallback;
@@ -41,6 +32,15 @@ import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A pool of connections to a target host.
@@ -352,17 +352,14 @@ public class ProxyConnectionPool implements Closeable {
                     IoUtils.safeClose(holder.clientConnection);
                     idleConnections--;
                 } else {
-                    // If the next run is after the connection timeout don't reschedule the task
-                    if (data.timeoutKey == null || data.nextTimeout > holder.timeout) {
-                        if (data.timeoutKey != null) {
-                            data.timeoutKey.remove();
-                            data.timeoutKey = null;
-                        }
-                        // Schedule a timeout task
-                        final long remaining = holder.timeout - currentTime + 1;
-                        data.nextTimeout = holder.timeout;
-                        data.timeoutKey = holder.clientConnection.getIoThread().executeAfter(data.timeoutTask, remaining, TimeUnit.MILLISECONDS);
+                    if (data.timeoutKey != null) {
+                        data.timeoutKey.remove();
+                        data.timeoutKey = null;
                     }
+                    // Schedule a timeout task
+                    final long remaining = holder.timeout - currentTime + 1;
+                    data.nextTimeout = holder.timeout;
+                    data.timeoutKey = holder.clientConnection.getIoThread().executeAfter(data.timeoutTask, remaining, TimeUnit.MILLISECONDS);
                     return;
                 }
             } else {
