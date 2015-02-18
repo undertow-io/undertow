@@ -97,6 +97,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         if(parseTimeoutUpdater != null) {
             parseTimeoutUpdater.connectionIdle();
         }
+        connection.setCurrentExchange(null);
     }
 
     public void handleEvent(final StreamSourceChannel channel) {
