@@ -70,10 +70,32 @@ public class ProxyConnectionPool implements Closeable {
      */
     private volatile boolean closed;
 
+    /**
+     * The maximum number of connections that can be established to the target
+     */
     private final int maxConnections;
+
+    /**
+     * The maximum number of connections that will be kept alive once they are idle. If a time to live is set
+     * these connections may be timed out, depending on the value of {@link #coreCachedConnections}.
+     *
+     * NOTE: This value is per IO thread, so to get the actual value this must be multiplied by the number of IO threads
+     */
     private final int maxCachedConnections;
-    private final int sMaxConnections;
-    private final long ttl;
+
+    /**
+     * The minimum number of connections that this proxy connection pool will try and keep established. Once the pool
+     * is down to this number of connections no more connections will be timed out.
+     *
+     * NOTE: This value is per IO thread, so to get the actual value this must be multiplied by the number of IO threads
+     */
+    private final int coreCachedConnections;
+
+    /**
+     * The timeout for idle connections. Note that if {@code #coreCachedConnections} is set then once the pool is down
+     * to the core size no more connections will be timed out.
+     */
+    private final long timeToLive;
 
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<>();
 
@@ -93,8 +115,8 @@ public class ProxyConnectionPool implements Closeable {
         this.connectionPoolManager = connectionPoolManager;
         this.maxConnections = Math.max(connectionPoolManager.getMaxConnections(), 1);
         this.maxCachedConnections = Math.max(connectionPoolManager.getMaxCachedConnections(), 0);
-        this.sMaxConnections = Math.max(connectionPoolManager.getSMaxConnections(), 0);
-        this.ttl = connectionPoolManager.getTtl();
+        this.coreCachedConnections = Math.max(connectionPoolManager.getSMaxConnections(), 0);
+        this.timeToLive = connectionPoolManager.getTtl();
         this.bindAddress = bindAddress;
         this.uri = uri;
         this.ssl = ssl;
@@ -165,10 +187,19 @@ public class ProxyConnectionPool implements Closeable {
                 }
                 hostData.availableConnections.add(connectionHolder);
                 // If the soft max and ttl are configured
-                if (sMaxConnections >= 0 && ttl > 0) {
+                if (timeToLive > 0) {
+                    //we only start the timeout process once we have hit the core pool size
+                    //otherwise connections could start timing out immediately once the core pool size is hit
+                    //and if we never hit the core pool size then it does not make sense to start timers which are never
+                    //used (as timers are expensive)
                     final long currentTime = System.currentTimeMillis();
-                    connectionHolder.timeout = currentTime + ttl;
-                    timeoutConnections(currentTime, hostData);
+                    connectionHolder.timeout = currentTime + timeToLive;
+                    if(hostData.availableConnections.size() > coreCachedConnections) {
+                        if (hostData.nextTimeout <= 0) {
+                            hostData.timeoutKey = connection.getIoThread().executeAfter(hostData.timeoutTask, timeToLive, TimeUnit.MILLISECONDS);
+                            hostData.nextTimeout = connectionHolder.timeout;
+                        }
+                    }
                 }
             }
         } else if (connection.isOpen() && connection.isUpgraded()) {
@@ -342,7 +373,7 @@ public class ProxyConnectionPool implements Closeable {
         int idleConnections = data.availableConnections.size();
         for (;;) {
             ConnectionHolder holder;
-            if (idleConnections > 0 && idleConnections >= sMaxConnections && (holder = data.availableConnections.peek()) != null) {
+            if (idleConnections > 0 && idleConnections >= coreCachedConnections && (holder = data.availableConnections.peek()) != null) {
                 if (!holder.clientConnection.isOpen()) {
                     // Already closed connections decrease the available connections
                     idleConnections--;
@@ -368,6 +399,7 @@ public class ProxyConnectionPool implements Closeable {
                     data.timeoutKey.remove();
                     data.timeoutKey = null;
                 }
+                data.nextTimeout = -1;
                 return;
             }
         }
@@ -434,7 +466,7 @@ public class ProxyConnectionPool implements Closeable {
 
         int connections = 0;
         XnioIoThread.Key timeoutKey;
-        long nextTimeout;
+        long nextTimeout = -1;
 
         final Deque<ConnectionHolder> availableConnections = new ArrayDeque<>();
         final Deque<CallbackHolder> awaitingConnections = new ArrayDeque<>();
