@@ -608,7 +608,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             host = NetworkUtils.formatPossibleIpv6Address(address.getHostString());
             int port = address.getPort();
             if (!((getRequestScheme().equals("http") && port == 80)
-                    || (getRequestScheme().equals("https") && port == 8080))) {
+                    || (getRequestScheme().equals("https") && port == 443))) {
                 host = host + ":" + port;
             }
         }
