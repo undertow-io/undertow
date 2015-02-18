@@ -121,7 +121,7 @@ class ModClusterProxyClient implements ProxyClient {
 
                 context.handleRequest(proxyTarget, exchange, wrappedCallback, timeout, timeUnit, true);
             } else {
-                context.handleRequest(proxyTarget, exchange, callback, timeout, timeUnit, true);
+                context.handleRequest(proxyTarget, exchange, callback, timeout, timeUnit, false);
             }
         }
     }
