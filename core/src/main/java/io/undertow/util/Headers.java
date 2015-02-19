@@ -253,7 +253,7 @@ public final class Headers {
         int start = pos + key.length() + 1;
         for (end = start; end < header.length(); ++end) {
             char c = header.charAt(end);
-            if (c == ' ' || c == '\t') {
+            if (c == ' ' || c == '\t' || c == ';') {
                 break;
             }
         }
