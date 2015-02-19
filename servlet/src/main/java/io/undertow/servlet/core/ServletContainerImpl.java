@@ -71,7 +71,8 @@ public class ServletContainerImpl implements ServletContainer {
 
     @Override
     public DeploymentManager getDeploymentByPath(final String path) {
-        DeploymentManager exact = deploymentsByPath.get(path);
+
+        DeploymentManager exact = deploymentsByPath.get(path.isEmpty() ? "/" : path);
         if (exact != null) {
             return exact;
         }
@@ -88,6 +89,6 @@ public class ServletContainerImpl implements ServletContainer {
                 }
             }
         }
-        return deploymentsByPath.get("");
+        return deploymentsByPath.get("/");
     }
 }
