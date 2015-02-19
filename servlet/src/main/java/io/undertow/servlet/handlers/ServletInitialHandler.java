@@ -32,6 +32,7 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ServletBlockingHttpExchange;
+import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
@@ -307,6 +308,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             //if it is not dispatched and is not a mock request
             if (!exchange.isDispatched() && !(exchange.getConnection() instanceof MockServerConnection)) {
                 servletRequestContext.getOriginalResponse().responseDone();
+            }
+            if(!exchange.isDispatched()) {
+                AsyncContextImpl ctx = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
+                if(ctx != null) {
+                    ctx.complete();
+                }
             }
         } finally {
             try {

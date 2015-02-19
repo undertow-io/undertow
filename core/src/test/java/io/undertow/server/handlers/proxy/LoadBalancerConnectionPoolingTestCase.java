@@ -43,8 +43,8 @@ public class LoadBalancerConnectionPoolingTestCase {
     public static void before() throws Exception {
 
         ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient()
-                .setConnectionsPerThread(10)
-                .setSoftMaxConnectionsPerThread(2)
+                .setConnectionsPerThread(1)
+                .setSoftMaxConnectionsPerThread(0)
                 .setTtl(1000)
                 .addHost(new URI("http", null, host, port, null, null, null), "s1")
                 , 10000, ResponseCodeHandler.HANDLE_404);
@@ -114,8 +114,8 @@ public class LoadBalancerConnectionPoolingTestCase {
             client.getConnectionManager().shutdown();
         }
 
-        Assert.assertEquals(10, activeConnections.size());
-        Thread.sleep(4000);
         Assert.assertEquals(2, activeConnections.size());
+        Thread.sleep(4000);
+        Assert.assertEquals(0, activeConnections.size());
     }
 }
