@@ -213,6 +213,11 @@ class HttpTransferEncoding {
             //this will just discard the data
             //we still go through with the rest of the logic, to make sure all headers are set correctly
             channel = new HeadStreamSinkConduit(channel, terminateResponseListener(exchange));
+        } else if(!Connectors.isEntityBodyAllowed(exchange)) {
+            //we are not allowed to send an entity body for some requests
+            exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
+            exchange.getResponseHeaders().remove(Headers.TRANSFER_ENCODING);
+            channel = new HeadStreamSinkConduit(channel, terminateResponseListener(exchange));
         }
 
         final HeaderMap responseHeaders = exchange.getResponseHeaders();

@@ -1545,7 +1545,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         try {
             if (isResponseChannelAvailable()) {
-                if(!getRequestMethod().equals(Methods.CONNECT)) {
+                if(!getRequestMethod().equals(Methods.CONNECT) && Connectors.isEntityBodyAllowed(this)) {
                     //according to
                     getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 }
