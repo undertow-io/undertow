@@ -230,4 +230,15 @@ public class Connectors {
     public static StreamSourceChannel getExistingRequestChannel(final HttpServerExchange exchange) {
         return exchange.requestChannel;
     }
+
+    public static boolean isEntityBodyAllowed(HttpServerExchange exchange){
+        int code = exchange.getResponseCode();
+        if(code >= 100 && code < 200) {
+            return false;
+        }
+        if(code == 204 || code == 304) {
+            return false;
+        }
+        return true;
+    }
 }

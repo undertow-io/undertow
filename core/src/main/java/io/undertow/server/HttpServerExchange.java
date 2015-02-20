@@ -38,6 +38,7 @@ import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import org.jboss.logging.Logger;
@@ -1530,7 +1531,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         try {
             if (isResponseChannelAvailable()) {
-                getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+                if(!getRequestMethod().equals(Methods.CONNECT) && Connectors.isEntityBodyAllowed(this)) {
+                    //according to
+                    getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+                }
                 getResponseChannel();
             }
             responseChannel.shutdownWrites();
