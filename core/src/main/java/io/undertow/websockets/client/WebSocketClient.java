@@ -64,15 +64,16 @@ public class WebSocketClient {
     public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
 
         final FutureResult<WebSocketChannel> ioFuture = new FutureResult<>();
+        final String scheme = uri.getScheme().equals("wss") ? "https" : "http";
         final URI newUri;
         try {
-            newUri = new URI(uri.getScheme().equals("wss") ? "https" : "http", uri.getUserInfo(), uri.getHost(), uri.getPort() == -1 ? (uri.getScheme().equals("wss") ? 443 : 80) : uri.getPort(), uri.getPath().isEmpty() ? "/" : uri.getPath(), uri.getQuery(), uri.getFragment());
+            newUri = new URI(scheme, uri.getUserInfo(), uri.getHost(), uri.getPort() == -1 ? (uri.getScheme().equals("wss") ? 443 : 80) : uri.getPort(), uri.getPath().isEmpty() ? "/" : uri.getPath(), uri.getQuery(), uri.getFragment());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
         final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation);
         final Map<String, String> originalHeaders = handshake.createHeaders();
-        originalHeaders.put(Headers.ORIGIN_STRING, uri.getHost());
+        originalHeaders.put(Headers.ORIGIN_STRING, scheme + "://" + uri.getHost());
         final Map<String, List<String>> headers = new HashMap<>();
         for(Map.Entry<String, String> entry : originalHeaders.entrySet()) {
             List<String> list = new ArrayList<>();
