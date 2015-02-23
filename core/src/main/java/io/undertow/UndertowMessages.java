@@ -70,7 +70,7 @@ public interface UndertowMessages {
     @Message(id = 11, value = "Session manager must not be null")
     IllegalStateException sessionManagerMustNotBeNull();
 
-    @Message(id = 12, value = "Session manager was not attached to the request. Make sure that the SessionAttachmentHander is installed in the handler chain")
+    @Message(id = 12, value = "Session manager was not attached to the request. Make sure that the SessionAttachmentHandler is installed in the handler chain")
     IllegalStateException sessionManagerNotFound();
 
     @Message(id = 13, value = "Argument %s cannot be null")
