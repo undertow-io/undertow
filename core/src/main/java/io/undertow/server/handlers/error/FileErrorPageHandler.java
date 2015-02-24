@@ -70,6 +70,11 @@ public class FileErrorPageHandler implements HttpHandler {
         this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
     }
 
+    public FileErrorPageHandler(HttpHandler next, final File file, final Integer... responseCodes) {
+        this.next = next;
+        this.file = file;
+        this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
+    }
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.addDefaultResponseListener(new DefaultResponseListener() {
@@ -217,7 +222,7 @@ public class FileErrorPageHandler implements HttpHandler {
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-            return new FileErrorPageHandler(new File(file), responseCodes);
+            return new FileErrorPageHandler(handler, new File(file), responseCodes);
         }
     }
 }
