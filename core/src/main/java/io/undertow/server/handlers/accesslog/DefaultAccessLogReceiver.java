@@ -74,6 +74,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     private Writer writer = null;
 
     private volatile boolean closed = false;
+    private boolean initialRun = true;
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName) {
         this(logWriteExecutor, outputDirectory, logBaseName, null);
@@ -121,7 +122,17 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         }
         if (forceLogRotation) {
             doRotate();
+        } else if(initialRun && defaultLogFile.exists()) {
+            //if there is an existing log file check if it should be rotated
+            long lm = defaultLogFile.lastModified();
+            Calendar c = Calendar.getInstance();
+            c.setTimeInMillis(changeOverPoint);
+            c.add(Calendar.DATE, -1);
+            if(lm <= c.getTimeInMillis()) {
+                doRotate();
+            }
         }
+        initialRun = false;
         List<String> messages = new ArrayList<>();
         String msg = null;
         //only grab at most 1000 messages at a time
@@ -196,6 +207,9 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
                 writer.flush();
                 writer.close();
                 writer = null;
+            }
+            if(!defaultLogFile.exists()) {
+                return;
             }
             File newFile = new File(outputDirectory, logBaseName + "_" + currentDateString + logNameSuffix);
             int count = 0;
