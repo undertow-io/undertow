@@ -39,8 +39,12 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     @Override
-    public String rewriteUrl(final String originalUrl, final String sessionid) {
-        return originalUrl;
+    public String rewriteUrl(final HttpServerExchange exchange, final String originalUrl, final String sessionid) {
+        String existing = delegate.findSessionId(exchange);
+        if (existing != null || fallback == null) {
+            return originalUrl;
+        }
+        return fallback.rewriteUrl(exchange, originalUrl, sessionid);
     }
 
     @Override

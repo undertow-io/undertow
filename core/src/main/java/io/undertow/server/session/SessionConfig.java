@@ -69,7 +69,7 @@ public interface SessionConfig {
 
     SessionCookieSource sessionCookieSource(final HttpServerExchange exchange);
 
-    String rewriteUrl(final String originalUrl, final String sessionId);
+    String rewriteUrl(final HttpServerExchange exchange, final String originalUrl, final String sessionId);
 
     enum SessionCookieSource {
         URL,
