@@ -70,7 +70,7 @@ class MCMPAdvertiseTask implements Runnable {
         final MulticastMessageChannel channel = worker.createUdpServer(bindAddress, new ChannelListener<MulticastMessageChannel>() {
             @Override
             public void handleEvent(MulticastMessageChannel channel) {
-                channel.resumeWrites();
+                //channel.resumeWrites();
             }
         }, OptionMap.EMPTY);
         final MCMPAdvertiseTask task = new MCMPAdvertiseTask(container, config, channel);
