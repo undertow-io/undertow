@@ -136,7 +136,7 @@ public class SslSessionConfig implements SessionConfig {
     }
 
     @Override
-    public String rewriteUrl(final String originalUrl, final String sessionId) {
+    public String rewriteUrl(final HttpServerExchange exchange, final String originalUrl, final String sessionId) {
         return originalUrl;
     }
 

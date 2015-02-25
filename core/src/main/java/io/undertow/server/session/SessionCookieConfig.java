@@ -45,7 +45,7 @@ public class SessionCookieConfig implements SessionConfig {
 
 
     @Override
-    public String rewriteUrl(final String originalUrl, final String sessionId) {
+    public String rewriteUrl(final HttpServerExchange exchange, final String originalUrl, final String sessionId) {
         return originalUrl;
     }
 
@@ -62,7 +62,6 @@ public class SessionCookieConfig implements SessionConfig {
             cookie.setMaxAge(maxAge);
         }
         exchange.setResponseCookie(cookie);
-        exchange.getRequestCookies().put(cookieName, cookie);
     }
 
     @Override

@@ -73,7 +73,7 @@ public class PathParameterSessionConfig implements SessionConfig {
      * @param sessionId Session id to be included in the encoded URL
      */
     @Override
-    public String rewriteUrl(final String url, final String sessionId) {
+    public String rewriteUrl(final HttpServerExchange exchange, final String url, final String sessionId) {
         if ((url == null) || (sessionId == null))
             return (url);
 
