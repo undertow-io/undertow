@@ -80,6 +80,7 @@ public class PathParameterSessionConfig implements SessionConfig {
         String path = url;
         String query = "";
         String anchor = "";
+        String fragment = "";
         int question = url.indexOf('?');
         if (question >= 0) {
             path = url.substring(0, question);
@@ -90,9 +91,20 @@ public class PathParameterSessionConfig implements SessionConfig {
             anchor = path.substring(pound);
             path = path.substring(0, pound);
         }
+        int fragmentIndex = url.lastIndexOf(';');
+        if(fragmentIndex >= 0) {
+            fragment = path.substring(fragmentIndex);
+            path = path.substring(0, fragmentIndex);
+        }
+
         StringBuilder sb = new StringBuilder(path);
         if (sb.length() > 0) { // jsessionid can't be first.
-            sb.append(';');
+            if(fragmentIndex > 0) {
+                sb.append(fragment);
+                sb.append("&");
+            } else {
+                sb.append(';');
+            }
             sb.append(name.toLowerCase(Locale.ENGLISH));
             sb.append('=');
             sb.append(sessionId);

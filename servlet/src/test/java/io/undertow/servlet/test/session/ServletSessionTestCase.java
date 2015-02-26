@@ -19,6 +19,9 @@
 package io.undertow.servlet.test.session;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 import javax.servlet.ServletException;
 
@@ -35,7 +38,9 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.cookie.Cookie;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -129,5 +134,53 @@ public class ServletSessionTestCase {
         }
     }
 
+
+    @Test
+    public void testSessionConfigNoCookies() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        client.setCookieStore(new CookieStore() {
+            @Override
+            public void addCookie(Cookie cookie) {
+
+            }
+
+            @Override
+            public List<Cookie> getCookies() {
+                return Collections.EMPTY_LIST;
+            }
+
+            @Override
+            public boolean clearExpired(Date date) {
+                return false;
+            }
+
+            @Override
+            public void clear() {
+
+            }
+        });
+        try {
+            HttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b;foo=bar"));
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("1", response);
+            String url = result.getHeaders("url")[0].getValue();
+
+            result = client.execute(new HttpGet(url));
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            url = result.getHeaders("url")[0].getValue();
+            Assert.assertEquals("2", response);
+
+            result = client.execute(new HttpGet(url));
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("3", response);
+
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
 }

@@ -1073,6 +1073,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     private SessionConfig.SessionCookieSource sessionCookieSource() {
+        HttpSession session = getSession(false);
+        if(session == null || session.isNew()) {
+            return SessionConfig.SessionCookieSource.NONE;
+        }
         if(sessionCookieSource == null) {
             sessionCookieSource = originalServletContext.getSessionConfig().sessionCookieSource(exchange);
         }
