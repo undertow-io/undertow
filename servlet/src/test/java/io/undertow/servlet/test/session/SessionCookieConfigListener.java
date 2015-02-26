@@ -20,6 +20,9 @@ package io.undertow.servlet.test.session;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import javax.servlet.SessionTrackingMode;
+import java.util.Arrays;
+import java.util.HashSet;
 
 /**
  * @author Stuart Douglas
@@ -29,6 +32,7 @@ public class SessionCookieConfigListener implements ServletContextListener {
     public void contextInitialized(final ServletContextEvent sce) {
         sce.getServletContext().getSessionCookieConfig().setName("MySessionCookie");
         sce.getServletContext().getSessionCookieConfig().setPath("/servletContext/aa/");
+        sce.getServletContext().setSessionTrackingModes(new HashSet<>(Arrays.asList(SessionTrackingMode.COOKIE, SessionTrackingMode.URL)));
     }
 
     @Override

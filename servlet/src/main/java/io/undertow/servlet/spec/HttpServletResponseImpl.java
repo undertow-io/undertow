@@ -624,7 +624,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (isEncodeable(toAbsolute(url))) {
             return originalServletContext.getSessionConfig().rewriteUrl(url, servletContext.getSession(originalServletContext, exchange, true).getId());
         } else {
-            return (url);
+            return url;
         }
     }
 
@@ -683,7 +683,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
      *
      * @param location Absolute URL to be validated
      */
-    protected boolean isEncodeable(final String location) {
+    private boolean isEncodeable(final String location) {
 
         if (location == null)
             return (false);
@@ -701,10 +701,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         }
 
         final HttpSession session = hreq.getSession(false);
-        if (session == null)
-            return (false);
-        if (hreq.isRequestedSessionIdFromCookie())
-            return (false);
+        if (session == null) {
+            return false;
+        } else if (!hreq.isRequestedSessionIdFromURL() && !session.isNew()) {
+            return false;
+        }
 
         return doIsEncodeable(hreq, session, location);
     }
@@ -750,8 +751,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (file == null) {
             return false;
         }
-        String tok = originalServletContext.getSessionCookieConfig().getName() + "=" + session.getId();
-        if (file.indexOf(tok) >= 0) {
+        String tok = originalServletContext.getSessionCookieConfig().getName().toLowerCase() + "=" + session.getId();
+        if (file.contains(tok)) {
             return false;
         }
 

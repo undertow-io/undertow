@@ -40,6 +40,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
 
     @Override
     public String rewriteUrl(final String originalUrl, final String sessionid) {
+        if(fallback != null) {
+            return fallback.rewriteUrl(originalUrl, sessionid);
+        }
         return originalUrl;
     }
 

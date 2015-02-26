@@ -35,6 +35,7 @@ public class SessionServlet extends HttpServlet {
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         HttpSession session = req.getSession();
+        resp.addHeader("url", resp.encodeURL(req.getRequestURL().toString()));
         Integer value = (Integer)session.getAttribute("key");
         if(value == null) {
             value = 1;
