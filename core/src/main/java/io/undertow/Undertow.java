@@ -155,11 +155,8 @@ public final class Undertow {
                             }
                             if(http2) {
                                 Http2OpenListener http2Listener = new Http2OpenListener(buffers, undertowOptions);
-                                Http2OpenListener http214Listener = new Http2OpenListener(buffers, undertowOptions, Http2OpenListener.HTTP2_14);
                                 http2Listener.setRootHandler(rootHandler);
-                                http214Listener.setRootHandler(rootHandler);
                                 alpn.addProtocol(Http2OpenListener.HTTP2, http2Listener, 10);
-                                alpn.addProtocol(Http2OpenListener.HTTP2_14, http214Listener, 11);
                             }
                             openListener = alpn;
                         } else {

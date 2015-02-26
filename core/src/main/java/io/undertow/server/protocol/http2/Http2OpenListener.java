@@ -43,8 +43,7 @@ import java.nio.ByteBuffer;
  * @author Stuart Douglas
  */
 public final class Http2OpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
-    public static final String HTTP2 = "h2-15";
-    public static final String HTTP2_14 = "h2-14";
+    public static final String HTTP2 = "h2";
 
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
