@@ -46,10 +46,10 @@ public class ModCluster {
     private final int cacheConnections;
     private final int requestQueueSize;
     private final boolean queueNewRequests;
+    private final int maxRequestTime;
 
     private final XnioWorker xnioWorker;
     private final ModClusterContainer container;
-    private final HttpHandler proxyHandler;
 
     private final String serverID = UUID.randomUUID().toString(); // TODO
 
@@ -62,8 +62,8 @@ public class ModCluster {
         this.healthCheckInterval = builder.healthCheckInterval;
         this.removeBrokenNodes = builder.removeBrokenNodes;
         this.healthChecker = builder.healthChecker;
+        this.maxRequestTime = builder.maxRequestTime;
         this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client);
-        this.proxyHandler = new ProxyHandler(container.getProxyClient(), builder.maxRequestTime, NEXT_HANDLER);
     }
 
     protected String getServerID() {
@@ -107,10 +107,27 @@ public class ModCluster {
      *
      * @return the proxy handler
      */
+    @Deprecated
     public HttpHandler getProxyHandler() {
-        return proxyHandler;
+        return createProxyHandler();
+    }
+    /**
+     * Get the handler proxying the requests.
+     *
+     * @return the proxy handler
+     */
+    public HttpHandler createProxyHandler() {
+        return new ProxyHandler(container.getProxyClient(), maxRequestTime, NEXT_HANDLER);
     }
 
+    /**
+     * Get the handler proxying the requests.
+     *
+     * @return the proxy handler
+     */
+    public HttpHandler createProxyHandler(HttpHandler next) {
+        return new ProxyHandler(container.getProxyClient(), maxRequestTime, next);
+    }
     /**
      * Start
      */

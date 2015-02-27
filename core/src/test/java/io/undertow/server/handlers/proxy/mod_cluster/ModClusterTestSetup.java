@@ -64,7 +64,7 @@ public class ModClusterTestSetup {
             modCluster.start();
 
             // Create the proxy and mgmt handler
-            final HttpHandler proxy = modCluster.getProxyHandler();
+            final HttpHandler proxy = modCluster.createProxyHandler();
             final MCMPConfig config = MCMPConfig.builder()
                     .setManagementHost(chost)
                     .setManagementPort(cport)

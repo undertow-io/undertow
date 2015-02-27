@@ -112,7 +112,7 @@ public abstract class AbstractModClusterTestBase {
         modCluster = ModCluster.builder(DefaultServer.getWorker(), undertowClient, xnioSsl).build();
 
         final int serverPort = getHostPort("default");
-        final HttpHandler proxy = modCluster.getProxyHandler();
+        final HttpHandler proxy = modCluster.createProxyHandler();
         final HttpHandler mcmp = MCMPConfig.webBuilder()
                 .setManagementHost(getHostAddress("default"))
                 .setManagementPort(serverPort)
