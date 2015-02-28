@@ -20,7 +20,6 @@ package io.undertow.util;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -61,26 +60,16 @@ public class FileUtils {
     }
 
     public static String readFile(InputStream file) {
-        BufferedInputStream stream = null;
-        try {
-            stream = new BufferedInputStream(file);
+        try (BufferedInputStream stream = new BufferedInputStream(file)) {
             byte[] buff = new byte[1024];
             StringBuilder builder = new StringBuilder();
-            int read = -1;
+            int read;
             while ((read = stream.read(buff)) != -1) {
                 builder.append(new String(buff, 0, read));
             }
             return builder.toString();
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } finally {
-            if (stream != null) {
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    //ignore
-                }
-            }
         }
     }
 
@@ -112,33 +101,18 @@ public class FileUtils {
 
 
     public static void copyFile(final File src, final File dest) throws IOException {
-        final InputStream in = new BufferedInputStream(new FileInputStream(src));
-        try {
+        try (InputStream in = new BufferedInputStream(new FileInputStream(src))) {
             copyFile(in, dest);
-        } finally {
-            close(in);
         }
     }
 
     public static void copyFile(final InputStream in, final File dest) throws IOException {
         dest.getParentFile().mkdirs();
-        final OutputStream out = new BufferedOutputStream(new FileOutputStream(dest));
-        try {
-            int i = in.read();
-            while (i != -1) {
-                out.write(i);
-                i = in.read();
+        try (OutputStream out = new BufferedOutputStream(new FileOutputStream(dest))) {
+            int read;
+            while ((read = in.read()) != -1) {
+                out.write(read);
             }
-        } finally {
-            close(out);
-        }
-    }
-
-
-    public static void close(Closeable closeable) {
-        try {
-            closeable.close();
-        } catch (IOException ignore) {
         }
     }
 
