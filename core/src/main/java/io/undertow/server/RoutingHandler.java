@@ -78,9 +78,11 @@ public class RoutingHandler implements HttpHandler {
             return;
         }
         exchange.putAttachment(PathTemplateMatch.ATTACHMENT_KEY, match);
-        if (rewriteQueryParameters) {
-            for (Map.Entry<String, String> entry : match.getParameters().entrySet()) {
+        for (Map.Entry<String, String> entry : match.getParameters().entrySet()) {
+            if (rewriteQueryParameters) {
                 exchange.addQueryParam(entry.getKey(), entry.getValue());
+            } else {
+                exchange.addPathParam(entry.getKey(), entry.getValue());
             }
         }
         for (HandlerHolder handler : match.getValue().predicatedHandlers) {
