@@ -74,6 +74,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     private final int maxRequestSize;
     private final long maxEntitySize;
     private final boolean recordRequestStartTime;
+    private final boolean allowUnknownProtocols;
 
     //0 = new request ok, reads resumed
     //1 = request running, new request not ok
@@ -93,6 +94,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
+        this.allowUnknownProtocols = connection.getUndertowOptions().get(UndertowOptions.ALLOW_UNKNOWN_PROTOCOLS, false);
         int requestParseTimeout = connection.getUndertowOptions().get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
         int requestIdleTimeout = connection.getUndertowOptions().get(UndertowOptions.NO_REQUEST_TIMEOUT, -1);
         if(requestIdleTimeout < 0 && requestParseTimeout < 0) {
@@ -194,9 +196,15 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             requestStateUpdater.set(this, 1);
 
             if(httpServerExchange.getProtocol() == Protocols.HTTP_2_0) {
-                if(httpServerExchange.getRequestMethod().equals(PRI) && connection.getUndertowOptions().get(UndertowOptions.ENABLE_HTTP2, false)) {
-                    handleHttp2PriorKnowledge(connection.getChannel(), connection, pooled);
-                    free = false;
+                free = handleHttp2PriorKnowledge(pooled, httpServerExchange);
+                return;
+            }
+
+            if(!allowUnknownProtocols) {
+                HttpString protocol = httpServerExchange.getProtocol();
+                if(protocol != Protocols.HTTP_1_1 && protocol != Protocols.HTTP_1_0 && protocol != Protocols.HTTP_0_9) {
+                    UndertowLogger.REQUEST_IO_LOGGER.debugf("Closing connection from %s due to unknown protocol %s", connection.getChannel().getPeerAddress(), protocol);
+                    sendBadRequestAndClose(connection.getChannel(), new IOException());
                     return;
                 }
             }
@@ -214,6 +222,16 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             return;
         } finally {
             if (free) pooled.free();
+        }
+    }
+
+    private boolean handleHttp2PriorKnowledge(Pooled<ByteBuffer> pooled, HttpServerExchange httpServerExchange) throws IOException {
+        if(httpServerExchange.getRequestMethod().equals(PRI) && connection.getUndertowOptions().get(UndertowOptions.ENABLE_HTTP2, false)) {
+            handleHttp2PriorKnowledge(connection.getChannel(), connection, pooled);
+            return false;
+        } else {
+            sendBadRequestAndClose(connection.getChannel(), new IOException());
+            return true;
         }
     }
 

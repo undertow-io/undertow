@@ -185,6 +185,20 @@ public class UndertowOptions {
     public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = Option.simple(UndertowOptions.class, "ENABLE_CONNECTOR_STATISTICS", Boolean.class);
 
     /**
+     * If unknown protocols should be allowed. The known protocols are:
+     *
+     * HTTP/0.9
+     * HTTP/1.0
+     * HTTP/1.1
+     * HTTP/2.0
+     *
+     * If this is false then requests that specify any other protocol will be rejected with a 400
+     *
+     * Defaults to false
+     */
+    public static final Option<Boolean> ALLOW_UNKNOWN_PROTOCOLS = Option.simple(UndertowOptions.class, "ALLOW_UNKNOWN_PROTOCOLS", Boolean.class);
+
+    /**
      * The size of the header table that is used in the encoder
      */
     public static final Option<Integer> HTTP2_SETTINGS_HEADER_TABLE_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_HEADER_TABLE_SIZE", Integer.class);
