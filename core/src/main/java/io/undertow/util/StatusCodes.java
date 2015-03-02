@@ -42,7 +42,9 @@ public class StatusCodes {
     public static final int ALREADY_REPORTED = 208;
     public static final int IM_USED = 226;
     public static final int MULTIPLE_CHOICES = 300;
-    public static final int MOVED_PERMENANTLY = 301;
+    public static final int MOVED_PERMANENTLY = 301;
+    @Deprecated //typo, but left in for now due to backwards compat
+    public static final int MOVED_PERMENANTLY = MOVED_PERMANENTLY;
     public static final int FOUND = 302;
     public static final int SEE_OTHER = 303;
     public static final int NOT_MODIFIED = 304;
