@@ -25,6 +25,8 @@ import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.util.ClosingChannelExceptionHandler;
+import io.undertow.util.HttpString;
+import io.undertow.util.Protocols;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -59,6 +61,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     private final int maxRequestSize;
     private final long maxEntitySize;
     private final boolean recordRequestStartTime;
+    private final boolean allowUnknownProtocols;
 
     //0 = new request ok, reads resumed
     //1 = request running, new request not ok
@@ -75,6 +78,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
+        this.allowUnknownProtocols = connection.getUndertowOptions().get(UndertowOptions.ALLOW_UNKNOWN_PROTOCOLS, false);
         int requestParseTimeout = connection.getUndertowOptions().get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
         int requestIdleTimeout = connection.getUndertowOptions().get(UndertowOptions.NO_REQUEST_TIMEOUT, -1);
         if(requestIdleTimeout < 0 && requestParseTimeout < 0) {
@@ -173,6 +177,15 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
             this.httpServerExchange = null;
             requestStateUpdater.set(this, 1);
+
+            if(!allowUnknownProtocols) {
+                HttpString protocol = httpServerExchange.getProtocol();
+                if(protocol != Protocols.HTTP_1_1 && protocol != Protocols.HTTP_1_0 && protocol != Protocols.HTTP_0_9) {
+                    UndertowLogger.REQUEST_IO_LOGGER.debugf("Closing connection from %s due to unknown protocol %s", connection.getChannel().getPeerAddress(), protocol);
+                    sendBadRequestAndClose(connection.getChannel(), new IOException());
+                    return;
+                }
+            }
             HttpTransferEncoding.setupRequest(httpServerExchange);
             if (recordRequestStartTime) {
                 Connectors.setRequestStartTime(httpServerExchange);
