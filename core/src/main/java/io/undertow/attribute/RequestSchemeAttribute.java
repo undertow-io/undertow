@@ -37,7 +37,7 @@ public class RequestSchemeAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        return exchange.getRequestMethod().toString();
+        return exchange.getRequestScheme();
     }
 
     @Override
