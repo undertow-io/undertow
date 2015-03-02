@@ -42,7 +42,7 @@ public class StatusCodes {
     public static final int ALREADY_REPORTED = 208;
     public static final int IM_USED = 226;
     public static final int MULTIPLE_CHOICES = 300;
-    public static final int MOVED_PERMENANTLY = 301;
+    public static final int MOVED_PERMANENTLY = 301;
     public static final int FOUND = 302;
     public static final int SEE_OTHER = 303;
     public static final int NOT_MODIFIED = 304;
@@ -157,7 +157,7 @@ public class StatusCodes {
         putCode(ALREADY_REPORTED, ALREADY_REPORTED_STRING);
         putCode(IM_USED, IM_USED_STRING);
         putCode(MULTIPLE_CHOICES, MULTIPLE_CHOICES_STRING);
-        putCode(MOVED_PERMENANTLY, MOVED_PERMANENTLY_STRING);
+        putCode(MOVED_PERMANENTLY, MOVED_PERMANENTLY_STRING);
         putCode(FOUND, FOUND_STRING);
         putCode(SEE_OTHER, SEE_OTHER_STRING);
         putCode(NOT_MODIFIED, NOT_MODIFIED_STRING);
