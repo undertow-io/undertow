@@ -26,3 +26,4 @@ io.undertow.attribute.ResponseTimeAttribute$Builder
 io.undertow.attribute.PathParameterAttribute$Builder
 io.undertow.attribute.TransportProtocolAttribute$Builder
 io.undertow.attribute.RequestSchemeAttribute$Builder
+io.undertow.attribute.HostAndPortAttribute$Builder
