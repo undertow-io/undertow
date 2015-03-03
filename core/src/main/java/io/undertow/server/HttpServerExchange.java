@@ -100,6 +100,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     static final AttachmentKey<Pooled<ByteBuffer>[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(Pooled[].class);
 
+    /**
+     * Attachment key that can be used to hold additional request attributes
+     */
+    public static final AttachmentKey<Map<String, String>> REQUEST_ATTRIBUTES = AttachmentKey.create(Map.class);
+
     private final ServerConnection connection;
     private final HeaderMap requestHeaders;
     private final HeaderMap responseHeaders;

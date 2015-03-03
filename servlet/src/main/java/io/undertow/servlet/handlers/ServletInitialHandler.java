@@ -67,6 +67,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -256,6 +257,15 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
+            //set request attributes from the connector
+            //generally this is only applicable if apache is sending AJP_ prefixed environment variables
+            Map<String, String> attrs = exchange.getAttachment(HttpServerExchange.REQUEST_ATTRIBUTES);
+            if(attrs != null) {
+                for(Map.Entry<String, String> entry : attrs.entrySet()) {
+                    request.setAttribute(entry.getKey(), entry.getValue());
+                }
+            }
+
             SecurityActions.setCurrentRequestContext(servletRequestContext);
             servletRequestContext.setRunningInsideHandler(true);
             try {

@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
+import java.util.TreeMap;
 
 import io.undertow.security.impl.ExternalAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
@@ -102,6 +103,8 @@ public class AjpRequestParser {
     public static final String SECRET = "secret";
 
     public static final String STORED_METHOD = "stored_method";
+
+    public static final String AJP_REMOTE_PORT = "AJP_REMOTE_PORT";
 
     static {
         HTTP_METHODS = new HttpString[28];
@@ -391,8 +394,21 @@ public class AjpRequestParser {
                         exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_AUTHENTICATION_TYPE, result);
                     } else if (state.currentAttribute.equals(STORED_METHOD)) {
                         exchange.setRequestMethod(new HttpString(result));
-                    } else {
+                    } else if (state.currentAttribute.equals(AJP_REMOTE_PORT)) {
+                        state.remotePort = Integer.parseInt(result);
+                    } else if (state.currentAttribute.equals(SSL_SESSION)) {
+                        state.sslSessionId = result;
+                    } else if (state.currentAttribute.equals(SSL_CIPHER)) {
+                        state.sslCipher = result;
+                    } else if (state.currentAttribute.equals(SSL_CERT)) {
+                        state.sslCert = result;
+                    } else if (state.currentAttribute.equals(SSL_KEY_SIZE)) {
+                        state.sslKeySize = result;
+                    }  else {
                         //other attributes
+                        if(state.attributes == null) {
+                            state.attributes = new TreeMap<>();
+                        }
                         state.attributes.put(state.currentAttribute, result);
                     }
                     state.currentAttribute = null;

@@ -218,6 +218,9 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 if(scheme != null) {
                     httpServerExchange.setRequestScheme(scheme);
                 }
+                if(state.attributes != null) {
+                    httpServerExchange.putAttachment(HttpServerExchange.REQUEST_ATTRIBUTES, state.attributes);
+                }
                 state = null;
                 this.httpServerExchange = null;
                 httpServerExchange.setPersistent(true);
