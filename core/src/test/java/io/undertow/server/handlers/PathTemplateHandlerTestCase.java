@@ -48,6 +48,11 @@ public class PathTemplateHandlerTestCase {
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("foo");
                     }
+                }).add("/foo/", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("foo/");
+                    }
                 })
                 .add("/foo/{bar}", new HttpHandler() {
                     @Override
@@ -66,6 +71,12 @@ public class PathTemplateHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("foo", HttpClientUtils.readResponse(result));
+
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("foo/", HttpClientUtils.readResponse(result));
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a");
             result = client.execute(get);

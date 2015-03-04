@@ -118,7 +118,7 @@ public class PathTemplateMatcher<T> {
     }
 
     private String trimBase(PathTemplate template) {
-        if (template.getBase().endsWith("/")) {
+        if (template.getBase().endsWith("/") && !template.getParameterNames().isEmpty()) {
             return template.getBase().substring(0, template.getBase().length() - 1);
         }
         return template.getBase();

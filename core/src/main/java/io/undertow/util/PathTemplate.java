@@ -67,14 +67,8 @@ public class PathTemplate implements Comparable<PathTemplate> {
             return PathTemplate.create("/" + inputPath);
         }
 
-        // otherwise normalize template
-        final StringBuilder builder = new StringBuilder(inputPath);
-        while(builder != null && builder.length() > 1 && '/' == builder.charAt(builder.length() - 1)) {
-            builder.deleteCharAt(builder.length() - 1);
-        }
-
         // create string from modified string
-        final String path = builder.toString();
+        final String path = inputPath;
 
         int state = 0;
         String base = "";

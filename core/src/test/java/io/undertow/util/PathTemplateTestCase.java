@@ -51,7 +51,7 @@ public class PathTemplateTestCase {
         testMatch("docs/{docId}/read", "/docs/mydoc/read?myQueryParam", "docId", "mydoc");
 
         // test trailing slashes
-        testMatch("/docs/mydoc/", "/docs/mydoc");
+        testMatch("/docs/mydoc/", "/docs/mydoc/");
         testMatch("/docs/{docId}/", "/docs/mydoc", "docId", "mydoc");
         testMatch("/docs/{docId}/{op}/", "/docs/mydoc/read", "docId", "mydoc", "op", "read");
         testMatch("/docs/{docId}/{op}/{allowed}/", "/docs/mydoc/read/true", "docId", "mydoc", "op", "read", "allowed", "true");
