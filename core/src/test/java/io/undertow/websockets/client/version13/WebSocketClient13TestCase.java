@@ -46,7 +46,6 @@ import io.undertow.websockets.core.BufferedTextMessage;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
 
 /**
@@ -83,7 +82,7 @@ public class WebSocketClient13TestCase {
     @Test
     public void testTextMessage() throws Exception {
 
-        final WebSocketChannel webSocketChannel = WebSocketClient.connect(worker, buffer, OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13).get();
+        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, buffer, new URI(DefaultServer.getDefaultServerURL())).connect().get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();

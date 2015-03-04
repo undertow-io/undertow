@@ -29,11 +29,9 @@ import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.client.WebSocketClientNegotiation;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.XnioWorker;
 import org.xnio.http.UpgradeFailedException;
@@ -197,7 +195,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
         }
 
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, clientBindAddress, path, WebSocketVersion.V13, clientNegotiation, null);
+        IoFuture<WebSocketChannel> session = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
+                .setSsl(ssl)
+                .setBindAddress(clientBindAddress)
+                .setClientNegotiation(clientNegotiation)
+                .connect();
         Number timeout = (Number) cec.getUserProperties().get(TIMEOUT);
         if(session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS: timeout.intValue(), TimeUnit.SECONDS) == IoFuture.Status.WAITING) {
             //add a notifier to close the channel if the connection actually completes
@@ -256,7 +258,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
 
 
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, ssl, bufferPool, OptionMap.EMPTY, clientBindAddress, path, WebSocketVersion.V13, clientNegotiation, null); //TODO: fix this
+        IoFuture<WebSocketChannel> session = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
+                .setSsl(ssl)
+                .setBindAddress(clientBindAddress)
+                .setClientNegotiation(clientNegotiation)
+                .connect();
         Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
         IoFuture.Status result = session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS : timeout.intValue(), TimeUnit.SECONDS);
         if(result == IoFuture.Status.WAITING) {
