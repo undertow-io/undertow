@@ -32,7 +32,6 @@ import io.undertow.websockets.jsr.WebSocketReconnectHandler;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
@@ -47,7 +46,6 @@ import java.net.URI;
  */
 @RunWith(DefaultServer.class)
 @HttpOneOnly
-@Ignore
 public class ClientEndpointReconnectTestCase {
 
     private static ServerWebSocketContainer deployment;
