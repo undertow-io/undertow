@@ -44,6 +44,7 @@ public class WebSocketDeploymentInfo {
     private final List<ContainerReadyListener> containerReadyListeners = new ArrayList<>();
     private final List<ExtensionHandshake> extensions = new ArrayList<>();
     private String clientBindAddress = null;
+    private WebSocketReconnectHandler reconnectHandler;
 
     public XnioWorker getWorker() {
         return worker;
@@ -130,5 +131,14 @@ public class WebSocketDeploymentInfo {
 
     public void setClientBindAddress(String clientBindAddress) {
         this.clientBindAddress = clientBindAddress;
+    }
+
+    public WebSocketReconnectHandler getReconnectHandler() {
+        return reconnectHandler;
+    }
+
+    public WebSocketDeploymentInfo setReconnectHandler(WebSocketReconnectHandler reconnectHandler) {
+        this.reconnectHandler = reconnectHandler;
+        return this;
     }
 }

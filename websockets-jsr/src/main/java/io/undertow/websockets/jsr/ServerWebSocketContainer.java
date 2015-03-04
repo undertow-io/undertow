@@ -96,6 +96,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final ThreadSetupAction threadSetupAction;
     private final boolean dispatchToWorker;
     private final InetSocketAddress clientBindAddress;
+    private final WebSocketReconnectHandler webSocketReconnectHandler;
 
     private volatile long defaultAsyncSendTimeout;
     private volatile long defaultMaxSessionIdleTimeout;
@@ -108,14 +109,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final List<WebsocketClientSslProvider> clientSslProviders;
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
-        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, null);
+        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, null, null);
     }
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker) {
-        this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, null);
+        this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, null, null);
     }
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, InetSocketAddress clientBindAddress) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
@@ -128,6 +129,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
 
         this.clientSslProviders = Collections.unmodifiableList(clientSslProviders);
+        this.webSocketReconnectHandler = reconnectHandler;
     }
 
     @Override
@@ -195,10 +197,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
         }
 
-        IoFuture<WebSocketChannel> session = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
+        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
                 .setSsl(ssl)
                 .setBindAddress(clientBindAddress)
-                .setClientNegotiation(clientNegotiation)
+                .setClientNegotiation(clientNegotiation);
+        IoFuture<WebSocketChannel> session = connectionBuilder
                 .connect();
         Number timeout = (Number) cec.getUserProperties().get(TIMEOUT);
         if(session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS: timeout.intValue(), TimeUnit.SECONDS) == IoFuture.Status.WAITING) {
@@ -234,7 +237,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
 
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);
+        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
         endpointInstance.onOpen(undertowSession, cec);
         channel.resumeReceives();
 
@@ -257,11 +260,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
 
 
-
-        IoFuture<WebSocketChannel> session = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
+        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
                 .setSsl(ssl)
                 .setBindAddress(clientBindAddress)
-                .setClientNegotiation(clientNegotiation)
+                .setClientNegotiation(clientNegotiation);
+        IoFuture<WebSocketChannel> session = connectionBuilder
                 .connect();
         Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
         IoFuture.Status result = session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS : timeout.intValue(), TimeUnit.SECONDS);
@@ -299,7 +302,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             extensions.add(ExtensionImpl.create(e));
         }
 
-        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions);
+        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
         endpointInstance.onOpen(undertowSession, cec.getConfig());
         channel.resumeReceives();
 
@@ -640,5 +643,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 }
             }
         }
+    }
+
+    public WebSocketReconnectHandler getWebSocketReconnectHandler() {
+        return webSocketReconnectHandler;
     }
 }

@@ -66,7 +66,7 @@ public class AnnotatedEndpoint extends Endpoint {
 
     @Override
     public void onOpen(final Session session, final EndpointConfig endpointConfiguration) {
-
+        this.released = false;
         this.executor = new OrderedExecutor(((UndertowSession)session).getWebSocketChannel().getWorker());
 
 

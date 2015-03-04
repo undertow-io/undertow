@@ -19,10 +19,12 @@ package io.undertow.websockets.jsr;
 
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSockets;
 import org.xnio.ChannelListener;
+import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 
 import javax.websocket.CloseReason;
@@ -34,7 +36,6 @@ import javax.websocket.RemoteEndpoint;
 import javax.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.channels.Channel;
 import java.security.Principal;
 import java.util.Collections;
 import java.util.HashMap;
@@ -42,6 +43,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -52,8 +54,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class UndertowSession implements Session {
 
     private final String sessionId;
-    private final WebSocketChannel webSocketChannel;
-    private final FrameHandler frameHandler;
+    private WebSocketChannel webSocketChannel;
+    private FrameHandler frameHandler;
     private final ServerWebSocketContainer container;
     private final Principal user;
     private final WebSocketSessionRemoteEndpoint remote;
@@ -68,59 +70,37 @@ public final class UndertowSession implements Session {
     private final Set<Session> openSessions;
     private final String subProtocol;
     private final List<Extension> extensions;
+    private final WebSocketClient.ConnectionBuilder clientConnectionBuilder;
+    private final EndpointConfig config;
     private volatile int maximumBinaryBufferSize = 0;
     private volatile int maximumTextBufferSize = 0;
     private volatile boolean localClose;
+    private int disconnectCount = 0;
+    private int failedCount = 0;
 
-    public UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
-                           Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
-                           InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
-                           final Encoding encoding, final Set<Session> openSessions, final String subProtocol,
-                           final List<Extension> extensions) {
+    UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
+                    Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
+                    InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
+                    final Encoding encoding, final Set<Session> openSessions, final String subProtocol,
+                    final List<Extension> extensions, WebSocketClient.ConnectionBuilder clientConnectionBuilder) {
         this.webSocketChannel = webSocketChannel;
         this.queryString = queryString;
         this.encoding = encoding;
         this.openSessions = openSessions;
+        this.clientConnectionBuilder = clientConnectionBuilder;
         container = handler.getContainer();
         this.user = user;
         this.requestUri = requestUri;
         this.requestParameterMap = Collections.unmodifiableMap(requestParameterMap);
         this.pathParameters = Collections.unmodifiableMap(pathParameters);
-        remote = new WebSocketSessionRemoteEndpoint(webSocketChannel, config, encoding);
+        this.config = config;
+        remote = new WebSocketSessionRemoteEndpoint(this, encoding);
         this.endpoint = endpoint;
-        webSocketChannel.getCloseSetter().set(new ChannelListener<Channel>() {
-            @Override
-            public void handleEvent(final Channel channel) {
-                close0();
-            }
-        });
-        this.frameHandler = new FrameHandler(this, this.endpoint.getInstance());
-        webSocketChannel.getReceiveSetter().set(frameHandler);
         this.sessionId = new SecureRandomSessionIdGenerator().createSessionId();
         this.attrs = Collections.synchronizedMap(new HashMap<>(config.getUserProperties()));
         this.extensions = extensions;
         this.subProtocol = subProtocol;
-        webSocketChannel.addCloseTask(new ChannelListener<WebSocketChannel>() {
-            @Override
-            public void handleEvent(WebSocketChannel channel) {
-                //so this puts us in an interesting position. We know the underlying
-                //TCP connection has been torn down, however this may have involved reading
-                //a close frame, which will be delivered shortly
-                //to get around this we schedule the code in the IO thread, so if there is a close
-                //frame awaiting delivery it will be delivered before the close
-                channel.getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        //we delegate this execution to the IO thread
-                        try {
-                            closeInternal(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, null));
-                        } catch (IOException e) {
-                            //ignore
-                        }
-                    }
-                });
-            }
-        });
+        setupWebSocketChannel(webSocketChannel);
     }
 
     @Override
@@ -256,8 +236,46 @@ public final class UndertowSession implements Session {
                 }
             } finally {
                 close0();
+                if(clientConnectionBuilder != null && !localClose) {
+                    WebSocketReconnectHandler webSocketReconnectHandler = container.getWebSocketReconnectHandler();
+                    if (webSocketReconnectHandler != null) {
+                        JsrWebSocketLogger.REQUEST_LOGGER.debugf("Calling reconnect handler for %s", this);
+                        long reconnect = webSocketReconnectHandler.disconnected(closeReason, requestUri, this, ++disconnectCount);
+                        if (reconnect >= 0) {
+                            handleReconnect(reconnect);
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private void handleReconnect(final long reconnect) {
+        JsrWebSocketLogger.REQUEST_LOGGER.debugf("Attempting reconnect in %s ms for session %s", reconnect, this);
+        webSocketChannel.getIoThread().executeAfter(new Runnable() {
+            @Override
+            public void run() {
+                clientConnectionBuilder.connect().addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
+                    @Override
+                    public void handleDone(WebSocketChannel data, Object attachment) {
+                        closed.set(false);
+                        UndertowSession.this.webSocketChannel = data;
+                        UndertowSession.this.setupWebSocketChannel(data);
+                        localClose = false;
+                        endpoint.getInstance().onOpen(UndertowSession.this, config);
+                        webSocketChannel.resumeReceives();
+                    }
+
+                    @Override
+                    public void handleFailed(IOException exception, Object attachment) {
+                        long timeout = container.getWebSocketReconnectHandler().reconnectFailed(exception, getRequestURI(), UndertowSession.this, ++failedCount);
+                        if(timeout >= 0) {
+                            handleReconnect(timeout);
+                        }
+                    }
+                }, null);
+            }
+        }, reconnect, TimeUnit.MILLISECONDS);
     }
 
     public void forceClose() {
@@ -350,5 +368,31 @@ public final class UndertowSession implements Session {
 
     public WebSocketChannel getWebSocketChannel() {
         return webSocketChannel;
+    }
+
+    private void setupWebSocketChannel(WebSocketChannel webSocketChannel) {
+        this.frameHandler = new FrameHandler(this, this.endpoint.getInstance());
+        webSocketChannel.getReceiveSetter().set(frameHandler);
+        webSocketChannel.addCloseTask(new ChannelListener<WebSocketChannel>() {
+            @Override
+            public void handleEvent(WebSocketChannel channel) {
+                //so this puts us in an interesting position. We know the underlying
+                //TCP connection has been torn down, however this may have involved reading
+                //a close frame, which will be delivered shortly
+                //to get around this we schedule the code in the IO thread, so if there is a close
+                //frame awaiting delivery it will be delivered before the close
+                channel.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        //we delegate this execution to the IO thread
+                        try {
+                            closeInternal(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, null));
+                        } catch (IOException e) {
+                            //ignore
+                        }
+                    }
+                });
+            }
+        });
     }
 }

@@ -20,14 +20,12 @@ package io.undertow.websockets.jsr;
 import io.undertow.websockets.core.BinaryOutputStream;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.WebSockets;
 import org.xnio.channels.Channels;
 
 import javax.websocket.EncodeException;
-import javax.websocket.EndpointConfig;
 import javax.websocket.RemoteEndpoint;
 import javax.websocket.SendHandler;
 import java.io.IOException;
@@ -47,15 +45,13 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
 
-    private final WebSocketChannel webSocketChannel;
-    private final EndpointConfig config;
+    private final UndertowSession undertowSession;
     private final Async async = new AsyncWebSocketSessionRemoteEndpoint();
     private final Basic basic = new BasicWebSocketSessionRemoteEndpoint();
     private final Encoding encoding;
 
-    public WebSocketSessionRemoteEndpoint(WebSocketChannel webSocketChannel, EndpointConfig config, final Encoding encoding) {
-        this.webSocketChannel = webSocketChannel;
-        this.config = config;
+    public WebSocketSessionRemoteEndpoint(UndertowSession session, final Encoding encoding) {
+        this.undertowSession = session;
         this.encoding = encoding;
     }
 
@@ -90,7 +86,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         if(applicationData.remaining() > 125) {
             throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
         }
-        WebSockets.sendPing(applicationData, webSocketChannel, null);
+        WebSockets.sendPing(applicationData, undertowSession.getWebSocketChannel(), null);
     }
 
     @Override
@@ -101,7 +97,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         if(applicationData.remaining() > 125) {
             throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
         }
-        WebSockets.sendPong(applicationData, webSocketChannel, null);
+        WebSockets.sendPong(applicationData, undertowSession.getWebSocketChannel(), null);
     }
 
     class AsyncWebSocketSessionRemoteEndpoint implements Async {
@@ -126,7 +122,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if(text == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            WebSockets.sendText(text, webSocketChannel, new SendHandlerAdapter(handler), sendTimeout);
+            WebSockets.sendText(text, undertowSession.getWebSocketChannel(), new SendHandlerAdapter(handler), sendTimeout);
         }
 
         @Override
@@ -135,7 +131,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
             final SendResultFuture future = new SendResultFuture();
-            WebSockets.sendText(text, webSocketChannel, future, sendTimeout);
+            WebSockets.sendText(text, undertowSession.getWebSocketChannel(), future, sendTimeout);
             return future;
         }
 
@@ -145,7 +141,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
             final SendResultFuture future = new SendResultFuture();
-            WebSockets.sendBinary(data, webSocketChannel, future, sendTimeout);
+            WebSockets.sendBinary(data, undertowSession.getWebSocketChannel(), future, sendTimeout);
             return future;
         }
 
@@ -158,7 +154,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if(data == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            WebSockets.sendBinary(data, webSocketChannel, new SendHandlerAdapter(completion), sendTimeout);
+            WebSockets.sendBinary(data, undertowSession.getWebSocketChannel(), new SendHandlerAdapter(completion), sendTimeout);
         }
 
         @Override
@@ -186,22 +182,22 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         private void sendObjectImpl(final Object o, final WebSocketCallback callback) {
             try {
                 if(o instanceof String) {
-                    WebSockets.sendText((String)o, webSocketChannel, callback, sendTimeout);
+                    WebSockets.sendText((String)o, undertowSession.getWebSocketChannel(), callback, sendTimeout);
                 } else if(o instanceof byte[]) {
-                    WebSockets.sendBinary(ByteBuffer.wrap((byte[])o), webSocketChannel, callback, sendTimeout);
+                    WebSockets.sendBinary(ByteBuffer.wrap((byte[])o), undertowSession.getWebSocketChannel(), callback, sendTimeout);
                 } else if(o instanceof ByteBuffer) {
-                    WebSockets.sendBinary((ByteBuffer)o, webSocketChannel, callback, sendTimeout);
+                    WebSockets.sendBinary((ByteBuffer)o, undertowSession.getWebSocketChannel(), callback, sendTimeout);
                 } else if (encoding.canEncodeText(o.getClass())) {
-                    WebSockets.sendText(encoding.encodeText(o), webSocketChannel, callback, sendTimeout);
+                    WebSockets.sendText(encoding.encodeText(o), undertowSession.getWebSocketChannel(), callback, sendTimeout);
                 } else if (encoding.canEncodeBinary(o.getClass())) {
-                    WebSockets.sendBinary(encoding.encodeBinary(o), webSocketChannel, callback, sendTimeout);
+                    WebSockets.sendBinary(encoding.encodeBinary(o), undertowSession.getWebSocketChannel(), callback, sendTimeout);
                 } else {
                     // TODO: Replace on bug is fixed
                     // https://issues.jboss.org/browse/LOGTOOL-64
                     throw new EncodeException(o, "No suitable encoder found");
                 }
             } catch (Exception e) {
-                callback.onError(webSocketChannel, null, e);
+                callback.onError(undertowSession.getWebSocketChannel(), null, e);
             }
         }
 
@@ -228,7 +224,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if(applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            WebSockets.sendPing(applicationData, webSocketChannel, null, sendTimeout);
+            WebSockets.sendPing(applicationData, undertowSession.getWebSocketChannel(), null, sendTimeout);
         }
 
         @Override
@@ -239,7 +235,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if(applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            WebSockets.sendPong(applicationData, webSocketChannel, null, sendTimeout);
+            WebSockets.sendPong(applicationData, undertowSession.getWebSocketChannel(), null, sendTimeout);
         }
     }
 
@@ -261,7 +257,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
             assertNotInFragment();
-            WebSockets.sendTextBlocking(text, webSocketChannel);
+            WebSockets.sendTextBlocking(text, undertowSession.getWebSocketChannel());
         }
 
         @Override
@@ -270,7 +266,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
             assertNotInFragment();
-            WebSockets.sendBinaryBlocking(data, webSocketChannel);
+            WebSockets.sendBinaryBlocking(data, undertowSession.getWebSocketChannel());
             data.clear(); //for some reason the TCK expects this, might as well just match the RI behaviour
         }
 
@@ -283,7 +279,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
             if (textFrameSender == null) {
-                textFrameSender = webSocketChannel.send(WebSocketFrameType.TEXT);
+                textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
             }
             try {
                 Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
@@ -309,7 +305,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
             if (binaryFrameSender == null) {
-                binaryFrameSender = webSocketChannel.send(WebSocketFrameType.BINARY);
+                binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
             }
             try {
                 Channels.writeBlocking(binaryFrameSender, partialByte);
@@ -329,13 +325,13 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         public OutputStream getSendStream() throws IOException {
             assertNotInFragment();
             //TODO: track fragment state
-            return new BinaryOutputStream(webSocketChannel.send(WebSocketFrameType.BINARY));
+            return new BinaryOutputStream(undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY));
         }
 
         @Override
         public Writer getSendWriter() throws IOException {
             assertNotInFragment();
-            return new OutputStreamWriter(new BinaryOutputStream(webSocketChannel.send(WebSocketFrameType.TEXT)), UTF_8);
+            return new OutputStreamWriter(new BinaryOutputStream(undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT)), UTF_8);
         }
 
         @Override
@@ -354,9 +350,9 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             } else if(o instanceof ByteBuffer) {
                 sendBinary((ByteBuffer)o);
             } else if (encoding.canEncodeText(o.getClass())) {
-                WebSockets.sendTextBlocking(encoding.encodeText(o), webSocketChannel);
+                WebSockets.sendTextBlocking(encoding.encodeText(o), undertowSession.getWebSocketChannel());
             } else if (encoding.canEncodeBinary(o.getClass())) {
-                WebSockets.sendBinaryBlocking(encoding.encodeBinary(o), webSocketChannel);
+                WebSockets.sendBinaryBlocking(encoding.encodeBinary(o), undertowSession.getWebSocketChannel());
             } else {
                 // TODO: Replace on bug is fixed
                 // https://issues.jboss.org/browse/LOGTOOL-64
@@ -387,7 +383,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if(applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            WebSockets.sendPingBlocking(applicationData, webSocketChannel);
+            WebSockets.sendPingBlocking(applicationData, undertowSession.getWebSocketChannel());
         }
 
         @Override
@@ -398,7 +394,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if(applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            WebSockets.sendPongBlocking(applicationData, webSocketChannel);
+            WebSockets.sendPongBlocking(applicationData, undertowSession.getWebSocketChannel());
         }
     }
 }

@@ -16,24 +16,25 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.test.reconnect;
 
-import javax.websocket.CloseReason;
-import java.net.URI;
+import javax.websocket.OnMessage;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
+import java.io.IOException;
 
 /**
- * Interface that can be used to listen for web socket disconnect and connection
- * failure events, and handle the reconnection. Both methods return a long timeout,
- * which is the number of milliseconds to wait before attempting reconnect.
- *
- * These entries are loaded from META-INF/services entries on deployment time.
- *
  * @author Stuart Douglas
  */
-public interface WebsocketReconnectHandler {
+@ServerEndpoint("/")
+public class DisconnectServerEndpoint {
 
-    long onConnectionClose(CloseReason closeReason, URI connectedUri, Object endpoint);
-
-    long onConnectionFailure(Exception exception, URI connectionURI);
-
+    @OnMessage
+    public String text(String message, Session session) throws IOException {
+        if(message.equals("close")) {
+            session.close();
+            return null;
+        }
+        return "ECHO-" + message;
+    }
 }

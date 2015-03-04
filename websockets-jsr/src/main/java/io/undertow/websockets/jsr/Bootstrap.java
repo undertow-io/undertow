@@ -78,7 +78,7 @@ public class Bootstrap implements ServletExtension {
             bind = new InetSocketAddress(info.getClientBindAddress(), 0);
         }
 
-        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, threadSetupAction, info.isDispatchToWorkerThread(), bind);
+        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, threadSetupAction, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler());
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);
