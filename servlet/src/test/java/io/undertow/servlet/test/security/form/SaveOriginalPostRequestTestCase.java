@@ -28,9 +28,11 @@ import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
 import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -76,6 +78,11 @@ public class SaveOriginalPostRequestTestCase {
                                            .setServletSecurityInfo(new ServletSecurityInfo()
                                                                    .addRoleAllowed("role1"))
                                            .addMapping("/secured/dumpRequest");
+
+        ServletInfo securedIndexRequestDumper = new ServletInfo("SecuredIndexRequestDumperServlet", RequestDumper.class)
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("role1"))
+                .addMapping("/index.html");
         ServletInfo unsecuredRequestDumper = new ServletInfo("UnsecuredRequestDumperServlet", RequestDumper.class)
                                              .addMapping("/dumpRequest");
         ServletInfo loginFormServlet = new ServletInfo("loginPage", FormLoginServlet.class)
@@ -93,8 +100,10 @@ public class SaveOriginalPostRequestTestCase {
                                  .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                                  .setDeploymentName("servletContext.war")
                                  .setIdentityManager(identityManager)
+                                 .addWelcomePage("index.html")
+                                 .setResourceManager(new TestResourceLoader(SaveOriginalPostRequestTestCase.class))
                                  .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
-                                 .addServlets(securedRequestDumper, unsecuredRequestDumper, loginFormServlet);
+                                 .addServlets(securedRequestDumper, unsecuredRequestDumper, loginFormServlet, securedIndexRequestDumper);
 
         DeploymentManager manager = container.addDeployment(builder);
 
@@ -124,6 +133,25 @@ public class SaveOriginalPostRequestTestCase {
         result = executePostRequest(client, "/servletContext/j_security_check", new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1"));
         assertEquals(200, result.getStatusLine().getStatusCode());
         response = HttpClientUtils.readResponse(result);
+
+        // let's check if the original request was saved, including its parameters.
+        assertTrue(response.contains("securedParam1=securedParam1Value"));
+        assertTrue(response.contains("securedParam2=securedParam2Value"));
+    }
+
+    @Test
+    public void testSavedRequestWithWelcomeFile() throws IOException {
+        TestHttpClient client = createHttpClient();
+
+        // this request should be saved and the client redirect to the login form.
+        HttpResponse result = executePostRequest(client, "/servletContext/", new BasicNameValuePair("securedParam1", "securedParam1Value"), new BasicNameValuePair("securedParam2", "securedParam2Value"));
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        Assert.assertEquals("Login Page", HttpClientUtils.readResponse(result));
+
+        // let's perform a successful authentication and get the request restored
+        result = executePostRequest(client, "/servletContext/j_security_check", new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1"));
+        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        String response = HttpClientUtils.readResponse(result);
 
         // let's check if the original request was saved, including its parameters.
         assertTrue(response.contains("securedParam1=securedParam1Value"));
