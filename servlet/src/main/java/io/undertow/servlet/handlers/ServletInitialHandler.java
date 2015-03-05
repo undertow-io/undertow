@@ -132,7 +132,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
-            exchange.setResponseCode(StatusCodes.FOUND);
+            exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
             exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             return;
         } else if (info.getType() == ServletPathMatch.Type.REWRITE) {
