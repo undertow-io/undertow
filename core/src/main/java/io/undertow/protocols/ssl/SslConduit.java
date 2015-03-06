@@ -184,6 +184,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     @Override
     public void resumeReads() {
+        if(anyAreSet(state, FLAG_READS_RESUMED)) {
+            //already resumed
+            return;
+        }
         resumeReads(false);
     }
     @Override
@@ -758,7 +762,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
             //attempt to write it out, if we fail we just return
             //we ignore the handshake status, as wrap will get called again
-            int res = sink.write(wrappedData.getResource());
+            if(wrappedData.getResource().hasRemaining()) {
+                sink.write(wrappedData.getResource());
+            }
+            //if it was not a complete write we just return
             if(wrappedData.getResource().hasRemaining()) {
                 return result.bytesConsumed();
             }
@@ -830,7 +837,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_READ_REQUIRES_WRITE)) {
             state &= ~FLAG_READ_REQUIRES_WRITE;
             if(anyAreSet(state, FLAG_READS_RESUMED)) {
-                resumeReads();
+                resumeReads(false);
             }
             if(allAreClear(state, FLAG_WRITES_RESUMED)) {
                 sink.suspendWrites();
