@@ -1001,7 +1001,12 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 } else {
                     //there is data in the buffers so we do a wakeup
                     //as we may not get an actual read notification
-                    runReadListener();
+                    //if we need to write for the SSL engine to progress we don't invoke the read listener
+                    //otherwise it will run in a busy loop till the channel becomes writable
+                    //we also don't re-run if we have outstanding tasks
+                    if(!(anyAreSet(state, FLAG_READ_REQUIRES_WRITE) && wrappedData != null) && outstandingTasks == 0) {
+                        runReadListener();
+                    }
                 }
             }
         }
