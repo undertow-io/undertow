@@ -96,7 +96,7 @@ public class WebsocketStressTestCase {
     }
 
     @Test
-    public void testCloseReason() throws Exception {
+    public void webSocketStressTestCase() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
             final List<Future<?>> futures = new ArrayList<>();

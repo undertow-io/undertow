@@ -284,6 +284,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                 serverOptions = OptionMap.builder()
                         .set(Options.TCP_NODELAY, true)
+                        .set(Options.BACKLOG, 1000)
                         .set(Options.REUSE_ADDRESSES, true)
                         .set(Options.BALANCING_TOKENS, 1)
                         .set(Options.BALANCING_CONNECTIONS, 2)
