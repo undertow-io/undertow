@@ -23,6 +23,7 @@ import java.util.Map;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
+import io.undertow.util.AttachmentKey;
 
 /**
  * Encapsulation of session cookie configuration. This removes the need for the session manager to
@@ -33,6 +34,8 @@ import io.undertow.server.handlers.CookieImpl;
 public class SessionCookieConfig implements SessionConfig {
 
     public static final String DEFAULT_SESSION_ID = "JSESSIONID";
+
+    private final AttachmentKey<String> NEW_SESSION_ID = AttachmentKey.create(String.class);
 
     private String cookieName = DEFAULT_SESSION_ID;
     private String path = "/";
@@ -62,7 +65,7 @@ public class SessionCookieConfig implements SessionConfig {
             cookie.setMaxAge(maxAge);
         }
         exchange.setResponseCookie(cookie);
-        exchange.getRequestCookies().put(cookieName, cookie);
+        exchange.putAttachment(NEW_SESSION_ID, sessionId);
     }
 
     @Override
@@ -80,6 +83,10 @@ public class SessionCookieConfig implements SessionConfig {
 
     @Override
     public String findSessionId(final HttpServerExchange exchange) {
+        String newId = exchange.getAttachment(NEW_SESSION_ID);
+        if(newId != null) {
+            return newId;
+        }
         Map<String, Cookie> cookies = exchange.getRequestCookies();
         if (cookies != null) {
             Cookie sessionId = cookies.get(cookieName);
