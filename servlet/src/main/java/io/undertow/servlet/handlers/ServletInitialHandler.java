@@ -39,6 +39,7 @@ import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
@@ -132,7 +133,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
-            exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
+            if(exchange.getRequestMethod().equals(Methods.GET) || exchange.getRequestMethod().equals(Methods.HEAD)) {
+                exchange.setResponseCode(StatusCodes.FOUND);
+            } else {
+                exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
+            }
             exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             return;
         } else if (info.getType() == ServletPathMatch.Type.REWRITE) {
