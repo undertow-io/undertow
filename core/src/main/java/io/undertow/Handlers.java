@@ -55,6 +55,8 @@ import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.server.handlers.sse.ServerSentEventConnectionCallback;
+import io.undertow.server.handlers.sse.ServerSentEventHandler;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 
@@ -184,6 +186,25 @@ public class Handlers {
         return new WebSocketProtocolHandshakeHandler(sessionHandler, next);
     }
 
+    /**
+     * A handler for server sent events
+     *
+     *
+     * @param callback The server sent events callback
+     * @return A new server sent events handler
+     */
+    public static ServerSentEventHandler serverSentEvents(ServerSentEventConnectionCallback callback) {
+        return new ServerSentEventHandler(callback);
+    }
+
+    /**
+     * A handler for server sent events
+     *
+     * @return A new server sent events handler
+     */
+    public static ServerSentEventHandler serverSentEvents() {
+        return new ServerSentEventHandler();
+    }
     /**
      * Return a new resource handler
      *

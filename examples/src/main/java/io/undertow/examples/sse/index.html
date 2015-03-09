@@ -1,26 +1,52 @@
+<!--
+  ~ JBoss, Home of Professional Open Source.
+  ~ Copyright 2014 Red Hat, Inc., and individual contributors
+  ~ as indicated by the @author tags.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  -->
+
 <html>
 <head><title>Undertow Chat</title>
 <script>
     var socket;
-    if (window.WebSocket) {
-        socket = new WebSocket("ws://localhost:8080/myapp");
-        socket.onmessage = function (event) {
+    if (window.EventSource) {
+        var source = new EventSource("sse");
+        source.onmessage = function(event) {
             var chat = document.getElementById('chat');
-            chat.innerHTML = chat.innerHTML + event.data + "<br />";
+            chat.innerHTML += event.data + "<br />";
         };
     } else {
-        alert("Your browser does not support Websockets. (Use Chrome)");
+        alert("Your browser does not support Server Sent Events. (Use Chrome)");
     }
 
     function send(message) {
-        if (!window.WebSocket) {
+        if (!window.EventSource) {
             return false;
         }
-        if (socket.readyState == WebSocket.OPEN) {
-            socket.send(message);
-        } else {
-            alert("The socket is not open.");
+        var http = new XMLHttpRequest();
+        http.open("POST", "send", true);
+        http.setRequestHeader("Content-type", "test/plain");
+        http.setRequestHeader("Content-length", message.length);
+        http.setRequestHeader("Connection", "close");
+
+        http.onreadystatechange = function() {
+            if (http.readyState == 4 && http.status != 200) {
+                alert("Failed to send chat message" + http.responseText);
+            }
         }
+
+        http.send(message);
         return false;
     }
 </script>
@@ -69,7 +95,7 @@
 <body>
 <div class="page">
     <div class="center" >
-        <h1>JSR-356 Web Socket Chat</h1>
+        <h1>Server Sent Events Chat</h1>
         <div id="chat" style="height:100%;width: 100%; overflow: scroll;">
 
 
