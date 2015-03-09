@@ -26,6 +26,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
+import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
@@ -62,6 +64,9 @@ public class ServerSentEventConnection implements Channel {
     private static final AtomicIntegerFieldUpdater<ServerSentEventConnection> openUpdater = AtomicIntegerFieldUpdater.newUpdater(ServerSentEventConnection.class, "open");
     private volatile int open = 1;
     private volatile boolean shutdown = false;
+    private volatile long keepAliveTime = -1;
+    private XnioExecutor.Key timerKey;
+
 
     public ServerSentEventConnection(HttpServerExchange exchange, StreamSinkChannel sink) {
         this.exchange = exchange;
@@ -69,6 +74,9 @@ public class ServerSentEventConnection implements Channel {
         this.sink.getCloseSetter().set(new ChannelListener<StreamSinkChannel>() {
             @Override
             public void handleEvent(StreamSinkChannel channel) {
+                if(timerKey != null) {
+                    timerKey.remove();
+                }
                 for (ChannelListener<ServerSentEventConnection> listener : closeTasks) {
                     ChannelListeners.invokeChannelListener(ServerSentEventConnection.this, listener);
                 }
@@ -77,10 +85,19 @@ public class ServerSentEventConnection implements Channel {
         this.sink.getWriteSetter().set(writeListener);
     }
 
+    /**
+     * Adds a listener that will be invoked when the channel is closed
+     *
+     * @param listener The listener to invoke
+     */
     public void addCloseTask(ChannelListener<ServerSentEventConnection> listener) {
         this.closeTasks.add(listener);
     }
 
+    /**
+     *
+     * @return The principal that was associated with the SSE request
+     */
     public Principal getPrincipal() {
         Account account = getAccount();
         if (account != null) {
@@ -89,6 +106,10 @@ public class ServerSentEventConnection implements Channel {
         return null;
     }
 
+    /**
+     *
+     * @return The account that was associated with the SSE request
+     */
     public Account getAccount() {
         SecurityContext sc = exchange.getSecurityContext();
         if (sc != null) {
@@ -97,26 +118,57 @@ public class ServerSentEventConnection implements Channel {
         return null;
     }
 
+    /**
+     *
+     * @return The request headers from the initial request that opened this connection
+     */
     public HeaderMap getRequestHeaders() {
         return exchange.getRequestHeaders();
     }
 
+    /**
+     *
+     * @return The response headers from the initial request that opened this connection
+     */
     public HeaderMap getResponseHeaders() {
         return exchange.getResponseHeaders();
     }
 
+    /**
+     *
+     * @return The request URI from the initial request that opened this connection
+     */
     public String getRequestURI() {
         return exchange.getRequestURI();
     }
 
+    /**
+     * Sends an event to the remote client
+     *
+     * @param data The event data
+     */
     public void send(String data) {
         send(data, null, null, null);
     }
 
+    /**
+     * Sends an event to the remote client
+     *
+     * @param data The event data
+     * @param callback A callback that is notified on Success or failure
+     */
     public void send(String data, EventCallback callback) {
         send(data, null, null, callback);
     }
 
+    /**
+     * Sends an event to the remote client
+     *
+     * @param data The event data
+     * @param event The event name
+     * @param id The event ID
+     * @param callback A callback that is notified on Success or failure
+     */
     public void send(String data, String event, String id, EventCallback callback) {
         if (open == 0 || shutdown) {
             if (callback != null) {
@@ -134,6 +186,47 @@ public class ServerSentEventConnection implements Channel {
                 }
             }
         });
+    }
+
+    /**
+     *
+     *
+     * @return The keep alive time
+     */
+    public long getKeepAliveTime() {
+        return keepAliveTime;
+    }
+
+    /**
+     * Sets the keep alive time in milliseconds. If this is larger than zero a ':' message will be sent this often
+     * (assuming there is no activity) to keep the connection alive.
+     *
+     * The spec recommends a value of 15000 (15 seconds).
+     *
+     * @param keepAliveTime The time in milliseconds between keep alive messaged
+     */
+    public void setKeepAliveTime(long keepAliveTime) {
+        this.keepAliveTime = keepAliveTime;
+        if(this.timerKey != null) {
+            this.timerKey.remove();
+        }
+        this.timerKey = sink.getIoThread().executeAtInterval(new Runnable() {
+            @Override
+            public void run() {
+                if(shutdown || open == 0) {
+                    if(timerKey != null) {
+                        timerKey.remove();
+                    }
+                    return;
+                }
+                if(pooled == null) {
+                    pooled = exchange.getConnection().getBufferPool().allocate();
+                    pooled.getResource().put(":\n".getBytes(StandardCharsets.UTF_8));
+                    pooled.getResource().flip();
+                    writeListener.handleEvent(sink);
+                }
+            }
+        }, keepAliveTime, TimeUnit.MILLISECONDS);
     }
 
     private void fillBuffer() {
