@@ -91,7 +91,7 @@ public class SetHeaderHandler implements HttpHandler {
     }
 
 
-    public class Builder implements HandlerBuilder {
+    public static class Builder implements HandlerBuilder {
         @Override
         public String name() {
             return "header";
