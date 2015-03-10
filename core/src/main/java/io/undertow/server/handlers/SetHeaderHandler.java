@@ -18,11 +18,19 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HttpString;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Set a fixed response header.
@@ -36,18 +44,42 @@ public class SetHeaderHandler implements HttpHandler {
     private final HttpHandler next;
 
     public SetHeaderHandler(final String header, final String value) {
+        if(value == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("value");
+        }
+        if(header == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("header");
+        }
         this.next = ResponseCodeHandler.HANDLE_404;
         this.value = ExchangeAttributes.constant(value);
         this.header = new HttpString(header);
     }
 
     public SetHeaderHandler(final HttpHandler next, final String header, final ExchangeAttribute value) {
+        if(value == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("value");
+        }
+        if(header == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("header");
+        }
+        if(next == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("next");
+        }
         this.next = next;
         this.value = value;
         this.header = new HttpString(header);
     }
 
     public SetHeaderHandler(final HttpHandler next, final String header, final String value) {
+        if(value == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("value");
+        }
+        if(header == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("header");
+        }
+        if(next == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("next");
+        }
         this.next = next;
         this.value = ExchangeAttributes.constant(value);
         this.header = new HttpString(header);
@@ -56,5 +88,48 @@ public class SetHeaderHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.getResponseHeaders().put(header, value.readAttribute(exchange));
         next.handleRequest(exchange);
+    }
+
+
+    public class Builder implements HandlerBuilder {
+        @Override
+        public String name() {
+            return "header";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> parameters = new HashMap<>();
+            parameters.put("header", String.class);
+            parameters.put("value", ExchangeAttribute.class);
+
+            return parameters;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            final Set<String> req = new HashSet<>();
+            req.add("value");
+            req.add("header");
+            return req;
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(final Map<String, Object> config) {
+            final ExchangeAttribute value = (ExchangeAttribute) config.get("value");
+            final String header = (String) config.get("header");
+
+            return new HandlerWrapper() {
+                @Override
+                public HttpHandler wrap(HttpHandler handler) {
+                    return new SetHeaderHandler(handler, header, value);
+                }
+            };
+        }
     }
 }
