@@ -127,7 +127,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                 case STATE_START: {
                     log.trace("Starting request");
                     // we assume that our buffer has enough space for the initial request line plus one more CR+LF
-                    assert buffer.remaining() >= 0x100;
+                    assert buffer.remaining() >= 50;
                     request.getMethod().appendTo(buffer);
                     buffer.put((byte) ' ');
                     string = request.getPath();

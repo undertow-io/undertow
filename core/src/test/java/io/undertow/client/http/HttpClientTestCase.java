@@ -168,7 +168,7 @@ public class HttpClientTestCase {
         final CountDownLatch latch = new CountDownLatch(10);
         DefaultServer.startSSLServer();
         SSLContext context = DefaultServer.getClientSSLContext();
-        XnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getBufferPool(), context);
+        XnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, context);
 
         final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
         try {

@@ -40,6 +40,7 @@
         <proxy>false</proxy>
         <dump>false</dump>
         <test.ipv6>false</test.ipv6>
+        <bufferSize>8192</bufferSize>
     </properties>
 
     <dependencies>
@@ -167,6 +168,7 @@
                         <test.ajp>${ajp}</test.ajp>
                         <test.proxy>${proxy}</test.proxy>
                         <test.dump>${dump}</test.dump>
+                        <test.bufferSize>${bufferSize}</test.bufferSize>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
@@ -202,6 +204,7 @@
                                     <systemPropertyVariables>
                                         <test.proxy>true</test.proxy>
                                         <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
@@ -226,6 +229,7 @@
                                     <systemPropertyVariables>
                                         <test.ajp>true</test.ajp>
                                         <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
@@ -250,6 +254,7 @@
                                     <systemPropertyVariables>
                                         <test.spdy>true</test.spdy>
                                         <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
@@ -274,6 +279,7 @@
                                     <systemPropertyVariables>
                                         <test.https>true</test.https>
                                         <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
@@ -298,6 +304,7 @@
                                     <systemPropertyVariables>
                                         <test.h2>true</test.h2>
                                         <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
@@ -322,6 +329,7 @@
                                     <systemPropertyVariables>
                                         <test.h2c>true</test.h2c>
                                         <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
                                         <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager

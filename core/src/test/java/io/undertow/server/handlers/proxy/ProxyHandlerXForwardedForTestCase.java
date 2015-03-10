@@ -49,7 +49,7 @@ public class ProxyHandlerXForwardedForTestCase {
         handlerPort = port + 2;
 
         DefaultServer.startSSLServer();
-        ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getBufferPool(), DefaultServer.getClientSSLContext());
+        ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, DefaultServer.getClientSSLContext());
 
         server = Undertow.builder()
             .addHttpsListener(handlerPort, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())

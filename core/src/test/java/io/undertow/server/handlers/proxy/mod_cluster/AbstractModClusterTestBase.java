@@ -84,7 +84,7 @@ public abstract class AbstractModClusterTestBase {
         port = getHostPort("default");
         hostName = getHostAddress("default");
 
-        xnioSsl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.getBufferPool(), getClientSSLContext());
+        xnioSsl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, getClientSSLContext());
     }
 
     protected List<NodeTestConfig> nodes;
