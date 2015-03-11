@@ -147,7 +147,7 @@ public final class Undertow {
                         boolean spdy = serverOptions.get(UndertowOptions.ENABLE_SPDY, false);
                         boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, false);
                         if(spdy || http2) {
-                            AlpnOpenListener alpn = new AlpnOpenListener(buffers, httpOpenListener);
+                            AlpnOpenListener alpn = new AlpnOpenListener(buffers, undertowOptions, httpOpenListener);
                             if(spdy) {
                                 SpdyOpenListener spdyListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions);
                                 spdyListener.setRootHandler(rootHandler);
