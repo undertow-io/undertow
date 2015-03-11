@@ -111,7 +111,7 @@ public class PathMatcher<T> {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
 
-        final String normalizedPath = this.normalizeSlashes(path);
+        final String normalizedPath = normalizeSlashes(path);
 
         if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath)) {
             this.defaultHandler = handler;
@@ -129,17 +129,17 @@ public class PathMatcher<T> {
         if (path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
-        exactPathMatches.put(this.normalizeSlashes(path), handler);
+        exactPathMatches.put(normalizeSlashes(path), handler);
         return this;
     }
 
     public T getExactPath(final String path) {
-        return exactPathMatches.get(this.normalizeSlashes(path));
+        return exactPathMatches.get(normalizeSlashes(path));
     }
 
     public T getPrefixPath(final String path) {
 
-        final String normalizedPath = this.normalizeSlashes(path);
+        final String normalizedPath = normalizeSlashes(path);
 
         // enable the prefix path mechanism to return the default handler
         if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath) && !paths.containsKey(normalizedPath)) {
@@ -179,7 +179,7 @@ public class PathMatcher<T> {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
 
-        final String normalizedPath = this.normalizeSlashes(path);
+        final String normalizedPath = normalizeSlashes(path);
 
         if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath)) {
             defaultHandler = null;
@@ -197,7 +197,7 @@ public class PathMatcher<T> {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
 
-        exactPathMatches.remove(this.normalizeSlashes(path));
+        exactPathMatches.remove(normalizeSlashes(path));
 
         return this;
     }
@@ -239,7 +239,7 @@ public class PathMatcher<T> {
      * @param path the path to normalize
      * @return a normalized (with respect to slashes) result
      */
-    private String normalizeSlashes(final String path) {
+    public static String normalizeSlashes(final String path) {
         // prepare
         final StringBuilder builder = new StringBuilder(path);
         boolean modified = false;
