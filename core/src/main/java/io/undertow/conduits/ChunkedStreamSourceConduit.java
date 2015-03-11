@@ -158,7 +158,9 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         }
         Pooled<ByteBuffer> pooled = bufferWrapper.allocate();
         ByteBuffer buf = pooled.getResource();
+        boolean free = true;
         try {
+            //we need to do our initial read into a
             int r = next.read(buf);
             buf.flip();
             if (r == -1) {
@@ -192,6 +194,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                     buf.limit(orig);
                     chunkRemaining -= remaining;
                     updateRemainingAllowed(remaining);
+                    free = false;
                     return remaining;
                 } else if (buf.hasRemaining()) {
                     int old = buf.limit();
@@ -227,6 +230,8 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                     } finally {
                         dst.limit(old);
                     }
+                } else {
+                    free = false;
                 }
                 updateRemainingAllowed(read);
                 return read;
@@ -240,7 +245,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             if(chunkRemaining >= 0) {
                 chunkReader.setChunkRemaining(chunkRemaining);
             }
-            if (buf.hasRemaining()) {
+            if (!free && buf.hasRemaining()) {
                 bufferWrapper.pushBack(pooled);
             } else {
                 pooled.free();
@@ -250,7 +255,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     }
 
     public boolean isFinished() {
-        return chunkReader.getChunkRemaining() == -1;
+        return closed || chunkReader.getChunkRemaining() == -1;
     }
 
     interface BufferWrapper {
