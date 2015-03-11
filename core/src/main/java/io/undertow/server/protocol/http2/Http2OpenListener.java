@@ -44,6 +44,8 @@ import java.nio.ByteBuffer;
  */
 public final class Http2OpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
     public static final String HTTP2 = "h2";
+    @Deprecated
+    public static final String HTTP2_14 = "h2-14";
 
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
