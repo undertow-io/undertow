@@ -1066,11 +1066,15 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         @Override
         public void writeReady() {
             if(anyAreSet(state, FLAG_READ_REQUIRES_WRITE)) {
-                try {
-                    doHandshake();
-                } catch (IOException e) {
-                    UndertowLogger.REQUEST_LOGGER.ioException(e);
-                    IoUtils.safeClose(delegate);
+                if(anyAreSet(state, FLAG_READS_RESUMED)) {
+                    readReadyHandler.readReady();
+                } else {
+                    try {
+                        doHandshake();
+                    } catch (IOException e) {
+                        UndertowLogger.REQUEST_LOGGER.ioException(e);
+                        IoUtils.safeClose(delegate);
+                    }
                 }
             }
             if (anyAreSet(state, FLAG_WRITES_RESUMED)) {

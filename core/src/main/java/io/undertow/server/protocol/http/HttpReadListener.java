@@ -216,6 +216,14 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             if(connectorStatistics != null) {
                 connectorStatistics.setup(httpServerExchange);
             }
+            if(connection.getSslSession() != null) {
+                //TODO: figure out a better solution for this
+                //in order to improve performance we do not generally suspend reads, instead we a CAS to detect when
+                //data arrives while a request is running and suspend lazily, as suspend/resume is relatively expensive
+                //however this approach does not work for SSL, as the underlying channel is not thread safe
+                //so we just suspend every time (the overhead is likely much less than the general SSL overhead anyway)
+                channel.suspendReads();
+            }
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);
