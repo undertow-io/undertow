@@ -46,42 +46,42 @@ public class BytesSentStreamSinkConduit extends AbstractStreamSinkConduit<Stream
 
     @Override
     public long transferFrom(FileChannel src, long position, long count) throws IOException {
-        long l = super.transferFrom(src, position, count);
+        long l = next.transferFrom(src, position, count);
         callback.activity(l);
         return l;
     }
 
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        long l = super.transferFrom(source, count, throughBuffer);
+        long l = next.transferFrom(source, count, throughBuffer);
         callback.activity(l);
         return l;
     }
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        int i = super.write(src);
+        int i = next.write(src);
         callback.activity(i);
         return i;
     }
 
     @Override
     public long write(ByteBuffer[] srcs, int offs, int len) throws IOException {
-        long l = super.write(srcs, offs, len);
+        long l = next.write(srcs, offs, len);
         callback.activity(l);
         return l;
     }
 
     @Override
     public int writeFinal(ByteBuffer src) throws IOException {
-        int i = super.writeFinal(src);
+        int i = next.writeFinal(src);
         callback.activity(i);
         return i;
     }
 
     @Override
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        long l = super.writeFinal(srcs, offset, length);
+        long l = next.writeFinal(srcs, offset, length);
         callback.activity(l);
         return l;
     }

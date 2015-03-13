@@ -608,6 +608,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     channel.shutdownWrites();
                     Channels.flushBlocking(channel);
                 }
+            } catch (IOException e) {
+                IoUtils.safeClose(this.channel);
+                throw e;
             } finally {
                 if (pooledBuffer != null) {
                     pooledBuffer.free();

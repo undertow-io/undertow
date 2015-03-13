@@ -25,7 +25,6 @@ import java.nio.channels.FileChannel;
 
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.TruncatedResponseException;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
@@ -669,19 +668,13 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public void truncateWrites() throws IOException {
-        int oldVal = this.state;
-        if (allAreClear(oldVal, MASK_STATE)) {
-            try {
-                next.truncateWrites();
-            } finally {
-                if (pooledBuffer != null) {
-                    bufferDone();
-                }
+        try {
+            next.truncateWrites();
+        } finally {
+            if (pooledBuffer != null) {
+                bufferDone();
             }
-            return;
         }
-        this.state = oldVal & ~MASK_STATE | FLAG_SHUTDOWN | STATE_BODY;
-        throw new TruncatedResponseException();
     }
 
     public XnioWorker getWorker() {
