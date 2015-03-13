@@ -196,10 +196,16 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public void truncateWrites() throws IOException {
-        if(lastChunkBuffer != null) {
-            lastChunkBuffer.free();
+        try {
+            if (lastChunkBuffer != null) {
+                lastChunkBuffer.free();
+            }
+            if (allAreClear(state, FLAG_FINISHED)) {
+                invokeFinishListener();
+            }
+        } finally {
+            super.truncateWrites();
         }
-        super.truncateWrites();
     }
 
     @Override
