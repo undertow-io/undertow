@@ -613,11 +613,19 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
-        return src.transferTo(position, count, new ConduitWritableByteChannel(this));
+        if(state != 0) {
+            return src.transferTo(position, count, new ConduitWritableByteChannel(this));
+        } else {
+            return next.transferFrom(src, position, count);
+        }
     }
 
     public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
-        return IoUtils.transfer(source, count, throughBuffer, new ConduitWritableByteChannel(this));
+        if (state != 0) {
+            return IoUtils.transfer(source, count, throughBuffer, new ConduitWritableByteChannel(this));
+        } else {
+            return next.transferFrom(source, count, throughBuffer);
+        }
     }
 
     @Override
