@@ -35,7 +35,6 @@ import io.undertow.util.Headers;
  * mechanism as detailed in Section 3.2. This should always be the first handler in a handler
  * chain.
  *
- * This handler also handles HTTP2 upgrade requests that are done via prior knowledge
  *
  * @author Stuart Douglas
  */
