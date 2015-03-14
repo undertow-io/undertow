@@ -277,9 +277,9 @@ public class ResourceHandler implements HttpHandler {
                     }
                 }
                 //we are going to proceed. Set the appropriate headers
-                final String contentType = resource.getContentType(mimeMappings);
 
                 if (!exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
+                    final String contentType = resource.getContentType(mimeMappings);
                     if (contentType != null) {
                         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
                     } else {
