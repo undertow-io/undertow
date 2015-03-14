@@ -31,10 +31,12 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -64,6 +66,30 @@ public class FileHandlerTestCase {
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
             Assert.assertTrue(response, response.contains("A web page"));
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testHeadRequest() throws IOException, URISyntaxException {
+        TestHttpClient client = new TestHttpClient();
+        File file = new File(getClass().getResource("page.html").toURI());
+        File rootPath = file.getParentFile();
+        try {
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPrefixPath("/path", new ResourceHandler()
+                                    .setResourceManager(new FileResourceManager(rootPath, 10485760))
+                                    .setDirectoryListingEnabled(true))));
+
+            HttpHead get = new HttpHead(DefaultServer.getDefaultServerURL() + "/path/page.html");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(Long.toString(file.length()), result.getHeaders(Headers.CONTENT_LENGTH_STRING)[0].getValue());
+            Header[] headers = result.getHeaders("Content-Type");
+            Assert.assertEquals("text/html", headers[0].getValue());
 
         } finally {
             client.getConnectionManager().shutdown();
