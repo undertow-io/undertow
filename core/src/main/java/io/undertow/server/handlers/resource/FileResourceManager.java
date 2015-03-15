@@ -64,7 +64,8 @@ public class FileResourceManager implements ResourceManager {
     private final boolean followLinks;
 
     /**
-     * Used if followLinks == true. Set of paths valid to follow symbolic links
+     * Used if followLinks == true. Set of paths valid to follow symbolic links. If this is empty and followLinks
+     * it true then all links will be followed
      */
     private final TreeSet<String> safePaths = new TreeSet<String>();
 
@@ -132,8 +133,8 @@ public class FileResourceManager implements ResourceManager {
         try {
             File file = new File(base, path);
             if (file.exists()) {
-                boolean isSymlinkPath = isSymlinkPath(base, file);
-                if (isSymlinkPath) {
+                boolean followAll = this.followLinks && safePaths.isEmpty();
+                if (!followAll && isSymlinkPath(base, file)) {
                     if (this.followLinks && isSymlinkSafe(file)) {
                         return getFileResource(file, path);
                     }
