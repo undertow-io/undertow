@@ -18,9 +18,11 @@
 
 package io.undertow.server.handlers.file;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -31,6 +33,7 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FileUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
@@ -120,6 +123,37 @@ public class FileHandlerTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+    @Test
+    public void testFileTransferLargeFile() throws IOException, URISyntaxException {
+        TestHttpClient client = new TestHttpClient();
+        File tmp = new File(System.getProperty("java.io.tmpdir"));
+        StringBuilder message = new StringBuilder();
+        for(int i = 0; i < 100000; ++i) {
+            message.append("Hello World");
+        }
+        File large = new File(tmp, "undertow.txt");
+        try {
+            FileUtils.copyFile(new ByteArrayInputStream(message.toString().getBytes(StandardCharsets.UTF_8)), large);
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPrefixPath("/path", new ResourceHandler(new FileResourceManager(tmp, 1))
+                                    // 1 byte = force transfer
+                                    .setDirectoryListingEnabled(true))));
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/undertow.txt");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Header[] headers = result.getHeaders("Content-Type");
+            Assert.assertEquals("text/plain", headers[0].getValue());
+            Assert.assertTrue(response, response.equals(message.toString()));
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
     /*
     Starts simple file server, it is useful for testing directory browsing
      */
