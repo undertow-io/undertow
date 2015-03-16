@@ -18,7 +18,15 @@
 
 package io.undertow.websockets.client;
 
+import io.undertow.UndertowMessages;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientExchange;
+import io.undertow.client.ClientRequest;
+import io.undertow.client.UndertowClient;
 import io.undertow.util.Headers;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 
@@ -34,6 +42,7 @@ import org.xnio.XnioWorker;
 import org.xnio.http.HttpUpgrade;
 import org.xnio.ssl.XnioSsl;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -102,6 +111,8 @@ public class WebSocketClient {
         private WebSocketVersion version = WebSocketVersion.V13;
         private WebSocketClientNegotiation clientNegotiation;
         private Set<ExtensionHandshake> clientExtensions;
+        private URI proxyUri;
+        private XnioSsl proxySsl;
 
         public ConnectionBuilder(XnioWorker worker, Pool<ByteBuffer> bufferPool, URI uri) {
             this.worker = worker;
@@ -175,6 +186,24 @@ public class WebSocketClient {
             return this;
         }
 
+        public URI getProxyUri() {
+            return proxyUri;
+        }
+
+        public ConnectionBuilder setProxyUri(URI proxyUri) {
+            this.proxyUri = proxyUri;
+            return this;
+        }
+
+        public XnioSsl getProxySsl() {
+            return proxySsl;
+        }
+
+        public ConnectionBuilder setProxySsl(XnioSsl proxySsl) {
+            this.proxySsl = proxySsl;
+            return this;
+        }
+
         public IoFuture<WebSocketChannel> connect() {
             final FutureResult<WebSocketChannel> ioFuture = new FutureResult<>();
             final String scheme = uri.getScheme().equals("wss") ? "https" : "http";
@@ -196,47 +225,127 @@ public class WebSocketClient {
             if (clientNegotiation != null) {
                 clientNegotiation.beforeRequest(headers);
             }
-            final IoFuture<? extends StreamConnection> result;
             InetSocketAddress toBind = bindAddress;
             String sysBind = System.getProperty(BIND_PROPERTY);
             if(toBind == null && sysBind != null) {
                 toBind = new InetSocketAddress(sysBind, 0);
             }
-            if (ssl != null) {
-                result = HttpUpgrade.performUpgrade(worker, ssl, toBind, newUri, headers, new ChannelListener<StreamConnection>() {
+            final InetSocketAddress finalToBind = toBind;
+            if(proxyUri != null) {
+               UndertowClient.getInstance().connect(new ClientCallback<ClientConnection>() {
                     @Override
-                    public void handleEvent(StreamConnection channel) {
-                        WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool);
-                        ioFuture.setResult(result);
+                    public void completed(final ClientConnection connection) {
+                        int port = uri.getPort() > 0 ? uri.getPort() : uri.getScheme().equals("https") || uri.getScheme().equals("wss") ? 443 : 80;
+                        ClientRequest cr = new ClientRequest()
+                                .setMethod(Methods.CONNECT)
+                                .setPath(uri.getHost() + ":" + port)
+                                .setProtocol(Protocols.HTTP_1_1);
+                        connection.sendRequest(cr, new ClientCallback<ClientExchange>() {
+                            @Override
+                            public void completed(ClientExchange result) {
+                                result.setResponseListener(new ClientCallback<ClientExchange>() {
+                                    @Override
+                                    public void completed(ClientExchange response) {
+                                        if (response.getResponse().getResponseCode() == 200) {
+                                            try {
+                                                StreamConnection targetConnection = connection.performUpgrade();
+                                                if(uri.getScheme().equals("wss") && uri.getScheme().equals("https")) {
+
+                                                    ioFuture.setException(new IOException("SSL connection over proxies not yet implemented"));
+                                                } else {
+                                                    handleConnectionWithExistingConnection(targetConnection);
+                                                }
+                                            } catch (IOException e) {
+                                                ioFuture.setException(e);
+                                            }
+                                        } else {
+                                            ioFuture.setException(UndertowMessages.MESSAGES.proxyConnectionFailed(response.getResponse().getResponseCode()));
+                                        }
+                                    }
+
+                                    private void handleConnectionWithExistingConnection(StreamConnection targetConnection) {
+                                        final IoFuture<?> result;
+
+                                        result = HttpUpgrade.performUpgrade(targetConnection, newUri, headers, new WebsocketConnectionListener(handshake, newUri, ioFuture), handshake.handshakeChecker(newUri, headers));
+
+                                        result.addNotifier(new IoFuture.Notifier<Object, Object>() {
+                                            @Override
+                                            public void notify(IoFuture<?> res, Object attachment) {
+                                                if (res.getStatus() == IoFuture.Status.FAILED) {
+                                                    ioFuture.setException(res.getException());
+                                                }
+                                            }
+                                        }, null);
+                                        ioFuture.addCancelHandler(new Cancellable() {
+                                            @Override
+                                            public Cancellable cancel() {
+                                                result.cancel();
+                                                return null;
+                                            }
+                                        });
+                                    }
+
+                                    @Override
+                                    public void failed(IOException e) {
+                                        ioFuture.setException(e);
+                                    }
+                                });
+                            }
+                            @Override
+                            public void failed(IOException e) {
+                                ioFuture.setException(e);
+                            }
+                        });
                     }
-                }, null, optionMap, handshake.handshakeChecker(newUri, headers));
+                    @Override
+                    public void failed(IOException e) {
+                        ioFuture.setException(e);
+                    }
+                }, bindAddress, proxyUri, worker, proxySsl,  bufferPool, optionMap);
+
             } else {
-                result = HttpUpgrade.performUpgrade(worker, toBind, newUri, headers, new ChannelListener<StreamConnection>() {
+                final IoFuture<?> result;
+                if (ssl != null) {
+                    result = HttpUpgrade.performUpgrade(worker, ssl, toBind, newUri, headers, new WebsocketConnectionListener(handshake, newUri, ioFuture), null, optionMap, handshake.handshakeChecker(newUri, headers));
+                } else {
+                    result = HttpUpgrade.performUpgrade(worker, toBind, newUri, headers, new WebsocketConnectionListener(handshake, newUri, ioFuture), null, optionMap, handshake.handshakeChecker(newUri, headers));
+                }
+                result.addNotifier(new IoFuture.Notifier<Object, Object>() {
                     @Override
-                    public void handleEvent(StreamConnection channel) {
-                        WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool);
-                        ioFuture.setResult(result);
+                    public void notify(IoFuture<?> res, Object attachment) {
+                        if (res.getStatus() == IoFuture.Status.FAILED) {
+                            ioFuture.setException(res.getException());
+                        }
                     }
-                }, null, optionMap, handshake.handshakeChecker(newUri, headers));
+                }, null);
+                ioFuture.addCancelHandler(new Cancellable() {
+                    @Override
+                    public Cancellable cancel() {
+                        result.cancel();
+                        return null;
+                    }
+                });
             }
-            result.addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
-                @Override
-                public void notify(IoFuture<? extends StreamConnection> res, Object attachment) {
-                    if (res.getStatus() == IoFuture.Status.FAILED) {
-                        ioFuture.setException(res.getException());
-                    }
-                }
-            }, null);
-            ioFuture.addCancelHandler(new Cancellable() {
-                @Override
-                public Cancellable cancel() {
-                    result.cancel();
-                    return null;
-                }
-            });
             return ioFuture.getIoFuture();
         }
 
+        private class WebsocketConnectionListener implements ChannelListener<StreamConnection> {
+            private final WebSocketClientHandshake handshake;
+            private final URI newUri;
+            private final FutureResult<WebSocketChannel> ioFuture;
+
+            public WebsocketConnectionListener(WebSocketClientHandshake handshake, URI newUri, FutureResult<WebSocketChannel> ioFuture) {
+                this.handshake = handshake;
+                this.newUri = newUri;
+                this.ioFuture = ioFuture;
+            }
+
+            @Override
+            public void handleEvent(StreamConnection channel) {
+                WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool);
+                ioFuture.setResult(result);
+            }
+        }
     }
 
     /**

@@ -21,9 +21,17 @@ package io.undertow.websockets.client.version13;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Deque;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import io.undertow.Undertow;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.ConnectHandler;
+import io.undertow.testutils.ProxyIgnore;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -56,6 +64,10 @@ import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
 public class WebSocketClient13TestCase {
     private static XnioWorker worker;
 
+    private static Undertow server;
+
+    private static final Deque<String> connectLog = new LinkedBlockingDeque<>();
+
     @BeforeClass
     public static void setup() throws IOException {
         DefaultServer.setRootHandler(AutobahnWebSocketServer.getRootHandler());
@@ -70,7 +82,31 @@ public class WebSocketClient13TestCase {
                 .set(Options.CORK, true)
                 .getMap());
 
+        final ConnectHandler handler = new ConnectHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                exchange.setResponseCode(500);
+            }
+        });
+
+        server = Undertow.builder().addHttpListener(DefaultServer.getHostPort("default") + 1, DefaultServer.getHostAddress("default"))
+                .setHandler(new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        connectLog.add(exchange.getRequestMethod() + " " + exchange.getRelativePath());
+                        handler.handleRequest(exchange);
+                    }
+                })
+                .build();
+        server.start();
     }
+
+    @AfterClass
+    public static void stop() {
+        server.stop();
+        server = null;
+    }
+
 
     @AfterClass
     public static void shutdown() {
@@ -112,4 +148,40 @@ public class WebSocketClient13TestCase {
         webSocketChannel.sendClose();
     }
 
+    @Test
+    @ProxyIgnore
+    public void testMessageViaProxy() throws Exception {
+
+        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, buffer, new URI(DefaultServer.getDefaultServerURL()))
+                .setProxyUri(new URI("http", null, DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default")  + 1, "/proxy", null, null))
+                .connect().get();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicReference<String> result = new AtomicReference<>();
+        webSocketChannel.getReceiveSetter().set(new AbstractReceiveListener() {
+            @Override
+            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+                String data = message.getData();
+                result.set(data);
+                latch.countDown();
+            }
+
+            @Override
+            protected void onError(WebSocketChannel channel, Throwable error) {
+                super.onError(channel, error);
+                error.printStackTrace();
+                latch.countDown();
+            }
+        });
+        webSocketChannel.resumeReceives();
+
+
+        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT, 11);
+        new StringWriteChannelListener("Hello World").setup(sendChannel);
+
+        latch.await(10, TimeUnit.SECONDS);
+        Assert.assertEquals("Hello World", result.get());
+        webSocketChannel.sendClose();
+        Assert.assertEquals("CONNECT localhost:7777", connectLog.poll());
+    }
 }

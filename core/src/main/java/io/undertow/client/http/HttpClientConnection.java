@@ -250,6 +250,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         if (request.getRequestHeaders().contains(UPGRADE)) {
             state |= UPGRADE_REQUESTED;
         }
+        if(request.getMethod().equals(Methods.CONNECT)) {
+            //we treat CONNECT like upgrade requests
+            state |= UPGRADE_REQUESTED;
+        }
 
         //setup the client request conduits
         final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
@@ -320,6 +324,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             throw new IOException(UndertowClientMessages.MESSAGES.connectionClosed());
         }
         state |= UPGRADED;
+        connection.getSinkChannel().setConduit(originalSinkConduit);
+        connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
         return connection;
     }
 
@@ -441,8 +447,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 //check if an upgrade worked
                 if (anyAreSet(HttpClientConnection.this.state, UPGRADE_REQUESTED)) {
                     if ((connectionString == null || !UPGRADE.equalToString(connectionString)) && !response.getResponseHeaders().contains(UPGRADE)) {
-                        //just unset the upgrade requested flag
-                        HttpClientConnection.this.state &= ~UPGRADE_REQUESTED;
+                        if(!currentRequest.getRequest().getMethod().equals(Methods.CONNECT) || response.getResponseCode() != 200) { //make sure it was not actually a connect request
+                            //just unset the upgrade requested flag
+                            HttpClientConnection.this.state &= ~UPGRADE_REQUESTED;
+                        }
                     }
                 }
 

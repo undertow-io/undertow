@@ -392,4 +392,7 @@ public interface UndertowMessages {
 
     @Message(id = 121, value = "Session was rejected as the maximum number of sessions (%s) has been hit")
     IllegalStateException tooManySessions(int maxSessions);
+
+    @Message(id = 122, value = "CONNECT attempt failed as target proxy returned %s")
+    IOException proxyConnectionFailed(int responseCode);
 }
