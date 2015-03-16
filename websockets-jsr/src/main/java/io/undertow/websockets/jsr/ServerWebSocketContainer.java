@@ -142,6 +142,15 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         this.defaultAsyncSendTimeout = defaultAsyncSendTimeout;
     }
 
+    public Session connectToServer(final Object annotatedEndpointInstance, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+        ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
+        if (config == null) {
+            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
+        }
+        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<Object>(annotatedEndpointInstance));
+        return connectToServerInternal(instance, config, connectionBuilder);
+    }
+
     @Override
     public Session connectToServer(final Object annotatedEndpointInstance, final URI path) throws DeploymentException, IOException {
         ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
@@ -157,6 +166,20 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
         }
         return connectToServerInternal(instance, ssl, config, path);
+    }
+
+    public Session connectToServer(Class<?> aClass, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+        ConfiguredClientEndpoint config = getClientEndpoint(aClass, true);
+        if (config == null) {
+            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
+        }
+        try {
+            AnnotatedEndpointFactory factory = config.getFactory();
+            InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
+            return connectToServerInternal(factory.createInstance(instance), config, connectionBuilder);
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -186,9 +209,6 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     @Override
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, final URI path) throws DeploymentException, IOException {
         ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
-
-        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()), cec);
         XnioSsl ssl = null;
         for (WebsocketClientSslProvider provider : clientSslProviders) {
             ssl = provider.getSsl(xnioWorker, endpointInstance, cec, path);
@@ -196,11 +216,23 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 break;
             }
         }
+        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
+        WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()), cec);
+
 
         WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
                 .setSsl(ssl)
                 .setBindAddress(clientBindAddress)
                 .setClientNegotiation(clientNegotiation);
+
+        return connectToServer(endpointInstance, config, connectionBuilder);
+    }
+
+    public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+        ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
+
+        WebSocketClientNegotiation clientNegotiation = connectionBuilder.getClientNegotiation();
+
         IoFuture<WebSocketChannel> session = connectionBuilder
                 .connect();
         Number timeout = (Number) cec.getUserProperties().get(TIMEOUT);
@@ -237,7 +269,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
 
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
+        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, connectionBuilder.getUri().getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
         endpointInstance.onOpen(undertowSession, cec);
         channel.resumeReceives();
 
@@ -264,6 +296,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 .setSsl(ssl)
                 .setBindAddress(clientBindAddress)
                 .setClientNegotiation(clientNegotiation);
+        return connectToServerInternal(endpointInstance, cec, connectionBuilder);
+    }
+
+    private Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+
         IoFuture<WebSocketChannel> session = connectionBuilder
                 .connect();
         Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
@@ -294,15 +331,19 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         for (Extension ext : cec.getConfig().getExtensions()) {
             extMap.put(ext.getName(), ext);
         }
-        for (WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
-            Extension ext = extMap.get(e.getName());
-            if (ext == null) {
-                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), clientNegotiation.getSupportedExtensions());
+        String subProtocol = null;
+        if(connectionBuilder.getClientNegotiation() != null) {
+            for (WebSocketExtension e : connectionBuilder.getClientNegotiation().getSelectedExtensions()) {
+                Extension ext = extMap.get(e.getName());
+                if (ext == null) {
+                    throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), connectionBuilder.getClientNegotiation().getSupportedExtensions());
+                }
+                extensions.add(ExtensionImpl.create(e));
             }
-            extensions.add(ExtensionImpl.create(e));
+            subProtocol = connectionBuilder.getClientNegotiation().getSelectedSubProtocol();
         }
 
-        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
+        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), connectionBuilder.getUri().getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), subProtocol, extensions, connectionBuilder);
         endpointInstance.onOpen(undertowSession, cec.getConfig());
         channel.resumeReceives();
 
