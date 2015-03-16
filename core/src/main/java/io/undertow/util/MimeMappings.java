@@ -164,8 +164,9 @@ public class MimeMappings {
             }
         }
 
-        public void addMapping(final String extension, final String contentType) {
+        public Builder addMapping(final String extension, final String contentType) {
             mappings.put(extension, contentType);
+            return this;
         }
 
         public MimeMappings build() {
