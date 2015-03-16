@@ -43,6 +43,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -50,7 +51,7 @@ import java.util.concurrent.Executor;
 /**
  * @author Stuart Douglas
  */
-public class MultiPartParserDefinition implements FormParserFactory.ParserDefinition {
+public class MultiPartParserDefinition implements FormParserFactory.ParserDefinition<MultiPartParserDefinition> {
 
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
@@ -58,7 +59,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
     private File tempFileLocation;
 
-    private String defaultEncoding = "ISO-8859-1";
+    private String defaultEncoding = StandardCharsets.ISO_8859_1.displayName();
 
     private long maxIndividualFileSize = -1;
 

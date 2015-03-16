@@ -53,8 +53,8 @@ public interface FormDataParser extends Closeable {
 
     /**
      * Parse the data, blocking the current thread until parsing is complete. For blocking handlers this method is
-     * more efficient than {@link #parse()}, as the calling thread should do that actual parsing, rather than the
-     * read thread
+     * more efficient than {@link #parse(io.undertow.server.HttpHandler next)}, as the calling thread should do that
+     * actual parsing, rather than the read thread
      *
      * @return The parsed form data
      * @throws IOException If the data could not be read
