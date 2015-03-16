@@ -181,6 +181,10 @@ public class UndertowXnioSsl extends XnioSsl {
         return setupSslConnection(futureResult, connection);
     }
 
+    public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap) {
+        return new UndertowSslConnection(connection, JsseSslUtils.createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress()), bufferPool);
+    }
+
     private IoFuture<SslConnection> setupSslConnection(FutureResult<SslConnection> futureResult, IoFuture<StreamConnection> connection) {
         connection.addNotifier(new IoFuture.HandlingNotifier<StreamConnection, FutureResult<SslConnection>>() {
             public void handleCancelled(final FutureResult<SslConnection> attachment) {

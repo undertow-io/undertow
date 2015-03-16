@@ -24,6 +24,7 @@ import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.UndertowClient;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -249,9 +250,8 @@ public class WebSocketClient {
                                         if (response.getResponse().getResponseCode() == 200) {
                                             try {
                                                 StreamConnection targetConnection = connection.performUpgrade();
-                                                if(uri.getScheme().equals("wss") && uri.getScheme().equals("https")) {
-
-                                                    ioFuture.setException(new IOException("SSL connection over proxies not yet implemented"));
+                                                if(uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
+                                                    handleConnectionWithExistingConnection(((UndertowXnioSsl)ssl).wrapExistingConnection(targetConnection, optionMap));
                                                 } else {
                                                     handleConnectionWithExistingConnection(targetConnection);
                                                 }

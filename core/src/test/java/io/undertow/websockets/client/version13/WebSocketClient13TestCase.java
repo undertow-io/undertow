@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.undertow.Undertow;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ConnectHandler;
@@ -89,7 +90,9 @@ public class WebSocketClient13TestCase {
             }
         });
 
-        server = Undertow.builder().addHttpListener(DefaultServer.getHostPort("default") + 1, DefaultServer.getHostAddress("default"))
+        DefaultServer.startSSLServer();
+
+        server = Undertow.builder().addHttpListener(DefaultServer.getHostPort("default") + 10, DefaultServer.getHostAddress("default"))
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -102,9 +105,10 @@ public class WebSocketClient13TestCase {
     }
 
     @AfterClass
-    public static void stop() {
+    public static void stop() throws IOException {
         server.stop();
         server = null;
+        DefaultServer.stopSSLServer();
     }
 
 
@@ -153,7 +157,7 @@ public class WebSocketClient13TestCase {
     public void testMessageViaProxy() throws Exception {
 
         final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, buffer, new URI(DefaultServer.getDefaultServerURL()))
-                .setProxyUri(new URI("http", null, DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default")  + 1, "/proxy", null, null))
+                .setProxyUri(new URI("http", null, DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default")  + 10, "/proxy", null, null))
                 .connect().get();
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -182,6 +186,45 @@ public class WebSocketClient13TestCase {
         latch.await(10, TimeUnit.SECONDS);
         Assert.assertEquals("Hello World", result.get());
         webSocketChannel.sendClose();
-        Assert.assertEquals("CONNECT localhost:7777", connectLog.poll());
+        Assert.assertEquals("CONNECT " + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default"), connectLog.poll());
+    }
+
+
+    @Test
+    @ProxyIgnore
+    public void testMessageViaWssProxy() throws Exception {
+
+        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, buffer, new URI(DefaultServer.getDefaultServerSSLAddress()))
+                .setSsl(new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()))
+                .setProxyUri(new URI("http", null, DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default") + 10, "/proxy", null, null))
+                .connect().get();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicReference<String> result = new AtomicReference<>();
+        webSocketChannel.getReceiveSetter().set(new AbstractReceiveListener() {
+            @Override
+            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+                String data = message.getData();
+                result.set(data);
+                latch.countDown();
+            }
+
+            @Override
+            protected void onError(WebSocketChannel channel, Throwable error) {
+                super.onError(channel, error);
+                error.printStackTrace();
+                latch.countDown();
+            }
+        });
+        webSocketChannel.resumeReceives();
+
+
+        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT, 11);
+        new StringWriteChannelListener("Hello World").setup(sendChannel);
+
+        latch.await(10, TimeUnit.SECONDS);
+        Assert.assertEquals("Hello World", result.get());
+        webSocketChannel.sendClose();
+        Assert.assertEquals("CONNECT " + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default"), connectLog.poll());
     }
 }
