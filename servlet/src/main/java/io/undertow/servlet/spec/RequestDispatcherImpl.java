@@ -39,6 +39,7 @@ import javax.servlet.ServletResponseWrapper;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.UndertowLogger;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
@@ -109,7 +110,12 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     }
 
     private void forwardImpl(ServletRequest request, ServletResponse response) throws ServletException, IOException {
-        final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
+        final ServletRequestContext servletRequestContext = SecurityActions.currentServletRequestContext();
+        if(servletRequestContext == null) {
+            UndertowLogger.REQUEST_LOGGER.debugf("No servlet request context for %s, dispatching mock request", request);
+            mock(request, response);
+            return;
+        }
 
         ThreadSetupAction.Handle handle = null;
         ServletContextImpl oldServletContext = null;
@@ -254,7 +260,12 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     }
 
     private void includeImpl(ServletRequest request, ServletResponse response) throws ServletException, IOException {
-        final ServletRequestContext servletRequestContext = SecurityActions.requireCurrentServletRequestContext();
+        final ServletRequestContext servletRequestContext = SecurityActions.currentServletRequestContext();
+        if(servletRequestContext == null) {
+            UndertowLogger.REQUEST_LOGGER.debugf("No servlet request context for %s, dispatching mock request", request);
+            mock(request, response);
+            return;
+        }
         final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
         ThreadSetupAction.Handle handle = null;
