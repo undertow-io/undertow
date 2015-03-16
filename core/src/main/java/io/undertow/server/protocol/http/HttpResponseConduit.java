@@ -613,7 +613,18 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
         if(state != 0) {
-            return src.transferTo(position, count, new ConduitWritableByteChannel(this));
+            final Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
+            ByteBuffer buffer = pooled.getResource();
+            try {
+                int res = src.read(buffer);
+                if(res <= 0) {
+                    return res;
+                }
+                buffer.flip();
+                return write(buffer);
+            } finally {
+                pooled.free();
+            }
         } else {
             return next.transferFrom(src, position, count);
         }
