@@ -321,6 +321,11 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                     receiver = null;
                 }
+                //if we read data into a frame we just return immediately, even if there is more remaining
+                //see https://issues.jboss.org/browse/UNDERTOW-410
+                //basically if we don't do this we loose some message ordering semantics
+                //as the second message may be processed before the first one
+                return null;
             }
             FrameHeaderData data = parseFrame(pooled.getResource());
             if (data != null) {
