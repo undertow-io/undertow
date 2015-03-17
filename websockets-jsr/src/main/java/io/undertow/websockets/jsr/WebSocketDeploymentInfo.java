@@ -97,8 +97,9 @@ public class WebSocketDeploymentInfo {
         return dispatchToWorkerThread;
     }
 
-    public void setDispatchToWorkerThread(boolean dispatchToWorkerThread) {
+    public WebSocketDeploymentInfo setDispatchToWorkerThread(boolean dispatchToWorkerThread) {
         this.dispatchToWorkerThread = dispatchToWorkerThread;
+        return this;
     }
 
     public interface ContainerReadyListener {
