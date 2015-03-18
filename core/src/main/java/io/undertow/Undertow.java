@@ -132,7 +132,7 @@ public final class Undertow {
                 } else {
                     OptionMap undertowOptions = OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap();
                     if (listener.type == ListenerType.HTTP) {
-                        HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions, bufferSize);
+                        HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
                         openListener.setRootHandler(rootHandler);
                         ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                         AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
