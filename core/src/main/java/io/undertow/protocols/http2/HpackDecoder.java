@@ -82,7 +82,7 @@ public class HpackDecoder extends Hpack {
      *
      * @param buffer The buffer
      */
-    public void decode(ByteBuffer buffer, boolean moreData) throws HpackException {
+    public void decode(ByteBuffer buffer) throws HpackException {
         while (buffer.hasRemaining()) {
             int originalPos = buffer.position();
             byte b = buffer.get();

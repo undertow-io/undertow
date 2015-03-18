@@ -56,7 +56,7 @@ public class HpackEncoder extends Hpack {
     private int entryPositionCounter;
 
     private int newMaxHeaderSize = -1; //if the max header size has been changed
-    private int minNewMaxHeeaderSize = -1; //records the smallest value of newMaxHeaderSize, as per section 4.1
+    private int minNewMaxHeaderSize = -1; //records the smallest value of newMaxHeaderSize, as per section 4.1
 
     private static final Map<HttpString, TableEntry[]> ENCODING_STATIC_TABLE;
 
@@ -103,17 +103,12 @@ public class HpackEncoder extends Hpack {
      * @param target
      */
     public State encode(HeaderMap headers, ByteBuffer target) {
-        if (target.remaining() < 20) {
-            return State.UNDERFLOW;
-        }
         long it = headersIterator;
         if (headersIterator == -1) {
             handleTableSizeChange(target);
             //new headers map
             it = headers.fastIterate();
             currentHeaders = headers;
-            //first push a reference set clear context update
-            //as the reference set is going away this allows us to be compliant with HPACK 08 without doing a heap of extra useless work
         } else {
             if (headers != currentHeaders) {
                 throw new IllegalStateException();
@@ -339,10 +334,10 @@ public class HpackEncoder extends Hpack {
 
     public void setMaxTableSize(int newSize) {
         this.newMaxHeaderSize = newSize;
-        if(minNewMaxHeeaderSize == -1) {
-           minNewMaxHeeaderSize = newSize;
+        if(minNewMaxHeaderSize == -1) {
+           minNewMaxHeaderSize = newSize;
         } else {
-            minNewMaxHeeaderSize = Math.min(newSize, minNewMaxHeeaderSize);
+            minNewMaxHeaderSize = Math.min(newSize, minNewMaxHeaderSize);
         }
     }
 
@@ -350,16 +345,16 @@ public class HpackEncoder extends Hpack {
         if(newMaxHeaderSize == -1) {
             return;
         }
-        if(minNewMaxHeeaderSize != newMaxHeaderSize) {
+        if(minNewMaxHeaderSize != newMaxHeaderSize) {
             target.put((byte)(1 << 5));
-            encodeInteger(target, minNewMaxHeeaderSize, 5);
+            encodeInteger(target, minNewMaxHeaderSize, 5);
         }
         target.put((byte)(1 << 5));
         encodeInteger(target, newMaxHeaderSize, 5);
         maxTableSize = newMaxHeaderSize;
         runEvictionIfRequired();
         newMaxHeaderSize = -1;
-        minNewMaxHeeaderSize = -1;
+        minNewMaxHeaderSize = -1;
     }
 
     public enum State {
