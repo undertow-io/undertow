@@ -23,12 +23,14 @@ import java.nio.ByteBuffer;
 import io.undertow.UndertowMessages;
 import io.undertow.util.HttpString;
 
+import static io.undertow.protocols.http2.Hpack.HeaderField;
+
 /**
  * A decoder for HPACK.
  *
  * @author Stuart Douglas
  */
-public class HpackDecoder extends Hpack {
+public class HpackDecoder {
 
     private static final int DEFAULT_RING_BUFFER_SIZE = 10;
 
@@ -72,7 +74,7 @@ public class HpackDecoder extends Hpack {
     }
 
     public HpackDecoder() {
-        this(DEFAULT_TABLE_SIZE);
+        this(Hpack.DEFAULT_TABLE_SIZE);
     }
 
     /**
@@ -89,7 +91,7 @@ public class HpackDecoder extends Hpack {
             if ((b & 0b10000000) != 0) {
                 //if the first bit is set it is an indexed header field
                 buffer.position(buffer.position() - 1); //unget the byte
-                int index = decodeInteger(buffer, 7); //prefix is 7
+                int index = Hpack.decodeInteger(buffer, 7); //prefix is 7
                 if (index == -1) {
                     buffer.position(originalPos);
                     return;
@@ -150,7 +152,7 @@ public class HpackDecoder extends Hpack {
 
     private boolean handleMaxMemorySizeChange(ByteBuffer buffer, int originalPos) throws HpackException {
         buffer.position(buffer.position() - 1); //unget the byte
-        int size = decodeInteger(buffer, 5);
+        int size = Hpack.decodeInteger(buffer, 5);
         if (size == -1) {
             buffer.position(originalPos);
             return false;
@@ -179,7 +181,7 @@ public class HpackDecoder extends Hpack {
 
     private HttpString readHeaderName(ByteBuffer buffer, int prefixLength) throws HpackException {
         buffer.position(buffer.position() - 1); //unget the byte
-        int index = decodeInteger(buffer, prefixLength);
+        int index = Hpack.decodeInteger(buffer, prefixLength);
         if (index == -1) {
             return null;
         } else if (index != 0) {
@@ -199,7 +201,7 @@ public class HpackDecoder extends Hpack {
         }
         byte data = buffer.get(buffer.position());
 
-        int length = decodeInteger(buffer, 7);
+        int length = Hpack.decodeInteger(buffer, 7);
         if (buffer.remaining() < length) {
             return null;
         }
@@ -223,13 +225,13 @@ public class HpackDecoder extends Hpack {
     }
 
     private HttpString handleIndexedHeaderName(int index) throws HpackException {
-        if (index <= STATIC_TABLE_LENGTH) {
-            return STATIC_TABLE[index].name;
+        if (index <= Hpack.STATIC_TABLE_LENGTH) {
+            return Hpack.STATIC_TABLE[index].name;
         } else {
-            if (index >= STATIC_TABLE_LENGTH + filledTableSlots) {
+            if (index >= Hpack.STATIC_TABLE_LENGTH + filledTableSlots) {
                 throw new HpackException();
             }
-            int adjustedIndex = getRealIndex(index - STATIC_TABLE_LENGTH);
+            int adjustedIndex = getRealIndex(index - Hpack.STATIC_TABLE_LENGTH);
             HeaderField res = headerTable[adjustedIndex];
             if (res == null) {
                 throw new HpackException();
@@ -245,10 +247,10 @@ public class HpackDecoder extends Hpack {
      * @throws HpackException
      */
     private void handleIndex(int index) throws HpackException {
-        if (index <= STATIC_TABLE_LENGTH) {
+        if (index <= Hpack.STATIC_TABLE_LENGTH) {
             addStaticTableEntry(index);
         } else {
-            int adjustedIndex = getRealIndex(index - STATIC_TABLE_LENGTH);
+            int adjustedIndex = getRealIndex(index - Hpack.STATIC_TABLE_LENGTH);
             HeaderField headerField = headerTable[adjustedIndex];
             headerEmitter.emitHeader(headerField.name, headerField.value, false);
         }
@@ -273,7 +275,7 @@ public class HpackDecoder extends Hpack {
     private void addStaticTableEntry(int index) throws HpackException {
         //adds an entry from the static table.
         //this must be an entry with a value as far as I can determine
-        HeaderField entry = STATIC_TABLE[index];
+        HeaderField entry = Hpack.STATIC_TABLE[index];
         if (entry.value == null) {
             throw new HpackException();
         }

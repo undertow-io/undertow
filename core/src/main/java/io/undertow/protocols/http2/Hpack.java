@@ -26,9 +26,10 @@ import io.undertow.util.HttpString;
 /**
  * @author Stuart Douglas
  */
-public class Hpack {
+final class Hpack {
 
-    public static final int DEFAULT_TABLE_SIZE = 4096;
+    private static final byte LOWER_DIFF = 'a' - 'A';
+    static final int DEFAULT_TABLE_SIZE = 4096;
     private static final int MAX_INTEGER_OCTETS = 8; //not sure what a good value for this is, but the spec says we need to provide an upper bound
 
     /**
@@ -39,7 +40,7 @@ public class Hpack {
 
 
     static final HeaderField[] STATIC_TABLE;
-    public static final int STATIC_TABLE_LENGTH;
+    static final int STATIC_TABLE_LENGTH;
 
     static {
         PREFIX_TABLE = new int[32];
@@ -146,7 +147,7 @@ public class Hpack {
      * @param n      The encoding prefix length
      * @return The encoded integer, or -1 if there was not enough data
      */
-    protected static int decodeInteger(ByteBuffer source, int n) throws HpackException {
+    static int decodeInteger(ByteBuffer source, int n) throws HpackException {
         if (source.remaining() == 0) {
             return -1;
         }
@@ -189,7 +190,7 @@ public class Hpack {
      * @param value  The integer to encode
      * @param n      The encoding prefix length
      */
-    protected static void encodeInteger(ByteBuffer source, int value, int n) {
+    static void encodeInteger(ByteBuffer source, int value, int n) {
         int twoNminus1 = PREFIX_TABLE[n];
         int pos = source.position() - 1;
         if (value < twoNminus1) {
@@ -205,5 +206,14 @@ public class Hpack {
         }
     }
 
+
+    static byte toLower(byte b) {
+        if (b >= 'A' && b <= 'Z') {
+            return (byte) (b + LOWER_DIFF);
+        }
+        return b;
+    }
+
+    private Hpack() {}
 
 }

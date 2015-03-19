@@ -39,7 +39,7 @@ public class HpackSpecExamplesUnitTestCase {
                 0x40, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d,
                 0x6b, 0x65, 0x79, 0x0d, 0x63, 0x75, 0x73,
                 0x74, 0x6f, 0x6d, 0x2d, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72};
-        HpackDecoder decoder = new HpackDecoder(HpackDecoder.DEFAULT_TABLE_SIZE);
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
         decoder.decode(ByteBuffer.wrap(data));
@@ -54,7 +54,7 @@ public class HpackSpecExamplesUnitTestCase {
     public void testExample_D_2_2() throws HpackException {
         //:path: /sample/path
         byte[] data = {0x04, 0x0c, 0x2f, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2f, 0x70, 0x61, 0x74, 0x68};
-        HpackDecoder decoder = new HpackDecoder(HpackDecoder.DEFAULT_TABLE_SIZE);
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
         decoder.decode(ByteBuffer.wrap(data));
@@ -68,7 +68,7 @@ public class HpackSpecExamplesUnitTestCase {
     public void testExample_D_2_3() throws HpackException {
         //password: secret
         byte[] data = {0x10, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x06, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74};
-        HpackDecoder decoder = new HpackDecoder(HpackDecoder.DEFAULT_TABLE_SIZE);
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
         decoder.decode(ByteBuffer.wrap(data));
@@ -82,7 +82,7 @@ public class HpackSpecExamplesUnitTestCase {
     public void testExample_D_2_4() throws HpackException {
         //:method: GET
         byte[] data = {(byte) 0x82};
-        HpackDecoder decoder = new HpackDecoder(HpackDecoder.DEFAULT_TABLE_SIZE);
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
         decoder.decode(ByteBuffer.wrap(data));
@@ -96,7 +96,7 @@ public class HpackSpecExamplesUnitTestCase {
     public void testExample_D_3() throws HpackException {
         //d 3.1
         byte[] data = {(byte) 0x82, (byte) 0x86, (byte) 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d};
-        HpackDecoder decoder = new HpackDecoder(HpackDecoder.DEFAULT_TABLE_SIZE);
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
         decoder.decode(ByteBuffer.wrap(data));
@@ -151,7 +151,7 @@ public class HpackSpecExamplesUnitTestCase {
         //d 4.1
         byte[] data = {(byte) 0x82, (byte) 0x86, (byte) 0x84, 0x41, (byte) 0x8c, (byte) 0xf1, (byte) 0xe3,
                 (byte) 0xc2, (byte) 0xe5, (byte) 0xf2, 0x3a, 0x6b, (byte) 0xa0, (byte) 0xab, (byte) 0x90, (byte) 0xf4, (byte) 0xff};
-        HpackDecoder decoder = new HpackDecoder(HpackDecoder.DEFAULT_TABLE_SIZE);
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
         decoder.decode(ByteBuffer.wrap(data));

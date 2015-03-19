@@ -34,22 +34,30 @@ public class HpackHuffmanEncodingUnitTestCase {
         runTest("Hello World", ByteBuffer.allocate(3), false);
         runTest("\\randomSpecialsChars~\u001D", ByteBuffer.allocate(100), true);
         runTest("\\~\u001D", ByteBuffer.allocate(100), false); //encoded form is larger than the original string
-
     }
 
 
+    @Test
+    public void testHuffmanEncodingLargeString() throws HpackException {
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i < 100; ++i) {
+            sb.append("Hello World");
+        }
+        runTest(sb.toString(), ByteBuffer.allocate(10000), true); //encoded form is larger than the original string
+    }
+
     void runTest(String string, ByteBuffer buffer, boolean bufferBigEnough) throws HpackException {
-        boolean res = HPackHuffman.encode(buffer, string);
+        boolean res = HPackHuffman.encode(buffer, string, false);
         if(!bufferBigEnough) {
             Assert.assertFalse(res);
             return;
         }
         Assert.assertTrue(res);
         buffer.flip();
-        int length = buffer.get() & 0xff;
-        Assert.assertTrue(((1 << 7) & length) != 0);
+        Assert.assertTrue(((1 << 7) & buffer.get(0)) != 0); //make sure the huffman bit is set
+        int length = Hpack.decodeInteger(buffer, 7);
         StringBuilder sb = new StringBuilder();
-        HPackHuffman.decode(buffer, length & ~(1<<7), sb);
+        HPackHuffman.decode(buffer, length, sb);
         Assert.assertEquals(string, sb.toString());
     }
 }

@@ -418,18 +418,39 @@ public class HPackHuffman {
      *
      * @param buffer   The buffer to encode into
      * @param toEncode The string to encode
+     * @param forceLowercase If the string should be encoded in lower case
      * @return true if encoding succeeded
      */
-    public static boolean encode(ByteBuffer buffer, String toEncode) {
+    public static boolean encode(ByteBuffer buffer, String toEncode, boolean forceLowercase) {
         if (buffer.remaining() <= toEncode.length()) {
             return false;
         }
         int start = buffer.position();
-        buffer.put((byte) 0); //we override this later once we have the length
+        //this sucks, but we need to put the length first
+        //and we don't really have any option but to calculate it in advance to make sure we have left enough room
+        //so we end up iterating twice
+        int length = 0;
+        for (int i = 0; i < toEncode.length(); ++i) {
+            byte c = (byte) toEncode.charAt(i);
+            if(forceLowercase) {
+                c = Hpack.toLower(c);
+            }
+            HuffmanCode code = HUFFMAN_CODES[c];
+            length += code.length;
+        }
+        int byteLength = length / 8 + (length % 8 == 0 ? 0 : 1);
+
+        buffer.put((byte) (1 << 7));
+        Hpack.encodeInteger(buffer, byteLength, 7);
+
+
         int bytePos = 0;
         byte currentBufferByte = 0;
         for (int i = 0; i < toEncode.length(); ++i) {
             byte c = (byte) toEncode.charAt(i);
+            if(forceLowercase) {
+                c = Hpack.toLower(c);
+            }
             HuffmanCode code = HUFFMAN_CODES[c];
             if (code.length + bytePos <= 8) {
                 //it fits in the current byte
@@ -484,7 +505,6 @@ public class HPackHuffman {
             }
             buffer.put((byte) (currentBufferByte | ((0xFF) >> bytePos)));
         }
-        buffer.put(start, (byte) ((1 << 7) | (buffer.position() - start - 1)));
         return true;
     }
 
