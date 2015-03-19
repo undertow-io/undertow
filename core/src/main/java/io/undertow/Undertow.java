@@ -122,6 +122,7 @@ public final class Undertow {
             Pool<ByteBuffer> buffers = new ByteBufferSlicePool(directBuffers ? BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR : BufferAllocator.BYTE_BUFFER_ALLOCATOR, bufferSize, bufferSize * buffersPerRegion);
 
             for (ListenerConfig listener : listeners) {
+                final HttpHandler rootHandler = listener.rootHandler != null ? listener.rootHandler : this.rootHandler;
                 if (listener.type == ListenerType.AJP) {
                     AjpOpenListener openListener = new AjpOpenListener(buffers, serverOptions);
                     openListener.setRootHandler(rootHandler);
@@ -132,7 +133,7 @@ public final class Undertow {
                 } else {
                     OptionMap undertowOptions = OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap();
                     if (listener.type == ListenerType.HTTP) {
-                        HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions, bufferSize);
+                        HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
                         openListener.setRootHandler(rootHandler);
                         ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                         AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
@@ -207,20 +208,23 @@ public final class Undertow {
         final KeyManager[] keyManagers;
         final TrustManager[] trustManagers;
         final SSLContext sslContext;
+        final HttpHandler rootHandler;
 
-        private ListenerConfig(final ListenerType type, final int port, final String host, KeyManager[] keyManagers, TrustManager[] trustManagers) {
+        private ListenerConfig(final ListenerType type, final int port, final String host, KeyManager[] keyManagers, TrustManager[] trustManagers, HttpHandler rootHandler) {
             this.type = type;
             this.port = port;
             this.host = host;
             this.keyManagers = keyManagers;
             this.trustManagers = trustManagers;
+            this.rootHandler = rootHandler;
             this.sslContext = null;
         }
 
-        private ListenerConfig(final ListenerType type, final int port, final String host, SSLContext sslContext) {
+        private ListenerConfig(final ListenerType type, final int port, final String host, SSLContext sslContext, HttpHandler rootHandler) {
             this.type = type;
             this.port = port;
             this.host = host;
+            this.rootHandler = rootHandler;
             this.keyManagers = null;
             this.trustManagers = null;
             this.sslContext = sslContext;
@@ -272,36 +276,55 @@ public final class Undertow {
 
         @Deprecated
         public Builder addListener(int port, String host) {
-            listeners.add(new ListenerConfig(ListenerType.HTTP, port, host, null, null));
-            return this;
-        }
-
-        public Builder addHttpListener(int port, String host) {
-            listeners.add(new ListenerConfig(ListenerType.HTTP, port, host, null, null));
-            return this;
-        }
-
-        public Builder addHttpsListener(int port, String host, KeyManager[] keyManagers, TrustManager[] trustManagers) {
-            listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, keyManagers, trustManagers));
-            return this;
-        }
-
-        public Builder addHttpsListener(int port, String host, SSLContext sslContext) {
-            listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, sslContext));
-            return this;
-        }
-
-        public Builder addAjpListener(int port, String host) {
-            listeners.add(new ListenerConfig(ListenerType.AJP, port, host, null, null));
+            listeners.add(new ListenerConfig(ListenerType.HTTP, port, host, null, null, null));
             return this;
         }
 
         @Deprecated
         public Builder addListener(int port, String host, ListenerType listenerType) {
-            listeners.add(new ListenerConfig(listenerType, port, host, null, null));
+            listeners.add(new ListenerConfig(listenerType, port, host, null, null, null));
             return this;
         }
 
+        public Builder addHttpListener(int port, String host) {
+            listeners.add(new ListenerConfig(ListenerType.HTTP, port, host, null, null, null));
+            return this;
+        }
+
+        public Builder addHttpsListener(int port, String host, KeyManager[] keyManagers, TrustManager[] trustManagers) {
+            listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, keyManagers, trustManagers, null));
+            return this;
+        }
+
+        public Builder addHttpsListener(int port, String host, SSLContext sslContext) {
+            listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, sslContext, null));
+            return this;
+        }
+
+        public Builder addAjpListener(int port, String host) {
+            listeners.add(new ListenerConfig(ListenerType.AJP, port, host, null, null, null));
+            return this;
+        }
+
+        public Builder addHttpListener(int port, String host, HttpHandler rootHandler) {
+            listeners.add(new ListenerConfig(ListenerType.HTTP, port, host, null, null, rootHandler));
+            return this;
+        }
+
+        public Builder addHttpsListener(int port, String host, KeyManager[] keyManagers, TrustManager[] trustManagers, HttpHandler rootHandler) {
+            listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, keyManagers, trustManagers, rootHandler));
+            return this;
+        }
+
+        public Builder addHttpsListener(int port, String host, SSLContext sslContext, HttpHandler rootHandler) {
+            listeners.add(new ListenerConfig(ListenerType.HTTPS, port, host, sslContext, rootHandler));
+            return this;
+        }
+
+        public Builder addAjpListener(int port, String host, HttpHandler rootHandler) {
+            listeners.add(new ListenerConfig(ListenerType.AJP, port, host, null, null, rootHandler));
+            return this;
+        }
         public Builder setBufferSize(final int bufferSize) {
             this.bufferSize = bufferSize;
             return this;
