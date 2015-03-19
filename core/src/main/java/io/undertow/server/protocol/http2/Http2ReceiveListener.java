@@ -116,7 +116,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
     private void handleRequests(Http2Channel channel, Http2StreamSourceChannel frame) {
         //we have a request
-        final Http2StreamSourceChannel dataChannel = (Http2StreamSourceChannel) frame;
+        final Http2StreamSourceChannel dataChannel = frame;
         final Http2ServerConnection connection = new Http2ServerConnection(channel, dataChannel, undertowOptions, bufferSize, rootHandler);
 
 
