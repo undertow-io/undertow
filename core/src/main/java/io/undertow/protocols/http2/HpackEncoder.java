@@ -44,7 +44,9 @@ public class HpackEncoder extends Hpack {
     public static final IndexFunction DEFAULT_INDEX_FUNCTION = new IndexFunction() {
         @Override
         public boolean shouldUseIndexing(HttpString headerName, String value) {
-            return !headerName.equals(Headers.CONTENT_LENGTH);
+            //content length and date change all the time
+            //no need to index them, or they will churn the table
+            return !headerName.equals(Headers.CONTENT_LENGTH) && !headerName.equals(Headers.DATE);
         }
     };
 
@@ -242,6 +244,7 @@ public class HpackEncoder extends Hpack {
 
     }
 
+
     private void preventPositionRollover() {
         //if the position counter is about to roll over we iterate all the table entries
         //and set their position to their actual position
@@ -290,46 +293,6 @@ public class HpackEncoder extends Hpack {
             return staticTable[0];
         }
         return null;
-    }
-
-    /**
-     * Push the n least significant bits of value into the buffer
-     *
-     * @param buffer        The Buffer to push into
-     * @param value         The bits to push into the buffer
-     * @param n             The number of bits to push
-     * @param currentBitPos Value between 0 and 7 specifying the current location of the pit pointer
-     */
-    static int pushBits(ByteBuffer buffer, int value, int n, int currentBitPos) {
-
-        int bitsLeft = n;
-        if (currentBitPos != 0) {
-            int rem = 8 - currentBitPos;
-            //deal with the first partial byte, after that it is full bytes
-            int forThisByte = n > rem ? rem : n;
-            //now we left shift the value to leave only the bits we want
-            int toPush = value >> (n - forThisByte);
-            //how far we need to shift right
-            int shift = 8 - (currentBitPos + forThisByte);
-            int pos = buffer.position() - 1;
-            buffer.put(pos, (byte) (buffer.get(pos) | (toPush << shift)));
-            bitsLeft -= forThisByte;
-            if (bitsLeft == 0) {
-                int newPos = currentBitPos + n;
-                return newPos == 8 ? 0 : newPos;
-            }
-            //ok, we have dealt with the first partial byte in the buffer
-        }
-        while (true) {
-            int forThisByte = bitsLeft > 8 ? 8 : bitsLeft;
-            int toPush = value >> (bitsLeft - forThisByte);
-            int shift = 8 - forThisByte;
-            buffer.put((byte) (toPush << shift));
-            bitsLeft -= forThisByte;
-            if (bitsLeft == 0) {
-                return forThisByte;
-            }
-        }
     }
 
     public void setMaxTableSize(int newSize) {

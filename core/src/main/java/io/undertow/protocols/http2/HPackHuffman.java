@@ -406,9 +406,86 @@ public class HPackHuffman {
                 bitPos--;
             }
         }
-        if(!eosBits) {
+        if (!eosBits) {
             throw UndertowMessages.MESSAGES.huffmanEncodedHpackValueDidNotEndWithEOS();
         }
+    }
+
+
+    /**
+     * Encodes the given string into the buffer. If there is not enough space in the buffer, or the encoded
+     * version is bigger than the original it will return false and not modify the buffers position
+     *
+     * @param buffer   The buffer to encode into
+     * @param toEncode The string to encode
+     * @return true if encoding succeeded
+     */
+    public static boolean encode(ByteBuffer buffer, String toEncode) {
+        if (buffer.remaining() <= toEncode.length()) {
+            return false;
+        }
+        int start = buffer.position();
+        buffer.put((byte) 0); //we override this later once we have the length
+        int bytePos = 0;
+        byte currentBufferByte = 0;
+        for (int i = 0; i < toEncode.length(); ++i) {
+            byte c = (byte) toEncode.charAt(i);
+            HuffmanCode code = HUFFMAN_CODES[c];
+            if (code.length + bytePos <= 8) {
+                //it fits in the current byte
+                currentBufferByte |= ((code.value & 0xFF) << 8 - (code.length + bytePos));
+                bytePos += code.length;
+            } else {
+                //it does not fit, it may need up to 4 bytes
+                int val = code.value;
+                int rem = code.length;
+                while (rem > 0) {
+                    if (!buffer.hasRemaining()) {
+                        buffer.position(start);
+                        return false;
+                    }
+                    int remainingInByte = 8 - bytePos;
+                    if (rem > remainingInByte) {
+                        currentBufferByte |= (val >> (rem - remainingInByte));
+                    } else {
+                        currentBufferByte |= (val << (remainingInByte - rem));
+                    }
+                    if (rem > remainingInByte) {
+                        buffer.put(currentBufferByte);
+                        currentBufferByte = 0;
+                        bytePos = 0;
+                    } else {
+                        bytePos = rem;
+                    }
+                    rem -= remainingInByte;
+                }
+            }
+            if (bytePos == 8) {
+                if (!buffer.hasRemaining()) {
+                    buffer.position(start);
+                    return false;
+                }
+                buffer.put(currentBufferByte);
+                currentBufferByte = 0;
+                bytePos = 0;
+            }
+            if (buffer.position() - start > toEncode.length()) {
+                //the encoded version is longer than the original
+                //just return false
+                buffer.position(start);
+                return false;
+            }
+        }
+        if (bytePos > 0) {
+            //add the EOS bytes if we have not finished on a single byte
+            if (!buffer.hasRemaining()) {
+                buffer.position(start);
+                return false;
+            }
+            buffer.put((byte) (currentBufferByte | ((0xFF) >> bytePos)));
+        }
+        buffer.put(start, (byte) ((1 << 7) | (buffer.position() - start - 1)));
+        return true;
     }
 
     protected static class HuffmanCode {
