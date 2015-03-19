@@ -64,6 +64,8 @@ public class URLRewritingSessionTestCase {
                 if (session == null) {
                     session = manager.createSession(exchange, sessionConfig);
                     session.setAttribute(COUNT, 0);
+                } else {
+                    Assert.assertEquals("/notamatchingpath;jsessionid=" + session.getId(), exchange.getRequestURI());
                 }
                 Integer count = (Integer) session.getAttribute(COUNT);
                 exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());

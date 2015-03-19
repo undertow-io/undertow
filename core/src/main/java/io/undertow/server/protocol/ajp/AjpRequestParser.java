@@ -243,7 +243,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                     } else {
                         final String url = result.value.substring(0, colon);
                         String res = decode(url, result.containsUrlCharacters);
-                        exchange.setRequestURI(url);
+                        exchange.setRequestURI(result.value);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
                         URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters);

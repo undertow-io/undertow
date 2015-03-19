@@ -260,9 +260,9 @@ public class Connectors {
                 }
                 exchange.setRequestPath(part);
                 exchange.setRelativePath(part);
-                exchange.setRequestURI(encodedPart);
                 for(int j = i; j < encodedPath.length(); ++j) {
                     if (encodedPath.charAt(j) == '?') {
+                        exchange.setRequestURI(encodedPath.substring(0, j));
                         String pathParams = encodedPath.substring(i + 1, j);
                         URLUtils.parsePathParms(pathParams, exchange, charset, decode);
                         String qs = encodedPath.substring(j + 1);
@@ -271,6 +271,7 @@ public class Connectors {
                         return;
                     }
                 }
+                exchange.setRequestURI(encodedPath);
                 URLUtils.parsePathParms(encodedPath.substring(i + 1), exchange, charset, decode);
                 return;
             } else if(c == '%' || c == '+') {

@@ -31,7 +31,6 @@ import io.undertow.protocols.spdy.SpdySynReplyStreamSinkChannel;
 import io.undertow.protocols.spdy.SpdySynStreamStreamSourceChannel;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.URLUtils;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -101,7 +100,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                 exchange.setRequestMethod(new HttpString(exchange.getRequestHeaders().getFirst(METHOD)));
                 exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(HOST));
                 final String path = exchange.getRequestHeaders().getFirst(PATH);
-                setRequestPath(exchange, path, encoding, allowEncodingSlash, decodeBuffer);
+                Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer);
 
                 SSLSession session = channel.getSslSession();
                 if(session != null) {
@@ -140,71 +139,4 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
             frame.getSpdyChannel().sendPing(id);
         }
     }
-
-
-    /**
-     * Sets the request path and query parameters, decoding to the requested charset.
-     *
-     * @param exchange    The exchange
-     * @param encodedPath        The encoded path
-     * @param charset     The charset
-     */
-    private void setRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, final boolean allowEncodedSlash, StringBuilder decodeBuffer) {
-        boolean requiresDecode = false;
-        for (int i = 0; i < encodedPath.length(); ++i) {
-            char c = encodedPath.charAt(i);
-            if (c == '?') {
-                String part;
-                String encodedPart = encodedPath.substring(0, i);
-                if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, decodeBuffer);
-                } else {
-                    part = encodedPart;
-                }
-                exchange.setRequestPath(part);
-                exchange.setRelativePath(part);
-                exchange.setRequestURI(encodedPart);
-                final String qs = encodedPath.substring(i + 1);
-                exchange.setQueryString(qs);
-                URLUtils.parseQueryString(qs, exchange, encoding, decode);
-                return;
-            } else if(c == ';') {
-                String part;
-                String encodedPart = encodedPath.substring(0, i);
-                if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, decodeBuffer);
-                } else {
-                    part = encodedPart;
-                }
-                exchange.setRequestPath(part);
-                exchange.setRelativePath(part);
-                exchange.setRequestURI(encodedPart);
-                for(int j = i; j < encodedPath.length(); ++j) {
-                    if (encodedPath.charAt(j) == '?') {
-                        String pathParams = encodedPath.substring(i + 1, j);
-                        URLUtils.parsePathParms(pathParams, exchange, encoding, decode);
-                        String qs = encodedPath.substring(j + 1);
-                        exchange.setQueryString(qs);
-                        URLUtils.parseQueryString(qs, exchange, encoding, decode);
-                        return;
-                    }
-                }
-                URLUtils.parsePathParms(encodedPath.substring(i + 1), exchange, encoding, decode);
-                return;
-            } else if(c == '%' || c == '+') {
-                requiresDecode = true;
-            }
-        }
-
-        String part;
-        if (requiresDecode) {
-            part = URLUtils.decode(encodedPath, charset, allowEncodedSlash, decodeBuffer);
-        } else {
-            part = encodedPath;
-        }
-        exchange.setRequestPath(part);
-        exchange.setRelativePath(part);
-        exchange.setRequestURI(encodedPath);
-    }
-
 }
