@@ -593,6 +593,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             }
             if(buffer != null) {
                 buffer.free();
+                buffer = null;
             }
         }
     }
