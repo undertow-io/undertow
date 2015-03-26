@@ -94,8 +94,11 @@ public class SecurityContextImpl implements SecurityContext {
      */
 
     public boolean authenticate() {
-        // TODO - I don't see a need to force single threaded - if this request is from the servlet APIs then the request will
-        // have already been dispatched.
+        if(authenticationState == AuthenticationState.ATTEMPTED) {
+            //we are re-attempted, so we just reset the state
+            //see UNDERTOW-263
+            authenticationState = AuthenticationState.NOT_ATTEMPTED;
+        }
         return !authTransition();
     }
 
