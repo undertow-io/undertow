@@ -125,6 +125,45 @@ final class SecurityActions {
         }
     }
 
+    static void setCurrentRequestContext(final ServletRequestContext servletRequestContext) {
+        if (System.getSecurityManager() == null) {
+            ServletRequestContext.setCurrentRequestContext(servletRequestContext);
+        } else {
+            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    ServletRequestContext.setCurrentRequestContext(servletRequestContext);
+                    return null;
+                }
+            });
+        }
+    }
+
+    static void clearCurrentServletAttachments() {
+        if (System.getSecurityManager() == null) {
+            ServletRequestContext.clearCurrentServletAttachments();
+        } else {
+            AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    ServletRequestContext.clearCurrentServletAttachments();
+                    return null;
+                }
+            });
+        }
+    }
+    static ServletRequestContext requireCurrentServletRequestContext() {
+        if (System.getSecurityManager() == null) {
+            return ServletRequestContext.requireCurrent();
+        } else {
+            return AccessController.doPrivileged(new PrivilegedAction<ServletRequestContext>() {
+                @Override
+                public ServletRequestContext run() {
+                    return ServletRequestContext.requireCurrent();
+                }
+            });
+        }
+    }
     static ServletInitialHandler createServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
         if (System.getSecurityManager() == null) {
             return new ServletInitialHandler(paths, next, setupAction, servletContext);

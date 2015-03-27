@@ -39,20 +39,6 @@ class SecurityActions {
         }
     }
 
-    static void setCurrentRequestContext(final ServletRequestContext servletRequestContext) {
-        if (System.getSecurityManager() == null) {
-            ServletRequestContext.setCurrentRequestContext(servletRequestContext);
-        } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    ServletRequestContext.setCurrentRequestContext(servletRequestContext);
-                    return null;
-                }
-            });
-        }
-    }
-
     static ServletRequestContext requireCurrentServletRequestContext() {
         if (System.getSecurityManager() == null) {
             return ServletRequestContext.requireCurrent();
@@ -65,18 +51,4 @@ class SecurityActions {
             });
         }
     }
-
-    static void clearCurrentServletAttachments() {
-            if (System.getSecurityManager() == null) {
-                ServletRequestContext.clearCurrentServletAttachments();
-            } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        ServletRequestContext.clearCurrentServletAttachments();
-                        return null;
-                    }
-                });
-            }
-        }
 }

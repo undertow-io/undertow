@@ -254,7 +254,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
-            SecurityActions.setCurrentRequestContext(servletRequestContext);
             servletRequestContext.setRunningInsideHandler(true);
             try {
                 listeners.requestInitialized(request);
@@ -308,11 +307,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 servletRequestContext.getOriginalResponse().responseDone();
             }
         } finally {
-            try {
-                handle.tearDown();
-            } finally {
-                SecurityActions.clearCurrentServletAttachments();
-            }
+            handle.tearDown();
         }
     }
 
