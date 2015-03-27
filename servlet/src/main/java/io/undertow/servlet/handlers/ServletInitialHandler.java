@@ -270,8 +270,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                     request.setAttribute(entry.getKey(), entry.getValue());
                 }
             }
-
-            SecurityActions.setCurrentRequestContext(servletRequestContext);
             servletRequestContext.setRunningInsideHandler(true);
             try {
                 listeners.requestInitialized(request);
@@ -331,11 +329,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 }
             }
         } finally {
-            try {
-                handle.tearDown();
-            } finally {
-                SecurityActions.clearCurrentServletAttachments();
-            }
+            handle.tearDown();
         }
     }
 
