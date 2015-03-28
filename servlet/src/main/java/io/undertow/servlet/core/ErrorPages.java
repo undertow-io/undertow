@@ -65,7 +65,7 @@ public class ErrorPages {
             }
         }
         if (location == null) {
-            location = defaultErrorPage;
+            location = getErrorLocation(500);
         }
         return location;
     }
