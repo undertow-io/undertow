@@ -66,7 +66,6 @@ public class ErrorPageTestCase {
 
         builder1.addErrorPage(new ErrorPage("/defaultErrorPage"));
         builder1.addErrorPage(new ErrorPage("/404", StatusCodes.NOT_FOUND));
-        builder1.addErrorPage(new ErrorPage("/500", StatusCodes.INTERNAL_SERVER_ERROR));
         builder1.addErrorPage(new ErrorPage("/parentException", ParentException.class));
         builder1.addErrorPage(new ErrorPage("/childException", ChildException.class));
         builder1.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
@@ -128,6 +127,7 @@ public class ErrorPageTestCase {
         builder3.addServlet(new ServletInfo("path", PathServlet.class)
                 .addMapping("/*"));
 
+        builder3.addErrorPage(new ErrorPage("/defaultErrorPage"));
         builder3.addErrorPage(new ErrorPage("/404", StatusCodes.NOT_FOUND));
         builder3.addErrorPage(new ErrorPage("/500", StatusCodes.INTERNAL_SERVER_ERROR));
         builder3.addErrorPage(new ErrorPage("/parentException", ParentException.class));
@@ -158,7 +158,7 @@ public class ErrorPageTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             runTest(1, client, StatusCodes.NOT_FOUND, null, "/404");
-            runTest(1, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "/500");
+            runTest(1, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "/defaultErrorPage");
             runTest(1, client, StatusCodes.NOT_IMPLEMENTED, null, "/defaultErrorPage");
             runTest(1, client, null, ParentException.class, "/parentException");
             runTest(1, client, null, ChildException.class, "/childException");
@@ -198,7 +198,7 @@ public class ErrorPageTestCase {
         try {
             runTest(3, client, StatusCodes.NOT_FOUND, null, "/404");
             runTest(3, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "/500");
-            runTest(3, client, StatusCodes.NOT_IMPLEMENTED, null, "<html><head><title>Error</title></head><body>Not Implemented</body></html>");
+            runTest(3, client, StatusCodes.NOT_IMPLEMENTED, null, "/defaultErrorPage");
             runTest(3, client, null, ParentException.class, "/parentException");
             runTest(3, client, null, ChildException.class, "/childException");
             runTest(3, client, null, RuntimeException.class, "/runtimeException");

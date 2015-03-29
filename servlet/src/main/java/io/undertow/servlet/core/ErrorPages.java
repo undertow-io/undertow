@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.core;
 
+import io.undertow.util.StatusCodes;
+
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -65,7 +67,7 @@ public class ErrorPages {
             }
         }
         if (location == null) {
-            location = defaultErrorPage;
+            location = getErrorLocation(StatusCodes.INTERNAL_SERVER_ERROR);
         }
         return location;
     }
