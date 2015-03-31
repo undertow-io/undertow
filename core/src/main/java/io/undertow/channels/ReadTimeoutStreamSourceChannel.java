@@ -59,7 +59,6 @@ public final class ReadTimeoutStreamSourceChannel extends DelegatingStreamSource
 
     /**
      * @param delegate    The underlying channel
-     * @param readTimeout The read timeout, in milliseconds
      */
     public ReadTimeoutStreamSourceChannel(final StreamSourceChannel delegate) {
         super(delegate);
@@ -76,9 +75,14 @@ public final class ReadTimeoutStreamSourceChannel extends DelegatingStreamSource
     }
 
     private void handleReadTimeout(final long ret) {
-        if (readTimeout > 0) {
+        if(ret == -1) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        } else if (readTimeout > 0) {
             if (ret == 0 && handle == null) {
-                handle = delegate.getReadThread().executeAfter(timeoutCommand, readTimeout, TimeUnit.MILLISECONDS);
+                handle = delegate.getIoThread().executeAfter(timeoutCommand, readTimeout, TimeUnit.MILLISECONDS);
             } else if (ret > 0 && handle != null) {
                 handle.remove();
             }
@@ -133,5 +137,23 @@ public final class ReadTimeoutStreamSourceChannel extends DelegatingStreamSource
             }
         }
         return ret;
+    }
+
+    @Override
+    public void shutdownReads() throws IOException {
+        super.shutdownReads();
+        if(handle != null) {
+            handle.remove();
+            handle = null;
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        super.close();
+        if(handle != null) {
+            handle.remove();
+            handle = null;
+        }
     }
 }

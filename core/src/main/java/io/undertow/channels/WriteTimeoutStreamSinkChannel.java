@@ -24,6 +24,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
+import org.xnio.Buffers;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
@@ -103,6 +104,12 @@ public final class WriteTimeoutStreamSinkChannel extends DelegatingStreamSinkCha
     public int writeFinal(ByteBuffer src) throws IOException {
         int ret = delegate.writeFinal(src);
         handleWriteTimeout(ret);
+        if(!src.hasRemaining()) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return ret;
     }
 
@@ -110,6 +117,12 @@ public final class WriteTimeoutStreamSinkChannel extends DelegatingStreamSinkCha
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
         long ret = delegate.writeFinal(srcs, offset, length);
         handleWriteTimeout(ret);
+        if(!Buffers.hasRemaining(srcs, offset, length)) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return ret;
     }
 
@@ -117,6 +130,12 @@ public final class WriteTimeoutStreamSinkChannel extends DelegatingStreamSinkCha
     public long writeFinal(ByteBuffer[] srcs) throws IOException {
         long ret = delegate.writeFinal(srcs);
         handleWriteTimeout(ret);
+        if(!Buffers.hasRemaining(srcs)) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return ret;
     }
 
@@ -147,5 +166,23 @@ public final class WriteTimeoutStreamSinkChannel extends DelegatingStreamSinkCha
             }
         }
         return ret;
+    }
+
+    @Override
+    public void shutdownWrites() throws IOException {
+        super.shutdownWrites();
+        if(handle != null) {
+            handle.remove();
+            handle = null;
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        super.close();
+        if(handle != null) {
+            handle.remove();
+            handle = null;
+        }
     }
 }

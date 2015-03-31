@@ -22,6 +22,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.server.OpenListener;
 
+import org.xnio.Buffers;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Options;
@@ -124,6 +125,12 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
     public int writeFinal(ByteBuffer src) throws IOException {
         int ret = super.writeFinal(src);
         handleWriteTimeout(ret);
+        if(!src.hasRemaining()) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return ret;
     }
 
@@ -131,6 +138,12 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
         long ret = super.writeFinal(srcs, offset, length);
         handleWriteTimeout(ret);
+        if(!Buffers.hasRemaining(srcs)) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return ret;
     }
 
@@ -178,5 +191,23 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
             timeout = Math.min(timeout, idleTimeout);
         }
         return timeout;
+    }
+
+    @Override
+    public void terminateWrites() throws IOException {
+        super.terminateWrites();
+        if(handle != null) {
+            handle.remove();
+            handle = null;
+        }
+    }
+
+    @Override
+    public void truncateWrites() throws IOException {
+        super.truncateWrites();
+        if(handle != null) {
+            handle.remove();
+            handle = null;
+        }
     }
 }
