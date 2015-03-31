@@ -84,6 +84,17 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
 
     private void handleReadTimeout(final long ret) throws IOException {
         if (!connection.isOpen()) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+            return;
+        }
+        if(ret == -1) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
             return;
         }
         if (ret == 0 && handle != null) {
@@ -164,5 +175,14 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
             timeout = Math.min(timeout, idleTimeout);
         }
         return timeout;
+    }
+
+    @Override
+    public void terminateReads() throws IOException {
+        super.terminateReads();
+        if(handle != null) {
+            handle.remove();
+            handle = null;
+        }
     }
 }

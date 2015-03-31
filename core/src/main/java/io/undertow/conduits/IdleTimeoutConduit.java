@@ -18,6 +18,7 @@
 package io.undertow.conduits;
 
 import io.undertow.UndertowLogger;
+import org.xnio.Buffers;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -134,6 +135,12 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public int writeFinal(ByteBuffer src) throws IOException {
         handleIdleTimeout();
         int w = sink.writeFinal(src);
+        if(source.isReadShutdown() && !src.hasRemaining()) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return w;
     }
 
@@ -141,6 +148,12 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
         handleIdleTimeout();
         long w = sink.writeFinal(srcs, offset, length);
+        if(source.isReadShutdown() && !Buffers.hasRemaining(srcs, offset, length)) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return w;
     }
 
@@ -148,6 +161,12 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long transferTo(long position, long count, FileChannel target) throws IOException {
         handleIdleTimeout();
         long w = source.transferTo(position, count, target);
+        if(sink.isWriteShutdown() && w == -1) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return w;
     }
 
@@ -155,6 +174,12 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         handleIdleTimeout();
         long w = source.transferTo(count, throughBuffer, target);
+        if(sink.isWriteShutdown() && w == -1) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return w;
     }
 
@@ -162,6 +187,12 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
         handleIdleTimeout();
         long r = source.read(dsts, offset, length);
+        if(sink.isWriteShutdown() && r == -1) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return r;
     }
 
@@ -169,6 +200,12 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public int read(ByteBuffer dst) throws IOException {
         handleIdleTimeout();
         int r = source.read(dst);
+        if(sink.isWriteShutdown() && r == -1) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
         return r;
     }
 
@@ -183,6 +220,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         handleIdleTimeout();
         long r = sink.transferFrom(source, count, throughBuffer);
+
         return r;
     }
 
@@ -194,6 +232,12 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     @Override
     public void terminateReads() throws IOException {
         source.terminateReads();
+        if(sink.isWriteShutdown()) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
     }
 
     @Override
@@ -253,6 +297,12 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     @Override
     public void terminateWrites() throws IOException {
         sink.terminateWrites();
+        if(source.isReadShutdown()) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
     }
 
     @Override
@@ -304,7 +354,14 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     @Override
     public void truncateWrites() throws IOException {
         sink.truncateWrites();
+        if(source.isReadShutdown()) {
+            if(handle != null) {
+                handle.remove();
+                handle = null;
+            }
+        }
     }
+
 
     @Override
     public boolean flush() throws IOException {
