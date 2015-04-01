@@ -420,19 +420,46 @@ public final class ProxyHandler implements HttpHandler {
             }
 
             // Set the protocol header and attachment
-            final String proto = exchange.getRequestScheme().equals("https") ? "https" : "http";
-            request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, proto);
-            request.putAttachment(ProxiedRequestAttachments.IS_SSL, proto.equals("https"));
+            if(reuseXForwarded && exchange.getRequestHeaders().contains(Headers.X_FORWARDED_PROTO)) {
+                final String proto = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PROTO);
+                request.putAttachment(ProxiedRequestAttachments.IS_SSL, proto.equals("https"));
+            } else {
+                final String proto = exchange.getRequestScheme().equals("https") ? "https" : "http";
+                request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, proto);
+                request.putAttachment(ProxiedRequestAttachments.IS_SSL, proto.equals("https"));
+            }
 
             // Set the server name
-            final String hostName = exchange.getHostName();
-            request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, hostName);
-            request.putAttachment(ProxiedRequestAttachments.SERVER_NAME, hostName);
+            if(reuseXForwarded && exchange.getRequestHeaders().contains(Headers.X_FORWARDED_SERVER)) {
+                final String hostName = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_SERVER);
+                request.putAttachment(ProxiedRequestAttachments.SERVER_NAME, hostName);
+            } else {
+                final String hostName = exchange.getHostName();
+                request.getRequestHeaders().put(Headers.X_FORWARDED_SERVER, hostName);
+                request.putAttachment(ProxiedRequestAttachments.SERVER_NAME, hostName);
+            }
+            if(!exchange.getRequestHeaders().contains(Headers.X_FORWARDED_HOST)) {
+                final String hostName = exchange.getHostName();
+                if(hostName != null) {
+                    request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, hostName);
+                }
+            }
 
             // Set the port
-            int port = exchange.getConnection().getLocalAddress(InetSocketAddress.class).getPort();
-            request.getRequestHeaders().put(Headers.X_FORWARDED_PORT, port);
-            request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, port);
+            if(reuseXForwarded && exchange.getRequestHeaders().contains(Headers.X_FORWARDED_PORT)) {
+                try {
+                    int port = Integer.parseInt(exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PORT));
+                    request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, port);
+                } catch (NumberFormatException e) {
+                    int port = exchange.getConnection().getLocalAddress(InetSocketAddress.class).getPort();
+                    request.getRequestHeaders().put(Headers.X_FORWARDED_PORT, port);
+                    request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, port);
+                }
+            } else {
+                int port = exchange.getConnection().getLocalAddress(InetSocketAddress.class).getPort();
+                request.getRequestHeaders().put(Headers.X_FORWARDED_PORT, port);
+                request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, port);
+            }
 
             SSLSessionInfo sslSessionInfo = exchange.getConnection().getSslSessionInfo();
             if (sslSessionInfo != null) {
