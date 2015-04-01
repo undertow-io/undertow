@@ -32,24 +32,26 @@ import org.xnio.IoUtils;
  */
 public class DefaultIoCallback implements IoCallback {
 
+    private static final IoCallback CALLBACK = new IoCallback() {
+        @Override
+        public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+            exchange.endExchange();
+        }
+
+        @Override
+        public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
+            exchange.endExchange();
+        }
+    };
+
     protected DefaultIoCallback() {
 
     }
 
     @Override
     public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-        sender.close(new IoCallback() {
-            @Override
-            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                exchange.endExchange();
-            }
-
-            @Override
-            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-                exchange.endExchange();
-            }
-        });
+        sender.close(CALLBACK);
     }
 
     @Override

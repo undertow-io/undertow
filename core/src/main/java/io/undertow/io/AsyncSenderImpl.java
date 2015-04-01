@@ -49,27 +49,7 @@ public class AsyncSenderImpl implements Sender {
     private IoCallback callback;
     private boolean inCallback;
 
-    private final ChannelListener<StreamSinkChannel> writeListener = new ChannelListener<StreamSinkChannel>() {
-        @Override
-        public void handleEvent(final StreamSinkChannel streamSinkChannel) {
-            try {
-                long toWrite = Buffers.remaining(buffer);
-                long written = 0;
-                while (written < toWrite) {
-                    long res = streamSinkChannel.write(buffer, 0, buffer.length);
-                    written += res;
-                    if (res == 0) {
-                        return;
-                    }
-                }
-                streamSinkChannel.suspendWrites();
-                invokeOnComplete();
-            } catch (IOException e) {
-                streamSinkChannel.suspendWrites();
-                invokeOnException(callback, e);
-            }
-        }
-    };
+    private ChannelListener<StreamSinkChannel> writeListener;
 
     public class TransferTask implements Runnable, ChannelListener<StreamSinkChannel> {
         public boolean run(boolean complete) {
@@ -125,7 +105,7 @@ public class AsyncSenderImpl implements Sender {
         }
     }
 
-    private final TransferTask transferTask = new TransferTask();
+    private TransferTask transferTask;
 
 
     public AsyncSenderImpl(final HttpServerExchange exchange) {
@@ -168,6 +148,10 @@ public class AsyncSenderImpl implements Sender {
                 if (res == 0) {
                     this.buffer = new ByteBuffer[]{buffer};
                     this.callback = callback;
+
+                    if(writeListener == null) {
+                        initWriteListener();
+                    }
                     channel.getWriteSetter().set(writeListener);
                     channel.resumeWrites();
                     return;
@@ -220,6 +204,10 @@ public class AsyncSenderImpl implements Sender {
                 if (res == 0) {
                     this.buffer = buffer;
                     this.callback = callback;
+
+                    if(writeListener == null) {
+                        initWriteListener();
+                    }
                     channel.getWriteSetter().set(writeListener);
                     channel.resumeWrites();
                     return;
@@ -247,7 +235,9 @@ public class AsyncSenderImpl implements Sender {
         if (inCallback) {
             return;
         }
-
+        if(transferTask == null) {
+            transferTask = new TransferTask();
+        }
         if (exchange.isInIoThread()) {
             exchange.dispatch(transferTask);
             return;
@@ -394,6 +384,9 @@ public class AsyncSenderImpl implements Sender {
                         long res = channel.write(buffer);
                         written += res;
                         if (res == 0) {
+                            if(writeListener == null) {
+                                initWriteListener();
+                            }
                             channel.getWriteSetter().set(writeListener);
                             channel.resumeWrites();
                             return;
@@ -404,6 +397,9 @@ public class AsyncSenderImpl implements Sender {
                     invokeOnException(callback, e);
                 }
             } else if (this.fileChannel != null) {
+                if(transferTask == null) {
+                    transferTask = new TransferTask();
+                }
                 if (!transferTask.run(false)) {
                     return;
                 }
@@ -424,5 +420,29 @@ public class AsyncSenderImpl implements Sender {
             pooledBuffers = null;
         }
         callback.onException(exchange, this, e);
+    }
+
+    private void initWriteListener() {
+        writeListener = new ChannelListener<StreamSinkChannel>() {
+            @Override
+            public void handleEvent(final StreamSinkChannel streamSinkChannel) {
+                try {
+                    long toWrite = Buffers.remaining(buffer);
+                    long written = 0;
+                    while (written < toWrite) {
+                        long res = streamSinkChannel.write(buffer, 0, buffer.length);
+                        written += res;
+                        if (res == 0) {
+                            return;
+                        }
+                    }
+                    streamSinkChannel.suspendWrites();
+                    invokeOnComplete();
+                } catch (IOException e) {
+                    streamSinkChannel.suspendWrites();
+                    invokeOnException(callback, e);
+                }
+            }
+        };
     }
 }
