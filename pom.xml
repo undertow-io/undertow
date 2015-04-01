@@ -64,7 +64,7 @@
         <version.easymock>3.2</version.easymock>        
         <version.io.undertow.jastow>1.0.0.Final</version.io.undertow.jastow>
         <version.junit>4.11</version.junit>        
-        <version.netty>3.6.6.Final</version.netty>     
+        <version.netty>4.1.0.Beta4</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>   
         <version.org.apache.httpmime>4.2.6</version.org.apache.httpmime>
         <version.org.apache.httpcomponents>4.2.6</version.org.apache.httpcomponents>
@@ -296,7 +296,7 @@
 
             <dependency>
                 <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
+                <artifactId>netty-all</artifactId>
                 <version>${version.netty}</version>
                 <scope>test</scope>
             </dependency>

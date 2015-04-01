@@ -90,13 +90,6 @@
             <scope>compile</scope>
         </dependency>
         <!-- Test dependencies -->
-
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         
         <dependency>
             <groupId>org.apache.directory.server</groupId>

@@ -31,9 +31,9 @@ import io.undertow.websockets.jsr.UndertowSession;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -111,7 +111,7 @@ public class AnnotatedEndpointTest {
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Stuart"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
@@ -124,7 +124,7 @@ public class AnnotatedEndpointTest {
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello".getBytes(), latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
@@ -202,7 +202,7 @@ public class AnnotatedEndpointTest {
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/increment/2"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "14".getBytes(), latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "14".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
@@ -215,7 +215,7 @@ public class AnnotatedEndpointTest {
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encoding/Stuart"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
@@ -227,7 +227,7 @@ public class AnnotatedEndpointTest {
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encodingGenerics/Stuart"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
@@ -239,7 +239,7 @@ public class AnnotatedEndpointTest {
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/request?a=b"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/ws/request?a=b".getBytes(), latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/ws/request?a=b".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }

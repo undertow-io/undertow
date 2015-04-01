@@ -17,22 +17,22 @@
  */
 package io.undertow.websockets.core.protocol;
 
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.NetworkUtils;
+import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedBinaryMessage;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.WebSocketConnectionCallback;
-import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.Test;
 import org.xnio.FutureResult;
 import org.xnio.Pooled;
@@ -84,7 +84,7 @@ public class WebSocket07ServerTest extends AbstractWebSocketServerTest {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ':' + DefaultServer.getHostPort("default") + '/'));
         client.connect();
-        client.send(new PingWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
+        client.send(new PingWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         client.destroy();
     }

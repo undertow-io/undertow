@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core.protocol;
 
+import io.netty.buffer.Unpooled;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.NetworkUtils;
@@ -31,12 +32,11 @@ import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -85,7 +85,7 @@ public class AbstractWebSocketServerTest {
         final FutureResult<?> latch = new FutureResult();
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
+        client.send(new TextWebSocketFrame(Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
@@ -128,7 +128,7 @@ public class AbstractWebSocketServerTest {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
 
         client.destroy();

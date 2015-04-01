@@ -17,10 +17,10 @@
  */
 package io.undertow.websockets.utils;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.junit.Assert;
 import org.xnio.FutureResult;
 
@@ -51,11 +51,11 @@ public final class FrameChecker implements WebSocketTestClient.FrameListener {
                 Assert.assertTrue(clazz.isInstance(frame));
 
                 if (frame instanceof TextWebSocketFrame) {
-                    String buf = ((TextWebSocketFrame) frame).getText();
+                    String buf = ((TextWebSocketFrame) frame).text();
 
                     Assert.assertEquals(new String(expectedPayload, Charset.forName("UTF-8")), buf);
                 } else {
-                    ChannelBuffer buf = frame.getBinaryData();
+                    ByteBuf buf = frame.content();
                     byte[] data = new byte[buf.readableBytes()];
                     buf.readBytes(data);
 

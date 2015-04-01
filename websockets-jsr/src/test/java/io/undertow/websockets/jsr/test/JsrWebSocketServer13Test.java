@@ -17,7 +17,7 @@
  */
 package io.undertow.websockets.jsr.test;
 
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

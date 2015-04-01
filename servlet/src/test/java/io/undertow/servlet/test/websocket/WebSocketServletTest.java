@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.test.websocket;
 
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
@@ -34,8 +36,6 @@ import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.FutureResult;
@@ -85,9 +85,9 @@ public class WebSocketServletTest {
                 .addMapping("/*"));
 
         final FutureResult latch = new FutureResult();
-        WebSocketTestClient client = new WebSocketTestClient(org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion.V13, new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/servletContext/"));
+        WebSocketTestClient client = new WebSocketTestClient(io.netty.handler.codec.http.websocketx.WebSocketVersion.V13, new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/servletContext/"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(US_ASCII), latch));
+        client.send(new TextWebSocketFrame(Unpooled.copiedBuffer("hello", US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(US_ASCII), latch));
         latch.getIoFuture().get();
         client.destroy();
     }

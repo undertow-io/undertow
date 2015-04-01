@@ -17,30 +17,30 @@
  */
 package io.undertow.websockets.utils;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
-import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class WebSocketTestClient {
-    private final ClientBootstrap bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory());
+    private final Bootstrap bootstrap = new Bootstrap();
     private Channel ch;
     private final URI uri;
     private final WebSocketVersion version;
@@ -75,21 +75,24 @@ public final class WebSocketTestClient {
             throw new IllegalArgumentException("Unsupported protocol: " + protocol);
         }
         final WebSocketClientHandshaker handshaker =
-                new WebSocketClientHandshakerFactory().newHandshaker(
-                        uri, version, null, false, Collections.<String, String>emptyMap());
+                WebSocketClientHandshakerFactory.newHandshaker(
+                        uri, version, null, false, new DefaultHttpHeaders());
 
+        EventLoopGroup group = new NioEventLoopGroup();
         final CountDownLatch handshakeLatch = new CountDownLatch(1);
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
-                ChannelPipeline pipeline = Channels.pipeline();
+        bootstrap.group(group)
+                .channel(NioSocketChannel.class)
+                .handler(new ChannelInitializer() {
+                    @Override
+                    protected void initChannel(Channel channel) throws Exception {
 
-                pipeline.addLast("decoder", new HttpResponseDecoder());
-                pipeline.addLast("encoder", new HttpRequestEncoder());
-                pipeline.addLast("ws-handler", new WSClientHandler(handshaker, handshakeLatch));
-                return pipeline;
-            }
-        });
+                        ChannelPipeline p = channel.pipeline();
+                        p.addLast(
+                                new HttpClientCodec(),
+                                new HttpObjectAggregator(8192),
+                                new WSClientHandler(handshaker, handshakeLatch));
+                    }
+                });
 
         // Connect
         ChannelFuture future =
@@ -97,7 +100,7 @@ public final class WebSocketTestClient {
                         new InetSocketAddress(uri.getHost(), uri.getPort()));
         future.syncUninterruptibly();
 
-        ch = future.getChannel();
+        ch = future.channel();
 
         handshaker.handshake(ch).syncUninterruptibly();
         handshakeLatch.await();
@@ -110,25 +113,27 @@ public final class WebSocketTestClient {
      * when an Exception was caught.
      */
     public WebSocketTestClient send(WebSocketFrame frame, final FrameListener listener) {
-        ch.getPipeline().addLast("responseHandler" + count.incrementAndGet(), new SimpleChannelUpstreamHandler() {
+        ch.pipeline().addLast("responseHandler" + count.incrementAndGet(), new SimpleChannelInboundHandler<Object>() {
+
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-                if (e.getMessage() instanceof CloseWebSocketFrame) {
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                if (msg instanceof CloseWebSocketFrame) {
                     closed = true;
                 }
-                listener.onFrame((WebSocketFrame) e.getMessage());
-                ctx.getPipeline().remove(this);
+                listener.onFrame((WebSocketFrame) msg);
+                ctx.pipeline().remove(this);
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-                listener.onError(e.getCause());
-                ctx.getPipeline().remove(this);
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                cause.printStackTrace();
+                listener.onError(cause);
+                ctx.pipeline().remove(this);
             }
         });
-        ChannelFuture cf = ch.write(frame).syncUninterruptibly();
+        ChannelFuture cf = ch.writeAndFlush(frame).syncUninterruptibly();
         if (!cf.isSuccess()) {
-            listener.onError(cf.getCause());
+            listener.onError(cf.cause());
         }
         return this;
     }
@@ -156,7 +161,7 @@ public final class WebSocketTestClient {
                 throw new RuntimeException(e);
             }
         }
-        bootstrap.releaseExternalResources();
+        //bootstrap.releaseExternalResources();
         if (ch != null) {
             ch.close().syncUninterruptibly();
         }
@@ -174,37 +179,38 @@ public final class WebSocketTestClient {
         void onError(Throwable t);
     }
 
-    private static final class WSClientHandler extends SimpleChannelUpstreamHandler {
+    private static final class WSClientHandler extends SimpleChannelInboundHandler<Object> {
 
         private final WebSocketClientHandshaker handshaker;
         private final CountDownLatch handshakeLatch;
 
         public WSClientHandler(WebSocketClientHandshaker handshaker, CountDownLatch handshakeLatch) {
+            super(false);
             this.handshaker = handshaker;
             this.handshakeLatch = handshakeLatch;
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-            Channel ch = ctx.getChannel();
+        protected void channelRead0(ChannelHandlerContext ctx, Object o) throws Exception {
+
+            Channel ch = ctx.channel();
 
             if (!handshaker.isHandshakeComplete()) {
-                handshaker.finishHandshake(ch, (HttpResponse) e.getMessage());
+                handshaker.finishHandshake(ch, (FullHttpResponse) o);
                 // the handshake response was processed upgrade is complete
                 handshakeLatch.countDown();
+                ReferenceCountUtil.release(o);
                 return;
             }
 
-            if (e.getMessage() instanceof HttpResponse) {
-                HttpResponse response = (HttpResponse) e.getMessage();
+            if (o instanceof FullHttpResponse) {
+                FullHttpResponse response = (FullHttpResponse) o;
+                ReferenceCountUtil.release(o);
                 throw new Exception("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
-                        + response.getContent().toString(CharsetUtil.UTF_8) + ')');
+                        + response.content().toString(CharsetUtil.UTF_8) + ')');
             }
-            // foward to the next handler
-            super.messageReceived(ctx, e);
+            ctx.fireChannelRead(o);
         }
-
-
     }
 }
 

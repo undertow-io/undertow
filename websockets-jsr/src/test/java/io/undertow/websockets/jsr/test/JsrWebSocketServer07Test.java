@@ -41,13 +41,14 @@ import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpointConfig;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
+
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -111,7 +112,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         Assert.assertNull(cause.get());
         client.destroy();
@@ -142,7 +143,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         Assert.assertNull(cause.get());
         client.destroy();
@@ -173,7 +174,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         Assert.assertNull(cause.get());
         client.destroy();
@@ -219,7 +220,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         latch2.getIoFuture().get();
 
@@ -268,7 +269,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         latch2.getIoFuture().get();
 
@@ -309,7 +310,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
 
         Future<Void> result = sendResult.get();
@@ -342,7 +343,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
 
         sendResult.get();
@@ -391,7 +392,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         Assert.assertNull(cause.get());
         client.destroy();
@@ -436,7 +437,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         Assert.assertNull(cause.get());
         client.destroy();
@@ -462,7 +463,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new PingWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
+        client.send(new PingWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         Assert.assertNull(cause.get());
         client.destroy();
@@ -591,7 +592,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         Assert.assertNull(cause.get());
         client.destroy();
@@ -629,7 +630,7 @@ public class JsrWebSocketServer07Test {
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
         latch.getIoFuture().get();
         Assert.assertNull(cause.get());
         client.destroy();
