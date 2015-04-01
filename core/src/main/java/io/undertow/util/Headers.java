@@ -106,6 +106,7 @@ public final class Headers {
     public static final String X_FORWARDED_HOST_STRING = "X-Forwarded-Host";
     public static final String X_FORWARDED_PORT_STRING = "X-Forwarded-Port";
     public static final String X_DISABLE_PUSH_STRING = "X-Disable-Push";
+    public static final String X_FORWARDED_SERVER_STRING = "X-Forwarded-Server";
 
     // Header names
 
@@ -185,6 +186,7 @@ public final class Headers {
     public static final HttpString X_FORWARDED_HOST = new HttpString(X_FORWARDED_HOST_STRING, 69);
     public static final HttpString X_FORWARDED_PORT = new HttpString(X_FORWARDED_PORT_STRING, 70);
     public static final HttpString X_FORWARDED_PROTO = new HttpString(X_FORWARDED_PROTO_STRING, 71);
+    public static final HttpString X_FORWARDED_SERVER = new HttpString(X_FORWARDED_SERVER_STRING, 72);
 
     // Content codings
 
