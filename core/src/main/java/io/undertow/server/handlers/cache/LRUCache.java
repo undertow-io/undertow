@@ -137,6 +137,11 @@ public class LRUCache<K, V> {
         }
     }
 
+    public void clear() {
+        cache.clear();
+        accessQueue.clear();
+    }
+
     public static final class CacheEntry<K, V> {
 
         private static final Object CLAIM_TOKEN = new Object();

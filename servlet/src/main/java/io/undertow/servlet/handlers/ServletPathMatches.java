@@ -20,6 +20,7 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.cache.LRUCache;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletMessages;
@@ -62,6 +63,8 @@ public class ServletPathMatches {
 
     private volatile ServletPathMatchesData data;
 
+    private final LRUCache<String, ServletPathMatch> pathMatchCache = new LRUCache<>(1000, -1); //TODO: configurable
+
     public ServletPathMatches(final Deployment deployment) {
         this.deployment = deployment;
         this.welcomePages = deployment.getDeploymentInfo().getWelcomePages().toArray(new String[deployment.getDeploymentInfo().getWelcomePages().size()]);
@@ -73,8 +76,13 @@ public class ServletPathMatches {
     }
 
     public ServletPathMatch getServletHandlerByPath(final String path) {
+        ServletPathMatch existing = pathMatchCache.get(path);
+        if(existing != null) {
+            return existing;
+        }
         ServletPathMatch match = getData().getServletHandlerByPath(path);
         if (!match.isRequiredWelcomeFileMatch()) {
+            pathMatchCache.add(path, match);
             return match;
         }
         try {
@@ -82,6 +90,7 @@ public class ServletPathMatches {
             String remaining = match.getRemaining() == null ? match.getMatched() : match.getRemaining();
             Resource resource = resourceManager.getResource(remaining);
             if (resource == null || !resource.isDirectory()) {
+                pathMatchCache.add(path, match);
                 return match;
             }
 
@@ -91,15 +100,20 @@ public class ServletPathMatches {
             ServletPathMatch welcomePage = findWelcomeFile(pathWithTrailingSlash, !pathEndsWithSlash);
 
             if (welcomePage != null) {
+                pathMatchCache.add(path, welcomePage);
                 return welcomePage;
             } else {
                 welcomePage = findWelcomeServlet(pathWithTrailingSlash, !pathEndsWithSlash);
                 if (welcomePage != null) {
+                    pathMatchCache.add(path, welcomePage);
                     return welcomePage;
                 } else if(pathEndsWithSlash) {
+                    pathMatchCache.add(path, match);
                     return match;
                 } else {
-                    return new ServletPathMatch(match.getServletChain(), match.getMatched(), match.getRemaining(), REDIRECT, "/");
+                    ServletPathMatch redirect = new ServletPathMatch(match.getServletChain(), match.getMatched(), match.getRemaining(), REDIRECT, "/");
+                    pathMatchCache.add(path, redirect);
+                    return redirect;
                 }
             }
 
@@ -111,6 +125,7 @@ public class ServletPathMatches {
 
     public void invalidate() {
         this.data = null;
+        this.pathMatchCache.clear();
     }
 
     private ServletPathMatchesData getData() {
