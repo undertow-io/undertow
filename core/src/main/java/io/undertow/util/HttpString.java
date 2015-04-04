@@ -267,7 +267,18 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      */
     @Override
     public boolean equals(final Object other) {
-        return other == this || other instanceof HttpString && equals((HttpString) other);
+        if(other == this) {
+            return true;
+        }
+        if(!(other instanceof HttpString)) {
+            return false;
+        }
+        HttpString otherString = (HttpString) other;
+        if(orderInt > 0 && otherString.orderInt > 0) {
+            //if the order int is set for both of them and different then we know they are different strings
+            return false;
+        }
+        return bytesAreEqual(bytes, otherString.bytes);
     }
 
     /**
