@@ -72,12 +72,12 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     private volatile long startTime;
 
-    private final boolean exictOldestUnusedSessionOnMax;
+    private final boolean expireOldestUnusedSessionOnMax;
 
 
-    public InMemorySessionManager(String deploymentName, int maxSessions, boolean exictOldestUnusedSessionOnMax) {
+    public InMemorySessionManager(String deploymentName, int maxSessions, boolean expireOldestUnusedSessionOnMax) {
         this.deploymentName = deploymentName;
-        this.exictOldestUnusedSessionOnMax = exictOldestUnusedSessionOnMax;
+        this.expireOldestUnusedSessionOnMax = expireOldestUnusedSessionOnMax;
         this.sessions = new ConcurrentHashMap<>();
         this.maxSize = maxSessions;
         ConcurrentDirectDeque<String> evictionQueue = null;
@@ -88,7 +88,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     }
 
     public InMemorySessionManager(String deploymentName, int maxSessions) {
-        this(deploymentName, maxSessions, true);
+        this(deploymentName, maxSessions, false);
     }
 
     public InMemorySessionManager(String id) {
@@ -119,7 +119,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public Session createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (evictionQueue != null) {
-            if(exictOldestUnusedSessionOnMax) {
+            if(expireOldestUnusedSessionOnMax) {
                 while (sessions.size() >= maxSize && !evictionQueue.isEmpty()) {
 
                     String key = evictionQueue.poll();
