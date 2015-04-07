@@ -81,6 +81,23 @@ public class FileResourceManager implements ResourceManager {
         this(base, transferMinSize, true, followLinks, safePaths);
     }
 
+    protected FileResourceManager(long transferMinSize, boolean caseSensitive, boolean followLinks, final String... safePaths) {
+        this.caseSensitive = caseSensitive;
+        this.followLinks = followLinks;
+        this.transferMinSize = transferMinSize;
+        if (this.followLinks) {
+            if (safePaths == null) {
+                throw UndertowMessages.MESSAGES.argumentCannotBeNull("safePaths");
+            }
+            for (final String safePath : safePaths) {
+                if (safePath == null) {
+                    throw UndertowMessages.MESSAGES.argumentCannotBeNull("safePaths");
+                }
+            }
+            this.safePaths.addAll(Arrays.asList(safePaths));
+        }
+    }
+
     public FileResourceManager(final File base, long transferMinSize, boolean caseSensitive, boolean followLinks, final String... safePaths) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
@@ -275,7 +292,7 @@ public class FileResourceManager implements ResourceManager {
     /**
      * Apply security check for case insensitive file systems.
      */
-    private FileResource getFileResource(final File file, final String path) throws IOException {
+    protected FileResource getFileResource(final File file, final String path) throws IOException {
         if (this.caseSensitive) {
             if (isFileSameCase(file)) {
                 return new FileResource(file, this, path);
