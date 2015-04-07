@@ -18,10 +18,6 @@
 
 package io.undertow.servlet.test.listener.request.async.onError;
 
-import java.io.IOException;
-
-import javax.servlet.ServletException;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -41,12 +37,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.servlet.ServletException;
+import java.io.IOException;
+
 /**
+ * @author Jozef Hartinger
  * @see https://issues.jboss.org/browse/UNDERTOW-30
  * @see https://issues.jboss.org/browse/UNDERTOW-31
  * @see https://issues.jboss.org/browse/UNDERTOW-32
- *
- * @author Jozef Hartinger
  */
 @RunWith(DefaultServer.class)
 public class AsyncListenerOnErrorTest {
@@ -66,13 +64,13 @@ public class AsyncListenerOnErrorTest {
                 .addMapping("/async1");
 
         ServletInfo a2 = new ServletInfo("asyncServlet2", AsyncServlet2.class)
-        .setAsyncSupported(true)
-        .addMapping("/async2");
+                .setAsyncSupported(true)
+                .addMapping("/async2");
 
 
         ServletInfo a3 = new ServletInfo("asyncServlet3", AsyncServlet3.class)
-        .setAsyncSupported(true)
-        .addMapping("/async3");
+                .setAsyncSupported(true)
+                .addMapping("/async3");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(AsyncListenerOnErrorTest.class.getClassLoader())
@@ -102,7 +100,7 @@ public class AsyncListenerOnErrorTest {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
-            Assert.assertArrayEquals(new String[] {"ERROR", "COMPLETE"}, AsyncEventListener.results());
+            Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(2));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -117,7 +115,7 @@ public class AsyncListenerOnErrorTest {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
-            Assert.assertArrayEquals(new String[] {"COMPLETE", "ERROR"}, AsyncEventListener.results());
+            Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(2));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -132,7 +130,7 @@ public class AsyncListenerOnErrorTest {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
-            Assert.assertArrayEquals(new String[] {"START", "COMPLETE", "ERROR"}, AsyncEventListener.results());
+            Assert.assertArrayEquals(new String[]{"START", "ERROR", "COMPLETE"}, AsyncEventListener.results(3));
         } finally {
             client.getConnectionManager().shutdown();
         }

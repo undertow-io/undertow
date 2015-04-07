@@ -20,8 +20,9 @@ package io.undertow.servlet.test.listener.request.async.onError;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.AsyncEvent;
 
@@ -30,10 +31,31 @@ import javax.servlet.AsyncEvent;
  */
 public class AsyncEventListener implements javax.servlet.AsyncListener {
 
-    private static final List<String> EVENTS = Collections.synchronizedList(new ArrayList<String>());
+    private static final LinkedBlockingDeque<String> EVENTS = new LinkedBlockingDeque<>();
 
-    public static String[] results() {
-        String[] ret = EVENTS.toArray(new String[EVENTS.size()]);
+    public static String[] results(int expected) {
+        List<String> poll = new ArrayList<>();
+        String current = EVENTS.poll();
+        while (current != null) {
+            poll.add(current);
+            current = EVENTS.poll();
+        }
+        try {
+            if (poll.size() < expected) {
+                current = EVENTS.poll(5, TimeUnit.SECONDS);
+                while (current != null) {
+                    poll.add(current);
+                    if (poll.size() < expected) {
+                        current = EVENTS.poll(5, TimeUnit.SECONDS);
+                    } else {
+                        current = EVENTS.poll();
+                    }
+                }
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        String[] ret = poll.toArray(new String[poll.size()]);
         EVENTS.clear();
         return ret;
     }

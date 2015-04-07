@@ -272,9 +272,10 @@ public class AsyncContextImpl implements AsyncContext {
             timeoutKey.remove();
             timeoutKey = null;
         }
-        onAsyncComplete();
         if(!dispatched) {
             completeInternal();
+        } else {
+            onAsyncComplete();
         }
         if(previousAsyncContext != null) {
             previousAsyncContext.complete();
@@ -282,14 +283,12 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     public synchronized void completeInternal() {
-        if(timeoutKey != null) {
-            timeoutKey.remove();
-            timeoutKey = null;
-        }
         servletRequestContext.getOriginalRequest().asyncRequestDispatched();
         Thread currentThread = Thread.currentThread();
         if (!initialRequestDone && currentThread == initiatingThread) {
-            //the context was stopped in the same request context it was started, we don't do anything
+            //TODO: according to the spec we should delay this until the container initiated thread has returned?
+
+            onAsyncComplete();
             if (dispatched) {
                 throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
             }
@@ -297,13 +296,12 @@ public class AsyncContextImpl implements AsyncContext {
             dispatched = true;
             initialRequestDone();
         } else {
-            //we do not run the ServletRequestListeners here, as the request does not come into the scope
-            //of a web application, as defined by the javadoc on ServletRequestListener
             if(currentThread == exchange.getIoThread()) {
                 //the thread safety semantics here are a bit weird.
                 //basically if we are doing async IO we can't do a dispatch here, as then the IO thread can be racing
                 //with the dispatch thread.
                 //at all other times the dispatch is desirable
+                onAsyncComplete();
                 HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                 response.responseDone();
                 try {
@@ -315,6 +313,7 @@ public class AsyncContextImpl implements AsyncContext {
                 doDispatch(new Runnable() {
                     @Override
                     public void run() {
+                        onAsyncComplete();
 
                         HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                         response.responseDone();
@@ -396,7 +395,7 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     @Override
-    public void setTimeout(final long timeout) {
+    public synchronized void setTimeout(final long timeout) {
         if (initialRequestDone) {
             throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyReturnedToContainer();
         }
