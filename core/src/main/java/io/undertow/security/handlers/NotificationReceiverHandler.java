@@ -33,18 +33,18 @@ import io.undertow.server.HttpServerExchange;
 public class NotificationReceiverHandler implements HttpHandler {
 
     private final HttpHandler next;
-    private final Collection<NotificationReceiver> receivers;
+    private final NotificationReceiver[] receivers;
 
     public NotificationReceiverHandler(final HttpHandler next, final Collection<NotificationReceiver> receivers) {
         this.next = next;
-        this.receivers = receivers;
+        this.receivers = receivers.toArray(new NotificationReceiver[receivers.size()]);
     }
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         SecurityContext sc = exchange.getSecurityContext();
-        for (NotificationReceiver receiver : receivers) {
-            sc.registerNotificationReceiver(receiver);
+        for (int i = 0; i < receivers.length; ++i) {
+            sc.registerNotificationReceiver(receivers[i]);
         }
 
         next.handleRequest(exchange);
