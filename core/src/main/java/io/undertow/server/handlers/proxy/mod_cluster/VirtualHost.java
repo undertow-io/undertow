@@ -65,7 +65,7 @@ public class VirtualHost {
             if (pathLength == length) {
                 HostEntry next = contexts.get(path);
                 if (next != null) {
-                    return new PathMatcher.PathMatch<>(path.substring(pathLength), next);
+                    return new PathMatcher.PathMatch<>(path, "", next);
                 }
             } else if (pathLength < length) {
                 char c = path.charAt(pathLength);
@@ -73,15 +73,15 @@ public class VirtualHost {
                     String part = path.substring(0, pathLength);
                     HostEntry next = contexts.get(part);
                     if (next != null) {
-                        return new PathMatcher.PathMatch<>(path.substring(pathLength), next);
+                        return new PathMatcher.PathMatch<>(part, path.substring(pathLength), next);
                     }
                 }
             }
         }
         if(defaultHandler.contexts.isEmpty()) {
-            return new PathMatcher.PathMatch<>(path, null);
+            return new PathMatcher.PathMatch<>("", path, null);
         }
-        return new PathMatcher.PathMatch<>(path, defaultHandler);
+        return new PathMatcher.PathMatch<>("", path, defaultHandler);
     }
 
     public synchronized void registerContext(final String path, final String jvmRoute, final Context context) {

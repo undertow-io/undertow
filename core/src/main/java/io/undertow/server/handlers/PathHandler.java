@@ -21,6 +21,7 @@ package io.undertow.server.handlers;
 import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.cache.LRUCache;
 import io.undertow.util.PathMatcher;
 
 /**
@@ -37,22 +38,56 @@ public class PathHandler implements HttpHandler {
 
     private final PathMatcher<HttpHandler> pathMatcher = new PathMatcher<>();
 
+    private final LRUCache<String, PathMatcher.PathMatch<HttpHandler>> cache;
+
     public PathHandler(final HttpHandler defaultHandler) {
+        this(0);
+        pathMatcher.addPrefixPath("/", defaultHandler);
+    }
+
+    public PathHandler(final HttpHandler defaultHandler, int cacheSize) {
+        this(cacheSize);
         pathMatcher.addPrefixPath("/", defaultHandler);
     }
 
     public PathHandler() {
+        this(0);
+    }
+
+    public PathHandler(int cacheSize) {
+        if(cacheSize > 0) {
+            cache = new LRUCache<>(cacheSize, -1);
+        } else {
+            cache = null;
+        }
     }
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        final PathMatcher.PathMatch<HttpHandler> match = pathMatcher.match(exchange.getRelativePath());
+        PathMatcher.PathMatch<HttpHandler> match = null;
+        boolean hit = false;
+        if(cache != null) {
+            match = cache.get(exchange.getRelativePath());
+            hit = true;
+        }
+        if(match == null) {
+            match = pathMatcher.match(exchange.getRelativePath());
+        }
         if (match.getValue() == null) {
             ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
             return;
         }
+        if(hit) {
+            cache.add(exchange.getRelativePath(), match);
+        }
         exchange.setRelativePath(match.getRemaining());
-        exchange.setResolvedPath(exchange.getRequestPath().substring(0, exchange.getRequestPath().length() - match.getRemaining().length()));
+        if(exchange.getResolvedPath().isEmpty()) {
+            //first path handler, we can just use the matched part
+            exchange.setResolvedPath(match.getMatched());
+        } else {
+            //already something in the resolved path
+            exchange.setResolvedPath(exchange.getRequestPath().substring(0, exchange.getRequestPath().length() - match.getRemaining().length()));
+        }
         match.getValue().handleRequest(exchange);
     }
 

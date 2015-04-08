@@ -66,7 +66,7 @@ public class PathMatcher<T> {
         if (!exactPathMatches.isEmpty()) {
             T match = getExactPath(path);
             if (match != null) {
-                return new PathMatch<>("", match);
+                return new PathMatch<>(path, "", match);
             }
         }
 
@@ -77,7 +77,7 @@ public class PathMatcher<T> {
             if (pathLength == length) {
                 T next = paths.get(path);
                 if (next != null) {
-                    return new PathMatch<>(path.substring(pathLength), next);
+                    return new PathMatch<>(path, "", next);
                 }
             } else if (pathLength < length) {
                 char c = path.charAt(pathLength);
@@ -85,12 +85,12 @@ public class PathMatcher<T> {
                     String part = path.substring(0, pathLength);
                     T next = paths.get(part);
                     if (next != null) {
-                        return new PathMatch<>(path.substring(pathLength), next);
+                        return new PathMatch<>(part, path.substring(pathLength), next);
                     }
                 }
             }
         }
-        return new PathMatch<>(path, defaultHandler);
+        return new PathMatch<>("", path, defaultHandler);
     }
 
     /**
@@ -214,16 +214,22 @@ public class PathMatcher<T> {
     }
 
     public static final class PathMatch<T> {
+        private final String matched;
         private final String remaining;
         private final T value;
 
-        public PathMatch(String remaining, T value) {
+        public PathMatch(String matched, String remaining, T value) {
+            this.matched = matched;
             this.remaining = remaining;
             this.value = value;
         }
 
         public String getRemaining() {
             return remaining;
+        }
+
+        public String getMatched() {
+            return matched;
         }
 
         public T getValue() {
