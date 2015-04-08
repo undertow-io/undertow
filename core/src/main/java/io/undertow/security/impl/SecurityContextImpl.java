@@ -19,9 +19,8 @@ package io.undertow.security.impl;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 import io.undertow.UndertowMessages;
@@ -47,8 +46,7 @@ import static io.undertow.UndertowMessages.MESSAGES;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  * @author Stuart Douglas
  */
-public class
-        SecurityContextImpl implements SecurityContext {
+public class SecurityContextImpl implements SecurityContext {
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("MODIFY_UNDERTOW_SECURITY_CONTEXT");
 
@@ -57,9 +55,13 @@ public class
     private String programaticMechName = "Programatic";
     private AuthenticationState authenticationState = AuthenticationState.NOT_ATTEMPTED;
     private final HttpServerExchange exchange;
-    private final List<AuthenticationMechanism> authMechanisms = new ArrayList<>();
+    /**
+     * the authentication mechanisms. Note that in order to reduce the allocation of list and iterator structures
+     * we use a custom linked list structure.
+     */
+    private Node<AuthenticationMechanism> authMechanisms = null;
     private final IdentityManager identityManager;
-    private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
+    private Node<NotificationReceiver> notificationReceivers = null;
 
 
     // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
@@ -133,11 +135,11 @@ public class
     }
 
     private AuthenticationState attemptAuthentication() {
-        return new AuthAttempter(authMechanisms.iterator(), exchange).transition();
+        return new AuthAttempter(authMechanisms,exchange).transition();
     }
 
     private AuthenticationState sendChallenges() {
-        return new ChallengeSender(authMechanisms.iterator(), exchange).transition();
+        return new ChallengeSender(authMechanisms, exchange).transition();
     }
 
     private boolean authTransitionRequired() {
@@ -192,12 +194,27 @@ public class
     @Override
     public void addAuthenticationMechanism(final AuthenticationMechanism handler) {
         // TODO - Do we want to change this so we can ensure the mechanisms are not modifiable mid request?
-        authMechanisms.add(handler);
+        if(authMechanisms == null) {
+            authMechanisms = new Node<>(handler);
+        } else {
+            Node<AuthenticationMechanism> cur = authMechanisms;
+            while (cur.next != null) {
+                cur = cur.next;
+            }
+            cur.next = new Node<>(handler);
+        }
     }
 
     @Override
+    @Deprecated
     public List<AuthenticationMechanism> getAuthenticationMechanisms() {
-        return Collections.unmodifiableList(authMechanisms);
+        List<AuthenticationMechanism> ret = new LinkedList<>();
+        Node<AuthenticationMechanism> cur = authMechanisms;
+        while (cur != null) {
+            ret.add(cur.item);
+            cur = cur.next;
+        }
+        return Collections.unmodifiableList(ret);
     }
 
     @Override
@@ -268,34 +285,57 @@ public class
     }
 
     private void sendNoticiation(final SecurityNotification notification) {
-        for (NotificationReceiver current : notificationReceivers) {
-            current.handleNotification(notification);
+        Node<NotificationReceiver> cur = notificationReceivers;
+        while (cur != null) {
+            cur.item.handleNotification(notification);
+            cur = cur.next;
         }
     }
 
     @Override
     public void registerNotificationReceiver(NotificationReceiver receiver) {
-        notificationReceivers.add(receiver);
+        if(notificationReceivers == null) {
+            notificationReceivers = new Node<>(receiver);
+        } else {
+            Node<NotificationReceiver> cur = notificationReceivers;
+            while (cur.next != null) {
+                cur = cur.next;
+            }
+            cur.next = new Node<>(receiver);
+        }
     }
 
     @Override
     public void removeNotificationReceiver(NotificationReceiver receiver) {
-        notificationReceivers.remove(receiver);
+        Node<NotificationReceiver> cur = notificationReceivers;
+        if(receiver.equals(cur.item)) {
+            notificationReceivers = cur.next;
+        } else {
+            Node<NotificationReceiver> old = cur;
+            while (cur.next != null) {
+                cur = cur.next;
+                if(receiver.equals(cur.item)) {
+                    old.next = cur.next;
+                }
+                old = cur;
+            }
+        }
     }
 
     private class AuthAttempter {
 
-        private final Iterator<AuthenticationMechanism> mechanismIterator;
+        private Node<AuthenticationMechanism> currentMethod;
         private final HttpServerExchange exchange;
 
-        private AuthAttempter(final Iterator<AuthenticationMechanism> mechanismIterator, final HttpServerExchange exchange) {
-            this.mechanismIterator = mechanismIterator;
+        private AuthAttempter(Node<AuthenticationMechanism> currentMethod, final HttpServerExchange exchange) {
             this.exchange = exchange;
+            this.currentMethod = currentMethod;
         }
 
         private AuthenticationState transition() {
-            if (mechanismIterator.hasNext()) {
-                final AuthenticationMechanism mechanism = mechanismIterator.next();
+            if (currentMethod != null) {
+                final AuthenticationMechanism mechanism = currentMethod.item;
+                currentMethod = currentMethod.next;
                 AuthenticationMechanismOutcome outcome = mechanism.authenticate(exchange, SecurityContextImpl.this);
 
                 if (outcome == null) {
@@ -331,20 +371,21 @@ public class
      */
     private class ChallengeSender {
 
-        private final Iterator<AuthenticationMechanism> mechanismIterator;
+        private Node<AuthenticationMechanism> currentMethod;
         private final HttpServerExchange exchange;
 
         private boolean atLeastOneChallenge = false;
         private Integer chosenStatusCode = null;
 
-        private ChallengeSender(final Iterator<AuthenticationMechanism> mechanismIterator, final HttpServerExchange exchange) {
-            this.mechanismIterator = mechanismIterator;
+        private ChallengeSender(Node<AuthenticationMechanism> currentMethod, final HttpServerExchange exchange) {
             this.exchange = exchange;
+            this.currentMethod = currentMethod;
         }
 
         private AuthenticationState transition() {
-            if (mechanismIterator.hasNext()) {
-                final AuthenticationMechanism mechanism = mechanismIterator.next();
+            if (currentMethod != null) {
+                final AuthenticationMechanism mechanism = currentMethod.item;
+                currentMethod = currentMethod.next;
                 ChallengeResult result = mechanism.sendChallenge(exchange, SecurityContextImpl.this);
 
                 if (result.isChallengeSent()) {
@@ -396,6 +437,19 @@ public class
         AUTHENTICATED,
 
         CHALLENGE_SENT;
+    }
+
+    /**
+     * To reduce allocations we use a custom linked list data structure
+     * @param <T>
+     */
+    private static final class Node<T> {
+        final T item;
+        Node<T> next;
+
+        private Node(T item) {
+            this.item = item;
+        }
     }
 
 }
