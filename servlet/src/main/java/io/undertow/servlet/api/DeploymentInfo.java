@@ -153,6 +153,11 @@ public class DeploymentInfo implements Cloneable {
      */
     private MultipartConfigElement defaultMultipartConfig;
 
+    /**
+     * Cache of common content types, to prevent allocations when parsing the charset
+     */
+    private int contentTypeCacheSize = 100;
+
     public void validate() {
         if (deploymentName == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("deploymentName");
@@ -1100,6 +1105,14 @@ public class DeploymentInfo implements Cloneable {
         this.defaultMultipartConfig = defaultMultipartConfig;
     }
 
+    public int getContentTypeCacheSize() {
+        return contentTypeCacheSize;
+    }
+
+    public void setContentTypeCacheSize(int contentTypeCacheSize) {
+        this.contentTypeCacheSize = contentTypeCacheSize;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1177,6 +1190,7 @@ public class DeploymentInfo implements Cloneable {
         info.lifecycleInterceptors.addAll(lifecycleInterceptors);
         info.authenticationMode = authenticationMode;
         info.defaultMultipartConfig = defaultMultipartConfig;
+        info.contentTypeCacheSize = contentTypeCacheSize;
         return info;
     }
 

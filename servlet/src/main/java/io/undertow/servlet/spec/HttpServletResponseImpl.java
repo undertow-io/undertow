@@ -408,51 +408,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (type == null || insideInclude || responseStarted()) {
             return;
         }
-        contentType = type;
-        int split = type.indexOf(";");
-        if (split != -1) {
-            int pos = type.indexOf("charset=");
-            if (pos != -1) {
-                int i = pos + "charset=".length();
-                do {
-                    char c = type.charAt(i);
-                    if (c == ' ' || c == '\t' || c == ';') {
-                        break;
-                    }
-                    ++i;
-                } while (i < type.length());
-                if (writer == null && !isCommitted()) {
-                    charsetSet = true;
-                    //we only change the charset if the writer has not been retrieved yet
-                    this.charset = type.substring(pos + "charset=".length(), i);
-                    //it is valid for the charset to be enclosed in quotes
-                    if (this.charset.startsWith("\"") && this.charset.endsWith("\"") && this.charset.length() > 1) {
-                        this.charset = this.charset.substring(1, this.charset.length() - 1);
-                    }
-                }
-                int charsetStart = pos;
-                while (type.charAt(--charsetStart) != ';' && charsetStart > 0) {
-                }
-                StringBuilder contentTypeBuilder = new StringBuilder();
-                contentTypeBuilder.append(type.substring(0, charsetStart));
-                if (i != type.length()) {
-                    contentTypeBuilder.append(type.substring(i));
-                }
-                contentType = contentTypeBuilder.toString();
-            }
-            //strip any trailing semicolon
-            for (int i = contentType.length() - 1; i >= 0; --i) {
-                char c = contentType.charAt(i);
-                if (c == ' ' || c == '\t') {
-                    continue;
-                }
-                if (c == ';') {
-                    contentType = contentType.substring(0, i);
-                }
-                break;
-            }
+        ContentTypeInfo ct = servletContext.parseContentType(type);
+        contentType = ct.getContentType();
+        if(ct.getCharset() != null && writer == null && !isCommitted()) {
+            charset = ct.getCharset();
+            charsetSet = true;
         }
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader());
     }
 
     @Override

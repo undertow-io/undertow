@@ -19,6 +19,7 @@ package io.undertow.servlet.spec;
 
 import io.undertow.Version;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.cache.LRUCache;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.session.PathParameterSessionConfig;
 import io.undertow.server.session.Session;
@@ -111,6 +112,7 @@ public class ServletContextImpl implements ServletContext {
     private volatile boolean initialized = false;
     private int filterMappingUrlPatternInsertPosition = 0;
     private int filterMappingServletNameInsertPosition = 0;
+    private final LRUCache<String, ContentTypeInfo> contentTypeCache;
 
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
@@ -124,6 +126,7 @@ public class ServletContextImpl implements ServletContext {
             this.attributes = deploymentInfo.getServletContextAttributeBackingMap();
         }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
+        this.contentTypeCache = new LRUCache<>(deployment.getDeploymentInfo().getContentTypeCacheSize(), -1);
     }
 
     public void initDone() {
@@ -892,5 +895,62 @@ public class ServletContextImpl implements ServletContext {
             }
         }
         deployment.getServletPaths().invalidate();
+    }
+
+    ContentTypeInfo parseContentType(String type) {
+        ContentTypeInfo existing = contentTypeCache.get(type);
+        if(existing != null) {
+            return existing;
+        }
+        String contentType = type;
+        String charset = null;
+
+        int split = type.indexOf(";");
+        if (split != -1) {
+            int pos = type.indexOf("charset=");
+            if (pos != -1) {
+                int i = pos + "charset=".length();
+                do {
+                    char c = type.charAt(i);
+                    if (c == ' ' || c == '\t' || c == ';') {
+                        break;
+                    }
+                    ++i;
+                } while (i < type.length());
+                charset = type.substring(pos + "charset=".length(), i);
+                //it is valid for the charset to be enclosed in quotes
+                if (charset.startsWith("\"") && charset.endsWith("\"") && charset.length() > 1) {
+                    charset = charset.substring(1, charset.length() - 1);
+                }
+
+                int charsetStart = pos;
+                while (type.charAt(--charsetStart) != ';' && charsetStart > 0) {
+                }
+                StringBuilder contentTypeBuilder = new StringBuilder();
+                contentTypeBuilder.append(type.substring(0, charsetStart));
+                if (i != type.length()) {
+                    contentTypeBuilder.append(type.substring(i));
+                }
+                contentType = contentTypeBuilder.toString();
+            }
+            //strip any trailing semicolon
+            for (int i = contentType.length() - 1; i >= 0; --i) {
+                char c = contentType.charAt(i);
+                if (c == ' ' || c == '\t') {
+                    continue;
+                }
+                if (c == ';') {
+                    contentType = contentType.substring(0, i);
+                }
+                break;
+            }
+        }
+        if(charset == null) {
+            existing = new ContentTypeInfo(contentType, null, contentType);
+        } else {
+            existing = new ContentTypeInfo(contentType + ";charset=" + charset, charset,  contentType);
+        }
+        contentTypeCache.add(type, existing);
+        return existing;
     }
 }
