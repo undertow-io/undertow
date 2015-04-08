@@ -467,9 +467,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             }
             if (header != null && header.getByteBuffer() != null) {
                 header.getByteBuffer().free();
+                header = null;
             }
             if (trailer != null) {
                 trailer.free();
+                trailer = null;
             }
             if (anyAreSet(state, STATE_FIRST_DATA_WRITTEN)) {
                 channelForciblyClosed();
@@ -613,9 +615,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         } finally {
             if(header != null && header.getByteBuffer() != null) {
                 header.getByteBuffer().free();
+                header = null;
             }
             if(trailer != null) {
                 trailer.free();
+                trailer = null;
             }
             if(pooled != null) {
                 pooled.free();

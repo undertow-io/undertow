@@ -85,15 +85,6 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
         }
     }
 
-
-    /**
-     * If a stream sink channel is closed while in the middle of sending fragmented data we need to close the connection.
-     * @throws IOException
-     */
-    protected void channelForciblyClosed() throws IOException {
-        getChannel().sendClose();
-    }
-
     private byte opCode() {
         if(dataWritten) {
             return WebSocket07Channel.OPCODE_CONT;
