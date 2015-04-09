@@ -143,9 +143,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         } else if (info.getType() == ServletPathMatch.Type.REWRITE) {
             //this can only happen if the path ends with a /
             //otherwise there would be a redirect instead
-            exchange.setRelativePath(exchange.getRelativePath() + info.getRewriteLocation());
-            //exchange.setRequestURI(exchange.getRequestURI() + info.getRewriteLocation()); UNDERTOW-348
-            exchange.setRequestPath(exchange.getRequestPath() + info.getRewriteLocation());
+            exchange.setRelativePath(info.getRewriteLocation());
         }
 
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
