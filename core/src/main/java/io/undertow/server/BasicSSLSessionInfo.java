@@ -28,7 +28,7 @@ import javax.security.cert.X509Certificate;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.Certificate;
 
 /**
@@ -37,8 +37,6 @@ import java.security.cert.Certificate;
  * @author Stuart Douglas
  */
 public class BasicSSLSessionInfo implements SSLSessionInfo {
-
-    private static final Charset US_ASCII = Charset.forName("US-ASCII");
 
     private final byte[] sessionId;
     private final String cypherSuite;
@@ -59,7 +57,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
 
         if (certificate != null) {
             java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
-            byte[] certificateBytes = certificate.getBytes(US_ASCII);
+            byte[] certificateBytes = certificate.getBytes(StandardCharsets.US_ASCII);
             ByteArrayInputStream stream = new ByteArrayInputStream(certificateBytes);
             peerCertificate = cf.generateCertificate(stream);
             this.certificate = X509Certificate.getInstance(certificateBytes);

@@ -22,6 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ import java.util.Map;
  */
 public class RedirectBuilder {
 
-    public static final String UTF_8 = "UTF-8";
+    public static final String UTF_8 = StandardCharsets.UTF_8.name();
 
     /**
      * Redirects to a new relative path. All other data from the exchange is preserved.

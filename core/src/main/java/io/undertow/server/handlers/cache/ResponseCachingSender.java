@@ -18,10 +18,10 @@
 
 package io.undertow.server.handlers.cache;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
@@ -84,11 +84,7 @@ public class ResponseCachingSender implements Sender {
 
     @Override
     public void send(final String data, final IoCallback callback) {
-        try {
-            handleUpdate(ByteBuffer.wrap(data.getBytes("UTF-8")));
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        handleUpdate(ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8)));
         delegate.send(data, callback);
     }
 
@@ -100,11 +96,7 @@ public class ResponseCachingSender implements Sender {
 
     @Override
     public void send(final String data) {
-        try {
-            handleUpdate(ByteBuffer.wrap(data.getBytes("UTF-8")));
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        handleUpdate(ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8)));
         delegate.send(data);
     }
 

@@ -21,7 +21,6 @@ package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
@@ -30,6 +29,7 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
@@ -93,7 +93,7 @@ public class Hybi07Handshake extends Handshake {
     protected final String solve(final String nonceBase64) throws NoSuchAlgorithmException {
         final String concat = nonceBase64.trim() + getMagicNumber();
         final MessageDigest digest = MessageDigest.getInstance(getHashAlgorithm());
-        digest.update(concat.getBytes(WebSocketUtils.UTF_8));
+        digest.update(concat.getBytes(StandardCharsets.UTF_8));
         return  Base64.encodeBytes(digest.digest()).trim();
     }
 

@@ -24,7 +24,7 @@ import io.undertow.server.HttpServerExchange;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -61,7 +61,6 @@ import io.undertow.util.FlexBase64;
 public class SimpleNonceManager implements SessionNonceManager {
 
     private static final String DEFAULT_HASH_ALG = "MD5";
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
 
     /**
      * List of invalid nonces, this list contains the nonces that have been used without a nonce count.
@@ -222,7 +221,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         byte[] prefix = new byte[8];
         random.nextBytes(prefix);
         long timeStamp = System.currentTimeMillis();
-        byte[] now = Long.toString(timeStamp).getBytes(UTF_8);
+        byte[] now = Long.toString(timeStamp).getBytes(StandardCharsets.UTF_8);
 
         String nonce = createNonce(prefix, now);
 
@@ -386,7 +385,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
         if (expectedNonce.equals(nonce)) {
             try {
-                long timeStamp = Long.parseLong(new String(timeStampBytes, UTF_8));
+                long timeStamp = Long.parseLong(new String(timeStampBytes, StandardCharsets.UTF_8));
 
                 return new Nonce(expectedNonce, timeStamp, nonceCount);
             } catch (NumberFormatException dropped) {
@@ -413,7 +412,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         digest.update(prefix);
         digest.update(timeStamp);
 
-        return digest.digest(secret.getBytes(UTF_8));
+        return digest.digest(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public void associateHash(String nonce, byte[] hash) {

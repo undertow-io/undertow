@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
@@ -36,7 +37,6 @@ import org.xnio.IoUtils;
  */
 public class BlockingSenderImpl implements Sender {
 
-    private static final Charset utf8 = Charset.forName("UTF-8");
     /**
      * TODO: we should be used pooled buffers
      */
@@ -91,11 +91,11 @@ public class BlockingSenderImpl implements Sender {
     @Override
     public void send(final String data, final IoCallback callback) {
         if (inCall) {
-            queue(new ByteBuffer[]{ByteBuffer.wrap(data.getBytes(utf8))}, callback);
+            queue(new ByteBuffer[]{ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8))}, callback);
             return;
         }
         try {
-            outputStream.write(data.getBytes(utf8));
+            outputStream.write(data.getBytes(StandardCharsets.UTF_8));
             invokeOnComplete(callback);
         } catch (IOException e) {
             callback.onException(exchange, this, e);

@@ -23,7 +23,6 @@ import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketMessages;
-import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
 import io.undertow.websockets.extensions.ExtensionFunction;
@@ -35,6 +34,7 @@ import org.xnio.http.ExtendedHandshakeChecker;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -210,7 +210,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
             final String concat = nonceBase64 + MAGIC_NUMBER;
             final MessageDigest digest = MessageDigest.getInstance("SHA1");
 
-            digest.update(concat.getBytes(WebSocketUtils.UTF_8));
+            digest.update(concat.getBytes(StandardCharsets.UTF_8));
             final byte[] bytes = digest.digest();
             return FlexBase64.encodeString(bytes, false);
         } catch (NoSuchAlgorithmException e) {

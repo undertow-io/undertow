@@ -41,7 +41,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HexConverter;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -66,7 +66,6 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     private static final int PREFIX_LENGTH = DIGEST_PREFIX.length();
     private static final String OPAQUE_VALUE = "00000000000000000000000000000000";
     private static final byte COLON = ':';
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
 
     public static final Factory FACTORY = new Factory();
 
@@ -313,7 +312,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             requestDigest = createRFC2617RequestDigest(ha1, ha2, context);
         }
 
-        byte[] providedResponse = context.getParsedHeader().get(DigestAuthorizationToken.RESPONSE).getBytes(UTF_8);
+        byte[] providedResponse = context.getParsedHeader().get(DigestAuthorizationToken.RESPONSE).getBytes(StandardCharsets.UTF_8);
 
         return MessageDigest.isEqual(requestDigest, providedResponse);
     }
@@ -333,8 +332,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     private byte[] createHA2Auth(final DigestContext context, Map<DigestAuthorizationToken, String> parsedHeader) {
-        byte[] method = context.getMethod().getBytes(UTF_8);
-        byte[] digestUri = parsedHeader.get(DigestAuthorizationToken.DIGEST_URI).getBytes(UTF_8);
+        byte[] method = context.getMethod().getBytes(StandardCharsets.UTF_8);
+        byte[] digestUri = parsedHeader.get(DigestAuthorizationToken.DIGEST_URI).getBytes(StandardCharsets.UTF_8);
 
         MessageDigest digest = context.getDigest();
         try {
@@ -357,7 +356,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         final MessageDigest digest = context.getDigest();
         final Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
 
-        byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
+        byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(StandardCharsets.UTF_8);
 
         try {
             digest.update(ha1);
@@ -376,10 +375,10 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         final MessageDigest digest = context.getDigest();
         final Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
 
-        byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
-        byte[] nonceCount = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT).getBytes(UTF_8);
-        byte[] cnonce = parsedHeader.get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
-        byte[] qop = parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP).getBytes(UTF_8);
+        byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(StandardCharsets.UTF_8);
+        byte[] nonceCount = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT).getBytes(StandardCharsets.UTF_8);
+        byte[] cnonce = parsedHeader.get(DigestAuthorizationToken.CNONCE).getBytes(StandardCharsets.UTF_8);
+        byte[] qop = parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP).getBytes(StandardCharsets.UTF_8);
 
         try {
             digest.update(ha1);
@@ -456,7 +455,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 } else {
                     ha2 = createHA2AuthInt();
                 }
-                String rspauth = new String(createRFC2617RequestDigest(ha1, ha2, context), UTF_8);
+                String rspauth = new String(createRFC2617RequestDigest(ha1, ha2, context), StandardCharsets.UTF_8);
                 sb.append(",").append(Headers.RESPONSE_AUTH.toString()).append("=\"").append(rspauth).append("\"");
                 sb.append(",").append(Headers.CNONCE.toString()).append("=\"").append(parsedHeader.get(DigestAuthorizationToken.CNONCE)).append("\"");
                 sb.append(",").append(Headers.NONCE_COUNT.toString()).append("=").append(parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT));
@@ -470,7 +469,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     private byte[] createHA2Auth(final DigestContext context) {
-        byte[] digestUri = context.getParsedHeader().get(DigestAuthorizationToken.DIGEST_URI).getBytes(UTF_8);
+        byte[] digestUri = context.getParsedHeader().get(DigestAuthorizationToken.DIGEST_URI).getBytes(StandardCharsets.UTF_8);
 
         MessageDigest digest = context.getDigest();
         try {
@@ -590,8 +589,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 throw MESSAGES.noSessionData();
             }
 
-            byte[] nonce = context.getParsedHeader().get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
-            byte[] cnonce = context.getParsedHeader().get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
+            byte[] nonce = context.getParsedHeader().get(DigestAuthorizationToken.NONCE).getBytes(StandardCharsets.UTF_8);
+            byte[] cnonce = context.getParsedHeader().get(DigestAuthorizationToken.CNONCE).getBytes(StandardCharsets.UTF_8);
 
             byte[] response = new byte[nonce.length + cnonce.length + 1];
             System.arraycopy(nonce, 0, response, 0, nonce.length);

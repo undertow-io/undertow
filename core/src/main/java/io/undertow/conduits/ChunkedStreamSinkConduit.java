@@ -23,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
@@ -335,7 +336,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                     trailer.getHeaderName().appendTo(lastChunkBuffer);
                     lastChunkBuffer.put((byte) ':');
                     lastChunkBuffer.put((byte) ' ');
-                    lastChunkBuffer.put(val.getBytes("US-ASCII"));
+                    lastChunkBuffer.put(val.getBytes(StandardCharsets.US_ASCII));
                     lastChunkBuffer.put(CRLF);
                 }
             }

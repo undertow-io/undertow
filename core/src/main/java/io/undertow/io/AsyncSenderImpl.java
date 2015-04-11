@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
@@ -38,8 +39,6 @@ import org.xnio.channels.StreamSinkChannel;
  * @author Stuart Douglas
  */
 public class AsyncSenderImpl implements Sender {
-
-    private static final Charset utf8 = Charset.forName("UTF-8");
 
     private StreamSinkChannel channel;
     private final HttpServerExchange exchange;
@@ -258,7 +257,7 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void send(final String data, final IoCallback callback) {
-        send(data, utf8, callback);
+        send(data, StandardCharsets.UTF_8, callback);
     }
 
     @Override

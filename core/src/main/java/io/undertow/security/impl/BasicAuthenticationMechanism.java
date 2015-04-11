@@ -20,7 +20,7 @@ package io.undertow.security.impl;
 import static io.undertow.UndertowMessages.MESSAGES;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +46,6 @@ import static io.undertow.util.StatusCodes.UNAUTHORIZED;
  */
 public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
     public static final String SILENT = "silent";
 
     private final String name;
@@ -95,7 +94,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                     String plainChallenge = null;
                     try {
                         ByteBuffer decode = FlexBase64.decode(base64Challenge);
-                        plainChallenge = new String(decode.array(), decode.arrayOffset(), decode.limit(), UTF_8);
+                        plainChallenge = new String(decode.array(), decode.arrayOffset(), decode.limit(), StandardCharsets.UTF_8);
                     } catch (IOException e) {
                     }
                     int colonPos;

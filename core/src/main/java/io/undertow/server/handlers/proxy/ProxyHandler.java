@@ -32,6 +32,7 @@ import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
@@ -98,7 +99,7 @@ public final class ProxyHandler implements HttpHandler {
 
     private static final Logger log = Logger.getLogger(ProxyHandler.class);
 
-    public static final String UTF_8 = "UTF-8";
+    public static final String UTF_8 = StandardCharsets.UTF_8.name();
     private final ProxyClient proxyClient;
     private final int maxRequestTime;
 

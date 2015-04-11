@@ -19,6 +19,8 @@ package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.UndertowLogger;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * <p>
  * Encodes and decodes to and from Base64 notation.
@@ -196,9 +198,6 @@ class Base64 {
 
     /** The new line character (\n) as a byte. */
     private static final byte NEW_LINE = (byte) '\n';
-
-    /** Preferred encoding. */
-    private static final String PREFERRED_ENCODING = "US-ASCII";
 
     private static final byte WHITE_SPACE_ENC = -5; // Indicates white space in encoding
     private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
@@ -629,13 +628,7 @@ class Base64 {
         } // end finally
 
         // Return value according to relevant encoding.
-        try {
-            return new String(baos.toByteArray(), PREFERRED_ENCODING);
-        } // end try
-        catch (java.io.UnsupportedEncodingException uue) {
-            // Fall back to some Java default
-            return new String(baos.toByteArray());
-        } // end catch
+        return new String(baos.toByteArray(), StandardCharsets.US_ASCII);
 
     } // end encode
 
@@ -765,12 +758,7 @@ class Base64 {
         byte[] encoded = encodeBytesToBytes(source, off, len, options);
 
         // Return value according to relevant encoding.
-        try {
-            return new String(encoded, PREFERRED_ENCODING);
-        } // end try
-        catch (java.io.UnsupportedEncodingException uue) {
-            return new String(encoded);
-        } // end catch
+        return new String(encoded, StandardCharsets.US_ASCII);
 
     } // end encodeBytes
 
@@ -1137,13 +1125,8 @@ class Base64 {
             throw new NullPointerException("Input string was null.");
         } // end if
 
-        byte[] bytes;
-        try {
-            bytes = s.getBytes(PREFERRED_ENCODING);
-        } // end try
-        catch (java.io.UnsupportedEncodingException uee) {
-            bytes = s.getBytes();
-        } // end catch
+        byte[] bytes = s.getBytes(StandardCharsets.US_ASCII);
+
           // </change>
 
         // Decode
@@ -1339,7 +1322,7 @@ class Base64 {
         Base64.OutputStream bos = null;
         try {
             bos = new Base64.OutputStream(new java.io.FileOutputStream(filename), Base64.DECODE);
-            bos.write(dataToDecode.getBytes(PREFERRED_ENCODING));
+            bos.write(dataToDecode.getBytes(StandardCharsets.US_ASCII));
         } // end try
         catch (java.io.IOException e) {
             throw e; // Catch and throw to execute finally{} block
@@ -1444,7 +1427,7 @@ class Base64 {
             } // end while
 
             // Save in a variable to return
-            encodedData = new String(buffer, 0, length, Base64.PREFERRED_ENCODING);
+            encodedData = new String(buffer, 0, length, StandardCharsets.US_ASCII);
 
         } // end try
         catch (java.io.IOException e) {
@@ -1474,7 +1457,7 @@ class Base64 {
         java.io.OutputStream out = null;
         try {
             out = new java.io.BufferedOutputStream(new java.io.FileOutputStream(outfile));
-            out.write(encoded.getBytes("US-ASCII")); // Strict, 7-bit output.
+            out.write(encoded.getBytes(StandardCharsets.US_ASCII)); // Strict, 7-bit output.
         } // end try
         catch (java.io.IOException e) {
             throw e; // Catch and release to execute finally{}

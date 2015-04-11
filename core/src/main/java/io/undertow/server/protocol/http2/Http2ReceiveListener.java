@@ -19,6 +19,7 @@
 package io.undertow.server.protocol.http2;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.net.ssl.SSLSession;
 
@@ -88,7 +89,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         this.allowEncodingSlash = undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
         if (undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
-            this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, "UTF-8");
+            this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         } else {
             this.encoding = null;
         }
