@@ -22,7 +22,7 @@ import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicateParser;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HandlerWrapper;
-import io.undertow.util.ChaninedHandlerWrapper;
+import io.undertow.util.ChainedHandlerWrapper;
 import io.undertow.util.FileUtils;
 
 import java.io.File;
@@ -71,7 +71,7 @@ public class PredicatedHandlersParser {
                     for(int i = 0; i < handlers.length; ++i) {
                         handlers[i] = HandlerParser.parse(parts[i + 1], classLoader);
                     }
-                    handler = new ChaninedHandlerWrapper(Arrays.asList(handlers));
+                    handler = new ChainedHandlerWrapper(Arrays.asList(handlers));
                 }
                 wrappers.add(new PredicatedHandler(predicate, handler));
             }

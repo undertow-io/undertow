@@ -28,11 +28,11 @@ import io.undertow.server.HttpHandler;
  *
  * @author Stuart Douglas
  */
-public class ChaninedHandlerWrapper implements HandlerWrapper {
+public class ChainedHandlerWrapper implements HandlerWrapper {
 
     private final List<HandlerWrapper> handlers;
 
-    public ChaninedHandlerWrapper(List<HandlerWrapper> handlers) {
+    public ChainedHandlerWrapper(List<HandlerWrapper> handlers) {
         this.handlers = handlers;
     }
 

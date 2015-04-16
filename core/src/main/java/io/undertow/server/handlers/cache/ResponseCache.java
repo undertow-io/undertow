@@ -200,22 +200,22 @@ public class ResponseCache {
     }
 
     private static class DereferenceCallback implements IoCallback {
-        private final DirectBufferCache.CacheEntry cache;
+        private final DirectBufferCache.CacheEntry entry;
 
-        public DereferenceCallback(DirectBufferCache.CacheEntry cache) {
-            this.cache = cache;
+        public DereferenceCallback(DirectBufferCache.CacheEntry entry) {
+            this.entry = entry;
         }
 
         @Override
         public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-            cache.dereference();
+            entry.dereference();
             exchange.endExchange();
         }
 
         @Override
         public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-            cache.dereference();
+            entry.dereference();
             exchange.endExchange();
         }
     }
