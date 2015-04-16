@@ -19,6 +19,7 @@
 package io.undertow.servlet.handlers;
 
 import io.undertow.UndertowMessages;
+import io.undertow.util.SubstringMap;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,11 +34,11 @@ class ServletPathMatchesData {
 
     private final Map<String, ServletPathMatch> exactPathMatches;
 
-    private final Map<String, PathMatch> prefixMatches;
+    private final SubstringMap<PathMatch> prefixMatches;
 
     private final Map<String, ServletChain> nameMatches;
 
-    public ServletPathMatchesData(final Map<String, ServletChain> exactPathMatches, final Map<String, PathMatch> prefixMatches, final Map<String, ServletChain> nameMatches) {
+    public ServletPathMatchesData(final Map<String, ServletChain> exactPathMatches, final SubstringMap<PathMatch> prefixMatches, final Map<String, ServletChain> nameMatches) {
         this.prefixMatches = prefixMatches;
         this.nameMatches = nameMatches;
         Map<String, ServletPathMatch> newExactPathMatches = new HashMap<>();
@@ -61,18 +62,17 @@ class ServletPathMatchesData {
         if (exact != null) {
             return exact;
         }
-        PathMatch match = prefixMatches.get(path);
+        SubstringMap.SubstringMatch<PathMatch> match = prefixMatches.get(path);
         if (match != null) {
-            return handleMatch(path, match, path.lastIndexOf('.'));
+            return handleMatch(path, match.getValue(), path.lastIndexOf('.'));
         }
         int extensionPos = -1;
         for (int i = path.length() - 1; i >= 0; --i) {
             final char c = path.charAt(i);
              if (c == '/') {
-                final String part = path.substring(0, i);
-                match = prefixMatches.get(part);
+                match = prefixMatches.get(path, i);
                 if (match != null) {
-                    return handleMatch(path, match, extensionPos);
+                    return handleMatch(path, match.getValue(), extensionPos);
                 }
             } else if (c == '.' && extensionPos == -1) {
                     extensionPos = i;
@@ -107,7 +107,7 @@ class ServletPathMatchesData {
 
         private final Map<String, ServletChain> exactPathMatches = new HashMap<>();
 
-        private final Map<String, PathMatch> prefixMatches = new HashMap<>();
+        private final SubstringMap<PathMatch> prefixMatches = new SubstringMap<PathMatch>();
 
         private final Map<String, ServletChain> nameMatches = new HashMap<>();
 
@@ -116,18 +116,24 @@ class ServletPathMatchesData {
         }
 
         public void addPrefixMatch(final String prefix, final ServletChain match, final boolean requireWelcomeFileMatch) {
-            PathMatch m = prefixMatches.get(prefix);
-            if (m == null) {
+            SubstringMap.SubstringMatch<PathMatch> mt = prefixMatches.get(prefix);
+            PathMatch m;
+            if (mt == null) {
                 prefixMatches.put(prefix, m = new PathMatch(match));
+            } else {
+                m = mt.getValue();
             }
             m.defaultHandler = match;
             m.requireWelcomeFileMatch = requireWelcomeFileMatch;
         }
 
         public void addExtensionMatch(final String prefix, final String extension, final ServletChain match) {
-            PathMatch m = prefixMatches.get(prefix);
-            if (m == null) {
+            SubstringMap.SubstringMatch<PathMatch> mt = prefixMatches.get(prefix);
+            PathMatch m;
+            if (mt == null) {
                 prefixMatches.put(prefix, m = new PathMatch(null));
+            } else {
+                m = mt.getValue();
             }
             m.extensionMatches.put(extension, match);
         }

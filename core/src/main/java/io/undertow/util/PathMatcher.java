@@ -20,7 +20,6 @@ package io.undertow.util;
 
 import io.undertow.UndertowMessages;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +41,7 @@ public class PathMatcher<T> {
     private static final String STRING_PATH_SEPARATOR = "/";
 
     private volatile T defaultHandler;
-    private final ConcurrentMap<String, T> paths = new CopyOnWriteMap<>();
+    private final SubstringMap<T> paths = new SubstringMap<>();
     private final ConcurrentMap<String, T> exactPathMatches = new CopyOnWriteMap<>();
 
     /**
@@ -75,17 +74,18 @@ public class PathMatcher<T> {
         for (int i = 0; i < lengths.length; ++i) {
             int pathLength = lengths[i];
             if (pathLength == length) {
-                T next = paths.get(path);
+                SubstringMap.SubstringMatch<T> next = paths.get(path);
                 if (next != null) {
-                    return new PathMatch<>(path, "", next);
+                    return new PathMatch<>(path, "", next.getValue());
                 }
             } else if (pathLength < length) {
                 char c = path.charAt(pathLength);
                 if (c == '/') {
-                    String part = path.substring(0, pathLength);
-                    T next = paths.get(part);
+
+                    //String part = path.substring(0, pathLength);
+                    SubstringMap.SubstringMatch<T> next = paths.get(path, pathLength);
                     if (next != null) {
-                        return new PathMatch<>(part, path.substring(pathLength), next);
+                        return new PathMatch<>(next.getKey(), path.substring(pathLength), next.getValue());
                     }
                 }
             }
@@ -141,12 +141,16 @@ public class PathMatcher<T> {
         final String normalizedPath = URLUtils.normalizeSlashes(path);
 
         // enable the prefix path mechanism to return the default handler
-        if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath) && !paths.containsKey(normalizedPath)) {
+        SubstringMap.SubstringMatch<T> match = paths.get(normalizedPath);
+        if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath) && match == null) {
             return this.defaultHandler;
+        }
+        if(match == null) {
+            return null;
         }
 
         // return the value for the given path
-        return paths.get(normalizedPath);
+        return match.getValue();
     }
 
     private void buildLengths() {
@@ -156,7 +160,7 @@ public class PathMatcher<T> {
                 return -o1.compareTo(o2);
             }
         });
-        for (String p : paths.keySet()) {
+        for (String p : paths.keys()) {
             lengths.add(p.length());
         }
 
@@ -210,7 +214,7 @@ public class PathMatcher<T> {
     }
 
     public Map<String, T> getPaths() {
-        return Collections.unmodifiableMap(paths);
+        return paths.toMap();
     }
 
     public static final class PathMatch<T> {
