@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -178,7 +179,7 @@ public abstract class HttpRequestParser {
         maxHeaders = options.get(UndertowOptions.MAX_HEADERS, 200);
         allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         decode = options.get(UndertowOptions.DECODE_URL, true);
-        charset = options.get(UndertowOptions.URL_CHARSET, "UTF-8");
+        charset = options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
     }
 
     public static final HttpRequestParser instance(final OptionMap options) {

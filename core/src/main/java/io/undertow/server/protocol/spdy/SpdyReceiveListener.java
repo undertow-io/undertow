@@ -38,6 +38,7 @@ import org.xnio.OptionMap;
 
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * The recieve listener for a SPDY connection.
@@ -74,7 +75,7 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
         this.allowEncodingSlash = undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
         if (undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
-            this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, "UTF-8");
+            this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         } else {
             this.encoding = null;
         }

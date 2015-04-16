@@ -19,7 +19,7 @@
 package io.undertow.websockets.core;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * A close message
@@ -27,8 +27,6 @@ import java.nio.charset.Charset;
  * @author Stuart Douglas
  */
 public class CloseMessage {
-
-    private static final Charset utf8 = Charset.forName("UTF-8");
 
     private final int code;
     private final String reason;
@@ -74,7 +72,7 @@ public class CloseMessage {
     }
 
     public ByteBuffer toByteBuffer() {
-        byte[] data = reason.getBytes(utf8);
+        byte[] data = reason.getBytes(StandardCharsets.UTF_8);
         ByteBuffer buffer = ByteBuffer.allocate(data.length + 2);
         buffer.putShort((short) code);
         buffer.put(data);

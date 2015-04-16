@@ -20,6 +20,7 @@ package io.undertow.util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -142,7 +143,7 @@ public class QueryParameterUtils {
 
     @Deprecated
     public static Map<String, Deque<String>> mergeQueryParametersWithNewQueryString(final Map<String, Deque<String>> queryParameters, final String newQueryString) {
-        return mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, "UTF-8");
+        return mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, StandardCharsets.UTF_8.name());
     }
 
     public static Map<String, Deque<String>> mergeQueryParametersWithNewQueryString(final Map<String, Deque<String>> queryParameters, final String newQueryString, final String encoding) {
@@ -163,7 +164,7 @@ public class QueryParameterUtils {
         String encoding = null;
         OptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
         if(undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
-            encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, "UTF-8");
+            encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         }
         return encoding;
     }

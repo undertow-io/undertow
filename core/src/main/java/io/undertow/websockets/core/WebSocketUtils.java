@@ -33,7 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Utility class which holds general useful utility methods which
@@ -43,10 +43,6 @@ import java.nio.charset.Charset;
  */
 public final class WebSocketUtils {
 
-    /**
-     * UTF-8 {@link Charset} which is used to encode Strings in WebSockets
-     */
-    public static final Charset UTF_8 = Charset.forName("UTF-8");
     private static final String EMPTY = "";
 
     /**
@@ -60,7 +56,7 @@ public final class WebSocketUtils {
         if (utfString == null || utfString.length() == 0) {
             return Buffers.EMPTY_BYTE_BUFFER;
         } else {
-            return ByteBuffer.wrap(utfString.toString().getBytes(UTF_8));
+            return ByteBuffer.wrap(utfString.toString().getBytes(StandardCharsets.UTF_8));
         }
     }
 
@@ -69,11 +65,11 @@ public final class WebSocketUtils {
             return EMPTY;
         }
         if (buffer.hasArray()) {
-            return new String(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining(), UTF_8);
+            return new String(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining(), StandardCharsets.UTF_8);
         } else {
             byte[] content = new byte[buffer.remaining()];
             buffer.get(content);
-            return new String(content, UTF_8);
+            return new String(content, StandardCharsets.UTF_8);
         }
     }
 
@@ -99,7 +95,7 @@ public final class WebSocketUtils {
                 index += len;
             }
         }
-        return new String(bytes, UTF_8);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     /**

@@ -26,6 +26,7 @@ import org.xnio.Pooled;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
@@ -190,11 +191,11 @@ abstract class SpdyHeaderBlockParser extends SpdyPushBackParser {
                     byte[] array = data.array();
                     for (int i = start; i < end; ++i) {
                         if (array[i] == 0) {
-                            headerMap.add(currentHeader, new String(array, start, i - start, "UTF-8"));
+                            headerMap.add(currentHeader, new String(array, start, i - start, StandardCharsets.UTF_8));
                             start = i + 1;
                         }
                     }
-                    headerMap.add(currentHeader, new String(array, start, end - start, "UTF-8"));
+                    headerMap.add(currentHeader, new String(array, start, end - start, StandardCharsets.UTF_8));
                     currentHeader = null;
                     data.position(data.position() + valueLength);
                 } else {
@@ -204,7 +205,7 @@ abstract class SpdyHeaderBlockParser extends SpdyPushBackParser {
                     byte[] array = data.array();
                     for (int i = start; i < end; ++i) {
                         if (array[i] == 0) {
-                            String headerValue = new String(array, start, i - start - 1, "UTF-8");
+                            String headerValue = new String(array, start, i - start - 1, StandardCharsets.UTF_8);
                             headerMap.add(currentHeader, headerValue);
                             start = i + 1;
                         }
@@ -222,11 +223,11 @@ abstract class SpdyHeaderBlockParser extends SpdyPushBackParser {
                     int end = completeData.length;
                     for (int i = start; i < end; ++i) {
                         if (completeData[i] == 0) {
-                            headerMap.add(currentHeader, new String(completeData, start, i - start - 1, "UTF-8"));
+                            headerMap.add(currentHeader, new String(completeData, start, i - start - 1, StandardCharsets.UTF_8));
                             start = i + 1;
                         }
                     }
-                    headerMap.add(currentHeader, new String(completeData, start, end - start, "UTF-8"));
+                    headerMap.add(currentHeader, new String(completeData, start, end - start, StandardCharsets.UTF_8));
                     data.position(data.position() + remainingData);
                     currentHeader = null;
                     this.remainingData = -1;

@@ -26,7 +26,7 @@ import org.xnio.XnioExecutor;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import static org.xnio.ChannelListeners.flushingChannelListener;
@@ -36,8 +36,6 @@ import static org.xnio.ChannelListeners.flushingChannelListener;
  */
 public class WebSockets {
 
-    private static final Charset utf8 = Charset.forName("UTF-8");
-
     /**
      * Sends a complete text message, invoking the callback when complete
      *
@@ -46,7 +44,7 @@ public class WebSockets {
      * @param callback
      */
     public static void sendText(final String message, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        final ByteBuffer data = ByteBuffer.wrap(message.getBytes(utf8));
+        final ByteBuffer data = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
         sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel, callback, -1);
     }
 
@@ -59,7 +57,7 @@ public class WebSockets {
      * @param timeoutmillis the timeout in milliseconds
      */
     public static void sendText(final String message, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
-        final ByteBuffer data = ByteBuffer.wrap(message.getBytes(utf8));
+        final ByteBuffer data = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
         sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel, callback, timeoutmillis);
     }
 
@@ -93,7 +91,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendTextBlocking(final String message, final WebSocketChannel wsChannel) throws IOException {
-        final ByteBuffer data = ByteBuffer.wrap(message.getBytes(utf8));
+        final ByteBuffer data = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
         sendBlockingInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel);
     }
 

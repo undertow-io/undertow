@@ -38,6 +38,7 @@ import org.xnio.StreamConnection;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import static io.undertow.UndertowOptions.DECODE_URL;
 import static io.undertow.UndertowOptions.URL_CHARSET;
@@ -47,7 +48,6 @@ import static io.undertow.UndertowOptions.URL_CHARSET;
  */
 public class AjpOpenListener implements OpenListener {
 
-    public static final String UTF_8 = "UTF-8";
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
 
@@ -81,7 +81,7 @@ public class AjpOpenListener implements OpenListener {
         Pooled<ByteBuffer> buf = pool.allocate();
         this.bufferSize = buf.getResource().remaining();
         buf.free();
-        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, UTF_8), undertowOptions.get(DECODE_URL, true));
+        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()), undertowOptions.get(DECODE_URL, true));
         connectorStatistics = new ConnectorStatisticsImpl();
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
