@@ -1510,8 +1510,9 @@ public final class HttpServerExchange extends AbstractAttachable {
                     }
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                    invokeExchangeCompleteListeners();
                     IoUtils.safeClose(connection);
-                    break;
+                    return this;
                 }
 
             }
@@ -1562,6 +1563,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            invokeExchangeCompleteListeners();
 
             IoUtils.safeClose(connection);
         }
