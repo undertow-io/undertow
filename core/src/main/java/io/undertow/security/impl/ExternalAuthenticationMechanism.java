@@ -23,6 +23,7 @@ import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.ExternalCredential;
+import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.AttachmentKey;
@@ -41,20 +42,29 @@ import java.util.Map;
  */
 public class ExternalAuthenticationMechanism implements AuthenticationMechanism {
 
-
-    public static final Factory FACTORY = new Factory();
     public static final String NAME = "EXTERNAL";
 
     private final String name;
+    private final IdentityManager identityManager;
 
     public static final AttachmentKey<String> EXTERNAL_PRINCIPAL = AttachmentKey.create(String.class);
     public static final AttachmentKey<String> EXTERNAL_AUTHENTICATION_TYPE = AttachmentKey.create(String.class);
 
-    public ExternalAuthenticationMechanism(String name) {
+    public ExternalAuthenticationMechanism(String name, IdentityManager identityManager) {
         this.name = name;
+        this.identityManager = identityManager;
+    }
+
+    public ExternalAuthenticationMechanism(String name) {
+        this(name, null);
     }
     public ExternalAuthenticationMechanism() {
         this(NAME);
+    }
+
+    @SuppressWarnings("deprecation")
+    private IdentityManager getIdentityManager(SecurityContext securityContext) {
+        return identityManager != null ? identityManager : securityContext.getIdentityManager();
     }
 
     @Override
@@ -63,7 +73,7 @@ public class ExternalAuthenticationMechanism implements AuthenticationMechanism 
         if(principal == null) {
             return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
         }
-        Account account = securityContext.getIdentityManager().verify(principal, ExternalCredential.INSTANCE);
+        Account account = getIdentityManager(securityContext).verify(principal, ExternalCredential.INSTANCE);
         if(account == null) {
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
@@ -80,11 +90,15 @@ public class ExternalAuthenticationMechanism implements AuthenticationMechanism 
 
     public static final class Factory implements AuthenticationMechanismFactory {
 
-        private Factory() {}
+        private final IdentityManager identityManager;
+
+        public Factory(IdentityManager identityManager) {
+            this.identityManager = identityManager;
+        }
 
         @Override
         public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
-            return new ExternalAuthenticationMechanism(mechanismName);
+            return new ExternalAuthenticationMechanism(mechanismName, identityManager);
         }
     }
 }

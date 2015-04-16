@@ -20,6 +20,7 @@ package io.undertow.servlet.handlers.security;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
+import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
@@ -35,6 +36,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.security.AccessController;
 import java.util.Map;
@@ -48,8 +50,6 @@ import java.util.Map;
 public class ServletFormAuthenticationMechanism extends FormAuthenticationMechanism {
 
     private static final String SESSION_KEY = "io.undertow.servlet.form.auth.redirect.location";
-
-    public static final Factory FACTORY = new Factory();
 
     @Deprecated
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
@@ -67,6 +67,10 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage) {
         super(formParserFactory, name, loginPage, errorPage);
+    }
+
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, IdentityManager identityManager) {
+        super(formParserFactory, name, loginPage, errorPage, identityManager);
     }
 
     @Override
@@ -130,9 +134,16 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     }
 
     public static class Factory implements AuthenticationMechanismFactory {
+
+        private final IdentityManager identityManager;
+
+        public Factory(IdentityManager identityManager) {
+            this.identityManager = identityManager;
+        }
+
         @Override
         public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
-            return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE));
+            return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE), identityManager);
         }
     }
 }

@@ -53,6 +53,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     private final String errorPage;
     private final String postLocation;
     private final FormParserFactory formParserFactory;
+    private final IdentityManager identityManager;
 
     public FormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
         this(FormParserFactory.builder().build(), name, loginPage, errorPage);
@@ -66,12 +67,26 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
         this(formParserFactory, name, loginPage, errorPage, DEFAULT_POST_LOCATION);
     }
 
+    public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage, final IdentityManager identityManager) {
+        this(formParserFactory, name, loginPage, errorPage, DEFAULT_POST_LOCATION, identityManager);
+    }
+
     public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage, final String postLocation) {
+        this(formParserFactory, name, loginPage, errorPage, postLocation, null);
+    }
+
+    public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage, final String postLocation, final IdentityManager identityManager) {
         this.name = name;
         this.loginPage = loginPage;
         this.errorPage = errorPage;
         this.postLocation = postLocation;
         this.formParserFactory = formParserFactory;
+        this.identityManager = identityManager;
+    }
+
+    @SuppressWarnings("deprecation")
+    private IdentityManager getIdentityManager(SecurityContext securityContext) {
+        return identityManager != null ? identityManager : securityContext.getIdentityManager();
     }
 
     @Override
@@ -105,7 +120,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
             AuthenticationMechanismOutcome outcome = null;
             PasswordCredential credential = new PasswordCredential(password.toCharArray());
             try {
-                IdentityManager identityManager = securityContext.getIdentityManager();
+                IdentityManager identityManager = getIdentityManager(securityContext);
                 Account account = identityManager.verify(userName, credential);
                 if (account != null) {
                     securityContext.authenticationComplete(account, name, true);

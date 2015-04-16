@@ -18,6 +18,7 @@
 package io.undertow.security.impl;
 
 import static io.undertow.UndertowMessages.MESSAGES;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -33,7 +34,6 @@ import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.FlexBase64;
-
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.BASIC;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
@@ -64,9 +64,8 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
      */
     private final boolean silent;
 
-    public static final Factory FACTORY = new Factory();
+    private final IdentityManager identityManager;
 
-    // TODO - Can we get the realm name from the IDM?
     public BasicAuthenticationMechanism(final String realmName) {
         this(realmName, "BASIC");
     }
@@ -76,9 +75,19 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     public BasicAuthenticationMechanism(final String realmName, final String mechanismName, final boolean silent) {
+        this(realmName, mechanismName, silent, null);
+    }
+
+    public BasicAuthenticationMechanism(final String realmName, final String mechanismName, final boolean silent, final IdentityManager identityManager) {
         this.challenge = BASIC_PREFIX + "realm=\"" + realmName + "\"";
         this.name = mechanismName;
         this.silent = silent;
+        this.identityManager = identityManager;
+    }
+
+    @SuppressWarnings("deprecation")
+    private IdentityManager getIdentityManager(SecurityContext securityContext) {
+        return identityManager != null ? identityManager : securityContext.getIdentityManager();
     }
 
     /**
@@ -103,7 +112,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                         String userName = plainChallenge.substring(0, colonPos);
                         char[] password = plainChallenge.substring(colonPos + 1).toCharArray();
 
-                        IdentityManager idm = securityContext.getIdentityManager();
+                        IdentityManager idm = getIdentityManager(securityContext);
                         PasswordCredential credential = new PasswordCredential(password);
                         try {
                             final AuthenticationMechanismOutcome result;
@@ -154,11 +163,17 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
     public static class Factory implements AuthenticationMechanismFactory {
 
+        private final IdentityManager identityManager;
+
+        public Factory(IdentityManager identityManager) {
+            this.identityManager = identityManager;
+        }
+
         @Override
         public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
             String realm = properties.get(REALM);
             String silent = properties.get(SILENT);
-            return new BasicAuthenticationMechanism(realm, mechanismName, silent != null && silent.equals("true"));
+            return new BasicAuthenticationMechanism(realm, mechanismName, silent != null && silent.equals("true"), identityManager);
         }
     }
 

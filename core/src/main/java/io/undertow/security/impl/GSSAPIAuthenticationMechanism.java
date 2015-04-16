@@ -98,17 +98,27 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     private final String name = "SPNEGO";
-
+    private final IdentityManager identityManager;
     private final GSSAPIServerSubjectFactory subjectFactory;
     private final Oid[] mechanisms;
 
-    public GSSAPIAuthenticationMechanism(final GSSAPIServerSubjectFactory subjectFactory, Oid ...supportedMechanisms) {
+    public GSSAPIAuthenticationMechanism(final GSSAPIServerSubjectFactory subjectFactory, IdentityManager identityManager, Oid ...supportedMechanisms) {
         this.subjectFactory = subjectFactory;
+        this.identityManager = identityManager;
         this.mechanisms = supportedMechanisms;
+    }
+
+    public GSSAPIAuthenticationMechanism(final GSSAPIServerSubjectFactory subjectFactory, Oid ...supportedMechanisms) {
+        this(subjectFactory, null, supportedMechanisms);
     }
 
     public GSSAPIAuthenticationMechanism(final GSSAPIServerSubjectFactory subjectFactory) {
         this(subjectFactory, DEFAULT_MECHANISMS);
+    }
+
+    @SuppressWarnings("deprecation")
+    private IdentityManager getIdentityManager(SecurityContext securityContext) {
+        return identityManager != null ? identityManager : securityContext.getIdentityManager();
     }
 
     @Override
@@ -119,7 +129,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         if (negContext != null) {
             exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, negContext);
             if (negContext.isEstablished()) {
-                IdentityManager identityManager = securityContext.getIdentityManager();
+                IdentityManager identityManager = getIdentityManager(securityContext);
                 final Account account = identityManager.verify(new GSSContextCredential(negContext.getGssContext()));
                 if (account != null) {
                     securityContext.authenticationComplete(account, name, false);

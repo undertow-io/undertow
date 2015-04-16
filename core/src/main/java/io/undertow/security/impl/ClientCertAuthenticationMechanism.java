@@ -28,9 +28,11 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.handlers.form.FormParserFactory;
+
 import org.xnio.SslClientAuthMode;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
+
 import java.io.IOException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -49,12 +51,12 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
     public static final String FORCE_RENEGOTIATION = "force_renegotiation";
 
     private final String name;
+    private final IdentityManager identityManager;
+
     /**
      * If we should force a renegotiation if client certs were not supplied. <code>true</code> by default
      */
     private final boolean forceRenegotiation;
-
-    public static final Factory FACTORY = new Factory();
 
     public ClientCertAuthenticationMechanism() {
         this(true);
@@ -69,8 +71,18 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
     }
 
     public ClientCertAuthenticationMechanism(final String mechanismName, boolean forceRenegotiation) {
+        this(mechanismName, forceRenegotiation, null);
+    }
+
+    public ClientCertAuthenticationMechanism(final String mechanismName, boolean forceRenegotiation, IdentityManager identityManager) {
         this.name = mechanismName;
         this.forceRenegotiation = forceRenegotiation;
+        this.identityManager = identityManager;
+    }
+
+    @SuppressWarnings("deprecation")
+    private IdentityManager getIdentityManager(SecurityContext securityContext) {
+        return identityManager != null ? identityManager : securityContext.getIdentityManager();
     }
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext) {
@@ -81,7 +93,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
                 if (clientCerts[0] instanceof X509Certificate) {
                     Credential credential = new X509CertificateCredential((X509Certificate) clientCerts[0]);
 
-                    IdentityManager idm = securityContext.getIdentityManager();
+                    IdentityManager idm = getIdentityManager(securityContext);
                     Account account = idm.verify(credential);
                     if (account != null) {
                         securityContext.authenticationComplete(account, name, false);
@@ -128,12 +140,18 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         return new ChallengeResult(false);
     }
 
-    private static final class Factory implements AuthenticationMechanismFactory {
+    public static final class Factory implements AuthenticationMechanismFactory {
+
+        private final IdentityManager identityManager;
+
+        public Factory(IdentityManager identityManager) {
+            this.identityManager = identityManager;
+        }
 
         @Override
         public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
             String forceRenegotiation = properties.get(FORCE_RENEGOTIATION);
-            return new ClientCertAuthenticationMechanism(mechanismName, forceRenegotiation == null ? true : "true".equals(forceRenegotiation));
+            return new ClientCertAuthenticationMechanism(mechanismName, forceRenegotiation == null ? true : "true".equals(forceRenegotiation), identityManager);
         }
     }
 
