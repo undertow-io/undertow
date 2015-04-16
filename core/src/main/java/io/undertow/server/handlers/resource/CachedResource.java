@@ -225,18 +225,18 @@ public class CachedResource implements Resource {
 
     private static class DereferenceCallback implements IoCallback {
 
-        private final DirectBufferCache.CacheEntry cache;
+        private final DirectBufferCache.CacheEntry entry;
         private final IoCallback callback;
 
-        public DereferenceCallback(DirectBufferCache.CacheEntry cache, final IoCallback callback) {
-            this.cache = cache;
+        public DereferenceCallback(DirectBufferCache.CacheEntry entry, final IoCallback callback) {
+            this.entry = entry;
             this.callback = callback;
         }
 
         @Override
         public void onComplete(final HttpServerExchange exchange, final Sender sender) {
             try {
-                cache.dereference();
+                entry.dereference();
             } finally {
                 callback.onComplete(exchange, sender);
             }
@@ -246,7 +246,7 @@ public class CachedResource implements Resource {
         public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
             try {
-                cache.dereference();
+                entry.dereference();
             } finally {
                 callback.onException(exchange, sender, exception);
             }
