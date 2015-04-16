@@ -17,10 +17,10 @@
  */
 package io.undertow.security.api;
 
-import java.util.List;
-
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
+
+import java.util.List;
 
 /**
  * The security context.
@@ -32,10 +32,6 @@ import io.undertow.security.idm.IdentityManager;
  * @see io.undertow.security.impl.SecurityContextImpl
  */
 public interface SecurityContext {
-
-    // TODO - Some of this is used within the core of undertow, some by the servlet integration and some by the mechanisms -
-    // once released the use by mechanisms will require the greatest level of backwards compatibility maintenance so may be
-    // better to split the rest out.
 
     /*
      * Methods Used To Run Authentication Process
@@ -84,9 +80,6 @@ public interface SecurityContext {
     /*
      * Methods Used To Control/Configure The Authentication Process.
      */
-
-    // TODO - May be better to pass a parameter to the authenticate methods to indicate that authentication is required.
-
 
     /**
      * Marks this request as requiring authentication. Authentication challenge headers will only be sent if this
@@ -150,7 +143,9 @@ public interface SecurityContext {
      * Obtain the associated {@link IdentityManager} to use to make account verification decisions.
      *
      * @return The associated {@link IdentityManager}
+     * @deprecated Authentication mechanisms that rely on the {@link IdentityManager} should instead hold their own reference to it.
      */
+    @Deprecated
     IdentityManager getIdentityManager();
 
     /**

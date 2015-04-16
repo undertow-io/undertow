@@ -27,6 +27,7 @@ import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
 import io.undertow.security.handlers.NotificationReceiverHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
+import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
@@ -87,6 +88,7 @@ import io.undertow.util.MimeMappings;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -271,20 +273,21 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
 
         final Map<String, AuthenticationMechanismFactory> factoryMap = new HashMap<>(deploymentInfo.getAuthenticationMechanisms());
+        final IdentityManager identityManager = deploymentInfo.getIdentityManager();
         if(!factoryMap.containsKey(BASIC_AUTH)) {
-            factoryMap.put(BASIC_AUTH, BasicAuthenticationMechanism.FACTORY);
+            factoryMap.put(BASIC_AUTH, new BasicAuthenticationMechanism.Factory(identityManager));
         }
         if(!factoryMap.containsKey(FORM_AUTH)) {
-            factoryMap.put(FORM_AUTH, ServletFormAuthenticationMechanism.FACTORY);
+            factoryMap.put(FORM_AUTH, new ServletFormAuthenticationMechanism.Factory(identityManager));
         }
         if(!factoryMap.containsKey(DIGEST_AUTH)) {
-            factoryMap.put(DIGEST_AUTH, DigestAuthenticationMechanism.FACTORY);
+            factoryMap.put(DIGEST_AUTH, new DigestAuthenticationMechanism.Factory(identityManager));
         }
         if(!factoryMap.containsKey(CLIENT_CERT_AUTH)) {
-            factoryMap.put(CLIENT_CERT_AUTH, ClientCertAuthenticationMechanism.FACTORY);
+            factoryMap.put(CLIENT_CERT_AUTH, new ClientCertAuthenticationMechanism.Factory(identityManager));
         }
         if(!factoryMap.containsKey(ExternalAuthenticationMechanism.NAME)) {
-            factoryMap.put(ExternalAuthenticationMechanism.NAME, ExternalAuthenticationMechanism.FACTORY);
+            factoryMap.put(ExternalAuthenticationMechanism.NAME, new ExternalAuthenticationMechanism.Factory(identityManager));
         }
         HttpHandler current = initialHandler;
         current = new SSLInformationAssociationHandler(current);
@@ -302,7 +305,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             current = new ServletSecurityConstraintHandler(securityPathMatches, current);
         }
         List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<>();
-        authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism()); //TODO: does this really need to be hard coded?
+        authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager)); //TODO: does this really need to be hard coded?
 
         String mechName = null;
         if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
@@ -365,7 +368,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (contextFactory == null) {
             contextFactory = SecurityContextFactoryImpl.INSTANCE;
         }
-        current = new SecurityInitialHandler(deploymentInfo.getAuthenticationMode(), deploymentInfo.getIdentityManager(), mechName,
+        current = new SecurityInitialHandler(deploymentInfo.getAuthenticationMode(), identityManager, mechName,
                 contextFactory, current);
         return current;
     }

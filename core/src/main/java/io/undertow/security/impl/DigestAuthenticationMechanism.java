@@ -61,13 +61,13 @@ import java.util.Set;
 public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
     private static final String DEFAULT_NAME = "DIGEST";
-    private final String mechanismName;
     private static final String DIGEST_PREFIX = DIGEST + " ";
     private static final int PREFIX_LENGTH = DIGEST_PREFIX.length();
     private static final String OPAQUE_VALUE = "00000000000000000000000000000000";
     private static final byte COLON = ':';
 
-    public static final Factory FACTORY = new Factory();
+    private final String mechanismName;
+    private final IdentityManager identityManager;
 
     private static final Set<DigestAuthorizationToken> MANDATORY_REQUEST_TOKENS;
 
@@ -105,12 +105,18 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
             final String realmName, final String domain, final NonceManager nonceManager, final String mechanismName) {
+        this(supportedAlgorithms, supportedQops, realmName, domain, nonceManager, mechanismName, null);
+    }
+
+    public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
+            final String realmName, final String domain, final NonceManager nonceManager, final String mechanismName, final IdentityManager identityManager) {
         this.supportedAlgorithms = supportedAlgorithms;
         this.supportedQops = supportedQops;
         this.realmName = realmName;
         this.domain = domain;
         this.nonceManager = nonceManager;
         this.mechanismName = mechanismName;
+        this.identityManager = identityManager;
 
         if (!supportedQops.isEmpty()) {
             StringBuilder sb = new StringBuilder();
@@ -126,8 +132,16 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     public DigestAuthenticationMechanism(final String realmName, final String domain, final String mechanismName) {
-        this(Collections.singletonList(DigestAlgorithm.MD5), new ArrayList<DigestQop>(0), realmName, domain,
-                new SimpleNonceManager());
+        this(realmName, domain, mechanismName, null);
+    }
+
+    public DigestAuthenticationMechanism(final String realmName, final String domain, final String mechanismName, final IdentityManager identityManager) {
+        this(Collections.singletonList(DigestAlgorithm.MD5), new ArrayList<DigestQop>(0), realmName, domain, new SimpleNonceManager(), DEFAULT_NAME, identityManager);
+    }
+
+    @SuppressWarnings("deprecation")
+    private IdentityManager getIdentityManager(SecurityContext securityContext) {
+        return identityManager != null ? identityManager : securityContext.getIdentityManager();
     }
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
@@ -249,7 +263,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         }
 
         final String userName = parsedHeader.get(DigestAuthorizationToken.USERNAME);
-        final IdentityManager identityManager = securityContext.getIdentityManager();
+        final IdentityManager identityManager = getIdentityManager(securityContext);
         final Account account;
 
         if (algorithm.isSession()) {
@@ -602,35 +616,17 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
     }
 
-    private class AuthenticationException extends Exception {
+    public static final class Factory implements AuthenticationMechanismFactory {
 
-        private static final long serialVersionUID = 4123187263595319747L;
+        private final IdentityManager identityManager;
 
-        // TODO - Remove unused constructors and maybe even move exception to higher level.
-
-        public AuthenticationException() {
-            super();
+        public Factory(IdentityManager identityManager) {
+            this.identityManager = identityManager;
         }
-
-        public AuthenticationException(String message, Throwable cause) {
-            super(message, cause);
-        }
-
-        public AuthenticationException(String message) {
-            super(message);
-        }
-
-        public AuthenticationException(Throwable cause) {
-            super(cause);
-        }
-
-    }
-
-    private static final class Factory implements AuthenticationMechanismFactory {
 
         @Override
         public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
-            return new DigestAuthenticationMechanism(properties.get(REALM), properties.get(CONTEXT_PATH), mechanismName);
+            return new DigestAuthenticationMechanism(properties.get(REALM), properties.get(CONTEXT_PATH), mechanismName, identityManager);
         }
     }
 

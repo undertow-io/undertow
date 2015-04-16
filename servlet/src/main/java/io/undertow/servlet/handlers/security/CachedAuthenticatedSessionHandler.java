@@ -30,8 +30,9 @@ import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.SavedRequest;
 
-import javax.servlet.http.HttpSession;
 import java.security.AccessController;
+
+import javax.servlet.http.HttpSession;
 
 /**
  * {@link HttpHandler} responsible for setting up the {@link AuthenticatedSessionManager} for cached authentications and
@@ -53,6 +54,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
         this.next = next;
         this.servletContext = servletContext;
     }
+
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
