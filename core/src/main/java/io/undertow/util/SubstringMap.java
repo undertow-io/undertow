@@ -199,6 +199,11 @@ public class SubstringMap<V> {
                         }
                         return ret;
                     }
+
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
                 };
             }
         };
