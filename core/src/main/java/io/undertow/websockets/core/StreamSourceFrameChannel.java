@@ -109,7 +109,7 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
 
     @Override
     protected WebSocketChannel getFramedChannel() {
-        return (WebSocketChannel) super.getFramedChannel();
+        return super.getFramedChannel();
     }
 
     public WebSocketChannel getWebSocketChannel() {

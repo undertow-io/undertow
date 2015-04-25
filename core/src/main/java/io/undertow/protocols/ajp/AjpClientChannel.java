@@ -95,7 +95,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
         ajpParser.parse(data);
         if (ajpParser.isComplete()) {
             try {
-                AjpResponseParser parser = (AjpResponseParser) ajpParser;
+                AjpResponseParser parser = ajpParser;
                 if (parser.prefix == FRAME_TYPE_SEND_HEADERS) {
                     return new SendHeadersResponse(parser.statusCode, parser.reasonPhrase, parser.headers);
                 } else if (parser.prefix == FRAME_TYPE_REQUEST_BODY_CHUNK) {

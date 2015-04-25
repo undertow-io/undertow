@@ -450,7 +450,7 @@ public final class HeaderValues extends AbstractCollection<String> implements De
         final Object[] target = inLen < size ? Arrays.copyOfRange(a, inLen, inLen + size) : a;
         final Object v = this.value;
         if (v instanceof String) {
-            target[0] = (T)v;
+            target[0] = v;
         } else {
             System.arraycopy(v, 0, target, 0, size);
         }
@@ -570,9 +570,8 @@ public final class HeaderValues extends AbstractCollection<String> implements De
     }
 
     public boolean addAll(final Collection<? extends String> c) {
-        Iterator<? extends String> it = c.iterator();
-        while (it.hasNext()) {
-            add(it.next());
+        for (String s : c) {
+            add(s);
         }
         return !c.isEmpty();
     }

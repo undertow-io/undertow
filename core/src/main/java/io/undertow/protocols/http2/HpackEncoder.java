@@ -247,7 +247,7 @@ public class HpackEncoder {
         DynamicTableEntry d = new DynamicTableEntry(headerName, val, -pos);
         List<TableEntry> existing = dynamicTable.get(headerName);
         if (existing == null) {
-            dynamicTable.put(headerName, existing = new ArrayList<TableEntry>(1));
+            dynamicTable.put(headerName, existing = new ArrayList<>(1));
         }
         existing.add(d);
         evictionQueue.add(d);

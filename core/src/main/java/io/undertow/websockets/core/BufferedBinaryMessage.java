@@ -177,7 +177,7 @@ public class BufferedBinaryMessage {
             current.getResource().flip();
             this.current = null;
             final ByteBuffer[] data = new ByteBuffer[]{current.getResource()};
-            return new PooledByteBufferArray(Collections.<Pooled<ByteBuffer>>singletonList(current), data);
+            return new PooledByteBufferArray(Collections.singletonList(current), data);
         }
         current.getResource().flip();
         data.add(current);

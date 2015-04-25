@@ -117,7 +117,7 @@ public class SpdySynReplyStreamSinkChannel extends SpdyStreamStreamSinkChannel {
                     newBuf.put(allHeaderBuffers[i].getResource());
                 }
                 newBuf.flip();
-                return new SendFrameHeader(remainingInBuffer, new ImmediatePooled<ByteBuffer>(newBuf));
+                return new SendFrameHeader(remainingInBuffer, new ImmediatePooled<>(newBuf));
             } finally {
                 //the allocate can oome
                 for (int i = 0; i < allHeaderBuffers.length; ++i) {

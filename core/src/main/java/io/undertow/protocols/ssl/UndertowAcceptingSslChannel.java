@@ -161,8 +161,8 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         engine.setEnableSessionCreation(enableSessionCreation != 0);
         final String[] cipherSuites = UndertowAcceptingSslChannel.this.cipherSuites;
         if (cipherSuites != null) {
-            final Set<String> supported = new HashSet<String>(Arrays.asList(engine.getSupportedCipherSuites()));
-            final List<String> finalList = new ArrayList<String>();
+            final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedCipherSuites()));
+            final List<String> finalList = new ArrayList<>();
             for (String name : cipherSuites) {
                 if (supported.contains(name)) {
                     finalList.add(name);
@@ -172,8 +172,8 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         }
         final String[] protocols = UndertowAcceptingSslChannel.this.protocols;
         if (protocols != null) {
-            final Set<String> supported = new HashSet<String>(Arrays.asList(engine.getSupportedProtocols()));
-            final List<String> finalList = new ArrayList<String>();
+            final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedProtocols()));
+            final List<String> finalList = new ArrayList<>();
             for (String name : protocols) {
                 if (supported.contains(name)) {
                     finalList.add(name);

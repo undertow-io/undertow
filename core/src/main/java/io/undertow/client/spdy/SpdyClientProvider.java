@@ -68,7 +68,7 @@ public class SpdyClientProvider implements ClientProvider {
     private static final String SPDY_3_1 = "spdy/3.1";
     private static final String HTTP_1_1 = "http/1.1";
 
-    private static final List<String> PROTOCOLS = Collections.unmodifiableList(Arrays.asList(new String[]{SPDY_3_1, HTTP_1_1}));
+    private static final List<String> PROTOCOLS = Collections.unmodifiableList(Arrays.asList(SPDY_3_1, HTTP_1_1));
 
     private static final Method ALPN_PUT_METHOD;
 
