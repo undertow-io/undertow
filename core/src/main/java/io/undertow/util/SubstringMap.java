@@ -121,6 +121,7 @@ public class SubstringMap<V> {
                 size--;
             }
         }
+        this.table = newTable;
         if(value == null) {
             return null;
         }

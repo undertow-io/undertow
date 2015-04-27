@@ -28,9 +28,6 @@ import java.util.Random;
 import java.util.Set;
 
 /**
- *
- *
- *
  * @author Stuart Douglas
  */
 public class SubstringMapTestCase {
@@ -40,43 +37,46 @@ public class SubstringMapTestCase {
     @Test
     public void testSubstringMap() {
 
-        int seed = new Random().nextInt();
-
-        Random random = new Random(seed);
-        System.out.println("Using Seed " + seed);
-
-        List<String> parts = new ArrayList<>();
-
         SubstringMap<Integer> paths = new SubstringMap<>();
-        Set<String> keys = new HashSet<>();
 
-        for(int i = 0; i < NUM_TEST_VALUES; ++i) {
-            String s = null;
-            do {
-                byte[] bytes = new byte[random.nextInt(30) + 5];
-                random.nextBytes(bytes);
-                s = FlexBase64.encodeString(bytes, false);
-            } while (keys.contains(s));
-            keys.add(s);
-            parts.add(s);
-            paths.put(s, i);
-            Assert.assertEquals(Integer.valueOf(i), paths.get(s).getValue());
-            Assert.assertEquals(Integer.valueOf(i), paths.get(s + "fooosdf", s.length()).getValue());
-        }
+        for (int count = 0; count < 10; ++count) {
+            int seed = new Random().nextInt();
 
-        for(String k : paths.keys()) {
-            Assert.assertTrue(keys.remove(k));
-        }
-        Assert.assertEquals(0, keys.size());
+            Random random = new Random(seed);
+            System.out.println("Using Seed " + seed);
 
-        for(int i = 0; i < NUM_TEST_VALUES; ++i) {
-            String p = parts.get(i);
-            Assert.assertEquals(Integer.valueOf(i), paths.get(p).getValue());
-            Assert.assertEquals(Integer.valueOf(i), paths.get(p + "asdfdsafasfw", p.length()).getValue());
-        }
-        for(int i = 0; i < NUM_TEST_VALUES; ++i) {
-            Integer p = paths.remove(parts.get(i));
-            Assert.assertEquals(Integer.valueOf(i), p);
+            List<String> parts = new ArrayList<>();
+
+            Set<String> keys = new HashSet<>();
+
+            for (int i = 0; i < NUM_TEST_VALUES; ++i) {
+                String s = null;
+                do {
+                    byte[] bytes = new byte[random.nextInt(30) + 5];
+                    random.nextBytes(bytes);
+                    s = FlexBase64.encodeString(bytes, false);
+                } while (keys.contains(s));
+                keys.add(s);
+                parts.add(s);
+                paths.put(s, i);
+                Assert.assertEquals(Integer.valueOf(i), paths.get(s).getValue());
+                Assert.assertEquals(Integer.valueOf(i), paths.get(s + "fooosdf", s.length()).getValue());
+            }
+
+            for (String k : paths.keys()) {
+                Assert.assertTrue(keys.remove(k));
+            }
+            Assert.assertEquals(0, keys.size());
+
+            for (int i = 0; i < NUM_TEST_VALUES; ++i) {
+                String p = parts.get(i);
+                Assert.assertEquals(Integer.valueOf(i), paths.get(p).getValue());
+                Assert.assertEquals(Integer.valueOf(i), paths.get(p + "asdfdsafasfw", p.length()).getValue());
+            }
+            for (int i = 0; i < NUM_TEST_VALUES; ++i) {
+                Integer p = paths.remove(parts.get(i));
+                Assert.assertEquals(Integer.valueOf(i), p);
+            }
         }
     }
 
