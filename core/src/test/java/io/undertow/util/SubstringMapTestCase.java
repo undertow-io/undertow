@@ -59,8 +59,10 @@ public class SubstringMapTestCase {
                 keys.add(s);
                 parts.add(s);
                 paths.put(s, i);
-                Assert.assertEquals(Integer.valueOf(i), paths.get(s).getValue());
+                Assert.assertEquals(Integer.valueOf(i), paths.get(s, s.length()).getValue());
                 Assert.assertEquals(Integer.valueOf(i), paths.get(s + "fooosdf", s.length()).getValue());
+                String missing = s + "asdfdasfasf";
+                Assert.assertNull(paths.get(missing, missing.length()));
             }
 
             for (String k : paths.keys()) {
@@ -70,7 +72,7 @@ public class SubstringMapTestCase {
 
             for (int i = 0; i < NUM_TEST_VALUES; ++i) {
                 String p = parts.get(i);
-                Assert.assertEquals(Integer.valueOf(i), paths.get(p).getValue());
+                Assert.assertEquals(Integer.valueOf(i), paths.get(p, p.length()).getValue());
                 Assert.assertEquals(Integer.valueOf(i), paths.get(p + "asdfdsafasfw", p.length()).getValue());
             }
             for (int i = 0; i < NUM_TEST_VALUES; ++i) {

@@ -74,7 +74,7 @@ public class PathMatcher<T> {
         for (int i = 0; i < lengths.length; ++i) {
             int pathLength = lengths[i];
             if (pathLength == length) {
-                SubstringMap.SubstringMatch<T> next = paths.get(path);
+                SubstringMap.SubstringMatch<T> next = paths.get(path, length);
                 if (next != null) {
                     return new PathMatch<>(path, "", next.getValue());
                 }
@@ -141,7 +141,7 @@ public class PathMatcher<T> {
         final String normalizedPath = URLUtils.normalizeSlashes(path);
 
         // enable the prefix path mechanism to return the default handler
-        SubstringMap.SubstringMatch<T> match = paths.get(normalizedPath);
+        SubstringMap.SubstringMatch<T> match = paths.getExact(normalizedPath);
         if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath) && match == null) {
             return this.defaultHandler;
         }

@@ -40,11 +40,19 @@ public class SubstringMap<V> {
     private volatile Object[] table = new Object[16];
     private int size;
 
-    public SubstringMatch<V> get(String key) {
-        return get(key, key.length());
+    public SubstringMatch<V> getExact(String key) {
+        return get(key, key.length(), true);
     }
 
     public SubstringMatch<V> get(String key, int length) {
+        return get(key, length, false);
+    }
+
+    public SubstringMatch<V> get(String key) {
+        return get(key, key.length(), false);
+    }
+
+    private SubstringMatch<V> get(String key, int length, boolean exact) {
         if(key.length() < length) {
             throw new IllegalArgumentException();
         }
@@ -53,8 +61,14 @@ public class SubstringMap<V> {
         int pos = tablePos(table, hash);
         int start = pos;
         while (table[pos] != null) {
-            if(doEquals((String) table[pos], key, length)) {
-                return (SubstringMatch<V>) table[pos + 1];
+            if(exact) {
+                if(table[pos].equals(key)) {
+                    return (SubstringMatch<V>) table[pos + 1];
+                }
+            } else {
+                if (doEquals((String) table[pos], key, length)) {
+                    return (SubstringMatch<V>) table[pos + 1];
+                }
             }
             pos += 2;
             if(pos >= table.length) {
