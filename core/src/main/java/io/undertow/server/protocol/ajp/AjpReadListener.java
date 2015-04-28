@@ -121,7 +121,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                         res = channel.read(buffer);
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        safeClose(channel);
+                        safeClose(connection);
                         return;
                     }
                 } else {
@@ -237,12 +237,11 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                safeClose(channel);
                 safeClose(connection);
             }
         } catch (Exception e) {
             UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-            safeClose(connection.getChannel());
+            safeClose(connection);
         } finally {
             if (free) pooled.free();
         }
