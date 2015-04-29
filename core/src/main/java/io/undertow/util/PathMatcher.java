@@ -141,7 +141,7 @@ public class PathMatcher<T> {
         final String normalizedPath = URLUtils.normalizeSlashes(path);
 
         // enable the prefix path mechanism to return the default handler
-        SubstringMap.SubstringMatch<T> match = paths.getExact(normalizedPath);
+        SubstringMap.SubstringMatch<T> match = paths.get(normalizedPath);
         if (PathMatcher.STRING_PATH_SEPARATOR.equals(normalizedPath) && match == null) {
             return this.defaultHandler;
         }

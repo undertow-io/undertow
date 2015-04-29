@@ -40,10 +40,6 @@ public class SubstringMap<V> {
     private volatile Object[] table = new Object[16];
     private int size;
 
-    public SubstringMatch<V> getExact(String key) {
-        return get(key, key.length(), true);
-    }
-
     public SubstringMatch<V> get(String key, int length) {
         return get(key, length, false);
     }
@@ -86,7 +82,7 @@ public class SubstringMap<V> {
     }
 
     private boolean doEquals(String s1, String s2, int length) {
-        if(s1.length() < length || s2.length() < length) {
+        if(s1.length() != length || s2.length() < length) {
             return false;
         }
         for(int i = 0; i < length; ++i) {

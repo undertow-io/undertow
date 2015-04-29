@@ -116,7 +116,7 @@ class ServletPathMatchesData {
         }
 
         public void addPrefixMatch(final String prefix, final ServletChain match, final boolean requireWelcomeFileMatch) {
-            SubstringMap.SubstringMatch<PathMatch> mt = prefixMatches.getExact(prefix);
+            SubstringMap.SubstringMatch<PathMatch> mt = prefixMatches.get(prefix);
             PathMatch m;
             if (mt == null) {
                 prefixMatches.put(prefix, m = new PathMatch(match));
@@ -128,7 +128,7 @@ class ServletPathMatchesData {
         }
 
         public void addExtensionMatch(final String prefix, final String extension, final ServletChain match) {
-            SubstringMap.SubstringMatch<PathMatch> mt = prefixMatches.getExact(prefix);
+            SubstringMap.SubstringMatch<PathMatch> mt = prefixMatches.get(prefix);
             PathMatch m;
             if (mt == null) {
                 prefixMatches.put(prefix, m = new PathMatch(null));
