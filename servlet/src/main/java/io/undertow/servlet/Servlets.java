@@ -82,6 +82,16 @@ public class Servlets {
     }
 
     /**
+     * Creates a new servlet description with the given class. The servlet name is inferred from the simple name of the class.
+     *
+     * @param servletClass The servlet class
+     * @return A new servlet description
+     */
+    public static ServletInfo servlet(final Class<? extends Servlet> servletClass) {
+        return servlet(servletClass.getSimpleName(), servletClass);
+    }
+
+    /**
      * Creates a new servlet description with the given name and class
      *
      * @param name         The servlet name
@@ -103,6 +113,16 @@ public class Servlets {
         return new ServletInfo(name, servletClass, servlet);
     }
 
+
+    /**
+     * Creates a new filter description with the given class. The filter name is inferred from the simple name of the class.
+     *
+     * @param filterClass The filter class
+     * @return A new filter description
+     */
+    public static FilterInfo filter(final Class<? extends Filter> filterClass) {
+        return filter(filterClass.getSimpleName(), filterClass);
+    }
 
     /**
      * Creates a new filter description with the given name and class
