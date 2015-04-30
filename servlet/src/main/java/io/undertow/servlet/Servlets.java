@@ -105,18 +105,18 @@ public class Servlets {
 
 
     /**
-     * Creates a new servlet description with the given name and class
+     * Creates a new filter description with the given name and class
      *
      * @param name        The filter name
      * @param filterClass The filter class
-     * @return A new servlet description
+     * @return A new filter description
      */
     public static FilterInfo filter(final String name, final Class<? extends Filter> filterClass) {
         return new FilterInfo(name, filterClass);
     }
 
     /**
-     * Creates a new servlet description with the given name and class
+     * Creates a new filter description with the given name and class
      *
      * @param name        The filter name
      * @param filterClass The filter class
