@@ -39,14 +39,17 @@ import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
+import javax.websocket.SendHandler;
+import javax.websocket.SendResult;
 import javax.websocket.Session;
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -97,48 +100,45 @@ public class WebsocketStressTestCase {
 
     @Test
     public void webSocketStressTestCase() throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
+        final ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
-            final List<Future<?>> futures = new ArrayList<>();
+            List<CountDownLatch> latches = new ArrayList<>();
             for (int i = 0; i < NUM_THREADS; ++i) {
+                final CountDownLatch latch = new CountDownLatch(1);
+                latches.add(latch);
+                final Session session = deployment.connectToServer(new Endpoint() {
+                    @Override
+                    public void onOpen(Session session, EndpointConfig config) {
+                    }
+
+                    @Override
+                    public void onClose(Session session, CloseReason closeReason) {
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onError(Session session, Throwable thr) {
+                        latch.countDown();
+                    }
+                }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
                 final int thread = i;
-                futures.add(executor.submit(new Runnable() {
+                executor.submit(new Runnable() {
                     @Override
                     public void run() {
-                        final CountDownLatch latch = new CountDownLatch(1);
                         try {
-                            Session session = deployment.connectToServer(new Endpoint() {
-                                @Override
-                                public void onOpen(Session session, EndpointConfig config) {
-                                }
 
-                                @Override
-                                public void onClose(Session session, CloseReason closeReason) {
-                                    latch.countDown();
-                                }
 
-                                @Override
-                                public void onError(Session session, Throwable thr) {
-                                    latch.countDown();
-                                }
-                            }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
-                            try {
-                                for (int i = 0; i < NUM_REQUESTS; ++i) {
-                                    session.getAsyncRemote().sendText("t-" + thread + "-m-" + i);
-                                }
-                                session.getAsyncRemote().sendText("close");
-                                latch.await();
-                            } finally {
-                                session.close();
-                            }
+                            executor.submit(new SendRunnable(session, thread, executor));
+
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
                     }
-                }));
+                });
+
             }
-            for (Future<?> future : futures) {
-                future.get();
+            for (CountDownLatch future : latches) {
+                future.await();
             }
         } finally {
             executor.shutdown();
@@ -155,5 +155,49 @@ public class WebsocketStressTestCase {
 
     @ClientEndpoint
     private static class ClientEndpointImpl {
+    }
+
+    private static class SendRunnable implements Runnable {
+        private final Session session;
+        private final int thread;
+        private final AtomicInteger count = new AtomicInteger();
+        private final ExecutorService executor;
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        public SendRunnable(Session session, int thread, ExecutorService executor) {
+            this.session = session;
+            this.thread = thread;
+            this.executor = executor;
+        }
+
+        @Override
+        public void run() {
+            session.getAsyncRemote().sendText("t-" + thread + "-m-" + count.get(), new SendHandler() {
+                @Override
+                public void onResult(SendResult result) {
+                    if (count.incrementAndGet() != NUM_REQUESTS) {
+                        executor.submit(SendRunnable.this);
+                    } else {
+                        executor.submit(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                session.getAsyncRemote().sendText("close");
+                                try {
+                                    latch.await();
+                                } catch (InterruptedException e) {
+
+                                }
+                                try {
+                                    session.close();
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
     }
 }
