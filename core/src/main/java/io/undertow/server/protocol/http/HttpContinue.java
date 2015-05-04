@@ -22,6 +22,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
@@ -47,6 +48,8 @@ public class HttpContinue {
 
     public static final String CONTINUE = "100-continue";
 
+    private static final AttachmentKey<Boolean> ALREADY_SENT = AttachmentKey.create(Boolean.class);
+
     /**
      * Returns true if this exchange requires the server to send a 100 (Continue) response.
      *
@@ -54,7 +57,7 @@ public class HttpContinue {
      * @return <code>true</code> if the server needs to send a continue response
      */
     public static boolean requiresContinueResponse(final HttpServerExchange exchange) {
-        if (!exchange.isHttp11() || exchange.isResponseStarted() || !exchange.getConnection().isContinueResponseSupported()) {
+        if (!exchange.isHttp11() || exchange.isResponseStarted() || !exchange.getConnection().isContinueResponseSupported() || exchange.getAttachment(ALREADY_SENT) != null) {
             return false;
         }
         if (exchange.getConnection() instanceof HttpServerConnection) {
@@ -105,8 +108,28 @@ public class HttpContinue {
         if (!exchange.isResponseChannelAvailable()) {
             throw UndertowMessages.MESSAGES.cannotSendContinueResponse();
         }
+        if(exchange.getAttachment(ALREADY_SENT) != null) {
+
+            return new ContinueResponseSender() {
+                @Override
+                public boolean send() throws IOException {
+                    return true;
+                }
+
+                @Override
+                public void awaitWritable() throws IOException {
+
+                }
+
+                @Override
+                public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
+
+                }
+            };
+        }
 
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
+        exchange.putAttachment(ALREADY_SENT, true);
         newExchange.setResponseCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
@@ -143,7 +166,11 @@ public class HttpContinue {
         if (!exchange.isResponseChannelAvailable()) {
             throw UndertowMessages.MESSAGES.cannotSendContinueResponse();
         }
+        if(exchange.getAttachment(ALREADY_SENT) != null) {
+            return;
+        }
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
+        exchange.putAttachment(ALREADY_SENT, true);
         newExchange.setResponseCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         newExchange.startBlocking();
@@ -164,7 +191,12 @@ public class HttpContinue {
 
 
     private static void internalSendContinueResponse(final HttpServerExchange exchange, final IoCallback callback) {
+        if(exchange.getAttachment(ALREADY_SENT) != null) {
+            callback.onComplete(exchange, null);
+            return;
+        }
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
+        exchange.putAttachment(ALREADY_SENT, true);
         newExchange.setResponseCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
