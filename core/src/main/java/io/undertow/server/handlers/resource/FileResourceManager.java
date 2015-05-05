@@ -150,6 +150,10 @@ public class FileResourceManager implements ResourceManager {
         try {
             File file = new File(base, path);
             if (file.exists()) {
+                if(path.endsWith("/") && ! file.isDirectory()) {
+                    //UNDERTOW-432 don't return non directories if the path ends with a /
+                    return null;
+                }
                 boolean followAll = this.followLinks && safePaths.isEmpty();
                 if (!followAll && isSymlinkPath(base, file)) {
                     if (this.followLinks && isSymlinkSafe(file)) {

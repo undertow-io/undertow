@@ -146,6 +146,7 @@ public class DefaultServlet extends HttpServlet {
         } else {
             resource = null;
         }
+
         if (resource == null) {
             if (req.getDispatcherType() == DispatcherType.INCLUDE) {
                 //servlet 9.3
@@ -171,6 +172,11 @@ public class DefaultServlet extends HttpServlet {
                 resp.sendError(StatusCodes.FORBIDDEN);
             }
         } else {
+            if(path.endsWith("/")) {
+                //UNDERTOW-432
+                resp.sendError(StatusCodes.NOT_FOUND);
+                return;
+            }
             serveFileBlocking(req, resp, resource);
         }
     }
