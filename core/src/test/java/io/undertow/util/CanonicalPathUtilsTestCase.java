@@ -33,6 +33,7 @@ public class CanonicalPathUtilsTestCase {
 
         //these strings should not be touched
         Assert.assertSame("a/b/c", CanonicalPathUtils.canonicalize("a/b/c"));
+        Assert.assertSame("a/b/c/", CanonicalPathUtils.canonicalize("a/b/c/"));
         Assert.assertSame("aaaaa", CanonicalPathUtils.canonicalize("aaaaa"));
 
         //these strings should result in the same string being output
