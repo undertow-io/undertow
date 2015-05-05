@@ -736,9 +736,7 @@ class MCMPHandler implements HttpHandler {
         final FormDataParser parser = parserFactory.createParser(exchange);
         final FormData formData = parser.parseBlocking();
         final RequestData data = new RequestData();
-        final Iterator<String> i = formData.iterator();
-        while (i.hasNext()) {
-            final String name = i.next();
+        for (String name : formData) {
             final HttpString key = new HttpString(name);
             data.add(key, formData.get(name));
         }

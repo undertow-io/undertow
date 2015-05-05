@@ -67,7 +67,7 @@ public class FileResourceManager implements ResourceManager {
      * Used if followLinks == true. Set of paths valid to follow symbolic links. If this is empty and followLinks
      * it true then all links will be followed
      */
-    private final TreeSet<String> safePaths = new TreeSet<String>();
+    private final TreeSet<String> safePaths = new TreeSet<>();
 
     public FileResourceManager(final File base, long transferMinSize) {
         this(base, transferMinSize, true, false, null);

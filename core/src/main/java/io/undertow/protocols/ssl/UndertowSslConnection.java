@@ -43,7 +43,7 @@ class UndertowSslConnection extends SslConnection {
 
     private final StreamConnection delegate;
     private final SslConduit sslConduit;
-    private final ChannelListener.SimpleSetter<SslConnection> handshakeSetter = new ChannelListener.SimpleSetter<SslConnection>();
+    private final ChannelListener.SimpleSetter<SslConnection> handshakeSetter = new ChannelListener.SimpleSetter<>();
     private final SSLEngine engine;
 
     /**

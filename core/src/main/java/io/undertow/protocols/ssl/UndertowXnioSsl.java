@@ -141,7 +141,7 @@ public class UndertowXnioSsl extends XnioSsl {
 
     @SuppressWarnings("deprecation")
     public IoFuture<ConnectedSslStreamChannel> connectSsl(final XnioWorker worker, final InetSocketAddress bindAddress, final InetSocketAddress destination, final ChannelListener<? super ConnectedSslStreamChannel> openListener, final ChannelListener<? super BoundChannel> bindListener, final OptionMap optionMap) {
-        final FutureResult<ConnectedSslStreamChannel> futureResult = new FutureResult<ConnectedSslStreamChannel>(IoUtils.directExecutor());
+        final FutureResult<ConnectedSslStreamChannel> futureResult = new FutureResult<>(IoUtils.directExecutor());
         final IoFuture<SslConnection> futureSslConnection = openSslConnection(worker, bindAddress, destination, new ChannelListener<SslConnection>() {
             public void handleEvent(final SslConnection sslConnection) {
                 final ConnectedSslStreamChannel assembledChannel = new AssembledConnectedSslStreamChannel(sslConnection, sslConnection.getSourceChannel(), sslConnection.getSinkChannel());
@@ -170,13 +170,13 @@ public class UndertowXnioSsl extends XnioSsl {
     }
 
     public IoFuture<SslConnection> openSslConnection(final XnioWorker worker, final InetSocketAddress bindAddress, final InetSocketAddress destination, final ChannelListener<? super SslConnection> openListener, final ChannelListener<? super BoundChannel> bindListener, final OptionMap optionMap) {
-        final FutureResult<SslConnection> futureResult = new FutureResult<SslConnection>(worker);
+        final FutureResult<SslConnection> futureResult = new FutureResult<>(worker);
         final IoFuture<StreamConnection> connection = worker.openStreamConnection(bindAddress, destination, new StreamConnectionChannelListener(optionMap, destination, futureResult, openListener), bindListener, optionMap);
         return setupSslConnection(futureResult, connection);
     }
     @Override
     public IoFuture<SslConnection> openSslConnection(final XnioIoThread ioThread, final InetSocketAddress bindAddress, final InetSocketAddress destination, final ChannelListener<? super SslConnection> openListener, final ChannelListener<? super BoundChannel> bindListener, final OptionMap optionMap) {
-        final FutureResult<SslConnection> futureResult = new FutureResult<SslConnection>(ioThread);
+        final FutureResult<SslConnection> futureResult = new FutureResult<>(ioThread);
         final IoFuture<StreamConnection> connection = ioThread.openStreamConnection(bindAddress, destination, new StreamConnectionChannelListener(optionMap, destination, futureResult, openListener), bindListener, optionMap);
         return setupSslConnection(futureResult, connection);
     }

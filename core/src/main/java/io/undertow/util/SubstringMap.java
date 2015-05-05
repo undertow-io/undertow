@@ -109,7 +109,7 @@ public class SubstringMap<V> {
             newTable = new Object[table.length];
             System.arraycopy(table, 0, newTable, 0, table.length);
         }
-        doPut(newTable, key, new SubstringMap.SubstringMatch<V>(key, value));
+        doPut(newTable, key, new SubstringMap.SubstringMatch<>(key, value));
         this.table = newTable;
         size++;
     }

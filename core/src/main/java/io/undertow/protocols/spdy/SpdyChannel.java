@@ -484,7 +484,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         synchronized (attachments) {
             final List<T> list = key.cast(attachments.get(key));
             if (list == null) {
-                final AttachmentList<T> newList = new AttachmentList<T>((Class<T>) Object.class);
+                final AttachmentList<T> newList = new AttachmentList<>((Class<T>) Object.class);
                 attachments.put(key, newList);
                 newList.add(value);
             } else {

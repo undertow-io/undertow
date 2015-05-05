@@ -99,9 +99,7 @@ public class SSLHeaderHandler implements HttpHandler {
                 exchange.setRequestScheme(HTTPS);
                 exchange.getConnection().setSslSessionInfo(info);
                 exchange.addExchangeCompleteListener(CLEAR_SSL_LISTENER);
-            } catch (java.security.cert.CertificateException e) {
-                UndertowLogger.REQUEST_LOGGER.debugf(e, "Could not create certificate from header %s", clientCert);
-            } catch (CertificateException e) {
+            } catch (java.security.cert.CertificateException | CertificateException e) {
                 UndertowLogger.REQUEST_LOGGER.debugf(e, "Could not create certificate from header %s", clientCert);
             }
         }
