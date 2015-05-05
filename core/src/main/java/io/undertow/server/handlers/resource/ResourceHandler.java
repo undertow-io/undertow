@@ -174,6 +174,11 @@ public class ResourceHandler implements HttpHandler {
                         return;
                     }
                     resource = indexResource;
+                } else if(exchange.getRelativePath().endsWith("/")) {
+                    //UNDERTOW-432
+                    exchange.setResponseCode(StatusCodes.NOT_FOUND);
+                    exchange.endExchange();
+                    return;
                 }
 
                 final ETag etag = resource.getETag();

@@ -88,6 +88,10 @@ public class FileResourceManager implements ResourceManager {
         try {
             File file = new File(base, path);
             if (file.exists()) {
+                if(path.endsWith("/") && !file.isDirectory()) {
+                    //UNDERTOW-432 don't return non directories if the path ends with a /
+                    return null;
+                }
                 //security check for case insensitive file systems
                 //we make sure the case of the filename matches the case of the request
                 //TODO: we should be able to avoid this if we can tell a FS is case sensitive
