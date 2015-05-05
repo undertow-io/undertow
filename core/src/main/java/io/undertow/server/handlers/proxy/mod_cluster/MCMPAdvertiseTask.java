@@ -28,6 +28,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.UndertowLogger;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
@@ -62,10 +63,10 @@ class MCMPAdvertiseTask implements Runnable {
     static void advertise(final ModClusterContainer container, final MCMPConfig.AdvertiseConfig config, final XnioWorker worker) throws IOException {
         final InetSocketAddress bindAddress;
         final InetAddress group = InetAddress.getByName(config.getAdvertiseGroup());
-        if (group == null || linuxLike) {
-            bindAddress = new InetSocketAddress(config.getAdvertisePort());
-        } else {
+        if (group != null && linuxLike) {
             bindAddress = new InetSocketAddress(group, config.getAdvertisePort());
+        } else {
+            bindAddress = new InetSocketAddress(config.getAdvertisePort());
         }
         final MulticastMessageChannel channel = worker.createUdpServer(bindAddress, new ChannelListener<MulticastMessageChannel>() {
             @Override
@@ -159,8 +160,8 @@ class MCMPAdvertiseTask implements Runnable {
             final String payload = builder.toString();
             final ByteBuffer byteBuffer = ByteBuffer.wrap(payload.getBytes());
             channel.sendTo(address, byteBuffer);
-        } catch (Exception Ex) {
-            Ex.printStackTrace();
+        } catch (Exception e) {
+            UndertowLogger.ROOT_LOGGER.errorf(e, "Cannot send advertise message");
         }
     }
 
