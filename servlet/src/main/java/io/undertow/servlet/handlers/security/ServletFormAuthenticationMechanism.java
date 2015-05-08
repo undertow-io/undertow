@@ -51,26 +51,39 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     private static final String SESSION_KEY = "io.undertow.servlet.form.auth.redirect.location";
 
+    public static final String SAVE_ORIGINAL_REQUEST = "save-original-request";
+
+    private final boolean saveOriginalRequest;
+
     @Deprecated
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
         super(name, loginPage, errorPage);
+        this.saveOriginalRequest = true;
     }
 
     @Deprecated
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage, final String postLocation) {
         super(name, loginPage, errorPage, postLocation);
+        this.saveOriginalRequest = true;
     }
 
     public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, String postLocation) {
         super(formParserFactory, name, loginPage, errorPage, postLocation);
+        this.saveOriginalRequest = true;
     }
 
     public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage) {
         super(formParserFactory, name, loginPage, errorPage);
+        this.saveOriginalRequest = true;
     }
 
     public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, IdentityManager identityManager) {
         super(formParserFactory, name, loginPage, errorPage, identityManager);
+        this.saveOriginalRequest = true;
+    }
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, IdentityManager identityManager, boolean saveOriginalRequest) {
+        super(formParserFactory, name, loginPage, errorPage, identityManager);
+        this.saveOriginalRequest = saveOriginalRequest;
     }
 
     @Override
@@ -97,6 +110,9 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     @Override
     protected void storeInitialLocation(final HttpServerExchange exchange) {
+        if(!saveOriginalRequest) {
+            return;
+        }
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         HttpSessionImpl httpSession = servletRequestContext.getCurrentServletContext().getSession(exchange, true);
         Session session;
@@ -143,7 +159,11 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
         @Override
         public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
-            return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE), identityManager);
+            boolean saveOriginal = true;
+            if(properties.containsKey(SAVE_ORIGINAL_REQUEST)) {
+                saveOriginal = Boolean.parseBoolean(properties.get(SAVE_ORIGINAL_REQUEST));
+            }
+            return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE), identityManager, saveOriginal);
         }
     }
 }
