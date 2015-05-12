@@ -554,9 +554,9 @@ public class DeploymentInfo implements Cloneable {
     /**
      * Sets the executor that will be used to run servlet invocations. If this is null then the XNIO worker pool will be
      * used.
-     * <p/>
+     * <p>
      * Individual servlets may use a different executor
-     * <p/>
+     * <p>
      * If this is null then the current executor is used, which is generally the XNIO worker pool
      *
      * @param executor The executor
@@ -573,7 +573,7 @@ public class DeploymentInfo implements Cloneable {
 
     /**
      * Sets the executor that is used to run async tasks.
-     * <p/>
+     * <p>
      * If this is null then {@link #executor} is used, if this is also null then the default is used
      *
      * @param asyncExecutor The executor
@@ -748,7 +748,7 @@ public class DeploymentInfo implements Cloneable {
 
     /**
      * Sets the map that will be used by the ServletContext implementation to store attributes.
-     * <p/>
+     * <p>
      * This should usuablly be null, in which case Undertow will create a new map. This is only
      * used in situations where you want multiple deployments to share the same servlet context
      * attributes.

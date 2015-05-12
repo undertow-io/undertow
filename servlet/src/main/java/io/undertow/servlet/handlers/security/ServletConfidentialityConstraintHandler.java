@@ -33,7 +33,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
- * Servlet specific extension to {@see SinglePortConfidentialityHandler}
+ * Servlet specific extension to {@link SinglePortConfidentialityHandler}
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */

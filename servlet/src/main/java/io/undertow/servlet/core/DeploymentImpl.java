@@ -43,7 +43,7 @@ import io.undertow.servlet.spec.ServletContextImpl;
 /**
  * Class that represents the mutable state associated with a servlet deployment that is built up
  * during the bootstrap process.
- * <p/>
+ * <p>
  * Classes calling deployment methods during bootstrap must be aware of ordering concerns.
  *
  * @author Stuart Douglas

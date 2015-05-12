@@ -552,8 +552,7 @@ public class AsyncContextImpl implements AsyncContext {
      * Adds a task to be run to the async context. These tasks are run one at a time,
      * after the initial request is finished. If the request is dispatched before the initial
      * request is complete then these tasks will not be run
-     * <p/>
-     * <p/>
+     * <p>
      * This method is intended to be used to queue read and write tasks for async streams,
      * to make sure that multiple threads do not end up working on the same exchange at once
      *

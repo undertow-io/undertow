@@ -20,7 +20,7 @@ package io.undertow.servlet.api;
 import io.undertow.server.HttpServerExchange;
 
 /**
- * A utility to take the {@see HttpServerExchange} of the current request and obtain the number of the port number to use in
+ * A utility to take the {@link HttpServerExchange} of the current request and obtain the number of the port number to use in
  * https redirects.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>

@@ -28,7 +28,7 @@ import io.undertow.server.HttpServerExchange;
  * handler chain. The default handler will simply log the exception, however it is possible to write custom
  * handlers to handle the error however you want. A common use for this would be to change the log format for
  * exceptions, or possibly suppress the logging for certain exceptions types.
- * <p/>
+ * <p>
  * Implementations of this interface may also choose to suppress error page handler, and handle error page generation
  * internally by returning <code>true</code>
  *
@@ -47,7 +47,7 @@ public interface ExceptionHandler {
      * @param request         The request
      * @param response        The response
      * @param throwable       The exception
-     * @return <core>true</core> true if the error was handled by this method
+     * @return <code>true</code> true if the error was handled by this method
      */
     boolean handleThrowable(final HttpServerExchange exchange, ServletRequest request, ServletResponse response, Throwable throwable);
 }
