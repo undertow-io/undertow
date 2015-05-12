@@ -62,7 +62,7 @@ public interface SecurityContext {
      * Attempts to log the user in using the provided credentials. This result will be stored in the current
      * {@link AuthenticatedSessionManager} (if any), so subsequent requests will automatically be authenticated
      * as this user.
-     * <p/>
+     * <p>
      * This operation may block
      *
      * @param username The username

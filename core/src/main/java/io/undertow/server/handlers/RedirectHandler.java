@@ -35,7 +35,7 @@ import io.undertow.util.StatusCodes;
 
 /**
  * A redirect handler that redirects to the specified location via a 302 redirect.
- * <p/>
+ * <p>
  * The location is specified as an exchange attribute string.
  *
  * @author Stuart Douglas

@@ -26,8 +26,8 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 /**
  * Handler that eagerly parses form data. The request chain will pause while the data is being read,
  * and then continue when the form data is fully passed.
- * <p/>
- * <p/>
+ * <p>
+ * <p>
  * NOTE: This is not strictly compatible with servlet, as it removes the option for the user to
  * parse the request themselves, however in practice this requirement is probably rare, and
  * using this handler gives a significant performance advantage in that a thread is not blocked

@@ -41,7 +41,7 @@ public interface RangeAwareResource extends Resource {
     /**
      * It is possible that some resources managers may only support range requests on a subset of their resources,
      *
-     * @return <core>true</core> if this resource supports range requests
+     * @return <code>true</code> if this resource supports range requests
      */
     boolean isRangeSupported();
 }

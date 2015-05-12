@@ -41,7 +41,7 @@ import org.xnio.XnioWorker;
 
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.
- * <p/>
+ * <p>
  *
  * @author Stuart Douglas
  */

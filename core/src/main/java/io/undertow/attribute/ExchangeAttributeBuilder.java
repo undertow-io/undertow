@@ -20,7 +20,7 @@ package io.undertow.attribute;
 
 /**
  * An interface that knows how to build an exchange attribute from a textual representation.
- * <p/>
+ * <p>
  * This makes it easy to configure attributes based on a string representation
  *
  * @author Stuart Douglas

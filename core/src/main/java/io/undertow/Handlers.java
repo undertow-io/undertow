@@ -228,7 +228,7 @@ public class Handlers {
     /**
      * Returns a new HTTP trace handler. This handler will handle HTTP TRACE
      * requests as per the RFC.
-     * <p/>
+     * <p>
      * WARNING: enabling trace requests may leak information, in general it is recommended that
      * these be disabled for security reasons.
      *
@@ -371,9 +371,9 @@ public class Handlers {
 
     /**
      * A handler that will decode the URL, query parameters and to the specified charset.
-     * <p/>
+     * <p>
      * If you are using this handler you must set the {@link io.undertow.UndertowOptions#DECODE_URL} parameter to false.
-     * <p/>
+     * <p>
      * This is not as efficient as using the parsers built in UTF-8 decoder. Unless you need to decode to something other
      * than UTF-8 you should rely on the parsers decoding instead.
      *

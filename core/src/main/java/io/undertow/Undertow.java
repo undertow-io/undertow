@@ -52,7 +52,7 @@ import java.util.List;
 
 /**
  * Convenience class used to build an Undertow server.
- * <p/>
+ * <p>
  *
  * @author Stuart Douglas
  */

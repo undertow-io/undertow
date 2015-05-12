@@ -39,7 +39,7 @@ import static org.xnio.Bits.anyAreSet;
 
 /**
  * A 'gated' stream source channel.
- * <p/>
+ * <p>
  * This channel has a gate which starts of closed. When the gate is closed reads will return 0. When the gate is opened
  * reads will resume as normal.
  *
@@ -69,7 +69,7 @@ public final class GatedStreamSourceChannel implements StreamSourceChannel {
 
     /**
      * Open the gate and allow data to flow.  Once opened, the gate cannot be closed other than closing the channel.
-     * <p/>
+     * <p>
      * If the shutdownReads() or close() method has already been called this will result it in being invoked on the
      * delegate.
      */

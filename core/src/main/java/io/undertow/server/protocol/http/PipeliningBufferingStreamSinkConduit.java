@@ -46,7 +46,7 @@ import static org.xnio.Bits.anyAreSet;
 /**
  * A buffer that is used when processing pipelined requests, that allows the server to
  * buffer multiple responses into a single write() call.
- * <p/>
+ * <p>
  * This can improve performance when pipelining requests.
  *
  * @author Stuart Douglas
@@ -192,10 +192,10 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
 
     /**
      * Flushes the cached data.
-     * <p/>
+     * <p>
      * This should be called when a read thread fails to read any more request data, to make sure that any
      * buffered data is flushed after the last pipelined request.
-     * <p/>
+     * <p>
      * If this returns false the read thread should suspend reads and resume writes
      *
      * @return <code>true</code> If the flush succeeded, false otherwise
@@ -210,8 +210,6 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
 
     /**
      * Gets the channel wrapper that implements the buffering
-     *
-     * @return The channel wrapper
      */
     public void setupPipelineBuffer(final HttpServerExchange exchange) {
         ((HttpServerConnection) exchange.getConnection()).getChannel().getSinkChannel().setConduit(this);

@@ -28,11 +28,11 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * Handler that dispatches to a given handler based of a prefix match of the path.
- * <p/>
+ * <p>
  * This only matches a single level of a request, e.g if you have a request that takes the form:
- * <p/>
+ * <p>
  * /foo/bar
- * <p/>
+ * <p>
  *
  * @author Stuart Douglas
  */
@@ -96,10 +96,10 @@ public class PathMatcher<T> {
     /**
      * Adds a path prefix and a handler for that path. If the path does not start
      * with a / then one will be prepended.
-     * <p/>
+     * <p>
      * The match is done on a prefix bases, so registering /foo will also match /bar. Exact
      * path matches are taken into account first.
-     * <p/>
+     * <p>
      * If / is specified as the path then it will replace the default handler.
      *
      * @param path    The path

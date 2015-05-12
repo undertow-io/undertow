@@ -57,7 +57,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
      * Trailers that are to be attached to the end of the HTTP response. Note that it is the callers responsibility
      * to make sure the client understands trailers (i.e. they have provided a TE header), and to set the 'Trailers:'
      * header appropriately.
-     * <p/>
+     * <p>
      * This attachment must be set before the {@link #terminateWrites()} method is called.
      */
     @Deprecated

@@ -26,7 +26,7 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 
 /**
- * An {@link AuthenticationMechanism} which uses any cached {@link AuthenticationSession}s.
+ * An {@link AuthenticationMechanism} which uses any cached {@link AuthenticatedSession}s.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */

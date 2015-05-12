@@ -26,11 +26,11 @@ import io.undertow.util.PathMatcher;
 
 /**
  * Handler that dispatches to a given handler based of a prefix match of the path.
- * <p/>
+ * <p>
  * This only matches a single level of a request, e.g if you have a request that takes the form:
- * <p/>
+ * <p>
  * /foo/bar
- * <p/>
+ * <p>
  *
  * @author Stuart Douglas
  */
@@ -94,10 +94,10 @@ public class PathHandler implements HttpHandler {
     /**
      * Adds a path prefix and a handler for that path. If the path does not start
      * with a / then one will be prepended.
-     * <p/>
+     * <p>
      * The match is done on a prefix bases, so registering /foo will also match /bar. Exact
      * path matches are taken into account first.
-     * <p/>
+     * <p>
      * If / is specified as the path then it will replace the default handler.
      *
      * @param path    The path
@@ -113,11 +113,11 @@ public class PathHandler implements HttpHandler {
     /**
      * Adds a path prefix and a handler for that path. If the path does not start
      * with a / then one will be prepended.
-     * <p/>
+     * <p>
      * The match is done on a prefix bases, so registering /foo will also match /foo/bar.
      * Though exact path matches are taken into account before prefix path matches. So
      * if an exact path match exists it's  handler will be triggered.
-     * <p/>
+     * <p>
      * If / is specified as the path then it will replace the default handler.
      *
      * @param path    If the request contains this prefix, run handler.
@@ -132,7 +132,7 @@ public class PathHandler implements HttpHandler {
 
     /**
      * If the request path is exactly equal to the given path, run the handler.
-     * <p/>
+     * <p>
      * Exact paths are prioritized higher than prefix paths.
      *
      * @param path If the request path is exactly this, run handler.

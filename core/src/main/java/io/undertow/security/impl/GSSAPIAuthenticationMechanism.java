@@ -54,10 +54,10 @@ import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 /**
  * {@link io.undertow.security.api.AuthenticationMechanism} for GSSAPI / SPNEGO based authentication.
- * <p/>
+ * <p>
  * GSSAPI authentication is associated with the HTTP connection, as long as a connection is being re-used allow the
  * authentication state to be re-used.
- * <p/>
+ * <p>
  * TODO - May consider an option to allow it to also be associated with the underlying session but that has it's own risks so
  * would need to come with a warning.
  *

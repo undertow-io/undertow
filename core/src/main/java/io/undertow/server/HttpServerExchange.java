@@ -145,9 +145,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * The original request URI. This will include the host name if it was specified by the client.
-     * <p/>
+     * <p>
      * This is not decoded in any way, and does not include the query string.
-     * <p/>
+     * <p>
      * Examples:
      * GET http://localhost:8080/myFile.jsf?foo=bar HTTP/1.1 -> 'http://localhost:8080/myFile.jsf'
      * POST /my+File.jsf?foo=bar HTTP/1.1 -> '/my+File.jsf'
@@ -156,9 +156,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * The request path. This will be decoded by the server, and does not include the query string.
-     * <p/>
+     * <p>
      * This path is not canonicalised, so care must be taken to ensure that escape attacks are not possible.
-     * <p/>
+     * <p>
      * Examples:
      * GET http://localhost:8080/b/../my+File.jsf?foo=bar HTTP/1.1 -> '/b/../my+File.jsf'
      * POST /my+File.jsf?foo=bar HTTP/1.1 -> '/my File.jsf'
@@ -168,7 +168,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The remaining unresolved portion of request path. If a {@link io.undertow.server.handlers.CanonicalPathHandler} is
      * installed this will be canonicalised.
-     * <p/>
+     * <p>
      * Initially this will be equal to {@link #requestPath}, however it will be modified as handlers resolve the path.
      */
     private String relativePath;
@@ -197,12 +197,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The maximum entity size. This can be modified before the request stream is obtained, however once the request
      * stream is obtained this cannot be modified further.
-     * <p/>
+     * <p>
      * The default value for this is determined by the {@link io.undertow.UndertowOptions#MAX_ENTITY_SIZE} option. A value
      * of 0 indicates that this is unbounded.
-     * <p/>
+     * <p>
      * If this entity size is exceeded the request channel will be forcibly closed.
-     * <p/>
+     * <p>
      * TODO: integrate this with HTTP 100-continue responses, to make it possible to send a 417 rather than just forcibly
      * closing the channel.
      *
@@ -257,7 +257,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * If this flag is set it means that the request has been dispatched,
      * and will not be ending when the call stack returns.
-     * <p/>
+     * <p>
      * This could be because it is being dispatched to a worker thread from
      * an IO thread, or because resume(Reads/Writes) has been called.
      */
@@ -271,12 +271,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * If this flag is set then the request is current running through a
      * handler chain.
-     * <p/>
+     * <p>
      * This will be true most of the time, this only time this will return
      * false is when performing async operations outside the scope of a call to
      * {@link Connectors#executeRootHandler(HttpHandler, HttpServerExchange)},
      * such as when performing async IO.
-     * <p/>
+     * <p>
      * If this is true then when the call stack returns the exchange will either be dispatched,
      * or the exchange will be ended.
      */
@@ -403,12 +403,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The original request URI. This will include the host name, protocol etc
      * if it was specified by the client.
-     * <p/>
+     * <p>
      * This is not decoded in any way, and does not include the query string.
-     * <p/>
+     * <p>
      * Examples:
-     * GET http://localhost:8080/myFile.jsf?foo=bar HTTP/1.1 -> 'http://localhost:8080/myFile.jsf'
-     * POST /my+File.jsf?foo=bar HTTP/1.1 -> '/my+File.jsf'
+     * GET http://localhost:8080/myFile.jsf?foo=bar HTTP/1.1 -&gt; 'http://localhost:8080/myFile.jsf'
+     * POST /my+File.jsf?foo=bar HTTP/1.1 -&gt; '/my+File.jsf'
      */
     public String getRequestURI() {
         return requestURI;
@@ -443,9 +443,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * If a request was submitted to the server with a full URI instead of just a path this
      * will return true. For example:
-     * <p/>
-     * GET http://localhost:8080/b/../my+File.jsf?foo=bar HTTP/1.1 -> true
-     * POST /my+File.jsf?foo=bar HTTP/1.1 -> false
+     * <p>
+     * GET http://localhost:8080/b/../my+File.jsf?foo=bar HTTP/1.1 -&gt; true
+     * POST /my+File.jsf?foo=bar HTTP/1.1 -&gt; false
      *
      * @return <code>true</code> If the request URI contains the host part of the URI
      */
@@ -456,12 +456,12 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * The request path. This will be decoded by the server, and does not include the query string.
-     * <p/>
+     * <p>
      * This path is not canonicalised, so care must be taken to ensure that escape attacks are not possible.
-     * <p/>
+     * <p>
      * Examples:
-     * GET http://localhost:8080/b/../my+File.jsf?foo=bar HTTP/1.1 -> '/b/../my+File.jsf'
-     * POST /my+File.jsf?foo=bar HTTP/1.1 -> '/my File.jsf'
+     * GET http://localhost:8080/b/../my+File.jsf?foo=bar HTTP/1.1 -&gt; '/b/../my+File.jsf'
+     * POST /my+File.jsf?foo=bar HTTP/1.1 -&gt; '/my File.jsf'
      */
     public String getRequestPath() {
         return requestPath;
@@ -479,7 +479,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Get the request relative path.  This is the path which should be evaluated by the current handler.
-     * <p/>
+     * <p>
      * If the {@link io.undertow.server.handlers.CanonicalPathHandler} is installed in the current chain
      * then this path with be canonicalized
      *
@@ -534,7 +534,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Reconstructs the complete URL as seen by the user. This includes scheme, host name etc,
      * but does not include query string.
-     * <p/>
+     * <p>
      * This is not decoded.
      */
     public String getRequestURL() {
@@ -581,7 +581,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Return the host that this request was sent to, in general this will be the
      * value of the Host header, minus the port specifier.
-     * <p/>
+     * <p>
      * If this resolves to an IPv6 address it will not be enclosed by square brackets.
      * Care must be taken when constructing URLs based on this method to ensure IPv6 URLs
      * are handled correctly.
@@ -605,7 +605,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Return the host, and also the port if this request was sent to a non-standard port. In general
      * this will just be the value of the Host header.
-     * <p/>
+     * <p>
      * If this resolves to an IPv6 address it *will*  be enclosed by square brackets. The return
      * value of this method is suitable for inclusion in a URL.
      *
@@ -721,7 +721,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Dispatches this request to the XNIO worker thread pool. Once the call stack returns
      * the given runnable will be submitted to the executor.
-     * <p/>
+     * <p>
      * In general handlers should first check the value of {@link #isInIoThread()} before
      * calling this method, and only dispatch if the request is actually running in the IO
      * thread.
@@ -737,7 +737,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Dispatches this request to the given executor. Once the call stack returns
      * the given runnable will be submitted to the executor.
-     * <p/>
+     * <p>
      * In general handlers should first check the value of {@link #isInIoThread()} before
      * calling this method, and only dispatch if the request is actually running in the IO
      * thread.
@@ -1198,18 +1198,18 @@ public final class HttpServerExchange extends AbstractAttachable {
      * In order to close the channel you must first call {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()},
      * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternatively you can
      * call {@link #endExchange()}, which will close the channel as part of its cleanup.
-     * <p/>
+     * <p>
      * Closing a fixed-length response before the corresponding number of bytes has been written will cause the connection
      * to be reset and subsequent requests to fail; thus it is important to ensure that the proper content length is
      * delivered when one is specified.  The response channel may not be writable until after the response headers have
      * been sent.
-     * <p/>
+     * <p>
      * If this method is not called then an empty or default response body will be used, depending on the response code set.
-     * <p/>
+     * <p>
      * The returned channel will begin to write out headers when the first write request is initiated, or when
      * {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()} is called on the channel with no content being written.
      * Once the channel is acquired, however, the response code and headers may not be modified.
-     * <p/>
+     * <p>
      *
      * @return the response channel, or {@code null} if another party already acquired the channel
      */
@@ -1236,7 +1236,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Get the response sender.
-     * <p/>
+     * <p>
      * For blocking exchanges this will return a sender that uses the underlying output stream.
      *
      * @return the response sender, or {@code null} if another party already acquired the channel or the sender
@@ -1323,7 +1323,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Calling this method puts the exchange in blocking mode, and creates a
      * {@link BlockingHttpExchange} object to store the streams.
-     * <p/>
+     * <p>
      * When an exchange is in blocking mode the input stream methods become
      * available, other than that there is presently no major difference
      * between blocking an non-blocking modes.
@@ -1339,11 +1339,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Calling this method puts the exchange in blocking mode, using the given
      * blocking exchange as the source of the streams.
-     * <p/>
+     * <p>
      * When an exchange is in blocking mode the input stream methods become
      * available, other than that there is presently no major difference
      * between blocking an non-blocking modes.
-     * <p/>
+     * <p>
      * Note that this method may be called multiple times with different
      * exchange objects, to allow handlers to modify the streams
      * that are being used.
@@ -1430,10 +1430,10 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Ends the exchange by fully draining the request channel, and flushing the response channel.
-     * <p/>
+     * <p>
      * This can result in handoff to an XNIO worker, so after this method is called the exchange should
      * not be modified by the caller.
-     * <p/>
+     * <p>
      * If the exchange is already complete this method is a noop
      */
     public HttpServerExchange endExchange() {

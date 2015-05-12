@@ -39,16 +39,16 @@ import java.util.Set;
 /**
  * Parser that can build a handler from a string representation. The underlying syntax is quite simple, and example is
  * shown below:
- * <p/>
+ * <p>
  * <code>
  * rewrite[value="/path"]
  * </code>
  * If a handler is only being passed a single parameter then the parameter name can be omitted.
  * Strings can be enclosed in optional double or single quotations marks, and quotation marks can be escaped using
  * <code>\"</code>.
- * <p/>
+ * <p>
  * Array types are represented via a comma separated list of values enclosed in curly braces.
- * <p/>
+ * <p>
  * TODO: some way of
  *
  * @author Stuart Douglas

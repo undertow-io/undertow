@@ -87,7 +87,7 @@ import org.xnio.channels.StreamSinkChannel;
 
 /**
  * An HTTP handler which proxies content to a remote server.
- * <p/>
+ * <p>
  * This handler acts like a filter. The {@link ProxyClient} has a chance to decide if it
  * knows how to proxy the request. If it does then it will provide a connection that can
  * used to connect to the remote server, otherwise the next handler will be invoked and the
@@ -200,7 +200,7 @@ public final class ProxyHandler implements HttpHandler {
     /**
      * Adds a request header to the outgoing request. If the header resolves to null or an empty string
      * it will not be added, however any existing header with the same name will be removed.
-     * <p/>
+     * <p>
      * The attribute value will be parsed, and the resulting exchange attribute will be used to create the actual header
      * value.
      *

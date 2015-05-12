@@ -364,7 +364,7 @@ public class FlexBase64 {
     /**
      * Creates an OutputStream wrapper which decodes base64 content before writing to the passed OutputStream target.
      *
-     * <p></p>All bytes written will be queued to an 8192 byte buffer. This stream, therefore, does
+     * <p>All bytes written will be queued to an 8192 byte buffer. This stream, therefore, does
      * not require BufferedOutputStream, which would lead to double buffering.</p>
      *
      * <p>This stream is not thread-safe, and should not be shared between threads, without establishing a

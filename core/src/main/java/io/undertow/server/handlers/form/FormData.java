@@ -30,7 +30,7 @@ import io.undertow.util.HeaderMap;
 
 /**
  * Representation of form data.
- * <p/>
+ * <p>
  * TODO: add representation of multipart data
  */
 public final class FormData implements Iterable<String> {

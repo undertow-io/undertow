@@ -38,26 +38,26 @@ import io.undertow.attribute.ExchangeAttributes;
 /**
  * Parser that can build a predicate from a string representation. The underlying syntax is quite simple, and example is
  * shown below:
- * <p/>
+ * <p>
  * <code>
  * path["/MyPath"] or (method[value="POST"] and not headersPresent[value={Content-Type, "Content-Encoding"}, ignoreTrailer=true]
  * </code>
- * <p/>
+ * <p>
  * The following boolean operators are built in, listed in order or precedence:
  * - not
  * - and
  * - or
- * <p/>
+ * <p>
  * They work pretty much as you would expect them to. All other tokens are taken
  * to be predicate names. If the predicate does not require any parameters then the
  * brackets can be omitted, otherwise they are mandatory.
- * <p/>
+ * <p>
  * If a predicate is only being passed a single parameter then the parameter name can be omitted.
  * Strings can be enclosed in optional double or single quotations marks, and quotation marks can be escaped using
  * <code>\"</code>.
- * <p/>
+ * <p>
  * Array types are represented via a comma separated list of values enclosed in curly braces.
- * <p/>
+ * <p>
  * TODO: should we use antlr (or whatever) here? I don't really want an extra dependency just for this...
  *
  * @author Stuart Douglas

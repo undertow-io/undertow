@@ -42,7 +42,7 @@ public abstract class StreamSinkFrameChannel extends AbstractFramedStreamSinkCha
 
     /**
      * Set the RSV which is used for extensions.
-     * <p/>
+     * <p>
      * This can only be set before any write or transfer operations where passed
      * to the wrapped {@link org.xnio.channels.StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
      *

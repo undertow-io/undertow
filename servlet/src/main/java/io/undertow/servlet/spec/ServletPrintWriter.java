@@ -32,7 +32,7 @@ import java.util.Locale;
 /**
  * Real servlet print writer functionality, that is not limited by extending
  * {@link java.io.PrintWriter}
- * <p/>
+ * <p>
  *
  * @author Stuart Douglas
  */

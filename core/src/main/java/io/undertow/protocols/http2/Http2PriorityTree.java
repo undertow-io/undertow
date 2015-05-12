@@ -74,9 +74,9 @@ public class Http2PriorityTree {
     }
 
     /**
-     * Method that is invoked when a stream has
+     * Method that is invoked when a stream has been removed
      *
-     * @param streamId
+     * @param streamId id of the stream removed
      */
     public void streamRemoved(int streamId) {
         Http2PriorityNode node = nodesByID.get(streamId);

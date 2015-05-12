@@ -46,9 +46,9 @@ import static org.xnio.Bits.anyAreSet;
 
 /**
  * Framed Stream Sink Channel.
- * <p/>
+ * <p>
  * Thread safety notes:
- * <p/>
+ * <p>
  * The general contract is that this channel is only to be used by a single thread at a time. The only exception to this is
  * during flush. A flush will only happen when {@link #readyForFlush} is set, and while this bit is set the buffer
  * must not be modified.

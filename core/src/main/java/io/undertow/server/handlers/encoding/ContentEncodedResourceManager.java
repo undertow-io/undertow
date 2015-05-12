@@ -71,7 +71,7 @@ public class ContentEncodedResourceManager {
 
     /**
      * Gets a pre-encoded resource.
-     * <p/>
+     * <p>
      * TODO: blocking / non-blocking semantics
      *
      * @param resource

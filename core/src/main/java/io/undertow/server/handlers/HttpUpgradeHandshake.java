@@ -24,10 +24,10 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * Server side upgrade handler. This handler can inspect the request and modify the response.
- * <p/>
+ * <p>
  * If the request does not meet this handlers requirements it should return false to allow
  * other upgrade handlers to inspect the request.
- * <p/>
+ * <p>
  * If the request is invalid (e.g. security information is invalid) this should thrown an IoException.
  * if this occurs no further handlers will be tried.
  *

@@ -47,7 +47,7 @@ public class HttpAttachments {
      * If the value {@code true} is attached to the exchange under this key then Undertow will assume that the underlying application
      * has already taken care of chunking, and will not attempt to add its own chunk markers.
      *
-     * This will only take effect if the application has explicitly set the {@literal Transfer-Encoding: chunked) header.
+     * This will only take effect if the application has explicitly set the {@literal Transfer-Encoding: chunked} header.
      *
      */
     public static final AttachmentKey<Boolean> PRE_CHUNKED_RESPONSE = AttachmentKey.create(Boolean.class);
