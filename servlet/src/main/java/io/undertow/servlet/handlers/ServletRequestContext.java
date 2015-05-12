@@ -42,10 +42,10 @@ import javax.servlet.ServletResponse;
 
 /**
  * All the information that servlet needs to attach to the exchange.
- * <p/>
+ * <p>
  * This is all stored under this class, rather than using individual attachments, as
  * this approach has significant performance advantages.
- * <p/>
+ * <p>
  * The {@link ServletInitialHandler} also pushed this information to the {@link #CURRENT}
  * thread local, which allows it to be access even if the request or response have been
  * wrapped with non-compliant wrapper classes.

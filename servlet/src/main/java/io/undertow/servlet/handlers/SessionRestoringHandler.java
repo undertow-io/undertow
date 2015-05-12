@@ -41,7 +41,7 @@ import static io.undertow.servlet.api.SessionPersistenceManager.PersistentSessio
 
 /**
  * A handler that restores persistent HTTP session state for requests in development mode.
- * <p/>
+ * <p>
  * This handler should not be used in production environments.
  *
  * @author Stuart Douglas

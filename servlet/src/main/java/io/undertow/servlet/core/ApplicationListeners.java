@@ -45,10 +45,10 @@ import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRA
 
 /**
  * Class that is responsible for invoking application listeners.
- * <p/>
+ * <p>
  * This class does not perform any context setup, the context must be setup
  * before invoking this class.
- * <p/>
+ * <p>
  * Note that arrays are used instead of lists for performance reasons.
  *
  * @author Stuart Douglas

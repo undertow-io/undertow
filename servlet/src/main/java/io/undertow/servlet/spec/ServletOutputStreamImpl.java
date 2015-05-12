@@ -48,16 +48,16 @@ import static org.xnio.Bits.anyAreSet;
  * This stream essentially has two modes. When it is being used in standard blocking mode then
  * it will buffer in the pooled buffer. If the stream is closed before the buffer is full it will
  * set a content-length header if one has not been explicitly set.
- * <p/>
+ * <p>
  * If a content-length header was present when the stream was created then it will automatically
  * close and flush itself once the appropriate amount of data has been written.
- * <p/>
+ * <p>
  * Once the listener has been set it goes into async mode, and writes become non blocking. Most methods
  * have two different code paths, based on if the listener has been set or not
- * <p/>
+ * <p>
  * Once the write listener has been set operations must only be invoked on this stream from the write
  * listener callback. Attempting to invoke from a different thread will result in an IllegalStateException.
- * <p/>
+ * <p>
  * Async listener tasks are queued in the {@link AsyncContextImpl}. At most one lister can be active at
  * one time, which simplifies the thread safety requirements.
  *
@@ -431,12 +431,12 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     /**
      * Returns the underlying buffer. If this has not been created yet then
      * it is created.
-     * <p/>
+     * <p>
      * Callers that use this method must call {@link #updateWritten(long)} to update the written
      * amount.
-     * <p/>
+     * <p>
      * This allows the buffer to be filled directly, which can be more efficient.
-     * <p/>
+     * <p>
      * This method is basically a hack that should only be used by the print writer
      *
      * @return The underlying buffer
@@ -626,7 +626,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     /**
      * Closes the channel, and flushes any data out using async IO
-     * <p/>
+     * <p>
      * This is used in two situations, if an output stream is not closed when a
      * request is done, and when performing a close on a stream that is in async
      * mode

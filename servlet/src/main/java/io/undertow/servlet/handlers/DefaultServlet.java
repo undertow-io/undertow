@@ -58,9 +58,9 @@ import java.util.Set;
  * match the current path then the resources will be served up asynchronously using the
  * {@link io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange)} method,
  * otherwise the request is handled as a normal servlet request.
- * <p/>
+ * <p>
  * By default we only allow a restricted set of extensions.
- * <p/>
+ * <p>
  * todo: this thing needs a lot more work. In particular:
  * - caching for blocking requests
  * - correct mime type
