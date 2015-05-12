@@ -47,7 +47,7 @@ import io.undertow.util.Headers;
 
 /**
  * Handler that serves up a file from disk to serve as an error page.
- * <p/>
+ * <p>
  * This handler does not server up and response codes by default, you must configure
  * the response codes it responds to.
  *

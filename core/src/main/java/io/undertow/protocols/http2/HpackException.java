@@ -20,7 +20,7 @@ package io.undertow.protocols.http2;
 
 /**
  * Exception that is thrown when the HPACK compress context is broken.
- * <p/>
+ * <p>
  * In this case the connection must be closed.
  */
 public class HpackException extends Exception {

@@ -30,7 +30,7 @@ import org.xnio.channels.StreamSourceChannel;
 
 /**
  * Simple utility class for reading a string
- * <p/>
+ * <p>
  * todo: handle unicode properly
  *
  * @author Stuart Douglas

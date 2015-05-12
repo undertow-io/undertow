@@ -33,8 +33,8 @@ import java.util.List;
 
 /**
  * Parser for the undertow-handlers.conf file.
- * <p/>
- * This file has a line by line syntax, specifying predicate -> handler. If no predicate is specified then
+ * <p>
+ * This file has a line by line syntax, specifying predicate -&gt; handler. If no predicate is specified then
  * the line is assumed to just contain a handler.
  *
  * @author Stuart Douglas

@@ -24,7 +24,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
- * An extension to {@see AbstractConfidentialityHandler} that uses the Host header from the incoming message and specifies the
+ * An extension to {@link AbstractConfidentialityHandler} that uses the Host header from the incoming message and specifies the
  * confidential address by just switching the port.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>

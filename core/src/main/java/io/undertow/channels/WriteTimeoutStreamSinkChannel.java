@@ -35,7 +35,7 @@ import org.xnio.channels.StreamSourceChannel;
 
 /**
  * Wrapper for write timeout. This should always be the first wrapper applied to the underlying channel.
- * <p/>
+ * <p>
  *
  * @author Stuart Douglas
  * @see org.xnio.Options#WRITE_TIMEOUT

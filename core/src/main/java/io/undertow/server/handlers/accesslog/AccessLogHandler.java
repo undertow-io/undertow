@@ -35,11 +35,11 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
 /**
  * Access log handler. This handler will generate access log messages based on the provided format string,
  * and pass these messages into the provided {@link AccessLogReceiver}.
- * <p/>
+ * <p>
  * This handler can log any attribute that is provides via the {@link io.undertow.attribute.ExchangeAttribute}
  * mechanism. A general guide to the most common attribute is provided before, however this mechanism is extensible.
- * <p/>
- * <p/>
+ * <p>
+ * <p>
  * <p>This factory produces token handlers for the following patterns</p>
  * <ul>
  * <li><b>%a</b> - Remote IP address
@@ -70,7 +70,7 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
  * <li><b>combined</b> -
  * <code>%h %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
  * </ul>
- * <p/>
+ * <p>
  * <p>
  * There is also support to write information from the cookie, incoming
  * header, or the session<br>
@@ -82,7 +82,6 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
  * <li><code>%{r,xxx}</code> xxx is an attribute in the ServletRequest
  * <li><code>%{s,xxx}</code> xxx is an attribute in the HttpSession
  * </ul>
- * </p>
  *
  * @author Stuart Douglas
  */

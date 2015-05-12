@@ -42,7 +42,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * The recieve listener for a SPDY connection.
- * <p/>
+ * <p>
  * A new instance is created per connection.
  *
  * @author Stuart Douglas

@@ -96,7 +96,7 @@ public class AccessControlListHandler implements HttpHandler {
 
     /**
      * Adds an allowed user agent peer to the ACL list
-     * <p/>
+     * <p>
      * User agent may be given as regex
      *
      * @param pattern The pattern to add to the ACL
@@ -107,7 +107,7 @@ public class AccessControlListHandler implements HttpHandler {
 
     /**
      * Adds an denied user agent to the ACL list
-     * <p/>
+     * <p>
      * User agent may be given as regex
      *
      * @param pattern The user agent to add to the ACL

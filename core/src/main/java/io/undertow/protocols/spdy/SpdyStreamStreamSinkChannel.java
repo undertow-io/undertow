@@ -176,7 +176,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
      * This method should be called before sending. It will return the amount of
      * data that can be sent, taking into account the stream and connection flow
      * control windows, and the toSend parameter.
-     * <p/>
+     * <p>
      * It will decrement the flow control windows by the amount that can be sent,
      * so this method should only be called as a frame is being queued.
      *

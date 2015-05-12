@@ -32,8 +32,8 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * A predicate that does a regex match against an exchange.
- * <p/>
- * <p/>
+ * <p>
+ * <p>
  * By default this match is done against the relative URI, however it is possible to set it to match against other
  * exchange attributes.
  *

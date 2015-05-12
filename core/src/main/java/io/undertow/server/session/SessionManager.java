@@ -25,9 +25,9 @@ import java.util.Set;
 
 /**
  * Interface that manages sessions.
- * <p/>
+ * <p>
  * The session manager is responsible for maintaining session state.
- * <p/>
+ * <p>
  * As part of session creation the session manager MUST attempt to retrieve the {@link SessionCookieConfig} from
  * the {@link HttpServerExchange} and use it to set the session cookie. The frees up the session manager from
  * needing to know details of the cookie configuration. When invalidating a session the session manager MUST
@@ -58,13 +58,13 @@ public interface SessionManager {
     /**
      * Creates a new session. Any {@link SessionListener}s registered with this manager will be notified
      * of the session creation.
-     * <p/>
+     * <p>
      * This method *MUST* call {@link SessionConfig#findSessionId(io.undertow.server.HttpServerExchange)} (io.undertow.server.HttpServerExchange)} first to
      * determine if an existing session ID is present in the exchange. If this id is present then it must be used
      * as the new session ID. If a session with this ID already exists then an {@link IllegalStateException} must be
      * thrown.
-     * <p/>
-     * <p/>
+     * <p>
+     * <p>
      * This requirement exists to allow forwards across servlet contexts to work correctly.
      *
      * @return The created session

@@ -34,7 +34,7 @@ import java.util.concurrent.Executor;
 
 /**
  * This class provides the connector part of the {@link HttpServerExchange} API.
- * <p/>
+ * <p>
  * It contains methods that logically belong on the exchange, however should only be used
  * by connector implementations.
  *

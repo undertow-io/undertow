@@ -30,10 +30,10 @@ import io.undertow.UndertowMessages;
 
 /**
  * Represents a parsed web socket path template.
- * <p/>
+ * <p>
  * This class can be compared to other path templates, with templates that are considered
  * lower have a higher priority, and should be checked first.
- * <p/>
+ * <p>
  * This comparison can also be used to check for semantically equal paths, if
  * a.compareTo(b) == 0 then the two paths are equivalent, which will generally
  * result in a deployment exception.
@@ -168,7 +168,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
     /**
      * Check if the given uri matches the template. If so then it will return true and
      * place the value of any path parameters into the given map.
-     * <p/>
+     * <p>
      * Note the map may be modified even if the match in unsuccessful, however in this case
      * it will be emptied before the method returns
      *

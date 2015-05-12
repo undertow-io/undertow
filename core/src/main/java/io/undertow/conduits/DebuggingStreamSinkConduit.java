@@ -34,7 +34,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Conduit that saves all the data that is written through it and can dump it to the console
- * <p/>
+ * <p>
  * Obviously this should not be used in production.
  *
  * @author Stuart Douglas

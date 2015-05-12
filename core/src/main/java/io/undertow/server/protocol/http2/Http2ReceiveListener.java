@@ -48,7 +48,7 @@ import org.xnio.channels.Channels;
 
 /**
  * The recieve listener for a Http2 connection.
- * <p/>
+ * <p>
  * A new instance is created per connection.
  *
  * @author Stuart Douglas

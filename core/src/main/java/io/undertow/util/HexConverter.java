@@ -55,7 +55,7 @@ public class HexConverter {
     /**
      * Take the supplied byte array and convert it to to a byte array of the encoded
      * hex values.
-     * <p/>
+     * <p>
      * Each byte on the incoming array will be converted to two bytes on the return
      * array.
      *
@@ -79,7 +79,7 @@ public class HexConverter {
 
     /**
      * Take the incoming character of hex encoded data and convert to the raw byte values.
-     * <p/>
+     * <p>
      * The characters in the incoming array are processed in pairs with two chars of a pair
      * being converted to a single byte.
      *
@@ -112,7 +112,7 @@ public class HexConverter {
 
     /**
      * Take the incoming String of hex encoded data and convert to the raw byte values.
-     * <p/>
+     * <p>
      * The characters in the incoming String are processed in pairs with two chars of a pair
      * being converted to a single byte.
      *

@@ -47,7 +47,7 @@ import java.nio.ByteBuffer;
 
 /**
  * A server-side HTTP connection.
- * <p/>
+ * <p>
  * Note that the lifecycle of the server connection is tied to the underlying TCP connection. Even if the channel
  * is upgraded the connection is not considered closed until the upgraded channel is closed.
  *

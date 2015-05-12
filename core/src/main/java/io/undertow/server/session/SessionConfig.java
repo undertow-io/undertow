@@ -26,7 +26,7 @@ import io.undertow.util.AttachmentKey;
  * attachment such as setting a cookie, as well as actually attaching the session to the exchange for use by later
  * handlers.
  *
- * <p/>
+ * <p>
  * Generally this will just set a cookie.
  *
  * @author Stuart Douglas
@@ -38,9 +38,9 @@ public interface SessionConfig {
     /**
      * Attaches the session to the exchange. The method should attach the exchange under an attachment key,
      * and should also modify the exchange to allow the session to be re-attached on the next request.
-     * <p/>
+     * <p>
      * Generally this will involve setting a cookie
-     * <p/>
+     * <p>
      * Once a session has been attached it must be possible to retrieve it via
      * {@link #findSessionId(io.undertow.server.HttpServerExchange)}
      *

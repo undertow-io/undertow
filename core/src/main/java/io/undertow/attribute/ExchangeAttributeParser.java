@@ -29,7 +29,7 @@ import io.undertow.UndertowMessages;
 
 /**
  * Attribute parser for exchange attributes. This builds an attribute from a string definition.
- * <p/>
+ * <p>
  * This uses a service loader mechanism to allow additional token types to be loaded. Token definitions are loaded
  * from the provided class loader.
  *
@@ -61,9 +61,9 @@ public class ExchangeAttributeParser {
 
     /**
      * Parses the provided value string, and turns it into a list of exchange attributes.
-     * <p/>
+     * <p>
      * Tokens are created according to the following rules:
-     * <p/>
+     * <p>
      * %a - % followed by single character. %% is an escape for a literal %
      * %{.*}a? - % plus curly braces with any amount of content inside, followed by an optional character
      * ${.*} - $ followed by a curly braces to reference an item from the predicate context

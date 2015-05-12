@@ -62,7 +62,7 @@ import org.xnio.channels.SuspendableWriteChannel;
 
 /**
  * A {@link org.xnio.channels.ConnectedChannel} which can be used to send and receive Frames.
- * <p/>
+ * <p>
  * This provides a common base for framed protocols such as websockets and SPDY
  *
  * @author Stuart Douglas
@@ -243,7 +243,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     /**
      * receive method, returns null if no frame is ready. Otherwise returns a
      * channel that can be used to read the frame contents.
-     * <p/>
+     * <p>
      * Calling this method can also have the side effect of making additional data available to
      * existing source channels. In general if you suspend receives or don't have some other way
      * of calling this method then it can prevent frame channels for being fully consumed.
@@ -433,12 +433,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     /**
      * Flushes all ready stream sink conduits to the channel.
-     * <p/>
+     * <p>
      * Frames will be batched up, to allow them all to be written out via a gathering
      * write. The {@link #framePriority} implementation will be invoked to decide which
      * frames are eligible for sending and in what order.
-     *
-     * @throws IOException
      */
     protected synchronized void flushSenders() {
         if(flushingSenders) {
@@ -560,7 +558,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     /**
      * Queues a new frame to be sent, and attempts a flush if this is the first frame in the new frame queue.
-     * <p/>
+     * <p>
      * Depending on the {@link FramePriority} implementation in use the channel may or may not be added to the actual
      * pending queue
      *
@@ -662,7 +660,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     /**
      * Called when a source sub channel fails to fulfil its contract, and leaves the channel in an inconsistent state.
-     * <p/>
+     * <p>
      * The underlying read side will be forcibly closed.
      *
      * @param cause The possibly null cause
@@ -688,7 +686,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     /**
      * Called when a sub channel fails to fulfil its contract, and leaves the channel in an inconsistent state.
-     * <p/>
+     * <p>
      * The underlying channel will be closed, and any sub channels that have writes resumed will have their
      * listeners notified. It is expected that these listeners will then attempt to use the channel, and their standard
      * error handling logic will take over.

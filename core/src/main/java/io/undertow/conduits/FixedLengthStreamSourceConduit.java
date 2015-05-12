@@ -71,7 +71,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
      * Construct a new instance.  The given listener is called once all the bytes are read from the stream
      * <b>or</b> the stream is closed.  This listener should cause the remaining data to be drained from the
      * underlying stream if the underlying stream is to be reused.
-     * <p/>
+     * <p>
      * Calling this constructor will replace the read listener of the underlying channel.  The listener should be
      * restored from the {@code finishListener} object.  The underlying stream should not be closed while this wrapper
      * stream is active.
@@ -97,7 +97,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
      * Construct a new instance.  The given listener is called once all the bytes are read from the stream
      * <b>or</b> the stream is closed.  This listener should cause the remaining data to be drained from the
      * underlying stream if the underlying stream is to be reused.
-     * <p/>
+     * <p>
      * Calling this constructor will replace the read listener of the underlying channel.  The listener should be
      * restored from the {@code finishListener} object.  The underlying stream should not be closed while this wrapper
      * stream is active.

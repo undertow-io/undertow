@@ -30,9 +30,9 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Class that implements the token bucket algorithm.
- * <p/>
+ * <p>
  * Allows send speed to be throttled
- * <p/>
+ * <p>
  * Note that throttling is applied after an initial write, so if a big write is performed initially
  * it may be a while before it can write again.
  *

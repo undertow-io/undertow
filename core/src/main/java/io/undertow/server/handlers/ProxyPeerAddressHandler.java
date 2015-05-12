@@ -31,7 +31,7 @@ import java.util.Set;
 
 /**
  * Handler that sets the peer address to the value of the X-Forwarded-For header.
- * <p/>
+ * <p>
  * This should only be used behind a proxy that always sets this header, otherwise it
  * is possible for an attacker to forge their peer address;
  *

@@ -39,7 +39,7 @@ import io.undertow.UndertowLogger;
 /**
  * Log Receiver that stores logs in a directory under the specified file name, and rotates them after
  * midnight.
- * <p/>
+ * <p>
  * Web threads do not touch the log file, but simply queue messages to be written later by a worker thread.
  * A lightweight CAS based locking mechanism is used to ensure than only 1 thread is active writing messages at
  * any given time
