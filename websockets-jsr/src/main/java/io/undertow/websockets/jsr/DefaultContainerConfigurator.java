@@ -31,7 +31,7 @@ import javax.websocket.server.ServerEndpointConfig;
 
 /**
  * Server default container configurator.
- * <p/>
+ * <p>
  * This API is stupid, because it has no way to attach deployment specific context.
  *
  * @author Stuart Douglas
