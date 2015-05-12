@@ -51,10 +51,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Filter that provides HTTP upgrade functionality. This should be run after all user filters, but before any servlets.
- * <p/>
+ * <p>
  * The use of a filter rather than a servlet allows for normal HTTP requests to be served from the same location
  * as a web socket endpoint if no upgrade header is found.
- * <p/>
+ * <p>
  * TODO: this needs a lot of work
  *
  * @author Stuart Douglas

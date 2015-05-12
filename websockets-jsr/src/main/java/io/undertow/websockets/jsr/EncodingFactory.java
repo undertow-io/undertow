@@ -45,7 +45,7 @@ import io.undertow.servlet.api.InstanceHandle;
 /**
  * Factory class that produces encoding instances for an endpoint. This also provides static
  * methods about the capabilities of encoders.
- * <p/>
+ * <p>
  * These classes also perform implicit encodings for java primitives
  *
  * @author Stuart Douglas
