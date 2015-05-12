@@ -38,7 +38,7 @@ import io.undertow.util.StatusCodes;
 
 /**
  * The handler that is responsible for invoking the servlet
- * <p/>
+ * <p>
  * TODO: do we want to move lifecycle considerations out of this handler?
  *
  * @author Stuart Douglas

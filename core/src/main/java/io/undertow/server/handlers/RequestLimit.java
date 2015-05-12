@@ -32,13 +32,13 @@ import static org.xnio.Bits.longBitMask;
 
 /**
  * Represents a limit on a number of running requests.
- * <p/>
+ * <p>
  * This is basically a counter with a configured set of limits, that is used by {@link RequestLimitingHandler}.
- * <p/>
+ * <p>
  * When the number of active requests goes over the configured max requests then requests will be suspended and queued.
- * <p/>
+ * <p>
  * If the queue is full requests will be rejected with a 513.
- * <p/>
+ * <p>
  * The reason why this is abstracted out into a separate class is so that multiple handlers can share the same state. This
  * allows for fine grained control of resources.
  *

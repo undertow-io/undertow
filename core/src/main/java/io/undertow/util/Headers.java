@@ -238,7 +238,7 @@ public final class Headers {
 
     /**
      * Extracts a token from a header that has a given key. For instance if the header is
-     * <p/>
+     * <p>
      * content-type=multipart/form-data boundary=myboundary
      * and the key is boundary the myboundary will be returned.
      *
@@ -264,7 +264,7 @@ public final class Headers {
 
     /**
      * Extracts a quoted value from a header that has a given key. For instance if the header is
-     * <p/>
+     * <p>
      * content-disposition=form-data; name="my field"
      * and the key is name then "my field" will be returned without the quotes.
      *

@@ -40,7 +40,7 @@ import static org.xnio.Bits.anyAreSet;
 
 /**
  * A 'gated' stream sink channel.
- * <p/>
+ * <p>
  * This channel has a gate which starts of closed. When the gate is closed writes will return 0. When the gate is opened
  * writes will resume as normal.
  *
@@ -70,7 +70,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     /**
      * Open the gate and allow data to flow.  Once opened, the gate cannot be closed other than closing the channel.
-     * <p/>
+     * <p>
      * If the shutdownWrites() or close() method has already been called this will result it in being invoked on the
      * delegate.
      */

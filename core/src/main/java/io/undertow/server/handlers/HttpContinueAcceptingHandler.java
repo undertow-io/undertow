@@ -31,7 +31,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * Handler that provides support for HTTP/1.1 continue responses.
- * <p/>
+ * <p>
  * If the provided predicate returns <code>true</code> then the request will be
  * accepted, otherwise it will be rejected.
  *

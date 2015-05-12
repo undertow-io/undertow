@@ -38,7 +38,7 @@ public class ETagUtils {
      * Handles the if-match header. returns true if the request should proceed, false otherwise
      *
      * @param exchange the exchange
-     * @param etags    The etags
+     * @param etag    The etags
      * @return
      */
     public static boolean handleIfMatch(final HttpServerExchange exchange, final ETag etag, boolean allowWeak) {
@@ -60,7 +60,7 @@ public class ETagUtils {
      * Handles the if-match header. returns true if the request should proceed, false otherwise
      *
      * @param ifMatch The if match header
-     * @param etags   The etags
+     * @param etag   The etags
      * @return
      */
     public static boolean handleIfMatch(final String ifMatch, final ETag etag, boolean allowWeak) {
@@ -105,7 +105,7 @@ public class ETagUtils {
      * Handles the if-none-match header. returns true if the request should proceed, false otherwise
      *
      * @param exchange the exchange
-     * @param etags    The etags
+     * @param etag    The etags
      * @return
      */
     public static boolean handleIfNoneMatch(final HttpServerExchange exchange, final ETag etag, boolean allowWeak) {
@@ -127,7 +127,7 @@ public class ETagUtils {
      * Handles the if-none-match header. returns true if the request should proceed, false otherwise
      *
      * @param ifNoneMatch the header
-     * @param etags       The etags
+     * @param etag       The etags
      * @return
      */
     public static boolean handleIfNoneMatch(final String ifNoneMatch, final ETag etag, boolean allowWeak) {

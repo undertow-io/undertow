@@ -19,7 +19,7 @@ package io.undertow.security.idm;
 
 /**
  * An extension of {@link Credential} to provide some additional methods needed to enable verification of a request where
- * {@link DigestAuthenticationMechanism} is in use.
+ * {@link io.undertow.security.impl.DigestAuthenticationMechanism} is in use.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */

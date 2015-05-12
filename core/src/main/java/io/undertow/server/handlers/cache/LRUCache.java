@@ -27,11 +27,11 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A non-blocking cache where entries are indexed by a key.
- * <p/>
+ * <p>
  * <p>To reduce contention, entry allocation and eviction execute in a sampling
  * fashion (entry hits modulo N). Eviction follows an LRU approach (oldest sampled
  * entries are removed first) when the cache is out of capacity.</p>
- * <p/>
+ * <p>
  *
  * @author Jason T. Greene
  * @author Stuart Douglas

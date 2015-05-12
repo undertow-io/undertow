@@ -37,7 +37,7 @@ import java.nio.ByteBuffer;
 
 /**
  * A server-side AJP connection.
- * <p/>
+ * <p>
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */

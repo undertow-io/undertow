@@ -150,9 +150,9 @@ public class IPAddressAccessControlHandler implements HttpHandler {
 
     /**
      * Adds an allowed peer to the ACL list
-     * <p/>
+     * <p>
      * Peer can take several forms:
-     * <p/>
+     * <p>
      * a.b.c.d = Literal IPv4 Address
      * a:b:c:d:e:f:g:h = Literal IPv6 Address
      * a.b.* = Wildcard IPv4 Address
@@ -168,9 +168,9 @@ public class IPAddressAccessControlHandler implements HttpHandler {
 
     /**
      * Adds an denied peer to the ACL list
-     * <p/>
+     * <p>
      * Peer can take several forms:
-     * <p/>
+     * <p>
      * a.b.c.d = Literal IPv4 Address
      * a:b:c:d:e:f:g:h = Literal IPv6 Address
      * a.b.* = Wildcard IPv4 Address

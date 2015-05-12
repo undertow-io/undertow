@@ -20,7 +20,7 @@ package io.undertow.security.idm;
 import java.security.cert.X509Certificate;
 
 /**
- * A {@see Credential} implementation which wraps an X.509 certificate.
+ * A {@link Credential} implementation which wraps an X.509 certificate.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */

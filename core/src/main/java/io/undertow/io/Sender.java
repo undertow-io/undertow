@@ -68,7 +68,7 @@ public interface Sender {
 
     /**
      * Write the given String using async IO, and calls the given callback on completion or error.
-     * <p/>
+     * <p>
      * The CharSequence is encoded to UTF8
      *
      * @param data     The data to send
@@ -88,7 +88,7 @@ public interface Sender {
 
     /**
      * Write the given String using async IO, and ends the exchange when done
-     * <p/>
+     * <p>
      * The CharSequence is encoded to UTF8
      *
      * @param data     The data to send

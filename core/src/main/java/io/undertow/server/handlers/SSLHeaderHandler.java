@@ -41,16 +41,16 @@ import java.util.Set;
 
 /**
  * Handler that sets SSL information on the connection based on the following headers:
- * <p/>
+ * <p>
  * <ul>
  * <li>SSL_CLIENT_CERT</li>
  * <li>SSL_CIPHER</li>
  * <li>SSL_SESSION_ID</li>
  * </ul>
- * <p/>
+ * <p>
  * If this handler is present in the chain it will always override the SSL session information,
  * even if these headers are not present.
- * <p/>
+ * <p>
  * This handler MUST only be used on servers that are behind a reverse proxy, where the reverse proxy
  * has been configured to always set these header for EVERY request (or strip existing headers with these
  * names if no SSL information is present). Otherwise it may be possible for a malicious client to spoof

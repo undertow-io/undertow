@@ -24,9 +24,9 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * Represents a HTTP session.
- * <p/>
+ * <p>
  * Many operations provide both a blocking and an asynchronous version.
- * <p/>
+ * <p>
  * When using the async versions of operations no guarantee is made as to which threads will
  * run listeners registered with this session manger. When using the blocking version the listeners are guaranteed
  * to run in the calling thread.
@@ -72,7 +72,7 @@ public interface Session {
      * Returns the last time the client sent a request associated with
      * this session, as the number of milliseconds since midnight
      * January 1, 1970 GMT, and marked by the time the container received the request.
-     * <p/>
+     * <p>
      * <p>Actions that your application takes, such as getting or setting
      * a value associated with the session, do not affect the access
      * time.
@@ -140,11 +140,11 @@ public interface Session {
      * Binds an object to this session, using the name specified.
      * If an object of the same name is already bound to the session,
      * the object is replaced.
-     * <p/>
-     * <p/>
-     * <p/>
+     * <p>
+     * <p>
+     * <p>
      * <p>If the value passed in is null, this has the same effect as calling
-     * <code>removeAttribute()<code>.
+     * <code>removeAttribute()</code>.
      *
      * @param name  the name to which the object is bound;
      *              cannot be null

@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 
 /**
  * An utility class which can be used to check if a sequence of bytes or ByteBuffers contain non UTF-8 data.
- * <p/>
+ * <p>
  * Please use a new instance per stream.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

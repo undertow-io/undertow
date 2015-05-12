@@ -43,7 +43,7 @@ import static org.xnio.IoUtils.safeClose;
 /**
  * Initial implementation of a load balancing proxy client. This initial implementation is rather simplistic, and
  * will likely change.
- * <p/>
+ * <p>
  *
  * @author Stuart Douglas
  */
@@ -51,7 +51,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     /**
      * The attachment key that is used to attach the proxy connection to the exchange.
-     * <p/>
+     * <p>
      * This cannot be static as otherwise a connection from a different client could be re-used.
      */
     private final AttachmentKey<ExclusiveConnectionHolder> exclusiveConnectionKey = AttachmentKey.create(ExclusiveConnectionHolder.class);

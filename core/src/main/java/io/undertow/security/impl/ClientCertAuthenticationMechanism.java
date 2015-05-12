@@ -40,7 +40,7 @@ import java.util.Map;
 
 /**
  * The Client Cert based authentication mechanism.
- * <p/>
+ * <p>
  * When authenticate is called the current request is checked to see if it a SSL request, this is further checked to identify if
  * the client has been verified at the SSL level.
  *

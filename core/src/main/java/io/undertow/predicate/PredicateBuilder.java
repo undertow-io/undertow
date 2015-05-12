@@ -24,7 +24,7 @@ import java.util.Set;
 /**
  * An interface that knows how to build a predicate from a textual representation. This is loaded
  * using a service loader to make it configurable.
- * <p/>
+ * <p>
  * This makes it easy to configure conditions based on a string representation
  *
  * @author Stuart Douglas

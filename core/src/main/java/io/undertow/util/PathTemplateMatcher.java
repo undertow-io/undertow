@@ -32,7 +32,7 @@ import java.util.TreeSet;
 /**
  * Utility class that provides fast path matching of path templates. Templates are stored in a map based on the stem of the template,
  * and matches longest stem first.
- * <p/>
+ * <p>
  * TODO: we can probably do this faster using a trie type structure, but I think the current impl should perform ok most of the time
  *
  * @author Stuart Douglas

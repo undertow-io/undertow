@@ -69,7 +69,7 @@ public class PredicatesHandler implements HttpHandler {
 
     /**
      * Adds a new predicated handler.
-     * <p/>
+     * <p>
      *
      * @param predicate
      * @param handlerWrapper

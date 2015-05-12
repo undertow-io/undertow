@@ -23,7 +23,7 @@ import java.util.Date;
 /**
  * A HTTP cookie.
  *
- * @see io.undertow.server.ExchangeCookieUtils
+ * @see io.undertow.server.Connectors
  * @author Stuart Douglas
  */
 public interface Cookie {

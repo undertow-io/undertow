@@ -29,7 +29,7 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
  * Handler that associates SSL metadata with request
- * <p/>
+ * <p>
  * cipher suite - javax.servlet.request.cipher_suite String
  * bit size of the algorithm - javax.servlet.request.key_size Integer
  * SSL session id - javax.servlet.request.ssl_session_id String
@@ -85,8 +85,8 @@ public class SSLInformationAssociationHandler implements HttpHandler {
      /* ------------------------------------------------------------ */
 
     /**
-     * <p>Return the chain of X509 certificates used to negotiate the SSL Session.</p>
-     * <p/>
+     * Return the chain of X509 certificates used to negotiate the SSL Session.
+     * <p>
      * We convert JSSE's javax.security.cert.X509Certificate[]  to servlet's  java.security.cert.X509Certificate[]
      *
      * @param session the   javax.net.ssl.SSLSession to use as the source of the cert chain.

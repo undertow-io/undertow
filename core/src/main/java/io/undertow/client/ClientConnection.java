@@ -32,7 +32,7 @@ import java.nio.channels.Channel;
 
 /**
  * A client connection. This can be used to send requests, or to upgrade the connection.
- * <p/>
+ * <p>
  * In general these objects are not thread safe, they should only be used by the IO thread
  * that is responsible for the connection. As a result this client does not provide a mechanism
  * to perform blocking IO, it is designed for async operation only.
@@ -43,18 +43,17 @@ public interface ClientConnection extends Channel {
 
     /**
      * Sends a client request. The request object should not be modified after it has been submitted to the connection.
-     * <p/>
+     * <p>
      * Request objects can be queued. Once the request is in a state that it is ready to be sent the {@code clientCallback}
      * is invoked to provide the caller with the {@link ClientExchange}
-     * <p/>
+     * <p>
      * If {@link #isMultiplexingSupported()} returns true then multiple requests may be active at the same time, and a later
      * request may complete before an earlier one.
-     * <p/>
+     * <p>
      * Note that the request header may not be written out until after the callback has been invoked. This allows the
      * client to write out a header with a gathering write if the request contains content.
      *
      * @param request The request to send.
-     * @return The resulting client exchange, that can be used to send the request body and read the response
      */
     void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback);
 

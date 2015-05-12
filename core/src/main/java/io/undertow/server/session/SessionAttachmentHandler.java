@@ -27,9 +27,9 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 
 /**
  * Handler that attaches the session to the request.
- * <p/>
+ * <p>
  * This handler is also the place where session cookie configuration properties are configured.
- * <p/>
+ * <p>
  * note: this approach is not used by Servlet, which has its own session handlers
  *
  * @author Stuart Douglas

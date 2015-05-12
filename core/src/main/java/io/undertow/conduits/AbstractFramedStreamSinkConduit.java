@@ -40,7 +40,7 @@ import static org.xnio.Bits.anyAreSet;
 /**
  * Utility class to ease the implementation of framed protocols. This call provides a queue of frames, and a callback
  * that can be invoked when a frame event occurs.
- * <p/>
+ * <p>
  * When a write takes place all frames are attempted to be written out at once via a gathering write. Frames can be
  * queued via {@link #queueFrame(io.undertow.conduits.AbstractFramedStreamSinkConduit.FrameCallBack, java.nio.ByteBuffer...)}.
  *
@@ -241,7 +241,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
 
     /**
      * Interface that is called when a frame event takes place. The events are:
-     * <p/>
+     * <p>
      * <ul>
      * <li>
      * Done - The fame has been written out

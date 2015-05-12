@@ -26,10 +26,10 @@ import java.util.Map;
 /**
  * A string keyed map that can be accessed as a substring, eliminating the need to allocate a new string
  * to do a key comparison against.
- * <p/>
+ * <p>
  * This class uses linear probing and is thread safe due to copy on write semantics. As such it is not recomended
  * for data that changes frequently.
- * <p/>
+ * <p>
  * This class does not actually implement the map interface to avoid implementing unnecessary operations.
  *
  * @author Stuart Douglas

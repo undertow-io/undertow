@@ -37,7 +37,7 @@ import static org.xnio.Bits.anyAreSet;
 
 /**
  * Buffering output stream that wraps a channel.
- * <p/>
+ * <p>
  * This stream delays channel creation, so if a response will fit in the buffer it is not necessary to
  * set the content length header.
  *

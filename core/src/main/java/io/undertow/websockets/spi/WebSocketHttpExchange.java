@@ -34,14 +34,14 @@ import java.util.Set;
 
 /**
  * An abstraction for a Http exchange. Undertow uses 3 different types of exchanges:
- * <p/>
+ * <p>
  * - async
  * - blocking
  * - servlet
- * <p/>
+ * <p>
  * This class provides a way to operate on the underling exchange while providing the
  * correct semantics regardless of the underlying exchange type.
- * <p/>
+ * <p>
  * The main use case for this is web sockets. Web sockets should be able to perform
  * a handshake regardless of the nature of the underlying request, while still respecting
  * servlet filters, security etc.

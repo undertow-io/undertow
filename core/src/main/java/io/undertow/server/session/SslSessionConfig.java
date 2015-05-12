@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  * Session config that stores the session ID in the current SSL session.
- * <p/>
+ * <p>
  * It allows for a fallback to be provided for non-ssl connections
  *
  * @author Stuart Douglas

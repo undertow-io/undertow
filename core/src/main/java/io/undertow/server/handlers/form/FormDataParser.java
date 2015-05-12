@@ -27,7 +27,7 @@ import io.undertow.util.AttachmentKey;
 /**
  * Parser for form data. This can be used by down-stream handlers to parse
  * form data.
- * <p/>
+ * <p>
  * This parser must be closed to make sure any temporary files have been cleaned up.
  *
  * @author Stuart Douglas
@@ -42,10 +42,10 @@ public interface FormDataParser extends Closeable {
     /**
      * Parse the form data asynchronously. If all the data cannot be read immediately then a read listener will be
      * registered, and the data will be parsed by the read thread.
-     * <p/>
+     * <p>
      * When this method completes the handler will be invoked, and the data
      * will be attached under {@link #FORM_DATA}.
-     * <p/>
+     * <p>
      * The method can either invoke the next handler directly, or may delegate to the IO thread
      * to perform the parsing.
      */

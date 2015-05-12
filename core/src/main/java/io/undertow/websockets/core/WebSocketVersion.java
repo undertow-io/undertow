@@ -58,7 +58,7 @@ public enum WebSocketVersion {
     V08,
 
     /**
-     * <a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a>. This was originally <a href=
+     * <a href="http://tools.ietf.org/html/rfc6455">RFC 6455</a>. This was originally <a href=
      * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
      * 17</a>
      */

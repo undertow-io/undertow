@@ -146,7 +146,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     /**
      *
-     * @see io.undertow.security.api.NonceManager#nextNonce(java.lang.String)
+     * @see io.undertow.security.api.NonceManager#nextNonce(java.lang.String, io.undertow.server.HttpServerExchange)
      */
     public String nextNonce(String lastNonce, HttpServerExchange exchange) {
         if (lastNonce == null) {
@@ -230,7 +230,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     /**
      *
-     * @see io.undertow.security.api.NonceManager#validateNonce(java.lang.String, int)
+     * @see io.undertow.security.api.NonceManager#validateNonce(java.lang.String, int, io.undertow.server.HttpServerExchange)
      */
     @Override
     public boolean validateNonce(String nonce, int nonceCount, HttpServerExchange exchange) {

@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Class that provides support for dealing with HTTP 100 (Continue) responses.
- * <p/>
+ * <p>
  * Note that if a client is pipelining some requests and sending continue for others this
  * could cause problems if the pipelining buffer is enabled.
  *

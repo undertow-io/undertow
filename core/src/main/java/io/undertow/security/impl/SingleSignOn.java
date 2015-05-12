@@ -30,7 +30,7 @@ public interface SingleSignOn extends Iterable<Session>, AutoCloseable {
 
     /**
      * Returns the unique identifier for this SSO.
-     * @return
+     * @return this SSO's unique identifier
      */
     String getId();
 
@@ -48,20 +48,20 @@ public interface SingleSignOn extends Iterable<Session>, AutoCloseable {
 
     /**
      * Indicates whether or not the specified session is contained in the set of sessions to which the user is authenticated
-     * @param manager a session manager
+     * @param session a session manager
      * @return
      */
     boolean contains(Session session);
 
     /**
      * Adds the specified session to the set of sessions to which the user is authenticated
-     * @param manager a session manager
+     * @param session a session manager
      */
     void add(Session session);
 
     /**
      * Removes the specified session from the set of sessions to which the user is authenticated
-     * @param manager a session manager
+     * @param session a session manager
      */
     void remove(Session session);
 
