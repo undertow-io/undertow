@@ -22,13 +22,14 @@ import io.undertow.server.handlers.MetricsHandler;
 import io.undertow.servlet.api.MetricsCollector;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * @author Tomaz Cerar (c) 2014 Red Hat Inc.
  */
 public class TestMetricsCollector implements MetricsCollector {
 
-    private final ConcurrentHashMap<String,MetricsHandler> metrics = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String,MetricsHandler> metrics = new ConcurrentHashMap<>();
 
     @Override
     public void registerMetric(String name, MetricsHandler handler) {

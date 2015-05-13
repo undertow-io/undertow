@@ -23,6 +23,7 @@ import static io.undertow.server.handlers.cache.LimitedBufferSlicePool.PooledByt
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,7 +49,7 @@ public class DirectBufferCache {
     private static final int SAMPLE_INTERVAL = 5;
 
     private final LimitedBufferSlicePool pool;
-    private final ConcurrentHashMap<Object, CacheEntry> cache;
+    private final ConcurrentMap<Object, CacheEntry> cache;
     private final ConcurrentDirectDeque<CacheEntry> accessQueue;
     private final int sliceSize;
     private final int maxAge;
