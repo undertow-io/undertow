@@ -74,7 +74,6 @@ public class SessionCookieConfig implements SessionConfig {
                 .setHttpOnly(httpOnly)
                 .setMaxAge(0);
         exchange.setResponseCookie(cookie);
-        exchange.getRequestCookies().remove(cookieName);
     }
 
     @Override
