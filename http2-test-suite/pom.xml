@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>1.2.6.Final-SNAPSHOT</version>
+        <version>1.2.6.Final</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-http2-test-suite</artifactId>
-    <version>1.2.6.Final-SNAPSHOT</version>
+    <version>1.2.6.Final</version>
 
     <name>Undertow HTTP2 test suite</name>
 
