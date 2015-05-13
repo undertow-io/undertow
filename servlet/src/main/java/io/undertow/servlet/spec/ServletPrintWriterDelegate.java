@@ -126,7 +126,7 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
 
     @Override
     public void write(final String s) {
-        servletPrintWriter.write(s);
+        servletPrintWriter.write(s == null ? "null" : s);
     }
 
     @Override
