@@ -104,12 +104,21 @@ public class GetRequestedSessionIdTestCase {
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(newSessionId, response);
 
-            Assert.assertNotEquals(sessionId, newSessionId);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=destroycreate");
+            result = client.execute(get);
+            String createdSessionId = getSession(client.getCookieStore().getCookies());
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(newSessionId, response);
+            Assert.assertNotEquals(createdSessionId, newSessionId);
+
+
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=destroy");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(newSessionId, response);
+            Assert.assertEquals(createdSessionId, response);
+
         } finally {
             client.getConnectionManager().shutdown();
         }

@@ -304,6 +304,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String getRequestedSessionId() {
         SessionConfig config = originalServletContext.getSessionConfig();
+        if(config instanceof ServletContextImpl.IgnoreInvalidatedSessionConfig) {
+            return ((ServletContextImpl.IgnoreInvalidatedSessionConfig)config).getDelegate().findSessionId(exchange);
+        }
         return config.findSessionId(exchange);
     }
 

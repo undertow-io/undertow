@@ -148,7 +148,7 @@ public class ServletContextImpl implements ServletContext {
         if (wrapper != null) {
             sessionConfig = wrapper.wrap(sessionConfig, deployment);
         }
-        this.sessionConfig = sessionConfig;
+        this.sessionConfig = new IgnoreInvalidatedSessionConfig(sessionConfig);
     }
 
     @Override
@@ -952,5 +952,57 @@ public class ServletContextImpl implements ServletContext {
         }
         contentTypeCache.add(type, existing);
         return existing;
+    }
+
+    /**
+     * This is a bit of a hack to make sure than an invalidated session ID is not re-used.
+     */
+    static final class IgnoreInvalidatedSessionConfig implements SessionConfig {
+
+        private final AttachmentKey<String> INVALIDATED = AttachmentKey.create(String.class);
+
+        private final SessionConfig delegate;
+
+        private IgnoreInvalidatedSessionConfig(SessionConfig delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void setSessionId(HttpServerExchange exchange, String sessionId) {
+            delegate.setSessionId(exchange, sessionId);
+        }
+
+        @Override
+        public void clearSession(HttpServerExchange exchange, String sessionId) {
+            exchange.putAttachment(INVALIDATED, sessionId);
+            delegate.clearSession(exchange, sessionId);
+        }
+
+        @Override
+        public String findSessionId(HttpServerExchange exchange) {
+            String invalidated = exchange.getAttachment(INVALIDATED);
+            String current = delegate.findSessionId(exchange);
+            if(invalidated == null) {
+                return current;
+            }
+            if(invalidated.equals(current)) {
+                return null;
+            }
+            return current;
+        }
+
+        @Override
+        public SessionCookieSource sessionCookieSource(HttpServerExchange exchange) {
+            return delegate.sessionCookieSource(exchange);
+        }
+
+        @Override
+        public String rewriteUrl(String originalUrl, String sessionId) {
+            return delegate.rewriteUrl(originalUrl, sessionId);
+        }
+
+        public SessionConfig getDelegate() {
+            return delegate;
+        }
     }
 }

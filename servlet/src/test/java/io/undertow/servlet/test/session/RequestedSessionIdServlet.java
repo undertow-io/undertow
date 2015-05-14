@@ -41,6 +41,11 @@ public class RequestedSessionIdServlet extends HttpServlet {
                 req.getSession().invalidate();
                 resp.getWriter().write(req.getRequestedSessionId());
                 break;
+            case "destroycreate":
+                req.getSession().invalidate();
+                req.getSession(true);
+                resp.getWriter().write(req.getRequestedSessionId());
+                break;
             case "change":
                 req.changeSessionId();
                 resp.getWriter().write(req.getRequestedSessionId());
