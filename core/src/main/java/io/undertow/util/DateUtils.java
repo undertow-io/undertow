@@ -76,7 +76,7 @@ public class DateUtils {
     private static final String OLD_COOKIE_PATTERN = "EEE, dd-MMM-yyyy HH:mm:ss z";
 
 
-    private static final String COMMON_LOG_PATTERN = "dd/MMM/yyyy:HH:mm:ss Z";
+    private static final String COMMON_LOG_PATTERN = "[dd/MMM/yyyy:HH:mm:ss Z]";
 
 
     private static final ThreadLocal<SimpleDateFormat> COMMON_LOG_PATTERN_FORMAT = new ThreadLocal<SimpleDateFormat>() {

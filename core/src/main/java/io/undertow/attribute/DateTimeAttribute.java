@@ -24,7 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
 
 /**
- * The request status code
+ * The current time
  *
  * @author Stuart Douglas
  */
