@@ -18,15 +18,6 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.UndertowLogger;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpServerExchange;
@@ -41,11 +32,20 @@ import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author Stuart Douglas
  * @author Emanuel Muckenhuber
  */
-class ModClusterContainer {
+class ModClusterContainer implements ModClusterController {
 
     // The configured balancers
     private final ConcurrentMap<String, Balancer> balancers = new CopyOnWriteMap<>();
@@ -148,10 +148,10 @@ class ModClusterContainer {
     /**
      * Register a new node.
      *
-     * @param config            the node configuration
-     * @param balancerConfig    the balancer configuration
-     * @param ioThread          the associated I/O thread
-     * @param bufferPool        the buffer pool
+     * @param config         the node configuration
+     * @param balancerConfig the balancer configuration
+     * @param ioThread       the associated I/O thread
+     * @param bufferPool     the buffer pool
      * @return whether the node could be created or not
      */
     public synchronized boolean addNode(final NodeConfig config, final Balancer.BalancerBuilder balancerConfig, final XnioIoThread ioThread, final Pool<ByteBuffer> bufferPool) {
@@ -196,7 +196,7 @@ class ModClusterContainer {
     /**
      * Management command enabling all contexts on the given node.
      *
-     * @param jvmRoute    the jvmRoute
+     * @param jvmRoute the jvmRoute
      * @return
      */
     public synchronized boolean enableNode(final String jvmRoute) {
@@ -213,7 +213,7 @@ class ModClusterContainer {
     /**
      * Management command disabling all contexts on the given node.
      *
-     * @param jvmRoute    the jvmRoute
+     * @param jvmRoute the jvmRoute
      * @return
      */
     public synchronized boolean disableNode(final String jvmRoute) {
@@ -230,7 +230,7 @@ class ModClusterContainer {
     /**
      * Management command stopping all contexts on the given node.
      *
-     * @param jvmRoute    the jvmRoute
+     * @param jvmRoute the jvmRoute
      * @return
      */
     public synchronized boolean stopNode(final String jvmRoute) {
@@ -325,7 +325,7 @@ class ModClusterContainer {
         return false;
     }
 
-    synchronized boolean disableContext(final String contextPath, final String jvmRoute, List<String> aliases) {
+    public synchronized boolean disableContext(final String contextPath, final String jvmRoute, List<String> aliases) {
         final Node node = nodes.get(jvmRoute);
         if (node != null) {
             node.disableContext(contextPath, aliases);
@@ -386,10 +386,10 @@ class ModClusterContainer {
     /**
      * Try to find a failover node within the same load balancing group.
      *
-     * @oaram entry      the resolved virtual host entry
-     * @param domain     the load balancing domain, if known
-     * @param jvmRoute   the original jvmRoute
+     * @param domain   the load balancing domain, if known
+     * @param jvmRoute the original jvmRoute
      * @return the context, {@code null} if not found
+     * @oaram entry      the resolved virtual host entry
      */
     Context findFailoverNode(final VirtualHost.HostEntry entry, final String domain, final String jvmRoute, final boolean forceStickySession) {
         String failOverDomain = null;
@@ -421,7 +421,7 @@ class ModClusterContainer {
     /**
      * Map a request to virtual host.
      *
-     * @param exchange    the http exchange
+     * @param exchange the http exchange
      * @return
      */
     private PathMatcher.PathMatch<VirtualHost.HostEntry> mapVirtualHost(final HttpServerExchange exchange) {
@@ -442,8 +442,8 @@ class ModClusterContainer {
             if (host == null) {
                 return null;
             }
-            PathMatcher.PathMatch<VirtualHost.HostEntry> result =  host.match(context);
-            if(result.getValue() == null) {
+            PathMatcher.PathMatch<VirtualHost.HostEntry> result = host.match(context);
+            if (result.getValue() == null) {
                 return null;
             }
             return result;
@@ -583,6 +583,192 @@ class ModClusterContainer {
             for (final Node node : nodes.values()) {
                 node.resetLbStatus();
             }
+        }
+    }
+
+
+    @Override
+    public ModClusterStatus getStatus() {
+        List<ModClusterStatus.LoadBalancer> balancers = new ArrayList<>();
+        for(Map.Entry<String, Balancer> bentry : this.balancers.entrySet()) {
+            List<ModClusterStatus.Node> nodes = new ArrayList<>();
+            for(Node node : this.getNodes()) {
+                if(node.getBalancer().getName().equals(bentry.getKey())) {
+                    List<ModClusterStatus.Context> contexts = new ArrayList<>();
+
+                    for(Context i : node.getContexts()) {
+                        contexts.add(new ContextImpl(i));
+                    }
+
+                    nodes.add(new NodeImpl(node, contexts));
+                }
+            }
+
+            balancers.add(new BalancerImpl(bentry.getValue(), nodes));
+        }
+        return new ModClusterStatusImpl(balancers);
+    }
+
+    private class ModClusterStatusImpl implements ModClusterStatus {
+
+        private final List<LoadBalancer> balancers;
+
+        private ModClusterStatusImpl(List<LoadBalancer> balancers) {
+            this.balancers = balancers;
+        }
+
+        @Override
+        public List<LoadBalancer> getLoadBalancers() {
+            return balancers;
+        }
+
+        @Override
+        public LoadBalancer getLoadBalancer(String name) {
+            for (LoadBalancer b : balancers) {
+                if (b.getName().equals(name)) {
+                    return b;
+                }
+            }
+            return null;
+        }
+    }
+
+    private class BalancerImpl implements ModClusterStatus.LoadBalancer {
+        private final Balancer balancer;
+        private final List<ModClusterStatus.Node> nodes;
+
+        private BalancerImpl(Balancer balancer, List<ModClusterStatus.Node> nodes) {
+            this.balancer = balancer;
+            this.nodes = nodes;
+        }
+
+        @Override
+        public String getName() {
+            return balancer.getName();
+        }
+
+        @Override
+        public List<ModClusterStatus.Node> getNodes() {
+            return nodes;
+        }
+
+        @Override
+        public ModClusterStatus.Node getNode(String name) {
+            for (ModClusterStatus.Node i : nodes) {
+                if(i.getName().equals(name)) {
+                    return i;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public boolean isStickySession() {
+            return balancer.isStickySession();
+        }
+
+        @Override
+        public String getStickySessionCookie() {
+            return balancer.getStickySessionCookie();
+        }
+
+        @Override
+        public String getStickySessionPath() {
+            return null;
+        }
+
+        @Override
+        public boolean isStickySessionRemove() {
+            return balancer.isStickySessionRemove();
+        }
+
+        @Override
+        public boolean isStickySessionForce() {
+            return balancer.isStickySessionForce();
+        }
+
+        @Override
+        public int getWaitWorker() {
+            return balancer.getWaitWorker();
+        }
+
+        @Override
+        public int getMaxAttempts() {
+            return balancer.getMaxattempts();
+        }
+    }
+
+    private class NodeImpl implements ModClusterStatus.Node {
+
+        private final Node node;
+        private final List<ModClusterStatus.Context> contexts;
+
+        private NodeImpl(Node node, List<ModClusterStatus.Context> contexts) {
+            this.node = node;
+            this.contexts = contexts;
+        }
+
+        @Override
+        public String getName() {
+            return node.getJvmRoute();
+        }
+
+        @Override
+        public List<ModClusterStatus.Context> getContexts() {
+            return Collections.unmodifiableList(contexts);
+        }
+
+        @Override
+        public ModClusterStatus.Context getContext(String name) {
+            for (ModClusterStatus.Context i : contexts) {
+                if(i.getName().equals(name)) {
+                    return i;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public int getLoad() {
+            return node.getLoad();
+        }
+
+        @Override
+        public NodeStatus getStatus() {
+            return node.getStatus();
+        }
+    }
+
+    private class ContextImpl implements ModClusterStatus.Context {
+        private final Context context;
+
+        private ContextImpl(Context context) {
+            this.context = context;
+        }
+
+        @Override
+        public String getName() {
+            return context.getPath();
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return context.isEnabled();
+        }
+
+        @Override
+        public int getRequests() {
+            return context.getActiveRequests();
+        }
+
+        @Override
+        public void enable() {
+            context.enable();
+        }
+
+        @Override
+        public void disable() {
+            context.disable();
         }
     }
 

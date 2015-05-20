@@ -24,7 +24,7 @@ import org.junit.Test;
 /**
  * @author Stuart Douglas
  */
-public class StatusCodesTestCase {
+public class NodeStatusCodesTestCase {
 
     @Test
     public void testCodeLookup() {

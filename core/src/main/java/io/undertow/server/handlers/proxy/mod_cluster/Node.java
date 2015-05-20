@@ -43,21 +43,6 @@ import org.xnio.XnioIoThread;
  */
 class Node {
 
-    enum Status {
-        /**
-         * The node is up
-         */
-        NODE_UP,
-        /**
-         * The node is down
-         */
-        NODE_DOWN,
-        /**
-         * The node is paused
-         */
-        NODE_HOT_STANDBY;
-    }
-
     private final int id;
     private final String jvmRoute;
     private final ConnectionPoolManager connectionPoolManager;
@@ -134,14 +119,14 @@ class Node {
         return ioThread;
     }
 
-    public Status getStatus() {
+    public NodeStatus getStatus() {
         final int status = this.state;
         if (anyAreSet(status, ERROR)) {
-            return Status.NODE_DOWN;
+            return NodeStatus.NODE_DOWN;
         } else if (anyAreSet(status, HOT_STANDBY)) {
-            return Status.NODE_HOT_STANDBY;
+            return NodeStatus.NODE_HOT_STANDBY;
         } else {
-            return Status.NODE_UP;
+            return NodeStatus.NODE_UP;
         }
     }
 

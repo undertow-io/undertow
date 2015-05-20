@@ -66,9 +66,9 @@ public class NodeConfig {
     private final int ping;
 
     /**
-     * max time in seconds to life for connection above smax. Default 60 seconds (60_000 in milliseconds).
+     * max time in milliseconds to life for connection above smax. Default 60 seconds (60,000 in milliseconds).
      */
-    private final int ttl;
+    private final long ttl;
 
     /**
      * Max time the proxy will wait for the backend connection. Default 0 no timeout value in seconds.
@@ -147,7 +147,7 @@ public class NodeConfig {
      *
      * @return the ttl
      */
-    public int getTtl() {
+    public long getTtl() {
         return this.ttl;
     }
 
@@ -240,7 +240,7 @@ public class NodeConfig {
         private int requestQueueSize;
         private boolean queueNewRequests = false;
 
-        private int ttl = 60000;
+        private long ttl = 60000;
         private int timeout = 0;
 
         NodeBuilder(final ModCluster modCluster) {
@@ -248,6 +248,7 @@ public class NodeConfig {
             this.cacheConnections = modCluster.getCacheConnections();
             this.requestQueueSize = modCluster.getRequestQueueSize();
             this.queueNewRequests = modCluster.isQueueNewRequests();
+            this.ttl = modCluster.getTtl();
         }
 
         public NodeBuilder setHostname(String hostname) {
@@ -320,7 +321,7 @@ public class NodeConfig {
             return this;
         }
 
-        public NodeBuilder setTtl(int ttl) {
+        public NodeBuilder setTtl(long ttl) {
             this.ttl = ttl;
             return this;
         }

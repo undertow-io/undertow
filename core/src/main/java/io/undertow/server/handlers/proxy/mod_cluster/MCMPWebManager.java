@@ -238,7 +238,7 @@ class MCMPWebManager extends MCMPHandler {
 
     static void printProxyStat(StringBuilder buf, Node node, boolean reduceDisplay) {
         String status = "NOTOK";
-        if (node.getStatus() == Node.Status.NODE_UP)
+        if (node.getStatus() == NodeStatus.NODE_UP)
             status = "OK";
         if (reduceDisplay) {
             buf.append(" " + status + " ");

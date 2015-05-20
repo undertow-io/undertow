@@ -47,6 +47,7 @@ public class ModCluster {
     private final int requestQueueSize;
     private final boolean queueNewRequests;
     private final int maxRequestTime;
+    private final long ttl;
 
     private final XnioWorker xnioWorker;
     private final ModClusterContainer container;
@@ -63,6 +64,7 @@ public class ModCluster {
         this.removeBrokenNodes = builder.removeBrokenNodes;
         this.healthChecker = builder.healthChecker;
         this.maxRequestTime = builder.maxRequestTime;
+        this.ttl = builder.ttl;
         this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client);
     }
 
@@ -71,6 +73,10 @@ public class ModCluster {
     }
 
     protected ModClusterContainer getContainer() {
+        return container;
+    }
+
+    public ModClusterController getController() {
         return container;
     }
 
@@ -100,6 +106,10 @@ public class ModCluster {
 
     public NodeHealthChecker getHealthChecker() {
         return healthChecker;
+    }
+
+    public long getTtl() {
+        return ttl;
     }
 
     /**
@@ -181,6 +191,7 @@ public class ModCluster {
         private boolean queueNewRequests = false;
 
         private int maxRequestTime = -1;
+        private long ttl;
 
         private NodeHealthChecker healthChecker = NodeHealthChecker.NO_CHECK;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
@@ -234,6 +245,14 @@ public class ModCluster {
         public Builder setHealthChecker(NodeHealthChecker healthChecker) {
             this.healthChecker = healthChecker;
             return this;
+        }
+
+        public long getTtl() {
+            return ttl;
+        }
+
+        public void setTtl(long ttl) {
+            this.ttl = ttl;
         }
     }
 
