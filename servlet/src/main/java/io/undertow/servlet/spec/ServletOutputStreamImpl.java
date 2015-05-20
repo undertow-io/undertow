@@ -637,36 +637,45 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             return;
         }
+        try {
 
-        state |= FLAG_CLOSED;
-        state &= ~FLAG_READY;
-        if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
+            state |= FLAG_CLOSED;
+            state &= ~FLAG_READY;
+            if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
 
-            if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
-                if (buffer == null) {
-                    servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
-                } else {
-                    servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
+                    if (buffer == null) {
+                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
+                    } else {
+                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                    }
                 }
             }
-        }
-        createChannel();
-        if (buffer != null) {
-            if (!flushBufferAsync(true)) {
-                return;
-            }
+            createChannel();
+            if (buffer != null) {
+                if (!flushBufferAsync(true)) {
+                    return;
+                }
 
-            if (pooledBuffer != null) {
+                if (pooledBuffer != null) {
+                    pooledBuffer.free();
+                    buffer = null;
+                } else {
+                    buffer = null;
+                }
+            }
+            channel.shutdownWrites();
+            state |= FLAG_DELEGATE_SHUTDOWN;
+            if (!channel.flush()) {
+                channel.resumeWrites();
+            }
+        } catch (IOException e) {
+            if(pooledBuffer != null) {
                 pooledBuffer.free();
-                buffer = null;
-            } else {
+                pooledBuffer = null;
                 buffer = null;
             }
-        }
-        channel.shutdownWrites();
-        state |= FLAG_DELEGATE_SHUTDOWN;
-        if(!channel.flush()) {
-            channel.resumeWrites();
+            throw e;
         }
     }
 
