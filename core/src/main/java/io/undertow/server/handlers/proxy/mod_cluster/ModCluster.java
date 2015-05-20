@@ -251,8 +251,9 @@ public class ModCluster {
             return ttl;
         }
 
-        public void setTtl(long ttl) {
+        public Builder setTtl(long ttl) {
             this.ttl = ttl;
+            return this;
         }
     }
 
