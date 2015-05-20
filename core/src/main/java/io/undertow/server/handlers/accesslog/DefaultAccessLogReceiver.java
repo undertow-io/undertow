@@ -75,15 +75,21 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
 
     private volatile boolean closed = false;
     private boolean initialRun = true;
+    private final boolean rotate;
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName) {
         this(logWriteExecutor, outputDirectory, logBaseName, null);
     }
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName, final String logNameSuffix) {
+        this(logWriteExecutor, outputDirectory, logBaseName, logNameSuffix, true);
+    }
+
+    public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName, final String logNameSuffix, boolean rotate) {
         this.logWriteExecutor = logWriteExecutor;
         this.outputDirectory = outputDirectory;
         this.logBaseName = logBaseName;
+        this.rotate = rotate;
         this.logNameSuffix = (logNameSuffix != null) ? logNameSuffix : DEFAULT_LOG_SUFFIX;
         this.pendingMessages = new ConcurrentLinkedDeque<>();
         this.defaultLogFile = new File(outputDirectory, logBaseName + this.logNameSuffix);
@@ -96,9 +102,9 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.HOUR, 0);
         calendar.add(Calendar.DATE, 1);
-        changeOverPoint = calendar.getTimeInMillis();
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         currentDateString = df.format(new Date());
+        changeOverPoint = calendar.getTimeInMillis();
     }
 
     @Override
@@ -202,6 +208,9 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
 
     private void doRotate() {
         forceLogRotation = false;
+        if(!rotate) {
+            return;
+        }
         try {
             if (writer != null) {
                 writer.flush();
