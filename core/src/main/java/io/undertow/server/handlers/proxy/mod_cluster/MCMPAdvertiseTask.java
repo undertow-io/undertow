@@ -103,6 +103,8 @@ class MCMPAdvertiseTask implements Runnable {
             digestString(md, securityKey);
             ssalt = md.digest();
         }
+
+        UndertowLogger.ROOT_LOGGER.infof("Undertow starts mod_cluster proxy advertisements on %s with frequency %d ms.", address, config.getAdvertiseFrequency());
     }
 
     private static final String CRLF = "\r\n";
@@ -159,9 +161,10 @@ class MCMPAdvertiseTask implements Runnable {
 
             final String payload = builder.toString();
             final ByteBuffer byteBuffer = ByteBuffer.wrap(payload.getBytes());
+            UndertowLogger.ROOT_LOGGER.debugf("Gonna send payload: \n%s", payload);
             channel.sendTo(address, byteBuffer);
         } catch (Exception e) {
-            UndertowLogger.ROOT_LOGGER.errorf(e, "Cannot send advertise message");
+            UndertowLogger.ROOT_LOGGER.errorf(e, "Cannot send advertise message. address: %s", address);
         }
     }
 
