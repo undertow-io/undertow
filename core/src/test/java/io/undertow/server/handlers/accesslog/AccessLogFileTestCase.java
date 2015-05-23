@@ -18,8 +18,10 @@
 
 package io.undertow.server.handlers.accesslog;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -54,18 +56,18 @@ import io.undertow.util.FileUtils;
 @RunWith(DefaultServer.class)
 public class AccessLogFileTestCase {
 
-    private static final File logDirectory = new File(System.getProperty("java.io.tmpdir") + "/logs");
+    private static final Path logDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "logs");
 
     private static final int NUM_THREADS = 10;
     private static final int NUM_REQUESTS = 12;
 
     @Before
-    public void before() {
-        logDirectory.mkdirs();
+    public void before() throws IOException {
+        Files.createDirectories(logDirectory);
     }
 
     @After
-    public void after() {
+    public void after() throws IOException {
         FileUtils.deleteRecursive(logDirectory);
     }
 
@@ -78,21 +80,21 @@ public class AccessLogFileTestCase {
 
     @Test
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
-        File directory = logDirectory;
-        File logFileName = new File(directory, "server1.log");
+        Path directory = logDirectory;
+        Path logFileName = directory.resolve("server1.log");
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1");
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }
 
     @Test
     public void testSingleLogMessageToFileWithSuffix() throws IOException, InterruptedException {
-        File directory = logDirectory;
-        File logFileName = new File(directory, "server1.logsuffix");
+        Path directory = logDirectory;
+        Path logFileName = directory.resolve("server1.logsuffix");
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1", ".logsuffix");
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }
 
-    private void verifySingleLogMessageToFile(File logFileName, DefaultAccessLogReceiver logReceiver) throws IOException, InterruptedException {
+    private void verifySingleLogMessageToFile(Path logFileName, DefaultAccessLogReceiver logReceiver) throws IOException, InterruptedException {
 
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header} %{i,non-existent}", AccessLogFileTestCase.class.getClassLoader())));
@@ -105,7 +107,7 @@ public class AccessLogFileTestCase {
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latchHandler.await();
             logReceiver.awaitWrittenForTest();
-            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header single-val -\n", FileUtils.readFile(logFileName));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header single-val -\n", new String(Files.readAllBytes(logFileName)));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -114,8 +116,8 @@ public class AccessLogFileTestCase {
 
     @Test
     public void testLogLotsOfThreads() throws IOException, InterruptedException, ExecutionException {
-        File directory = logDirectory;
-        File logFileName = new File(directory, "server2.log");
+        Path directory = logDirectory;
+        Path logFileName = directory.resolve("server2.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server2");
         CompletionLatchHandler latchHandler;
@@ -157,7 +159,7 @@ public class AccessLogFileTestCase {
         }
         latchHandler.await();
         logReceiver.awaitWrittenForTest();
-        String completeLog = FileUtils.readFile(logFileName);
+        String completeLog = new String(Files.readAllBytes(logFileName));
         for (int i = 0; i < NUM_THREADS; ++i) {
             for (int j = 0; j < NUM_REQUESTS; ++j) {
                 Assert.assertTrue(completeLog.contains("REQ thread-" + i + "-request-" + j));
@@ -169,7 +171,7 @@ public class AccessLogFileTestCase {
 
     @Test
     public void testForcedLogRotation() throws IOException, InterruptedException {
-        File logFileName = new File(logDirectory, "server.log");
+        Path logFileName = logDirectory.resolve("server.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), logDirectory, "server");
         CompletionLatchHandler latchHandler;
@@ -184,12 +186,12 @@ public class AccessLogFileTestCase {
             latchHandler.await();
             latchHandler.reset();
             logReceiver.awaitWrittenForTest();
-            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1\n", FileUtils.readFile(logFileName));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1\n", new String(Files.readAllBytes(logFileName)));
             logReceiver.rotate();
             logReceiver.awaitWrittenForTest();
-            Assert.assertFalse(logFileName.exists());
-            File firstLogRotate = new File(logDirectory, "server_" + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + ".log");
-            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1\n", FileUtils.readFile(firstLogRotate));
+            Assert.assertFalse(Files.exists(logFileName));
+            Path firstLogRotate = logDirectory.resolve("server_" + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + ".log");
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1\n", new String(Files.readAllBytes(firstLogRotate)));
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.addHeader("test-header", "v2");
@@ -199,12 +201,12 @@ public class AccessLogFileTestCase {
             latchHandler.await();
             latchHandler.reset();
             logReceiver.awaitWrittenForTest();
-            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2\n", FileUtils.readFile(logFileName));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2\n", new String(Files.readAllBytes(logFileName)));
             logReceiver.rotate();
             logReceiver.awaitWrittenForTest();
-            Assert.assertFalse(logFileName.exists());
-            File secondLogRotate = new File(logDirectory, "server_" + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "-1.log");
-            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2\n", FileUtils.readFile(secondLogRotate));
+            Assert.assertFalse(Files.exists(logFileName));
+            Path secondLogRotate = logDirectory.resolve("server_" + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "-1.log");
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2\n", new String(Files.readAllBytes(secondLogRotate)));
 
         } finally {
             client.getConnectionManager().shutdown();

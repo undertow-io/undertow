@@ -18,11 +18,10 @@
 
 package io.undertow.servlet.test.util;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
+import java.nio.file.Paths;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -46,7 +45,7 @@ public class TXServlet extends HttpServlet {
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         FileChannel file = null;
         try {
-            file = new FileInputStream(new File(TXServlet.class.getResource(TXServlet.class.getSimpleName() + ".class").toURI())).getChannel();
+            file = FileChannel.open(Paths.get(TXServlet.class.getResource(TXServlet.class.getSimpleName() + ".class").toURI()));
         } catch (URISyntaxException e) {
         }
 

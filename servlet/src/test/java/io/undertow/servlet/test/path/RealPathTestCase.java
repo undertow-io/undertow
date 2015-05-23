@@ -18,7 +18,6 @@
 
 package io.undertow.servlet.test.path;
 
-import java.io.File;
 import javax.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
@@ -38,6 +37,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.nio.file.Paths;
 
 /**
  * @author Tomaz Cerar
@@ -76,7 +77,7 @@ public class RealPathTestCase {
         HttpResponse result = new TestHttpClient().execute(get);
         Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         String response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(new File(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
+        Assert.assertEquals(Paths.get(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
     }
 
     @Test
@@ -85,7 +86,7 @@ public class RealPathTestCase {
         HttpResponse result = new TestHttpClient().execute(get);
         Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         String response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(new File(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
+        Assert.assertEquals(Paths.get(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
     }
 
 }

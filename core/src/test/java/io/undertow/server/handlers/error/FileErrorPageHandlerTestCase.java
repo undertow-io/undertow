@@ -18,8 +18,9 @@
 
 package io.undertow.server.handlers.error;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Paths;
 
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -39,10 +40,11 @@ public class FileErrorPageHandlerTestCase {
 
 
     @Test
-    public void testFileBasedErrorPageIsGenerated() throws IOException {
+    public void testFileBasedErrorPageIsGenerated() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final FileErrorPageHandler handler = new FileErrorPageHandler(new File(getClass().getResource("errorpage.html").getFile()), StatusCodes.NOT_FOUND);
+            final FileErrorPageHandler handler = new FileErrorPageHandler(Paths.get(getClass().getResource("errorpage.html").toURI()), StatusCodes.NOT_FOUND);
+
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");

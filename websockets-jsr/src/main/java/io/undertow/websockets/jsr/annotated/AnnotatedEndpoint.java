@@ -265,5 +265,5 @@ public class AnnotatedEndpoint extends Endpoint {
                 AnnotatedEndpoint.this.onError(session, result.getException());
             }
         }
-    };
+    }
 }

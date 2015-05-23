@@ -18,7 +18,8 @@
 
 package io.undertow.servlet.core;
 
-import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import javax.servlet.MultipartConfigElement;
@@ -86,16 +87,16 @@ public class ManagedServlet implements Lifecycle {
             } else {
                 maxRequestSize = -1;
             }
-            final File tempDir;
+            final Path tempDir;
             if(config.getLocation() == null || config.getLocation().isEmpty()) {
                 tempDir = servletContext.getDeployment().getDeploymentInfo().getTempDir();
             } else {
                 String location = config.getLocation();
-                File locFile = new File(location);
+                Path locFile = Paths.get(location);
                 if(locFile.isAbsolute()) {
                     tempDir = locFile;
                 } else {
-                    tempDir = new File(servletContext.getDeployment().getDeploymentInfo().getTempDir(), location);
+                    tempDir = servletContext.getDeployment().getDeploymentInfo().getTempDir().resolve(location);
                 }
             }
 

@@ -22,10 +22,11 @@ import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
 import io.undertow.server.handlers.encoding.ContentEncodingRepository;
 import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
 import io.undertow.server.handlers.resource.CachingResourceManager;
-import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.FileUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
@@ -37,9 +38,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * @author Stuart Douglas
@@ -47,39 +49,34 @@ import java.io.IOException;
 @RunWith(DefaultServer.class)
 public class ContentEncodedResourceTestCase {
 
-    public static final String DIR_NAME = "/contentEncodingTestCase";
+    public static final String DIR_NAME = "contentEncodingTestCase";
 
-    static File tmpDir;
+    static Path tmpDir;
 
 
     @BeforeClass
-    public static void setup() {
+    public static void setup() throws IOException{
 
-        tmpDir = new File(System.getProperty("java.io.tmpdir") + DIR_NAME);
-        tmpDir.mkdirs();
-        tmpDir.deleteOnExit();
+        tmpDir = Files.createTempDirectory(Paths.get(System.getProperty("java.io.tmpdir")), DIR_NAME);
 
-        final FileResourceManager resourceManager = new FileResourceManager(tmpDir, 10485760);
-        DefaultServer.setRootHandler(new ResourceHandler().setResourceManager(resourceManager)
+        final PathResourceManager resourceManager = new PathResourceManager(tmpDir, 10485760);
+        DefaultServer.setRootHandler(new ResourceHandler(resourceManager)
                 .setContentEncodedResourceManager(
                         new ContentEncodedResourceManager(tmpDir, new CachingResourceManager(100, 10000, null, resourceManager, -1), new ContentEncodingRepository()
                                 .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, null), 0, 100000, null)));
     }
 
     @AfterClass
-    public static void after() {
-        for (File file : tmpDir.listFiles()) {
-            file.delete();
-        }
-        tmpDir.delete();
+    public static void after() throws IOException {
+        FileUtils.deleteRecursive(tmpDir);
     }
 
     @Test
     public void testFileIsCompressed() throws IOException, InterruptedException {
         ContentEncodingHttpClient client = new ContentEncodingHttpClient();
         String fileName = "hello.html";
-        File f = new File(tmpDir, fileName);
-        writeFile(f, "hello world");
+        Path f = tmpDir.resolve(fileName);
+        Files.write(f, "hello world".getBytes());
         try {
             for (int i = 0; i < 3; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + fileName);
@@ -89,7 +86,7 @@ public class ContentEncodedResourceTestCase {
                 Assert.assertEquals("hello world", response);
                 Assert.assertEquals("deflate", result.getHeaders(Headers.CONTENT_ENCODING_STRING)[0].getValue());
             }
-            writeFile(f, "modified file");
+            Files.write(f, "modified file".getBytes());
 
             //if it is serving a cached compressed version what is being served will not change
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + fileName);
@@ -103,15 +100,4 @@ public class ContentEncodedResourceTestCase {
             client.getConnectionManager().shutdown();
         }
     }
-
-
-    private void writeFile(final File f, final String contents) throws IOException {
-        FileOutputStream out = new FileOutputStream(f);
-        try {
-            out.write(contents.getBytes());
-        } finally {
-            out.close();
-        }
-    }
-
 }

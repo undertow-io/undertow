@@ -19,9 +19,10 @@
 package io.undertow.server.ssl;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 
 import io.undertow.server.HttpHandler;
@@ -30,7 +31,7 @@ import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.error.SimpleErrorPageHandler;
-import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.file.FileHandlerTestCase;
 import io.undertow.testutils.AjpIgnore;
@@ -61,7 +62,7 @@ public class ComplexSSLTestCase {
     @Test
     public void complexSSLTestCase() throws IOException, GeneralSecurityException, URISyntaxException, InterruptedException {
         final PathHandler pathHandler = new PathHandler();
-        File rootPath = new File(FileHandlerTestCase.class.getResource("page.html").toURI()).getParentFile();
+        Path rootPath = Paths.get(FileHandlerTestCase.class.getResource("page.html").toURI()).getParent();
 
         final NameVirtualHostHandler virtualHostHandler = new NameVirtualHostHandler();
         HttpHandler root = virtualHostHandler;
@@ -71,8 +72,7 @@ public class ComplexSSLTestCase {
         virtualHostHandler.addHost("default-host", pathHandler);
         virtualHostHandler.setDefaultHandler(pathHandler);
 
-        pathHandler.addPrefixPath("/", new ResourceHandler()
-                .setResourceManager(new FileResourceManager(rootPath, 10485760))
+        pathHandler.addPrefixPath("/", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                 .setDirectoryListingEnabled(true));
 
         DefaultServer.setRootHandler(root);

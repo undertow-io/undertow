@@ -20,7 +20,7 @@ package io.undertow.servlet.test.multipart;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -87,7 +87,7 @@ public class MultiPartTestCase {
             HttpPost post = new HttpPost(uri);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 
-            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
 
             post.setEntity(entity);
@@ -108,7 +108,7 @@ public class MultiPartTestCase {
             HttpPost post = new HttpPost(uri);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 
-            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
 
             post.setEntity(entity);
@@ -143,7 +143,7 @@ public class MultiPartTestCase {
             HttpPost post = new HttpPost(uri);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 
-            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
 
             post.setEntity(entity);
@@ -177,7 +177,7 @@ public class MultiPartTestCase {
             HttpPost post = new HttpPost(uri);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 
-            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
 
             post.setEntity(entity);
@@ -199,7 +199,7 @@ public class MultiPartTestCase {
             HttpPost post = new HttpPost(uri);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 
-            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
 
             post.setEntity(entity);
