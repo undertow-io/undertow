@@ -21,6 +21,7 @@ package io.undertow.server.handlers.accesslog;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -199,7 +200,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         }
         try {
             if (writer == null) {
-                writer = Files.newBufferedWriter(defaultLogFile, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+                writer = Files.newBufferedWriter(defaultLogFile, StandardCharsets.UTF_8, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
             }
             for (String message : messages) {
                 writer.write(message);
