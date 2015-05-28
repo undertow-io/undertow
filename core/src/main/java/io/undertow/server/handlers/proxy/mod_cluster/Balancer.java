@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import io.undertow.UndertowLogger;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -83,6 +85,8 @@ public class Balancer {
         this.stickySessionForce = b.isStickySessionForce();
         this.waitWorker = b.getWaitWorker();
         this.maxattempts = b.getMaxattempts();
+        UndertowLogger.ROOT_LOGGER.balancerCreated(this.id, this.name, this.stickySession, this.stickySessionCookie, this.stickySessionPath,
+                this.stickySessionRemove,  this.stickySessionForce, this.waitWorker, this.maxattempts);
     }
 
     public int getId() {
@@ -212,6 +216,7 @@ public class Balancer {
         public BalancerBuilder setStickySessionCookie(String stickySessionCookie) {
             if (stickySessionCookie != null && stickySessionCookie.length() > 30) {
                 this.stickySessionCookie = stickySessionCookie.substring(0, 30);
+                UndertowLogger.ROOT_LOGGER.stickySessionCookieLengthTruncated(stickySessionCookie, this.stickySessionCookie);
             } else {
                 this.stickySessionCookie = stickySessionCookie;
             }
