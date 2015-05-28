@@ -17,6 +17,8 @@
  */
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import io.undertow.UndertowLogger;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -95,6 +97,7 @@ public class NodeConfig {
         cacheConnections = b.cacheConnections;
         requestQueueSize = b.requestQueueSize;
         queueNewRequests = b.queueNewRequests;
+        UndertowLogger.ROOT_LOGGER.nodeConfigCreated(this.connectionURI, balancer, domain, jvmRoute, flushPackets, flushwait, ping, ttl, timeout, maxConnections, cacheConnections, requestQueueSize, queueNewRequests);
     }
 
     /**
