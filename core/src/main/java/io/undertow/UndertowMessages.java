@@ -395,4 +395,7 @@ public interface UndertowMessages {
 
     @Message(id = 122, value = "CONNECT attempt failed as target proxy returned %s")
     IOException proxyConnectionFailed(int responseCode);
+
+    @Message(id = 123, value = "MCMP message %s rejected due to suspicious characters")
+    RuntimeException mcmpMessageRejectedDueToSuspiciousCharacters(String data);
 }

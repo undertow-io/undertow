@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.Version;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
@@ -748,6 +749,15 @@ class MCMPHandler implements HttpHandler {
         return data;
     }
 
+    private static void checkStringForSuspiciousCharacters(String data) {
+        for(int i = 0; i < data.length(); ++i) {
+            char c = data.charAt(i);
+            if(c == '>' || c == '<' || c == '\\' || c == '\"' || c == '\n' || c == '\r') {
+                throw UndertowMessages.MESSAGES.mcmpMessageRejectedDueToSuspiciousCharacters(data);
+            }
+        }
+    }
+
     static class RequestData {
 
         private final Map<HttpString, Deque<String>> values = new LinkedHashMap<>();
@@ -757,13 +767,19 @@ class MCMPHandler implements HttpHandler {
         }
 
         void add(final HttpString name, Deque<FormData.FormValue> values) {
+            checkStringForSuspiciousCharacters(name.toString());
             for (final FormData.FormValue value : values) {
                 add(name, value);
             }
         }
 
+
+
         void addValues(final HttpString name, Deque<String> value) {
             Deque<String> values = this.values.get(name);
+            for(String i : value) {
+                checkStringForSuspiciousCharacters(i);
+            }
             if (values == null) {
                 this.values.put(name, value);
             } else {
@@ -776,7 +792,9 @@ class MCMPHandler implements HttpHandler {
             if (values == null) {
                 this.values.put(name, values = new ArrayDeque<>(1));
             }
-            values.add(value.getValue());
+            String stringVal = value.getValue();
+            checkStringForSuspiciousCharacters(stringVal);
+            values.add(stringVal);
         }
 
         String getFirst(HttpString name) {
