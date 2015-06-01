@@ -31,6 +31,7 @@ import org.jboss.logging.annotations.MessageLogger;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
@@ -280,4 +281,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.DEBUG)
     @Message(id = 5057, value = "Sending MCMP response to destination: %s, HTTP status: %s, Headers: %s, response: %s")
     void mcmpSendingResponse(InetSocketAddress destination, int status, HeaderMap headers, String response);
+
+    @LogMessage(level = org.jboss.logging.Logger.Level.WARN)
+    @Message(id = 5058, value = "Could not bind multicast socket to %s (%s address): %s; make sure your multicast address is of the same type as the IP stack (IPv4 or IPv6). Multicast socket will not be bound to an address, but this may lead to cross talking (see http://www.jboss.org/community/docs/DOC-9469 for details).")
+    void potentialCrossTalking(InetAddress group, String s, String localizedMessage);
 }
