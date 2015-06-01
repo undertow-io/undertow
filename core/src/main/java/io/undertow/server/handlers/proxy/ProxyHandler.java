@@ -18,29 +18,6 @@
 
 package io.undertow.server.handlers.proxy;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.security.cert.CertificateEncodingException;
-import javax.security.cert.X509Certificate;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.attribute.ExchangeAttribute;
@@ -84,6 +61,30 @@ import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.security.cert.CertificateEncodingException;
+import javax.security.cert.X509Certificate;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * An HTTP handler which proxies content to a remote server.
@@ -795,7 +796,10 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.<String, Class<?>>singletonMap("hosts", String[].class);
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put("hosts", String[].class);
+            params.put("rewrite-host-header", Boolean.class);
+            return params;
         }
 
         @Override
@@ -819,7 +823,8 @@ public final class ProxyHandler implements HttpHandler {
                     throw new RuntimeException(e);
                 }
             }
-            return new Wrapper(uris);
+            Boolean rewriteHostHeader = (Boolean) config.get("rewrite-host-header");
+            return new Wrapper(uris, rewriteHostHeader);
         }
 
     }
@@ -827,19 +832,27 @@ public final class ProxyHandler implements HttpHandler {
     private static class Wrapper implements HandlerWrapper {
 
         private final List<URI> uris;
+        private final boolean rewriteHostHeader;
 
-        private Wrapper(List<URI> uris) {
+        private Wrapper(List<URI> uris, Boolean rewriteHostHeader) {
             this.uris = uris;
+            this.rewriteHostHeader = rewriteHostHeader != null && rewriteHostHeader;
         }
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
 
-            LoadBalancingProxyClient loadBalancingProxyClient = new LoadBalancingProxyClient();
-            for(URI url : uris) {
-                loadBalancingProxyClient.addHost(url);
+            final ProxyClient proxyClient;
+            if (uris.size() == 1) {
+                proxyClient = new SimpleProxyClientProvider(uris.get(0));
+            } else {
+                final LoadBalancingProxyClient loadBalancingProxyClient = new LoadBalancingProxyClient();
+                for (URI url : uris) {
+                    loadBalancingProxyClient.addHost(url);
+                }
+                proxyClient = loadBalancingProxyClient;
             }
-            return new ProxyHandler(loadBalancingProxyClient, handler);
+            return new ProxyHandler(proxyClient, -1, handler, rewriteHostHeader, false);
         }
     }
 }
