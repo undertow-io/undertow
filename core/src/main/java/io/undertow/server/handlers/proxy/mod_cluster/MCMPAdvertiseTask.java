@@ -19,6 +19,7 @@
 package io.undertow.server.handlers.proxy.mod_cluster;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -29,7 +30,6 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
-import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 import org.xnio.channels.MulticastMessageChannel;
@@ -61,19 +61,27 @@ class MCMPAdvertiseTask implements Runnable {
     private final MulticastMessageChannel channel;
 
     static void advertise(final ModClusterContainer container, final MCMPConfig.AdvertiseConfig config, final XnioWorker worker) throws IOException {
-        final InetSocketAddress bindAddress;
+        InetSocketAddress bindAddress;
         final InetAddress group = InetAddress.getByName(config.getAdvertiseGroup());
         if (group != null && linuxLike) {
             bindAddress = new InetSocketAddress(group, config.getAdvertisePort());
         } else {
             bindAddress = new InetSocketAddress(config.getAdvertisePort());
         }
-        final MulticastMessageChannel channel = worker.createUdpServer(bindAddress, new ChannelListener<MulticastMessageChannel>() {
-            @Override
-            public void handleEvent(MulticastMessageChannel channel) {
-                //channel.resumeWrites();
+        MulticastMessageChannel channel;
+        try {
+            channel = worker.createUdpServer(bindAddress, null, OptionMap.EMPTY);
+        } catch (IOException e) {
+            if(group != null && linuxLike) {
+                //try again with no group
+                //see UNDERTOW-454
+                UndertowLogger.ROOT_LOGGER.potentialCrossTalking(group, (group instanceof Inet4Address) ? "IPv4" : "IPv6", e.getLocalizedMessage());
+                bindAddress = new InetSocketAddress(config.getAdvertisePort());
+                channel = worker.createUdpServer(bindAddress, null, OptionMap.EMPTY);
+            } else {
+                throw e;
             }
-        }, OptionMap.EMPTY);
+        }
         final MCMPAdvertiseTask task = new MCMPAdvertiseTask(container, config, channel);
         channel.getIoThread().executeAtInterval(task, config.getAdvertiseFrequency(), TimeUnit.MILLISECONDS);
     }
