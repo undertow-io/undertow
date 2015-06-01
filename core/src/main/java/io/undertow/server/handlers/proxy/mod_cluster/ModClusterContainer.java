@@ -189,7 +189,7 @@ class ModClusterContainer implements ModClusterController {
         }
         // Remove from the failover groups
         failoverDomains.remove(node.getJvmRoute());
-        UndertowLogger.ROOT_LOGGER.infof("registering node %s, connection: %s", jvmRoute, config.getConnectionURI());
+        UndertowLogger.ROOT_LOGGER.registeringNode(jvmRoute, config.getConnectionURI());
         return true;
     }
 
@@ -269,7 +269,7 @@ class ModClusterContainer implements ModClusterController {
         final String jvmRoute = node.getJvmRoute();
         node.markRemoved();
         if (nodes.remove(jvmRoute, node)) {
-            UndertowLogger.ROOT_LOGGER.infof("removing node %s", jvmRoute);
+             UndertowLogger.ROOT_LOGGER.removingNode(jvmRoute);
             node.markRemoved();
             // Remove the health check
             removeHealthCheck(node, node.getIoThread());
@@ -309,7 +309,8 @@ class ModClusterContainer implements ModClusterController {
             Context context = node.getContext(contextPath, aliases);
             if (context == null) {
                 context = node.registerContext(contextPath, aliases);
-                UndertowLogger.ROOT_LOGGER.infof("registering context %s, for node %s, with aliases %s", contextPath, jvmRoute, aliases);
+                UndertowLogger.ROOT_LOGGER.registeringContext(contextPath, jvmRoute);
+                UndertowLogger.ROOT_LOGGER.registeringContext(contextPath, jvmRoute, aliases);
                 for (final String alias : aliases) {
                     VirtualHost virtualHost = hosts.get(alias);
                     if (virtualHost == null) {
@@ -355,7 +356,7 @@ class ModClusterContainer implements ModClusterController {
             return false;
         }
         final String jvmRoute = node.getJvmRoute();
-        UndertowLogger.ROOT_LOGGER.infof("unregistering context '%s' from node '%s'", contextPath, jvmRoute);
+        UndertowLogger.ROOT_LOGGER.unregisteringContext(contextPath, jvmRoute);
         final Context context = node.removeContext(contextPath, aliases);
         if (context == null) {
             return false;

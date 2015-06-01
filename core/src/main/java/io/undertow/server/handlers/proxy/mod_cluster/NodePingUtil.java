@@ -24,6 +24,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.UndertowLogger;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
@@ -308,6 +309,7 @@ class NodePingUtil {
         @Override
         public void run() {
 
+            UndertowLogger.ROOT_LOGGER.httpClientPingTask(connection);
             // TODO AJP has a special ping thing
             client.connect(new ClientCallback<ClientConnection>() {
                 @Override

@@ -123,6 +123,7 @@ class MCMPHandler implements HttpHandler {
         this.modCluster = modCluster;
         this.container = modCluster.getContainer();
         this.parserFactory = FormParserFactory.builder(false).addParser(new FormEncodedDataDefinition().setForceCreation(true)).build();
+        UndertowLogger.ROOT_LOGGER.mcmpHandlerCreated();
     }
 
     @Override
@@ -148,7 +149,7 @@ class MCMPHandler implements HttpHandler {
         try {
             handleRequest(method, exchange);
         } catch (Exception e) {
-            UndertowLogger.ROOT_LOGGER.errorf(e, "failed to process management request");
+            UndertowLogger.ROOT_LOGGER.failedToProcessManagementReq(e);
             exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
             exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, CONTENT_TYPE);
             final Sender sender = exchange.getResponseSender();
@@ -207,6 +208,7 @@ class MCMPHandler implements HttpHandler {
             final HttpString name = i.next();
             final String value = requestData.getFirst(name);
 
+            UndertowLogger.ROOT_LOGGER.mcmpKeyValue(name, value);
             if (!checkString(value)) {
                 processError(TYPESYNTAX, SBADFLD + name + SBADFLD1, exchange);
                 return;
@@ -427,6 +429,7 @@ class MCMPHandler implements HttpHandler {
             return;
         }
 
+        UndertowLogger.ROOT_LOGGER.receivedNodeLoad(jvmRoute, loadValue);
         final int load = Integer.valueOf(loadValue);
         if (load > 0 || load == -2) {
 
@@ -447,7 +450,7 @@ class MCMPHandler implements HttpHandler {
                         }
                         sendResponse(exchange, response);
                     } catch (Exception e) {
-                        UndertowLogger.ROOT_LOGGER.debugf(e, "failed to send ping response");
+                        UndertowLogger.ROOT_LOGGER.failedToSendPingResponse(e);
                     }
                 }
 
@@ -458,7 +461,7 @@ class MCMPHandler implements HttpHandler {
                         node.markInError();
                         sendResponse(exchange, response);
                     } catch (Exception e) {
-                        UndertowLogger.ROOT_LOGGER.debugf(e, "failed to send ping response");
+                        UndertowLogger.ROOT_LOGGER.failedToSendPingResponseDBG(e, node.getJvmRoute(), jvmRoute);
                     }
                 }
             };
@@ -689,6 +692,7 @@ class MCMPHandler implements HttpHandler {
         exchange.setResponseCode(StatusCodes.OK);
         exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, CONTENT_TYPE);
         final Sender sender = exchange.getResponseSender();
+        UndertowLogger.ROOT_LOGGER.mcmpSendingResponse(exchange.getSourceAddress(), exchange.getResponseCode(), exchange.getResponseHeaders(), response);
         sender.send(response);
     }
 
@@ -721,6 +725,7 @@ class MCMPHandler implements HttpHandler {
         exchange.getResponseHeaders().add(new HttpString("Type"), type);
         exchange.getResponseHeaders().add(new HttpString("Mess"), errString);
         exchange.endExchange();
+        UndertowLogger.ROOT_LOGGER.mcmpProcessingError(type, errString);
     }
 
     /**

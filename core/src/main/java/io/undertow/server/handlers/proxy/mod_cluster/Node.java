@@ -367,7 +367,7 @@ class Node {
             oldState = this.state;
             newState = oldState | ERROR;
             if (stateUpdater.compareAndSet(this, oldState, newState)) {
-                UndertowLogger.ROOT_LOGGER.debugf("Node '%s' in error", jvmRoute);
+                UndertowLogger.ROOT_LOGGER.nodeIsInError(jvmRoute);
                 return;
             }
         }
@@ -395,7 +395,7 @@ class Node {
             oldState = this.state;
             if ((oldState & ERROR) != ERROR) {
                 newState = oldState | ERROR;
-                UndertowLogger.ROOT_LOGGER.debugf("Node '%s' in error", jvmRoute);
+                UndertowLogger.ROOT_LOGGER.nodeIsInError(jvmRoute);
             } else if ((oldState & ERROR_MASK) == ERROR_MASK) {
                 return ERROR_MASK;
             } else {
