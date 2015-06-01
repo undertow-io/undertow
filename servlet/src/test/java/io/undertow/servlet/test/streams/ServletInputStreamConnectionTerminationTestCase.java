@@ -27,7 +27,6 @@ import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
-import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
@@ -44,7 +43,7 @@ import java.io.IOException;
 @RunWith(DefaultServer.class)
 @HttpOneOnly
 @ProxyIgnore
-public class ConnectionTerminationTestCase {
+public class ServletInputStreamConnectionTerminationTestCase {
 
     public static final String HELLO_WORLD = "Hello World";
 
@@ -73,7 +72,7 @@ public class ConnectionTerminationTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.fail();
-        } catch (NoHttpResponseException expected) {
+        } catch (IOException expected) {
             //expected
         } finally {
             client.getConnectionManager().shutdown();
