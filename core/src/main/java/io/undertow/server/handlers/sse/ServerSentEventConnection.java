@@ -21,6 +21,9 @@ package io.undertow.server.handlers.sse;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Attachable;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
 import io.undertow.util.HeaderMap;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -47,9 +50,11 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 /**
  * Represents the server side of a Server Sent Events connection.
  *
+ * The class implements Attachable, which provides access to the underlying exchanges attachments.
+ *
  * @author Stuart Douglas
  */
-public class ServerSentEventConnection implements Channel {
+public class ServerSentEventConnection implements Channel, Attachable {
 
     private final HttpServerExchange exchange;
     private final StreamSinkChannel sink;
@@ -333,6 +338,31 @@ public class ServerSentEventConnection implements Channel {
             buffered.clear();
             sink.close();
         }
+    }
+
+    @Override
+    public <T> T getAttachment(AttachmentKey<T> key) {
+        return exchange.getAttachment(key);
+    }
+
+    @Override
+    public <T> List<T> getAttachmentList(AttachmentKey<? extends List<T>> key) {
+        return exchange.getAttachmentList(key);
+    }
+
+    @Override
+    public <T> T putAttachment(AttachmentKey<T> key, T value) {
+        return exchange.putAttachment(key, value);
+    }
+
+    @Override
+    public <T> T removeAttachment(AttachmentKey<T> key) {
+        return exchange.removeAttachment(key);
+    }
+
+    @Override
+    public <T> void addToAttachmentList(AttachmentKey<AttachmentList<T>> key, T value) {
+        exchange.addToAttachmentList(key, value);
     }
 
     public interface EventCallback {
