@@ -20,6 +20,8 @@ package io.undertow;
 
 import io.undertow.client.ClientConnection;
 import io.undertow.server.ServerConnection;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
@@ -29,9 +31,11 @@ import org.jboss.logging.annotations.MessageLogger;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * log messages start at 5000
@@ -184,4 +188,96 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5036, value = "ALPN negotiation failed for %s and no fallback defined, closing connection")
     void noALPNFallback(SocketAddress address);
+
+    /**
+     * Undertow mod_cluster proxy messages
+     */
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 5037, value = "Name of the cookie containing the session id, %s, had been too long and was truncated to: %s")
+    void stickySessionCookieLengthTruncated(String original, String current);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5038, value = "Balancer created: id: %s, name: %s, stickySession: %s, stickySessionCookie: %s, stickySessionPath: %s, stickySessionRemove: %s, stickySessionForce: %s, waitWorker: %s, maxattempts: %s")
+    void balancerCreated(int id, String name, boolean stickySession, String stickySessionCookie, String stickySessionPath, boolean stickySessionRemove,
+                                            boolean stickySessionForce, int waitWorker, int maxattempts);
+
+    @LogMessage(level = Logger.Level.INFO)
+    @Message(id = 5039, value = "Undertow starts mod_cluster proxy advertisements on %s with frequency %s ms")
+    void proxyAdvertisementsStarted(String address, int frequency);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5040, value = "Gonna send payload:\n%s")
+    void proxyAdvertiseMessagePayload(String payload);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5041, value = "Cannot send advertise message. Address: %s")
+    void proxyAdvertiseCannotSendMessage(@Cause Exception e, InetSocketAddress address);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5042, value = "Undertow mod_cluster proxy MCMPHandler created")
+    void mcmpHandlerCreated();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5043, value = "Error in processing MCMP commands: Type:%s, Mess: %s")
+    void mcmpProcessingError(String type, String errString);
+
+    @LogMessage(level = Logger.Level.INFO)
+    @Message(id = 5044, value = "Removing node %s")
+    void removingNode(String jvmRoute);
+
+    // Aliases intentionally omitted from INFO level.
+    @LogMessage(level = Logger.Level.INFO)
+    @Message(id = 5045, value = "Registering context %s, for node %s")
+    void registeringContext(String contextPath, String jvmRoute);
+
+    // Context path and JVMRoute redundantly logged with DEBUG soa s to provide meaning for aliases.
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5046, value = "Registering context %s, for node %s, with aliases %s")
+    void registeringContext(String contextPath, String jvmRoute, List<String> aliases);
+
+    @LogMessage(level = Logger.Level.INFO)
+    @Message(id = 5047, value = "Unregistering context %s, from node %s")
+    void unregisteringContext(String contextPath, String jvmRoute);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5048, value = "Node %s in error")
+    void nodeIsInError(String jvmRoute);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5049, value = "NodeConfig created: connectionURI: %s, balancer: %s, domain: %s, jvmRoute: %s, flushPackets: %s, flushwait: %s, ping: %s," +
+            "ttl: %s, timeout: %s, maxConnections: %s, cacheConnections: %s, requestQueueSize: %s, queueNewRequests: %s")
+    void nodeConfigCreated(URI connectionURI, String balancer, String domain, String jvmRoute, boolean flushPackets, int flushwait, int ping, long ttl,
+                           int timeout, int maxConnections, int cacheConnections, int requestQueueSize, boolean queueNewRequests);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5050, value = "Failed to process management request")
+    void failedToProcessManagementReq(@Cause Exception e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5051, value = "Failed to send ping response")
+    void failedToSendPingResponse(@Cause Exception e);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5052, value = "Failed to send ping response, node.getJvmRoute(): %s, jvmRoute: %s")
+    void failedToSendPingResponseDBG(@Cause Exception e, String node, String jvmRoute);
+
+    @LogMessage(level = Logger.Level.INFO)
+    @Message(id = 5053, value = "Registering node %s, connection: %s")
+    void registeringNode(String jvmRoute, URI connectionURI);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5054, value = "MCMP processing, key: %s, value: %s")
+    void mcmpKeyValue(HttpString name, String value);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5055, value = "HttpClientPingTask run for connection: %s")
+    void httpClientPingTask(URI connection);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5056, value = "Received node load in STATUS message, node jvmRoute: %s, load: %s")
+    void receivedNodeLoad(String jvmRoute, String loadValue);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5057, value = "Sending MCMP response to destination: %s, HTTP status: %s, Headers: %s, response: %s")
+    void mcmpSendingResponse(InetSocketAddress destination, int status, HeaderMap headers, String response);
 }
