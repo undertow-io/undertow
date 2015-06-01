@@ -79,7 +79,7 @@ import org.xnio.ssl.XnioSsl;
  */
 class MCMPHandler implements HttpHandler {
 
-    static enum MCMPAction {
+    enum MCMPAction {
 
         ENABLE,
         DISABLE,
@@ -436,8 +436,7 @@ class MCMPHandler implements HttpHandler {
 
             final Node node = container.getNode(jvmRoute);
             if (node == null) {
-                final String response = "Type=STATUS-RSP&State=NOTOK&JVMRoute=" + jvmRoute + "&id=" + creationTime;
-                sendResponse(exchange, response);
+                processError(MCMPErrorCode.CANT_READ_NODE, exchange);
                 return;
             }
 
