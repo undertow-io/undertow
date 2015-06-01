@@ -38,6 +38,10 @@ import java.net.URI;
 import java.sql.SQLException;
 import java.util.List;
 
+import static org.jboss.logging.Logger.Level.DEBUG;
+import static org.jboss.logging.Logger.Level.INFO;
+import static org.jboss.logging.Logger.Level.WARN;
+
 /**
  * log messages start at 5000
  *
@@ -62,7 +66,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5001, value = "An exception occurred processing the request")
     void exceptionProcessingRequest(@Cause Throwable cause);
 
-    @LogMessage(level = Logger.Level.INFO)
+    @LogMessage(level = INFO)
     @Message(id = 5002, value = "Exception reading file %s: %s")
     void exceptionReadingFile(final File file, final IOException e);
 
@@ -78,19 +82,19 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5006, value = "Connection from %s terminated as request header was larger than %s")
     void requestHeaderWasTooLarge(SocketAddress address, int size);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5007, value = "Request was not fully consumed")
     void requestWasNotFullyConsumed();
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5008, value = "An invalid token '%s' with value '%s' has been received.")
     void invalidTokenReceived(final String tokenName, final String tokenValue);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5009, value = "A mandatory token %s is missing from the request.")
     void missingAuthorizationToken(final String tokenName);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5010, value = "Verification of authentication tokens for user '%s' has failed using mechanism '%s'.")
     void authenticationFailed(final String userName, final String mechanism);
 
@@ -98,11 +102,11 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5011, value = "Ignoring AJP request with prefix %s")
     void ignoringAjpRequestWithPrefixCode(byte prefix);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5013, value = "An IOException occurred")
     void ioException(@Cause IOException e);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5014, value = "Failed to parse HTTP request")
     void failedToParseRequest(@Cause Exception e);
 
@@ -182,7 +186,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5034, value = "Remote endpoint failed to send initial settings frame in HTTP2 connection, frame type %s")
     void remoteEndpointFailedToSendInitialSettings(int type);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5035, value = "Closing channel because of parse timeout for remote address %s")
     void parseRequestTimedOut(java.net.SocketAddress remoteAddress);
 
@@ -193,20 +197,20 @@ public interface UndertowLogger extends BasicLogger {
     /**
      * Undertow mod_cluster proxy messages
      */
-    @LogMessage(level = Logger.Level.WARN)
+    @LogMessage(level = WARN)
     @Message(id = 5037, value = "Name of the cookie containing the session id, %s, had been too long and was truncated to: %s")
     void stickySessionCookieLengthTruncated(String original, String current);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5038, value = "Balancer created: id: %s, name: %s, stickySession: %s, stickySessionCookie: %s, stickySessionPath: %s, stickySessionRemove: %s, stickySessionForce: %s, waitWorker: %s, maxattempts: %s")
     void balancerCreated(int id, String name, boolean stickySession, String stickySessionCookie, String stickySessionPath, boolean stickySessionRemove,
                                             boolean stickySessionForce, int waitWorker, int maxattempts);
 
-    @LogMessage(level = Logger.Level.INFO)
+    @LogMessage(level = INFO)
     @Message(id = 5039, value = "Undertow starts mod_cluster proxy advertisements on %s with frequency %s ms")
     void proxyAdvertisementsStarted(String address, int frequency);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5040, value = "Gonna send payload:\n%s")
     void proxyAdvertiseMessagePayload(String payload);
 
@@ -214,7 +218,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5041, value = "Cannot send advertise message. Address: %s")
     void proxyAdvertiseCannotSendMessage(@Cause Exception e, InetSocketAddress address);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5042, value = "Undertow mod_cluster proxy MCMPHandler created")
     void mcmpHandlerCreated();
 
@@ -222,29 +226,29 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5043, value = "Error in processing MCMP commands: Type:%s, Mess: %s")
     void mcmpProcessingError(String type, String errString);
 
-    @LogMessage(level = Logger.Level.INFO)
+    @LogMessage(level = INFO)
     @Message(id = 5044, value = "Removing node %s")
     void removingNode(String jvmRoute);
 
     // Aliases intentionally omitted from INFO level.
-    @LogMessage(level = Logger.Level.INFO)
+    @LogMessage(level = INFO)
     @Message(id = 5045, value = "Registering context %s, for node %s")
     void registeringContext(String contextPath, String jvmRoute);
 
     // Context path and JVMRoute redundantly logged with DEBUG soa s to provide meaning for aliases.
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5046, value = "Registering context %s, for node %s, with aliases %s")
     void registeringContext(String contextPath, String jvmRoute, List<String> aliases);
 
-    @LogMessage(level = Logger.Level.INFO)
+    @LogMessage(level = INFO)
     @Message(id = 5047, value = "Unregistering context %s, from node %s")
     void unregisteringContext(String contextPath, String jvmRoute);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5048, value = "Node %s in error")
     void nodeIsInError(String jvmRoute);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5049, value = "NodeConfig created: connectionURI: %s, balancer: %s, domain: %s, jvmRoute: %s, flushPackets: %s, flushwait: %s, ping: %s," +
             "ttl: %s, timeout: %s, maxConnections: %s, cacheConnections: %s, requestQueueSize: %s, queueNewRequests: %s")
     void nodeConfigCreated(URI connectionURI, String balancer, String domain, String jvmRoute, boolean flushPackets, int flushwait, int ping, long ttl,
@@ -258,31 +262,35 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5051, value = "Failed to send ping response")
     void failedToSendPingResponse(@Cause Exception e);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5052, value = "Failed to send ping response, node.getJvmRoute(): %s, jvmRoute: %s")
     void failedToSendPingResponseDBG(@Cause Exception e, String node, String jvmRoute);
 
-    @LogMessage(level = Logger.Level.INFO)
+    @LogMessage(level = INFO)
     @Message(id = 5053, value = "Registering node %s, connection: %s")
     void registeringNode(String jvmRoute, URI connectionURI);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5054, value = "MCMP processing, key: %s, value: %s")
     void mcmpKeyValue(HttpString name, String value);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5055, value = "HttpClientPingTask run for connection: %s")
     void httpClientPingTask(URI connection);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5056, value = "Received node load in STATUS message, node jvmRoute: %s, load: %s")
     void receivedNodeLoad(String jvmRoute, String loadValue);
 
-    @LogMessage(level = Logger.Level.DEBUG)
+    @LogMessage(level = DEBUG)
     @Message(id = 5057, value = "Sending MCMP response to destination: %s, HTTP status: %s, Headers: %s, response: %s")
     void mcmpSendingResponse(InetSocketAddress destination, int status, HeaderMap headers, String response);
 
-    @LogMessage(level = org.jboss.logging.Logger.Level.WARN)
+    @LogMessage(level = WARN)
     @Message(id = 5058, value = "Could not bind multicast socket to %s (%s address): %s; make sure your multicast address is of the same type as the IP stack (IPv4 or IPv6). Multicast socket will not be bound to an address, but this may lead to cross talking (see http://www.jboss.org/community/docs/DOC-9469 for details).")
     void potentialCrossTalking(InetAddress group, String s, String localizedMessage);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5059, value = "Request dumping handler is in use. This handler is intended for debugging use only, and may dump sensitive data to the logs")
+    void warnRequestDumpingHandler();
 }

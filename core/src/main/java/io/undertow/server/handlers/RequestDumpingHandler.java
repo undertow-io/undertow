@@ -175,6 +175,7 @@ public class RequestDumpingHandler implements HttpHandler {
 
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
+
             return new Wrapper();
         }
 
@@ -183,6 +184,7 @@ public class RequestDumpingHandler implements HttpHandler {
     private static class Wrapper implements HandlerWrapper {
         @Override
         public HttpHandler wrap(HttpHandler handler) {
+            UndertowLogger.ROOT_LOGGER.warnRequestDumpingHandler();
             return new RequestDumpingHandler(handler);
         }
     }
