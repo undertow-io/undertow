@@ -71,6 +71,10 @@ public class DefaultServletTestCase {
                 .addInitParam("directory-listing", "true")
                 .addMapping("/*"));
 
+        //see UNDERTOW-458
+        builder.addFilter(new FilterInfo("date-header", GetDateFilter.class));
+        builder.addFilterUrlMapping("date-header", "/*", DispatcherType.REQUEST);
+
 
         builder.addFilter(new FilterInfo("Filter", HelloFilter.class));
         builder.addFilterUrlMapping("Filter", "/filterpath/*", DispatcherType.REQUEST);
@@ -161,12 +165,17 @@ public class DefaultServletTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/index.html");
+            //UNDERTOW-458
+            get.addHeader("date-header", "Fri, 10 Oct 2014 21:35:55 CEST");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertTrue(response.contains("Redirected home page"));
 
             String lm = result.getHeaders("Last-Modified")[0].getValue();
+            System.out.println(lm);
+            Assert.assertTrue(lm.endsWith("GMT"));
+
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/index.html");
             get.addHeader("IF-Modified-Since", lm);
             result = client.execute(get);
