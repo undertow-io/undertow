@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -130,16 +131,16 @@ public class FileHandlerTestCase {
         for(int i = 0; i < 100000; ++i) {
             message.append("Hello World");
         }
-        Path large = tmp.resolve("undertow.txt");
+        Path large = Files.createTempFile(null, ".txt");
         try {
-            Files.copy(new ByteArrayInputStream(message.toString().getBytes(StandardCharsets.UTF_8)), large);
+            Files.copy(new ByteArrayInputStream(message.toString().getBytes(StandardCharsets.UTF_8)), large, StandardCopyOption.REPLACE_EXISTING);
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(tmp, 1))
                                     // 1 byte = force transfer
                                     .setDirectoryListingEnabled(true))));
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/undertow.txt");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/" + large.getFileName().toString());
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
