@@ -54,7 +54,6 @@ public class DateUtils {
         @Override
         protected SimpleDateFormat initialValue() {
             SimpleDateFormat df = new SimpleDateFormat(RFC1123_PATTERN, LOCALE_US);
-            df.setTimeZone(GMT_ZONE);
             return df;
         }
     };
@@ -94,7 +93,12 @@ public class DateUtils {
      * @return The RFC-1123 formatted date
      */
     public static String toDateString(final Date date) {
-        return RFC1123_PATTERN_FORMAT.get().format(date);
+        SimpleDateFormat df = RFC1123_PATTERN_FORMAT.get();
+        //we always need to set the time zone
+        //because date format is stupid, and calling parse() can mutate the timezone
+        //see UNDERTOW-458
+        df.setTimeZone(GMT_ZONE);
+        return df.format(date);
     }
 
 
@@ -128,6 +132,7 @@ public class DateUtils {
 
         ParsePosition pp = new ParsePosition(0);
         SimpleDateFormat dateFormat = RFC1123_PATTERN_FORMAT.get();
+        dateFormat.setTimeZone(GMT_ZONE);
         Date val = dateFormat.parse(trimmedDate, pp);
         if (val != null && pp.getIndex() == trimmedDate.length()) {
             return val;
