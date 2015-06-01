@@ -91,6 +91,9 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
         if (channelClosed) {
             getChannel().removeStreamSink(getStreamId());
         }
+        if(reset) {
+            IoUtils.safeClose(this);
+        }
     }
 
     /**
@@ -161,7 +164,9 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
             return;
         }
         reset = true;
-        IoUtils.safeClose(this);
+        if(!isReadyForFlush()) {
+            IoUtils.safeClose(this);
+        }
         getChannel().removeStreamSink(getStreamId());
     }
 }
