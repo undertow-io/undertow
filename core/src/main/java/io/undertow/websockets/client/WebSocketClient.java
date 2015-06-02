@@ -257,6 +257,8 @@ public class WebSocketClient {
                                                 }
                                             } catch (IOException e) {
                                                 ioFuture.setException(e);
+                                            } catch (Exception e) {
+                                                ioFuture.setException(new IOException(e));
                                             }
                                         } else {
                                             ioFuture.setException(UndertowMessages.MESSAGES.proxyConnectionFailed(response.getResponse().getResponseCode()));
