@@ -32,6 +32,10 @@ import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
 import java.io.IOException;
+import java.lang.ref.PhantomReference;
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
@@ -45,36 +49,17 @@ import java.util.concurrent.TimeUnit;
  */
 public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
-    private XnioExecutor.Key handle;
+    /** Queue for enforcing deletion of timeouts for requests that are completed
+     */
+    private static final PhantomReferenceQueue timeoutDeletionQueue = new PhantomReferenceQueue();
+
     private final StreamConnection connection;
     private volatile long expireTime = -1;
     private final OpenListener openListener;
 
     private static final int FUZZ_FACTOR = 50; //we add 50ms to the timeout to make sure the underlying channel has actually timed out
 
-    private final Runnable timeoutCommand = new Runnable() {
-        @Override
-        public void run() {
-            handle = null;
-            if (expireTime == -1) {
-                return;
-            }
-            long current = System.currentTimeMillis();
-            if (current  < expireTime) {
-                //timeout has been bumped, re-schedule
-                handle = connection.getIoThread().executeAfter(timeoutCommand, (expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
-                return;
-            }
-            UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity", connection.getSourceChannel());
-            IoUtils.safeClose(connection);
-            if (connection.getSourceChannel().isReadResumed()) {
-                ChannelListeners.invokeChannelListener(connection.getSourceChannel(), connection.getSourceChannel().getReadListener());
-            }
-            if (connection.getSinkChannel().isWriteResumed()) {
-                ChannelListeners.invokeChannelListener(connection.getSinkChannel(), connection.getSinkChannel().getWriteListener());
-            }
-        }
-    };
+    private final TimeoutCommand timeoutCommand = new TimeoutCommand(this);
 
     public ReadTimeoutStreamSourceConduit(final StreamSourceConduit delegate, StreamConnection connection, OpenListener openListener) {
         super(delegate);
@@ -84,20 +69,20 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
 
     private void handleReadTimeout(final long ret) throws IOException {
         if (!connection.isOpen()) {
-            if(handle != null) {
-                handle.remove();
-                handle = null;
+            if(timeoutCommand.handle != null) {
+               timeoutCommand.handle.remove();
+               timeoutCommand.handle = null;
             }
             return;
         }
         if(ret == -1) {
-            if(handle != null) {
-                handle.remove();
-                handle = null;
+            if(timeoutCommand.handle != null) {
+               timeoutCommand.handle.remove();
+               timeoutCommand.handle = null;
             }
             return;
         }
-        if (ret == 0 && handle != null) {
+        if (ret == 0 && timeoutCommand.handle != null) {
             return;
         }
         Integer timeout = getTimeout();
@@ -111,9 +96,9 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
             throw new ClosedChannelException();
         }
         expireTime = currentTime + timeout;
-        XnioExecutor.Key key = handle;
+        XnioExecutor.Key key = timeoutCommand.handle;
         if (key == null) {
-            handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
+           timeoutCommand.handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -180,9 +165,150 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
     @Override
     public void terminateReads() throws IOException {
         super.terminateReads();
-        if(handle != null) {
-            handle.remove();
+        if(timeoutCommand.handle != null) {
+           timeoutCommand.handle.remove();
+           timeoutCommand.handle = null;
+        }
+    }
+
+    /** Queue for enforcing deletion of the timeout commands from the delay
+     * work queue after the conduit itself is GCd.
+     *
+     * This is functionally a quazi-finalize.  Finalize is expensive.  Phantom
+     * references are expected to be less so.
+     */
+    private static class PhantomReferenceQueue extends ReferenceQueue<ReadTimeoutStreamSourceConduit>
+    {
+        public PhantomReferenceQueue() {
+            startMonitoring();
+        }
+
+        private void startMonitoring() {
+            Runnable doRun = new Runnable() {
+                @Override
+                public void run() {
+                    while(true) {
+                        // Paranoid try/catch
+                        try {
+                            Reference<? extends ReadTimeoutStreamSourceConduit> r = null;
+                            r = remove();
+                            if(r instanceof TimeoutReference) {
+                                TimeoutReference ref = (TimeoutReference) r;
+                                ref.clearTimeout();
+                            }
+                        } catch (Throwable err) {
+                            err.printStackTrace();
+                        }
+                    }
+                }
+            };
+
+            //TODO: Integrate this properly with Undertow/Wildfly threading
+            // Instead of a new thread, one might try slipping a call to poll()
+            // into an appropriate spot, but I see there being threading
+            // concerns with that.
+            Thread runner = new Thread(doRun, "Undertow-Timeout-Cleanup");
+            runner.setDaemon(true);
+            runner.start();
+        }
+    }
+
+    /** Tie a reference of the TimeoutCommand to the phantom reference
+     * for post-GC cleanup of the timeout
+     */
+    public static class TimeoutReference extends PhantomReference<ReadTimeoutStreamSourceConduit>
+    {
+        /* This is not aiming to delay the normal GC process any,
+         * only to put extra effort into things that don't clean up by
+         * themselves - use weak references as we don't need anything stronger.
+         */
+
+        protected WeakReference<TimeoutCommand> commandRef;
+
+        public TimeoutReference(ReadTimeoutStreamSourceConduit owner,
+                PhantomReferenceQueue timeoutQueue, TimeoutCommand command) {
+            super(owner, timeoutQueue);
+            commandRef = new WeakReference<ReadTimeoutStreamSourceConduit.TimeoutCommand>(command);
+        }
+
+        public void clearTimeout() {
+            TimeoutCommand command = commandRef.get();
+            if(command != null) {
+                XnioExecutor.Key handle = command.handle;
+                if(handle != null) {
+                    handle.remove();
+                }
+            }
+        }
+    }
+
+    /** Implement as static so we can use a weak reference for the
+     * associated conduit, allowing it to GC even while the timeout is still
+     * queued. */
+    public static class TimeoutCommand implements Runnable {
+
+        /* Memory/GC notes:
+         * Conduit is held with a strong reference by anything that uses it.
+         * TimeoutCommand is held with a strong reference by the conduit and the
+         * delay work queue.
+         * For post GC cleanup (delete the timeout command from the delay work queue):
+         * TimeoutCommand holds a strong reference to a phantom reference to the conduit.
+         * The phantom reference also holds a weak reference back to the timeout command -
+         * if the TimeoutCommand is GCd, the phantom reference can also be GCd before any
+         * active cleanup is performed.
+         * When the Conduit is GCd, if the phantom reference still exists it is added to the
+         * PhanomReferenceQueue, which invokes handle.remove() should the handle still be valid.
+         */
+
+        /** Weak reference to the conduit that this TimeoutCommand is for - keep it weak
+         * so that we don't hold the conduit in memory */
+        WeakReference<ReadTimeoutStreamSourceConduit> owner;
+
+        private XnioExecutor.Key handle;
+
+        /* Hold on to the phantom reference needed to release us from the event
+         * queue - if we get freed from the queue, the reference is cleared also
+         * and extra action can be avoided.  If we arn't cleared up when the conduit
+         * is collected, the phantom reference is picked up by the
+         * PhantomReferenceQueue and removes us from the schedule.
+         *
+         * Paranoid:
+         *   Give the timeout reference protected scope so optimizers don't
+         *   try to optimize the reference away - the reference must only be
+         *   GCd after this the TimeoutCommand is eligible for GC.
+         */
+        protected TimeoutReference reference;
+
+        private TimeoutCommand(ReadTimeoutStreamSourceConduit owner) {
+            this.owner = new WeakReference<ReadTimeoutStreamSourceConduit>(owner);
+            reference = new TimeoutReference(owner, timeoutDeletionQueue, this);
+        }
+
+        @Override
+        public void run() {
+            ReadTimeoutStreamSourceConduit owner = this.owner.get();
+            if(owner == null) {
+                return;
+            }
+
             handle = null;
+            if (owner.expireTime == -1) {
+                return;
+            }
+            long current = System.currentTimeMillis();
+            if (current  < owner.expireTime) {
+                //timeout has been bumped, re-schedule
+                handle = owner.connection.getIoThread().executeAfter(owner.timeoutCommand, (owner.expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+                return;
+            }
+            UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity");
+            IoUtils.safeClose(owner.connection);
+            if (owner.connection.getSourceChannel().isReadResumed()) {
+                ChannelListeners.invokeChannelListener(owner.connection.getSourceChannel(), owner.connection.getSourceChannel().getReadListener());
+            }
+            if (owner.connection.getSinkChannel().isWriteResumed()) {
+                ChannelListeners.invokeChannelListener(owner.connection.getSinkChannel(), owner.connection.getSinkChannel().getWriteListener());
+            }
         }
     }
 
