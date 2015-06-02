@@ -29,6 +29,7 @@ import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
+import org.xnio.conduits.ReadReadyHandler;
 import org.xnio.conduits.StreamSourceConduit;
 
 import java.io.IOException;
@@ -80,21 +81,34 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
         super(delegate);
         this.connection = connection;
         this.openListener = openListener;
+        final ReadReadyHandler handler = new ReadReadyHandler.ChannelListenerHandler<>(connection.getSourceChannel());
+        delegate.setReadReadyHandler(new ReadReadyHandler() {
+            @Override
+            public void readReady() {
+                handler.readReady();
+            }
+
+            @Override
+            public void forceTermination() {
+                cleanup();
+                handler.forceTermination();
+            }
+
+            @Override
+            public void terminated() {
+                cleanup();
+                handler.terminated();
+            }
+        });
     }
 
     private void handleReadTimeout(final long ret) throws IOException {
         if (!connection.isOpen()) {
-            if(handle != null) {
-                handle.remove();
-                handle = null;
-            }
+            cleanup();
             return;
         }
         if(ret == -1) {
-            if(handle != null) {
-                handle.remove();
-                handle = null;
-            }
+            cleanup();
             return;
         }
         if (ret == 0 && handle != null) {
@@ -180,6 +194,10 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
     @Override
     public void terminateReads() throws IOException {
         super.terminateReads();
+        cleanup();
+    }
+
+    private void cleanup() {
         if(handle != null) {
             handle.remove();
             handle = null;
