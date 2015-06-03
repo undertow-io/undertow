@@ -1037,12 +1037,29 @@ public class FastConcurrentDirectDeque<E>
         return offerLast(e);
     }
 
-    public E poll()           { return pollFirst(); }
-    public E remove()         { return removeFirst(); }
-    public E peek()           { return peekFirst(); }
-    public E element()        { return getFirst(); }
-    public void push(E e)     { addFirst(e); }
-    public E pop()            { return removeFirst(); }
+    public E poll() {
+        return pollFirst();
+    }
+
+    public E remove() {
+        return removeFirst();
+    }
+
+    public E peek() {
+        return peekFirst();
+    }
+
+    public E element() {
+        return getFirst();
+    }
+
+    public void push(E e) {
+        addFirst(e);
+    }
+
+    public E pop() {
+        return removeFirst();
+    }
 
     /**
      * Removes the first element {@code e} such that
@@ -1386,16 +1403,30 @@ public class FastConcurrentDirectDeque<E>
         }
     }
 
-    /** Forward iterator */
+    /**
+     * Forward iterator
+     */
     private class Itr extends AbstractItr {
-        Node<E> startNode() { return first(); }
-        Node<E> nextNode(Node<E> p) { return succ(p); }
+        Node<E> startNode() {
+            return first();
+        }
+
+        Node<E> nextNode(Node<E> p) {
+            return succ(p);
+        }
     }
 
-    /** Descending iterator */
+    /**
+     * Descending iterator
+     */
     private class DescendingItr extends AbstractItr {
-        Node<E> startNode() { return last(); }
-        Node<E> nextNode(Node<E> p) { return pred(p); }
+        Node<E> startNode() {
+            return last();
+        }
+
+        Node<E> nextNode(Node<E> p) {
+            return pred(p);
+        }
     }
 
     /**

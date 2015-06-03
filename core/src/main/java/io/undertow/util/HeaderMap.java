@@ -61,7 +61,9 @@ public final class HeaderMap implements Iterable<HeaderValues> {
             final HeaderValues[] row = (HeaderValues[]) o;
             for (int i = 0; i < row.length; i++) {
                 headerValues = row[i];
-                if (headerValues != null && headerName.equals(headerValues.key)) { return headerValues; }
+                if (headerValues != null && headerName.equals(headerValues.key)) {
+                    return headerValues;
+                }
             }
             return null;
         }
@@ -89,7 +91,9 @@ public final class HeaderMap implements Iterable<HeaderValues> {
             final HeaderValues[] row = (HeaderValues[]) o;
             for (int i = 0; i < row.length; i++) {
                 headerValues = row[i];
-                if (headerValues != null && headerValues.key.equalToString(headerName)) { return headerValues; }
+                if (headerValues != null && headerValues.key.equalToString(headerName)) {
+                    return headerValues;
+                }
             }
             return null;
         }
@@ -246,7 +250,9 @@ public final class HeaderMap implements Iterable<HeaderValues> {
             for (int i = 0; i < row.length; i++) {
                 headerValues = row[i];
                 if (headerValues != null) {
-                    if (headerName.equals(headerValues.key)) { return headerValues; }
+                    if (headerName.equals(headerValues.key)) {
+                        return headerValues;
+                    }
                 } else if (empty == -1) {
                     empty = i;
                 }
