@@ -20,6 +20,7 @@ package io.undertow.security.handlers;
 
 import io.undertow.Handlers;
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanismContext;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -50,9 +51,10 @@ public class AuthenticationMechanismsHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final SecurityContext sc = exchange.getSecurityContext();
-        if(sc != null) {
+        if(sc != null && sc instanceof AuthenticationMechanismContext) {
+            AuthenticationMechanismContext amc = (AuthenticationMechanismContext) sc;
             for(AuthenticationMechanism mechanism : authenticationMechanisms) {
-                sc.addAuthenticationMechanism(mechanism);
+                amc.addAuthenticationMechanism(mechanism);
             }
         }
         next.handleRequest(exchange);

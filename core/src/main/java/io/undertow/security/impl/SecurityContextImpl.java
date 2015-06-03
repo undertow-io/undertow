@@ -17,19 +17,14 @@
  */
 package io.undertow.security.impl;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-
+import static io.undertow.UndertowMessages.MESSAGES;
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome;
 import io.undertow.security.api.AuthenticationMechanism.ChallengeResult;
+import io.undertow.security.api.AuthenticationMechanismContext;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
-import io.undertow.security.api.SecurityContext;
 import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.idm.Account;
@@ -38,7 +33,11 @@ import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StatusCodes;
 
-import static io.undertow.UndertowMessages.MESSAGES;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * The internal SecurityContext used to hold the state of security for the current exchange.
@@ -46,7 +45,7 @@ import static io.undertow.UndertowMessages.MESSAGES;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  * @author Stuart Douglas
  */
-public class SecurityContextImpl implements SecurityContext {
+public class SecurityContextImpl implements AuthenticationMechanismContext {
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("MODIFY_UNDERTOW_SECURITY_CONTEXT");
 
@@ -97,6 +96,7 @@ public class SecurityContextImpl implements SecurityContext {
      * CHALLENGED_SENT
      */
 
+    @Override
     public boolean authenticate() {
         if(authenticationState == AuthenticationState.ATTEMPTED) {
             //we are re-attempted, so we just reset the state
