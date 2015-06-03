@@ -17,16 +17,12 @@
  */
 package io.undertow.security.impl;
 
-import static io.undertow.UndertowMessages.MESSAGES;
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome;
 import io.undertow.security.api.AuthenticationMechanism.ChallengeResult;
 import io.undertow.security.api.AuthenticationMechanismContext;
 import io.undertow.security.api.AuthenticationMode;
-import io.undertow.security.api.NotificationReceiver;
-import io.undertow.security.api.SecurityNotification;
-import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
@@ -45,43 +41,30 @@ import java.util.List;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  * @author Stuart Douglas
  */
-public class SecurityContextImpl implements AuthenticationMechanismContext {
+public class SecurityContextImpl extends AbstractSecurityContext implements AuthenticationMechanismContext {
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("MODIFY_UNDERTOW_SECURITY_CONTEXT");
 
-    private final AuthenticationMode authenticationMode;
-    private boolean authenticationRequired;
-    private String programaticMechName = "Programatic";
     private AuthenticationState authenticationState = AuthenticationState.NOT_ATTEMPTED;
-    private final HttpServerExchange exchange;
+    private final AuthenticationMode authenticationMode;
+
+    private String programaticMechName = "Programatic";
+
     /**
      * the authentication mechanisms. Note that in order to reduce the allocation of list and iterator structures
      * we use a custom linked list structure.
      */
     private Node<AuthenticationMechanism> authMechanisms = null;
     private final IdentityManager identityManager;
-    private Node<NotificationReceiver> notificationReceivers = null;
-
-
-    // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
-    // be configured to either associate with the connection, the session or some other arbitrary whatever.
-    //
-    // Do we want multiple to be supported or just one?  Maybe extend the AuthenticationMechanism to allow
-    // it to be identified and called.
-
-    private String mechanismName;
-    private Account account;
-
-    // TODO - Why two constructors?  Maybe the first can do.
 
     public SecurityContextImpl(final HttpServerExchange exchange, final IdentityManager identityManager) {
         this(exchange, AuthenticationMode.PRO_ACTIVE, identityManager);
     }
 
     public SecurityContextImpl(final HttpServerExchange exchange, final AuthenticationMode authenticationMode, final IdentityManager identityManager) {
+        super(exchange);
         this.authenticationMode = authenticationMode;
         this.identityManager = identityManager;
-        this.exchange = exchange;
         if (System.getSecurityManager() != null) {
             System.getSecurityManager().checkPermission(PERMISSION);
         }
@@ -147,31 +130,16 @@ public class SecurityContextImpl implements AuthenticationMechanismContext {
             case NOT_ATTEMPTED:
                 // There has been no attempt to authenticate the current request so do so either if required or if we are set to
                 // be pro-active.
-                return authenticationRequired || authenticationMode == AuthenticationMode.PRO_ACTIVE;
+                return isAuthenticationRequired() || authenticationMode == AuthenticationMode.PRO_ACTIVE;
             case ATTEMPTED:
                 // To be ATTEMPTED we know it was not AUTHENTICATED so if it is required we need to transition to send the
                 // challenges.
-                return authenticationRequired;
+                return isAuthenticationRequired();
             default:
                 // At this point the state would either be AUTHENTICATED or CHALLENGE_SENT - either of which mean no further
                 // transitions applicable for this request.
                 return false;
         }
-    }
-
-    @Override
-    public void setAuthenticationRequired() {
-        authenticationRequired = true;
-    }
-
-    @Override
-    public boolean isAuthenticationRequired() {
-        return authenticationRequired;
-    }
-
-    @Override
-    public boolean isAuthenticated() {
-        return authenticationState == AuthenticationState.AUTHENTICATED;
     }
 
     /**
@@ -181,14 +149,6 @@ public class SecurityContextImpl implements AuthenticationMechanismContext {
      */
     public void setProgramaticMechName(final String programaticMechName) {
         this.programaticMechName = programaticMechName;
-    }
-
-    /**
-     * @return The name of the mechanism used to authenticate the request.
-     */
-    @Override
-    public String getMechanismName() {
-        return mechanismName;
     }
 
     @Override
@@ -218,11 +178,7 @@ public class SecurityContextImpl implements AuthenticationMechanismContext {
     }
 
     @Override
-    public Account getAuthenticatedAccount() {
-        return account;
-    }
-
-    @Override
+    @Deprecated
     public IdentityManager getIdentityManager() {
         return identityManager;
     }
@@ -255,72 +211,10 @@ public class SecurityContextImpl implements AuthenticationMechanismContext {
 
     @Override
     public void logout() {
-        if (!isAuthenticated()) {
-            return;
-        }
-        sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName, true,
-                MESSAGES.userLoggedOut(account.getPrincipal().getName()), true));
-
-        this.account = null;
-        this.mechanismName = null;
+        super.logout();
         this.authenticationState = AuthenticationState.NOT_ATTEMPTED;
     }
 
-    @Override
-    public void authenticationComplete(Account account, String mechanism, final boolean cachingRequired) {
-        authenticationComplete(account, mechanism, false, cachingRequired);
-    }
-
-    protected void authenticationComplete(Account account, String mechanism, boolean programatic, final boolean cachingRequired) {
-        this.account = account;
-        this.mechanismName = mechanism;
-
-        sendNoticiation(new SecurityNotification(exchange, EventType.AUTHENTICATED, account, mechanism, programatic,
-                MESSAGES.userAuthenticated(account.getPrincipal().getName()), cachingRequired));
-    }
-
-    @Override
-    public void authenticationFailed(String message, String mechanism) {
-        sendNoticiation(new SecurityNotification(exchange, EventType.FAILED_AUTHENTICATION, null, mechanism, false, message, true));
-    }
-
-    private void sendNoticiation(final SecurityNotification notification) {
-        Node<NotificationReceiver> cur = notificationReceivers;
-        while (cur != null) {
-            cur.item.handleNotification(notification);
-            cur = cur.next;
-        }
-    }
-
-    @Override
-    public void registerNotificationReceiver(NotificationReceiver receiver) {
-        if(notificationReceivers == null) {
-            notificationReceivers = new Node<>(receiver);
-        } else {
-            Node<NotificationReceiver> cur = notificationReceivers;
-            while (cur.next != null) {
-                cur = cur.next;
-            }
-            cur.next = new Node<>(receiver);
-        }
-    }
-
-    @Override
-    public void removeNotificationReceiver(NotificationReceiver receiver) {
-        Node<NotificationReceiver> cur = notificationReceivers;
-        if(receiver.equals(cur.item)) {
-            notificationReceivers = cur.next;
-        } else {
-            Node<NotificationReceiver> old = cur;
-            while (cur.next != null) {
-                cur = cur.next;
-                if(receiver.equals(cur.item)) {
-                    old.next = cur.next;
-                }
-                old = cur;
-            }
-        }
-    }
 
     private class AuthAttempter {
 
