@@ -23,6 +23,7 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
@@ -168,7 +169,7 @@ class MCMPAdvertiseTask implements Runnable {
                     .append("X-Manager-Host: ").append(host).append(CRLF);
 
             final String payload = builder.toString();
-            final ByteBuffer byteBuffer = ByteBuffer.wrap(payload.getBytes());
+            final ByteBuffer byteBuffer = ByteBuffer.wrap(payload.getBytes(StandardCharsets.US_ASCII));
             UndertowLogger.ROOT_LOGGER.proxyAdvertiseMessagePayload(payload);
             channel.sendTo(address, byteBuffer);
         } catch (Exception e) {
