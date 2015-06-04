@@ -411,7 +411,9 @@ public final class HeaderValues extends AbstractCollection<String> implements De
         if (index < 0 || index > size) throw new IndexOutOfBoundsException();
         final Iterator<? extends String> iterator = c.iterator();
         boolean result = false;
-        while (iterator.hasNext()) { result |= offer(index, iterator.next()); }
+        while (iterator.hasNext()) {
+            result |= offer(index, iterator.next());
+        }
         return result;
     }
 
@@ -428,7 +430,9 @@ public final class HeaderValues extends AbstractCollection<String> implements De
 
     public String[] toArray() {
         int size = this.size;
-        if (size == 0) { return NO_STRINGS; }
+        if (size == 0) {
+            return NO_STRINGS;
+        }
         final Object v = this.value;
         if (v instanceof String) return new String[] { (String) v };
         final String[] list = (String[]) v;
