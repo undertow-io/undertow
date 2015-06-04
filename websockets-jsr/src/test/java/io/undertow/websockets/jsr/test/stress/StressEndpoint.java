@@ -34,9 +34,15 @@ public class StressEndpoint {
 
     public static Set<String> MESSAGES = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
+    private volatile String closed;
+
     @OnMessage
     public void handleMessage(Session session, final String message) throws IOException {
+        if(closed != null) {
+            System.out.println("closed message " + closed);
+        }
         if(message.equals("close")) {
+            closed = Thread.currentThread().getName();
             session.close();
             return;
         }

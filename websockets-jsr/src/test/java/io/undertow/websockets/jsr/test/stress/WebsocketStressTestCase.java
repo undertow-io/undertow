@@ -95,6 +95,7 @@ public class WebsocketStressTestCase {
 
     @AfterClass
     public static void after() {
+        StressEndpoint.MESSAGES.clear();
         deployment = null;
     }
 
@@ -126,10 +127,7 @@ public class WebsocketStressTestCase {
                     @Override
                     public void run() {
                         try {
-
-
                             executor.submit(new SendRunnable(session, thread, executor));
-
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
@@ -143,7 +141,6 @@ public class WebsocketStressTestCase {
         } finally {
             executor.shutdown();
         }
-
         for (int t = 0; t < NUM_THREADS; ++t) {
             for (int i = 0; i < NUM_REQUESTS; ++i) {
                 String msg = "t-" + t + "-m-" + i;
@@ -175,6 +172,14 @@ public class WebsocketStressTestCase {
             session.getAsyncRemote().sendText("t-" + thread + "-m-" + count.get(), new SendHandler() {
                 @Override
                 public void onResult(SendResult result) {
+                    if(!result.isOK()) {
+                        try {
+                            result.getException().printStackTrace();
+                            session.close();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
                     if (count.incrementAndGet() != NUM_REQUESTS) {
                         executor.submit(SendRunnable.this);
                     } else {
