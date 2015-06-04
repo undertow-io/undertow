@@ -426,28 +426,37 @@ class ModClusterContainer implements ModClusterController {
      * @return
      */
     private PathMatcher.PathMatch<VirtualHost.HostEntry> mapVirtualHost(final HttpServerExchange exchange) {
-        final String hostName = exchange.getRequestHeaders().getFirst(Headers.HOST);
-        if (hostName != null) {
-            final String context = exchange.getRelativePath();
-            // Remove the port from the host
-            int i = hostName.indexOf(":");
-            VirtualHost host;
-            if (i > 0) {
-                host = hosts.get(hostName.substring(0, i));
-                if (host == null) {
+        final String context = exchange.getRelativePath();
+        if(modCluster.isUseAlias()) {
+            final String hostName = exchange.getRequestHeaders().getFirst(Headers.HOST);
+            if (hostName != null) {
+                // Remove the port from the host
+                int i = hostName.indexOf(":");
+                VirtualHost host;
+                if (i > 0) {
+                    host = hosts.get(hostName.substring(0, i));
+                    if (host == null) {
+                        host = hosts.get(hostName);
+                    }
+                } else {
                     host = hosts.get(hostName);
                 }
-            } else {
-                host = hosts.get(hostName);
+                if (host == null) {
+                    return null;
+                }
+                PathMatcher.PathMatch<VirtualHost.HostEntry> result = host.match(context);
+                if (result.getValue() == null) {
+                    return null;
+                }
+                return result;
             }
-            if (host == null) {
-                return null;
+        } else {
+            for(Map.Entry<String, VirtualHost> host : hosts.entrySet()) {
+                PathMatcher.PathMatch<VirtualHost.HostEntry> result = host.getValue().match(context);
+                if (result.getValue() != null) {
+                    return result;
+                }
             }
-            PathMatcher.PathMatch<VirtualHost.HostEntry> result = host.match(context);
-            if (result.getValue() == null) {
-                return null;
-            }
-            return result;
         }
         return null;
     }

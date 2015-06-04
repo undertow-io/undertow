@@ -48,6 +48,7 @@ public class ModCluster {
     private final boolean queueNewRequests;
     private final int maxRequestTime;
     private final long ttl;
+    private final boolean useAlias;
 
     private final XnioWorker xnioWorker;
     private final ModClusterContainer container;
@@ -65,6 +66,7 @@ public class ModCluster {
         this.healthChecker = builder.healthChecker;
         this.maxRequestTime = builder.maxRequestTime;
         this.ttl = builder.ttl;
+        this.useAlias = builder.useAlias;
         this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client);
     }
 
@@ -110,6 +112,10 @@ public class ModCluster {
 
     public long getTtl() {
         return ttl;
+    }
+
+    public boolean isUseAlias() {
+        return useAlias;
     }
 
     /**
@@ -192,6 +198,7 @@ public class ModCluster {
 
         private int maxRequestTime = -1;
         private long ttl;
+        private boolean useAlias = true;
 
         private NodeHealthChecker healthChecker = NodeHealthChecker.NO_CHECK;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
@@ -244,6 +251,11 @@ public class ModCluster {
 
         public Builder setHealthChecker(NodeHealthChecker healthChecker) {
             this.healthChecker = healthChecker;
+            return this;
+        }
+
+        public Builder setUseAlias(boolean useAlias) {
+            this.useAlias = useAlias;
             return this;
         }
 
