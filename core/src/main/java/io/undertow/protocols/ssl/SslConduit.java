@@ -231,6 +231,21 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
     }
 
+    private void runWriteListener() {
+        try {
+            delegate.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    writeReadyHandler.writeReady();
+                }
+            });
+        } catch (Exception e) {
+            //will only happen on shutdown
+            IoUtils.safeClose(connection, delegate);
+            UndertowLogger.REQUEST_IO_LOGGER.debugf(e, "Failed to queue read listener invocation");
+        }
+    }
+
     @Override
     public boolean isReadResumed() {
         return anyAreSet(state, FLAG_READS_RESUMED);
@@ -522,10 +537,19 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_WRITE_CLOSED)) {
             return;
         }
+        boolean runListener = isWriteResumed() && anyAreSet(state, FLAG_CLOSED);
         connection.writeClosed();
         state |= FLAG_WRITE_CLOSED;
         if(anyAreSet(state, FLAG_READ_CLOSED)) {
             closed();
+        }
+        if(anyAreSet(state, FLAG_READ_REQUIRES_WRITE)) {
+            notifyReadClosed();
+        }
+        state &= ~FLAG_WRITE_REQUIRES_READ;
+        //unclean shutdown, run the listener
+        if(runListener) {
+            runWriteListener();
         }
     }
 
@@ -533,11 +557,18 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_READ_CLOSED)) {
             return;
         }
+        boolean runListener = isReadResumed() && anyAreSet(state, FLAG_CLOSED);
         connection.readClosed();
 
         state |= FLAG_READ_CLOSED;
         if(anyAreSet(state, FLAG_WRITE_CLOSED)) {
             closed();
+        }
+        if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
+            notifyWriteClosed();
+        }
+        if(runListener) {
+            runReadListener();
         }
     }
 
@@ -597,22 +628,25 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         try {
             //try and read some data if we don't already have some
-            if(allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
-                if(dataToUnwrap == null) {
-                    dataToUnwrap = bufferPool.allocate();
+            final boolean noData = allAreClear(state, FLAG_DATA_TO_UNWRAP);
+            if(noData || this.dataToUnwrap.getResource().limit() < this.dataToUnwrap.getResource().capacity()) {
+                if(!noData) {
+                    this.dataToUnwrap.getResource().compact();
+                } else if(this.dataToUnwrap == null) {
+                    this.dataToUnwrap = bufferPool.allocate();
                 }
                 int res;
                 try {
-                    res = source.read(dataToUnwrap.getResource());
+                    res = source.read(this.dataToUnwrap.getResource());
                 } catch (IOException e) {
-                    dataToUnwrap.free();
-                    dataToUnwrap = null;
+                    this.dataToUnwrap.free();
+                    this.dataToUnwrap = null;
                     throw e;
                 }
-                dataToUnwrap.getResource().flip();
+                this.dataToUnwrap.getResource().flip();
                 if(res == -1) {
-                    dataToUnwrap.free();
-                    dataToUnwrap = null;
+                    this.dataToUnwrap.free();
+                    this.dataToUnwrap = null;
                     notifyReadClosed();
                     return -1;
                 } else if(res == 0 && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
@@ -630,7 +664,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             boolean unwrapBufferUsed = false;
             try {
                 if (userBuffers != null) {
-                    result = engine.unwrap(dataToUnwrap.getResource(), userBuffers, off, len);
+                    result = engine.unwrap(this.dataToUnwrap.getResource(), userBuffers, off, len);
                     if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
                         //not enough space in the user buffers
                         //we use our own
@@ -638,7 +672,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                         ByteBuffer[] d = new ByteBuffer[len + 1];
                         System.arraycopy(userBuffers, off, d, 0, len);
                         d[len] = unwrappedData.getResource();
-                        result = engine.unwrap(dataToUnwrap.getResource(), d);
+                        result = engine.unwrap(this.dataToUnwrap.getResource(), d);
                         unwrapBufferUsed = true;
                     }
                 } else {
@@ -648,7 +682,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     } else {
                         unwrappedData.getResource().compact();
                     }
-                    result = engine.unwrap(dataToUnwrap.getResource(), unwrappedData.getResource());
+                    result = engine.unwrap(this.dataToUnwrap.getResource(), unwrappedData.getResource());
                 }
             } finally {
                 if(unwrapBufferUsed) {
@@ -662,7 +696,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
 
             if (!handleHandshakeResult(result)) {
-                if(dataToUnwrap.getResource().hasRemaining()) {
+                if(this.dataToUnwrap.getResource().hasRemaining()) {
                     state |= FLAG_DATA_TO_UNWRAP;
                 }
                 return 0;
@@ -675,7 +709,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 state &= ~FLAG_DATA_TO_UNWRAP;
             } else if(result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
                 throw new IOException("overflow"); //todo: handle properly
-            } else if(dataToUnwrap.getResource().hasRemaining()) {
+            } else if(this.dataToUnwrap.getResource().hasRemaining()) {
                 state |= FLAG_DATA_TO_UNWRAP;
             }
             if(userBuffers == null) {
