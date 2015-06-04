@@ -38,21 +38,21 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public class SecurityInitialHandler implements HttpHandler {
+@SuppressWarnings("deprecation")
+public class SecurityInitialHandler extends AbstractSecurityContextAssociationHandler {
 
     private final AuthenticationMode authenticationMode;
     private final IdentityManager identityManager;
-    private final HttpHandler next;
     private final String programaticMechName;
     private final SecurityContextFactory contextFactory;
 
     public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
             final String programaticMechName, final SecurityContextFactory contextFactory, final HttpHandler next) {
+        super(next);
         this.authenticationMode = authenticationMode;
         this.identityManager = identityManager;
         this.programaticMechName = programaticMechName;
         this.contextFactory = contextFactory;
-        this.next = next;
     }
 
     public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
@@ -66,14 +66,12 @@ public class SecurityInitialHandler implements HttpHandler {
     }
 
     /**
-     * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange)
+     * @see io.undertow.security.handlers.AbstractSecurityContextAssociationHandler#createSecurityContext()
      */
     @Override
-    public void handleRequest(HttpServerExchange exchange) throws Exception {
-        SecurityContext newContext = this.contextFactory.createSecurityContext(exchange, authenticationMode, identityManager,
-                programaticMechName);
-        SecurityActions.setSecurityContext(exchange, newContext);
-        next.handleRequest(exchange);
+    public SecurityContext createSecurityContext(final HttpServerExchange exchange) {
+        return contextFactory.createSecurityContext(exchange, authenticationMode, identityManager, programaticMechName);
     }
+
 
 }
