@@ -101,13 +101,17 @@ public interface SecurityContext {
      * called mechanisms will be iterated over in the order they are added, and given a chance to authenticate the user.
      *
      * @param mechanism The mechanism to add
+     * @deprecated This method is now only applicable to {@code SecurityContext} implementations that also implement the {@link AuthenticationMechanismContext} interface.
      */
+    @Deprecated
     void addAuthenticationMechanism(AuthenticationMechanism mechanism);
 
     /**
      *
      * @return A list of all authentication mechanisms in this context
+     * @deprecated Obtaining lists of mechanisms is discouraged, however there should not be a need to call this anyway.
      */
+    @Deprecated
     List<AuthenticationMechanism> getAuthenticationMechanisms();
 
     /*
