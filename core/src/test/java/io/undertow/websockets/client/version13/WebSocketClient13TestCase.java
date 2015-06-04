@@ -40,6 +40,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
+import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
@@ -56,6 +57,7 @@ import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
+
 
 /**
  * @author Stuart Douglas
@@ -153,6 +155,44 @@ public class WebSocketClient13TestCase {
     }
 
     @Test
+    public void testTextMessageWss() throws Exception {
+
+        UndertowXnioSsl ssl = new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, DefaultServer.getClientSSLContext());
+        final WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(worker, buffer, new URI("wss://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default")))
+                .setSsl(ssl);
+        IoFuture<WebSocketChannel> future = connectionBuilder.connect();
+        future.await(4, TimeUnit.SECONDS);
+        final WebSocketChannel webSocketChannel = future.get();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicReference<String> result = new AtomicReference<>();
+        webSocketChannel.getReceiveSetter().set(new AbstractReceiveListener() {
+            @Override
+            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+                String data = message.getData();
+                result.set(data);
+                latch.countDown();
+            }
+
+            @Override
+            protected void onError(WebSocketChannel channel, Throwable error) {
+                super.onError(channel, error);
+                error.printStackTrace();
+                latch.countDown();
+            }
+        });
+        webSocketChannel.resumeReceives();
+
+
+        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT, 11);
+        new StringWriteChannelListener("Hello World").setup(sendChannel);
+
+        latch.await(10, TimeUnit.SECONDS);
+        Assert.assertEquals("Hello World", result.get());
+        webSocketChannel.sendClose();
+    }
+
+    @Test
     @ProxyIgnore
     public void testMessageViaProxy() throws Exception {
 
@@ -193,6 +233,7 @@ public class WebSocketClient13TestCase {
     @Test
     @ProxyIgnore
     public void testMessageViaWssProxy() throws Exception {
+
 
         final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, buffer, new URI(DefaultServer.getDefaultServerSSLAddress()))
                 .setSsl(new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()))
