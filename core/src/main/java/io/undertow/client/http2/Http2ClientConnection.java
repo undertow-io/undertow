@@ -94,7 +94,6 @@ public class Http2ClientConnection implements ClientConnection {
     public void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
         request.getRequestHeaders().put(PATH, request.getPath());
         request.getRequestHeaders().put(SCHEME, "https");
-        request.getRequestHeaders().put(AUTHORITY, request.getProtocol().toString());
         request.getRequestHeaders().put(METHOD, request.getMethod().toString());
         request.getRequestHeaders().put(AUTHORITY, request.getRequestHeaders().getFirst(Headers.HOST));
         request.getRequestHeaders().remove(Headers.HOST);

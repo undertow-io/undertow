@@ -573,19 +573,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             //this allows the SSL information to be propagated to be backend
             handler = new SSLHeaderHandler(new ProxyPeerAddressHandler(handler));
         }
-        if(spdy) {
-            final HttpHandler existing = handler;
-            handler = new HttpHandler() {
-                @Override
-                public void handleRequest(HttpServerExchange exchange) throws Exception {
-                    if(!exchange.getRequestHeaders().contains(":method")) {
-                        //make sure we have not fallen back to a stanard HTTPS connection
-                        throw new RuntimeException("Not a SPDY connection");
-                    }
-                    existing.handleRequest(exchange);
-                }
-            };
-        }
         if (dump) {
             rootHandler.next = new RequestDumpingHandler(handler);
         } else {

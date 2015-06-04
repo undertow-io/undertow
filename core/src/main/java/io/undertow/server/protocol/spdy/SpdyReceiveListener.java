@@ -101,10 +101,15 @@ public class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
                 connection.setExchange(exchange);
                 dataChannel.setMaxStreamSize(maxEntitySize);
                 exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
+                exchange.getRequestHeaders().remove(SCHEME);
                 exchange.setProtocol(new HttpString(exchange.getRequestHeaders().getFirst(VERSION)));
+                exchange.getRequestHeaders().remove(VERSION);
                 exchange.setRequestMethod(new HttpString(exchange.getRequestHeaders().getFirst(METHOD)));
+                exchange.getRequestHeaders().remove(METHOD);
                 exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(HOST));
+                exchange.getRequestHeaders().remove(HOST);
                 final String path = exchange.getRequestHeaders().getFirst(PATH);
+                exchange.getRequestHeaders().remove(PATH);
                 Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer);
 
                 SSLSession session = channel.getSslSession();

@@ -64,9 +64,6 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if (!exchange.getRequestHeaders().contains(":method")) {
-                            throw new RuntimeException("Not SPDY");
-                        }
                         System.out.println(exchange.getRequestHeaders());
                         handler1.handleRequest(exchange);
                     }
@@ -83,9 +80,6 @@ public class LoadBalancingProxySPDYTestCase extends AbstractLoadBalancingProxyTe
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if (!exchange.getRequestHeaders().contains(":method")) {
-                            throw new RuntimeException("Not SPDY");
-                        }
                         System.out.println(exchange.getRequestHeaders());
                         handler2.handleRequest(exchange);
                     }
