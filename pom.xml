@@ -89,7 +89,7 @@
 
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
-        <version.io.undertow.build.checkstyle-config>1.0.0.Final</version.io.undertow.build.checkstyle-config>
+        <version.io.undertow.build.checkstyle-config>1.0.1.Final</version.io.undertow.build.checkstyle-config>
         <version.org.mortbay.jetty.alpn.jdk7>7.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk7>
         <version.org.mortbay.jetty.alpn.jdk8.old>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8.old>
         <version.org.mortbay.jetty.alpn.jdk8>8.1.2.v20141202</version.org.mortbay.jetty.alpn.jdk8>
