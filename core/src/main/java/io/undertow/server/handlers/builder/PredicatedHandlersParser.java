@@ -25,6 +25,7 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.util.ChainedHandlerWrapper;
 import io.undertow.util.FileUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -43,6 +44,9 @@ import java.util.List;
  */
 public class PredicatedHandlersParser {
 
+    public static List<PredicatedHandler> parse(final File file, final ClassLoader classLoader) {
+        return parse(file.toPath(), classLoader);
+    }
 
     public static List<PredicatedHandler> parse(final Path file, final ClassLoader classLoader) {
         try {

@@ -19,6 +19,7 @@
 package io.undertow.server.handlers.accesslog;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
@@ -77,6 +78,18 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     private volatile boolean closed = false;
     private boolean initialRun = true;
     private final boolean rotate;
+
+    public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName) {
+        this(logWriteExecutor, outputDirectory.toPath(), logBaseName, null);
+    }
+
+    public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName, final String logNameSuffix) {
+        this(logWriteExecutor, outputDirectory.toPath(), logBaseName, logNameSuffix, true);
+    }
+
+    public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName, final String logNameSuffix, boolean rotate) {
+        this(logWriteExecutor, outputDirectory.toPath(), logBaseName, logNameSuffix, rotate);
+    }
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final Path outputDirectory, final String logBaseName) {
         this(logWriteExecutor, outputDirectory, logBaseName, null);

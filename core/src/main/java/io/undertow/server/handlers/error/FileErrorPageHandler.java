@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.error;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -67,9 +68,17 @@ public class FileErrorPageHandler implements HttpHandler {
 
     private volatile Path file;
 
+    public FileErrorPageHandler(final File file, final Integer... responseCodes) {
+        this(file.toPath(), responseCodes);
+    }
+
     public FileErrorPageHandler(final Path file, final Integer... responseCodes) {
         this.file = file;
         this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
+    }
+
+    public FileErrorPageHandler(HttpHandler next, final File file, final Integer... responseCodes) {
+        this(next, file.toPath(), responseCodes);
     }
 
     public FileErrorPageHandler(HttpHandler next, final Path file, final Integer... responseCodes) {
@@ -77,6 +86,7 @@ public class FileErrorPageHandler implements HttpHandler {
         this.file = file;
         this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
     }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.addDefaultResponseListener(new DefaultResponseListener() {
