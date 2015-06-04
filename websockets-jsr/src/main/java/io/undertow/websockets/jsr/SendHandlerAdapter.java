@@ -32,17 +32,26 @@ import javax.websocket.SendResult;
 final class SendHandlerAdapter implements WebSocketCallback<Void> {
     private final SendHandler handler;
     private static final SendResult OK = new SendResult();
+    private volatile boolean done;
 
     public SendHandlerAdapter(SendHandler handler) {
         this.handler = handler;
     }
     @Override
     public void complete(WebSocketChannel channel, Void context) {
+        if(done) {
+            return;
+        }
+        done = true;
         handler.onResult(new SendResult());
     }
 
     @Override
     public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
+        if(done) {
+            return;
+        }
+        done = true;
         handler.onResult(new SendResult(throwable));
     }
 }
