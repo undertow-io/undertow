@@ -628,30 +628,28 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         try {
             //try and read some data if we don't already have some
-            final boolean noData = allAreClear(state, FLAG_DATA_TO_UNWRAP);
-            if (!noData) {
-                this.dataToUnwrap.getResource().compact();
-            } else if (this.dataToUnwrap == null) {
-                this.dataToUnwrap = bufferPool.allocate();
+            if(allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
+                if(dataToUnwrap == null) {
+                    dataToUnwrap = bufferPool.allocate();
+                }
+                int res;
+                try {
+                    res = source.read(dataToUnwrap.getResource());
+                } catch (IOException e) {
+                    dataToUnwrap.free();
+                    dataToUnwrap = null;
+                    throw e;
+                }
+                dataToUnwrap.getResource().flip();
+                if(res == -1) {
+                    dataToUnwrap.free();
+                    dataToUnwrap = null;
+                    notifyReadClosed();
+                    return -1;
+                } else if(res == 0 && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
+                    return 0;
+                }
             }
-            int res;
-            try {
-                res = source.read(this.dataToUnwrap.getResource());
-            } catch (IOException e) {
-                this.dataToUnwrap.free();
-                this.dataToUnwrap = null;
-                throw e;
-            }
-            this.dataToUnwrap.getResource().flip();
-            if (res == -1) {
-                this.dataToUnwrap.free();
-                this.dataToUnwrap = null;
-                notifyReadClosed();
-                return -1;
-            } else if (!this.dataToUnwrap.getResource().hasRemaining() && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
-                return 0;
-            }
-
             long original = 0;
             if(userBuffers != null) {
                 original = Buffers.remaining(userBuffers);
@@ -695,7 +693,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
 
             if (!handleHandshakeResult(result)) {
-                if(this.dataToUnwrap.getResource().hasRemaining()) {
+                if(this.dataToUnwrap.getResource().hasRemaining() && result.getStatus() != SSLEngineResult.Status.BUFFER_UNDERFLOW) {
                     state |= FLAG_DATA_TO_UNWRAP;
                 }
                 return 0;
