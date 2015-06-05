@@ -629,30 +629,29 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         try {
             //try and read some data if we don't already have some
             final boolean noData = allAreClear(state, FLAG_DATA_TO_UNWRAP);
-            if(noData || this.dataToUnwrap.getResource().limit() < this.dataToUnwrap.getResource().capacity()) {
-                if(!noData) {
-                    this.dataToUnwrap.getResource().compact();
-                } else if(this.dataToUnwrap == null) {
-                    this.dataToUnwrap = bufferPool.allocate();
-                }
-                int res;
-                try {
-                    res = source.read(this.dataToUnwrap.getResource());
-                } catch (IOException e) {
-                    this.dataToUnwrap.free();
-                    this.dataToUnwrap = null;
-                    throw e;
-                }
-                this.dataToUnwrap.getResource().flip();
-                if(res == -1) {
-                    this.dataToUnwrap.free();
-                    this.dataToUnwrap = null;
-                    notifyReadClosed();
-                    return -1;
-                } else if(res == 0 && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
-                    return 0;
-                }
+            if (!noData) {
+                this.dataToUnwrap.getResource().compact();
+            } else if (this.dataToUnwrap == null) {
+                this.dataToUnwrap = bufferPool.allocate();
             }
+            int res;
+            try {
+                res = source.read(this.dataToUnwrap.getResource());
+            } catch (IOException e) {
+                this.dataToUnwrap.free();
+                this.dataToUnwrap = null;
+                throw e;
+            }
+            this.dataToUnwrap.getResource().flip();
+            if (res == -1) {
+                this.dataToUnwrap.free();
+                this.dataToUnwrap = null;
+                notifyReadClosed();
+                return -1;
+            } else if (res == 0 && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
+                return 0;
+            }
+
             long original = 0;
             if(userBuffers != null) {
                 original = Buffers.remaining(userBuffers);
