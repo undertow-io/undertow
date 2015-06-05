@@ -585,7 +585,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public File getTempDir() {
-        return tempDir.toFile();
+        return tempDir != null ? tempDir.toFile() : null;
     }
 
     public Path getTempDirPath() {
