@@ -425,8 +425,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void initializeTempDir(final ServletContextImpl servletContext, final DeploymentInfo deploymentInfo) {
-        if (deploymentInfo.getTempDirPath() != null) {
-            servletContext.setAttribute(ServletContext.TEMPDIR, deploymentInfo.getTempDirPath());
+        if (deploymentInfo.getTempDir() != null) {
+            servletContext.setAttribute(ServletContext.TEMPDIR, deploymentInfo.getTempDir());
         } else {
             servletContext.setAttribute(ServletContext.TEMPDIR, new File(SecurityActions.getSystemProperty("java.io.tmpdir")));
         }
