@@ -29,12 +29,12 @@ import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -68,7 +68,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = INFO)
     @Message(id = 5002, value = "Exception reading file %s: %s")
-    void exceptionReadingFile(final File file, final IOException e);
+    void exceptionReadingFile(final Path file, final IOException e);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5003, value = "IOException reading from channel")
@@ -76,7 +76,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5005, value = "Cannot remove uploaded file %s")
-    void cannotRemoveUploadedFile(File file);
+    void cannotRemoveUploadedFile(Path file);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5006, value = "Connection from %s terminated as request header was larger than %s")

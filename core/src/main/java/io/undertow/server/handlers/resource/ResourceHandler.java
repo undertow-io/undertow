@@ -20,6 +20,7 @@ package io.undertow.server.handlers.resource;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -190,7 +191,7 @@ public class ResourceHandler implements HttpHandler {
                 }
 
                 if (resource.isDirectory()) {
-                    Resource indexResource = null;
+                    Resource indexResource;
                     try {
                         indexResource = getIndexFiles(resourceManager, resource.getPath(), welcomeFiles);
                     } catch (IOException e) {
@@ -492,7 +493,7 @@ public class ResourceHandler implements HttpHandler {
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-            ResourceManager rm = new FileResourceManager(new File(location), 1024);
+            ResourceManager rm = new PathResourceManager(Paths.get(location), 1024);
             ResourceHandler resourceHandler = new ResourceHandler(rm);
             resourceHandler.setDirectoryListingEnabled(allowDirectoryListing);
             return resourceHandler;

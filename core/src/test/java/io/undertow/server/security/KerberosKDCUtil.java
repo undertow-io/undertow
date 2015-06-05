@@ -23,11 +23,14 @@ import io.undertow.testutils.DefaultServer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,14 +80,12 @@ class KerberosKDCUtil {
 
     private static final boolean IS_IBM = System.getProperty("java.vendor").contains("IBM");
 
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
-
     static final int LDAP_PORT = 11389;
     static final int KDC_PORT = 6088;
 
     private static final String DIRECTORY_NAME = "Test Service";
     private static boolean initialised;
-    private static File workingDir;
+    private static Path workingDir;
 
     /*
      * LDAP Related
@@ -140,7 +141,7 @@ class KerberosKDCUtil {
     private static void createPartition(final DirectoryServiceFactory dsf, final SchemaManager schemaManager, final String id,
             final String suffix) throws Exception {
         PartitionFactory pf = dsf.getPartitionFactory();
-        Partition p = pf.createPartition(schemaManager, id, suffix, 1000, workingDir);
+        Partition p = pf.createPartition(schemaManager, id, suffix, 1000, workingDir.toFile());
         pf.addIndex(p, "krb5PrincipalName", 10);
         p.initialize();
         directoryService.addPartition(p);
@@ -165,7 +166,7 @@ class KerberosKDCUtil {
                         baos.write(second);
                         baos.write(substitute.toByteArray()); // Terminator never found.
                     }
-                    String toReplace = new String(substitute.toByteArray(), UTF_8);
+                    String toReplace = new String(substitute.toByteArray(), StandardCharsets.UTF_8);
                     if (mappings.containsKey(toReplace)) {
                         baos.write(mappings.get(toReplace).getBytes());
                     } else {
@@ -213,17 +214,15 @@ class KerberosKDCUtil {
 
     private static void createWorkingDir() throws IOException {
         if (workingDir == null) {
-            if (workingDir == null) {
-                workingDir = new File(".");
-                workingDir = new File(workingDir, "target");
-                workingDir = new File(workingDir, "apacheds_working").getCanonicalFile();
-                if (!workingDir.exists()) {
-                    workingDir.mkdirs();
-                }
+            workingDir = Paths.get(".", "target", "apacheds_working");
+            if (!Files.exists(workingDir)) {
+                Files.createDirectories(workingDir);
             }
         }
-        for (File current : workingDir.listFiles()) {
-          current.delete();
+        try(DirectoryStream<Path> stream = Files.newDirectoryStream(workingDir)) {
+            for(Path child : stream) {
+                Files.delete(child);
+            }
         }
     }
 

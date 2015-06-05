@@ -31,19 +31,21 @@ import io.undertow.util.MultipartParser;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
-import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -57,17 +59,17 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
     private Executor executor;
 
-    private File tempFileLocation;
+    private Path tempFileLocation;
 
     private String defaultEncoding = StandardCharsets.ISO_8859_1.displayName();
 
     private long maxIndividualFileSize = -1;
 
     public MultiPartParserDefinition() {
-        tempFileLocation = new File(System.getProperty("java.io.tmpdir"));
+        tempFileLocation = Paths.get(System.getProperty("java.io.tmpdir"));
     }
 
-    public MultiPartParserDefinition(final File tempDir) {
+    public MultiPartParserDefinition(final Path tempDir) {
         tempFileLocation = tempDir;
     }
 
@@ -103,11 +105,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         return this;
     }
 
-    public File getTempFileLocation() {
+    public Path getTempFileLocation() {
         return tempFileLocation;
     }
 
-    public MultiPartParserDefinition setTempFileLocation(File tempFileLocation) {
+    public MultiPartParserDefinition setTempFileLocation(Path tempFileLocation) {
         this.tempFileLocation = tempFileLocation;
         return this;
     }
@@ -134,14 +136,14 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         private final HttpServerExchange exchange;
         private final FormData data;
         private final String boundary;
-        private final List<File> createdFiles = new ArrayList<>();
+        private final List<Path> createdFiles = new ArrayList<>();
         private final long maxIndividualFileSize;
         private String defaultEncoding;
 
         private final ByteArrayOutputStream contentBytes = new ByteArrayOutputStream();
         private String currentName;
         private String fileName;
-        private File file;
+        private Path file;
         private FileChannel fileChannel;
         private HeaderMap headers;
         private HttpHandler handler;
@@ -224,9 +226,13 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     fileName = Headers.extractQuotedValueFromHeader(disposition, "filename");
                     if (fileName != null) {
                         try {
-                            file = File.createTempFile("undertow", "upload", tempFileLocation);
+                            if (tempFileLocation != null) {
+                                file = Files.createTempFile(tempFileLocation, "undertow", "upload");
+                            } else {
+                                file = Files.createTempFile("undertow", "upload");
+                            }
                             createdFiles.add(file);
-                            fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_WRITE);
+                            fileChannel = FileChannel.open(file, StandardOpenOption.READ, StandardOpenOption.WRITE);
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
@@ -283,20 +289,22 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         }
 
 
-        public List<File> getCreatedFiles() {
+        public List<Path> getCreatedFiles() {
             return createdFiles;
         }
 
         @Override
         public void close() throws IOException {
             //we have to dispatch this, as it may result in file IO
-            final List<File> files = new ArrayList<>(getCreatedFiles());
+            final List<Path> files = new ArrayList<>(getCreatedFiles());
             exchange.getConnection().getWorker().execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (final File file : files) {
-                        if (file.exists()) {
-                            if (!file.delete()) {
+                    for (final Path file : files) {
+                        if (Files.exists(file)) {
+                            try {
+                                Files.delete(file);
+                            } catch (IOException e) {
                                 UndertowLogger.REQUEST_LOGGER.cannotRemoveUploadedFile(file);
                             }
                         }

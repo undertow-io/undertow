@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
@@ -213,8 +214,18 @@ public class CachedResource implements Resource {
     }
 
     @Override
+    public Path getFilePath() {
+        return underlyingResource.getFilePath();
+    }
+
+    @Override
     public File getResourceManagerRoot() {
         return underlyingResource.getResourceManagerRoot();
+    }
+
+    @Override
+    public Path getResourceManagerRootPath() {
+        return underlyingResource.getResourceManagerRootPath();
     }
 
     @Override

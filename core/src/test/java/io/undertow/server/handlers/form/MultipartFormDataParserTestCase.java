@@ -20,12 +20,12 @@ package io.undertow.server.handlers.form;
 
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.util.FileUtils;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
@@ -61,7 +61,7 @@ public class MultipartFormDataParserTestCase {
                         FormData.FormValue file = data.getFirst("file");
                         if (file.isFile()) {
                             if (file.getFile() != null) {
-                                if (FileUtils.readFile(file.getFile()).startsWith("file contents")) {
+                                if (new String(Files.readAllBytes(file.getFile())).startsWith("file contents")) {
                                     exchange.setResponseCode(StatusCodes.OK);
                                 }
                             }

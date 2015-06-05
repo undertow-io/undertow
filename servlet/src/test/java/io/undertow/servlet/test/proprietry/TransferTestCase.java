@@ -19,8 +19,9 @@
 package io.undertow.servlet.test.proprietry;
 
 import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import javax.servlet.ServletException;
 
@@ -83,9 +84,9 @@ public class TransferTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final byte[] response = HttpClientUtils.readRawResponse(result);
-            File file = new File(TXServlet.class.getResource(TXServlet.class.getSimpleName() + ".class").toURI());
-            byte[] expected = new byte[(int) file.length()];
-            DataInputStream dataInputStream = new DataInputStream(new FileInputStream(file));
+            Path file = Paths.get(TXServlet.class.getResource(TXServlet.class.getSimpleName() + ".class").toURI());
+            byte[] expected = new byte[(int) Files.size(file)];
+            DataInputStream dataInputStream = new DataInputStream(Files.newInputStream(file));
             dataInputStream.readFully(expected);
             dataInputStream.close();
             Assert.assertArrayEquals(expected, response);

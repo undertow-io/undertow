@@ -18,9 +18,10 @@
 
 package io.undertow.server.handlers.file;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -32,8 +33,8 @@ import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.cache.CacheHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
-import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -60,9 +61,8 @@ public class FileHandlerStressTestCase {
     public void simpleFileStressTest() throws IOException, ExecutionException, InterruptedException, URISyntaxException {
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
-            File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-            final ResourceHandler handler = new ResourceHandler()
-                    .setResourceManager(new FileResourceManager(rootPath, 10485760));
+            Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+            final ResourceHandler handler = new ResourceHandler(new PathResourceManager(rootPath, 10485760));
 
             final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(1024, 10, 10480), handler);
             final PathHandler path = new PathHandler();

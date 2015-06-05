@@ -24,7 +24,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.util.ImmediateConduitFactory;
-import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -34,11 +33,13 @@ import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 public class ContentEncodedResourceManager {
 
 
-    private final File encodedResourcesRoot;
+    private final Path encodedResourcesRoot;
     private final CachingResourceManager encoded;
     private final ContentEncodingRepository contentEncodingRepository;
     private final int minResourceSize;
@@ -60,7 +61,7 @@ public class ContentEncodedResourceManager {
 
     private final ConcurrentMap<LockKey, Object> fileLocks = new ConcurrentHashMap<>();
 
-    public ContentEncodedResourceManager(File encodedResourcesRoot, CachingResourceManager encodedResourceManager, ContentEncodingRepository contentEncodingRepository, int minResourceSize, int maxResourceSize, Predicate encodingAllowed) {
+    public ContentEncodedResourceManager(Path encodedResourcesRoot, CachingResourceManager encodedResourceManager, ContentEncodingRepository contentEncodingRepository, int minResourceSize, int maxResourceSize, Predicate encodingAllowed) {
         this.encodedResourcesRoot = encodedResourcesRoot;
         this.encoded = encodedResourceManager;
         this.contentEncodingRepository = contentEncodingRepository;
@@ -81,7 +82,7 @@ public class ContentEncodedResourceManager {
      */
     public ContentEncodedResource getResource(final Resource resource, final HttpServerExchange exchange) throws IOException {
         final String path = resource.getPath();
-        File file = resource.getFile();
+        Path file = resource.getFilePath();
         if (file == null) {
             return null;
         }
@@ -118,19 +119,19 @@ public class ContentEncodedResourceManager {
                 return new ContentEncodedResource(preCompressed, encoding.getName());
             }
 
-            final File finalTarget = new File(encodedResourcesRoot, newPath);
-            final File tempTarget = new File(encodedResourcesRoot, newPath);
+            final Path finalTarget = encodedResourcesRoot.resolve(newPath);
+            final Path tempTarget = encodedResourcesRoot.resolve(newPath);
 
             //horrible hack to work around XNIO issue
-            FileOutputStream tmp = new FileOutputStream(tempTarget);
+            OutputStream tmp = Files.newOutputStream(tempTarget);
             try {
                 tmp.close();
             } finally {
                 IoUtils.safeClose(tmp);
             }
 
-            targetFileChannel = exchange.getConnection().getWorker().getXnio().openFile(tempTarget, FileAccess.READ_WRITE);
-            sourceFileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+            targetFileChannel = FileChannel.open(tempTarget, StandardOpenOption.READ, StandardOpenOption.WRITE);
+            sourceFileChannel = FileChannel.open(file, StandardOpenOption.READ);
 
             StreamSinkConduit conduit = encoding.getEncoding().getResponseWrapper().wrap(new ImmediateConduitFactory<StreamSinkConduit>(new FileConduitTarget(targetFileChannel, exchange)), exchange);
             final ConduitStreamSinkChannel targetChannel = new ConduitStreamSinkChannel(null, conduit);
@@ -140,7 +141,7 @@ public class ContentEncodedResourceManager {
             if (transferred != resource.getContentLength()) {
                 UndertowLogger.REQUEST_LOGGER.error("Failed to write pre-cached file");
             }
-            tempTarget.renameTo(finalTarget);
+            Files.move(tempTarget, finalTarget);
             encoded.invalidate(newPath);
             final Resource encodedResource = encoded.getResource(newPath);
             return new ContentEncodedResource(encodedResource, encoding.getName());

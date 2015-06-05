@@ -19,11 +19,13 @@
 package io.undertow.server.handlers;
 
 import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
@@ -107,8 +109,8 @@ public class SenderTestCase {
                     }
                 }
                 URI uri = SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI();
-                File file = new File(uri);
-                final FileChannel channel = new FileInputStream(file).getChannel();
+                Path file = Paths.get(uri);
+                final FileChannel channel = FileChannel.open(file, StandardOpenOption.READ);
 
                 exchange.setResponseContentLength(channel.size() * TXS);
 
@@ -194,13 +196,13 @@ public class SenderTestCase {
         try {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            File file = new File(SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI());
-            byte[] data = new byte[(int) file.length() * TXS];
-
+            Path file = Paths.get(SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI());
+            long length = Files.size(file);
+            byte[] data = new byte[(int) length * TXS];
             for (int i = 0; i < TXS; i++) {
-                DataInputStream is = new DataInputStream(new FileInputStream(file));
-                is.readFully(data, (int) (i * file.length()), (int) file.length());
-                is.close();
+                try(DataInputStream is = new DataInputStream(Files.newInputStream(file))) {
+                    is.readFully(data, (int) (i * length), (int) length);
+                }
             }
             Assert.assertArrayEquals(data, HttpClientUtils.readRawResponse(result));
         } finally {
@@ -219,13 +221,13 @@ public class SenderTestCase {
         try {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            File file = new File(SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI());
-            byte[] data = new byte[(int) file.length() * TXS];
-
+            Path file = Paths.get(SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI());
+            long length = Files.size(file);
+            byte[] data = new byte[(int) length * TXS];
             for (int i = 0; i < TXS; i++) {
-                DataInputStream is = new DataInputStream(new FileInputStream(file));
-                is.readFully(data, (int) (i * file.length()), (int) file.length());
-                is.close();
+                try(DataInputStream is = new DataInputStream(Files.newInputStream(file))) {
+                    is.readFully(data, (int) (i * length), (int) length);
+                }
             }
             Assert.assertArrayEquals(data, HttpClientUtils.readRawResponse(result));
         } finally {

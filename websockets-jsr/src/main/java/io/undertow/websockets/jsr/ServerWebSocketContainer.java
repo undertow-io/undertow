@@ -147,7 +147,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
         }
-        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<Object>(annotatedEndpointInstance));
+        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<>(annotatedEndpointInstance));
         return connectToServerInternal(instance, config, connectionBuilder);
     }
 
@@ -157,7 +157,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
         }
-        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<Object>(annotatedEndpointInstance));
+        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<>(annotatedEndpointInstance));
         XnioSsl ssl = null;
         for (WebsocketClientSslProvider provider : clientSslProviders) {
             ssl = provider.getSsl(xnioWorker, annotatedEndpointInstance, path);

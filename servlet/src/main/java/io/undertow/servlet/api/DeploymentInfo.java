@@ -19,6 +19,7 @@
 package io.undertow.servlet.api;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -69,7 +70,7 @@ public class DeploymentInfo implements Cloneable {
     private int minorVersion;
     private Executor executor;
     private Executor asyncExecutor;
-    private File tempDir;
+    private Path tempDir;
     private JspConfigDescriptor jspConfigDescriptor;
     private DefaultServletConfig defaultServletConfig;
     private SessionManagerFactory sessionManagerFactory = new InMemorySessionManagerFactory();
@@ -584,10 +585,19 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public File getTempDir() {
+        return tempDir.toFile();
+    }
+
+    public Path getTempDirPath() {
         return tempDir;
     }
 
     public DeploymentInfo setTempDir(final File tempDir) {
+        this.tempDir = tempDir != null ? tempDir.toPath() : null;
+        return this;
+    }
+
+    public DeploymentInfo setTempDir(final Path tempDir) {
         this.tempDir = tempDir;
         return this;
     }

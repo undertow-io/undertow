@@ -22,10 +22,10 @@ import static io.undertow.Handlers.predicate;
 import static io.undertow.Handlers.resource;
 import static io.undertow.predicate.Predicates.secure;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManager;
@@ -46,13 +46,12 @@ import io.undertow.server.handlers.LearningPushHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
-import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Xnio;
 
@@ -80,7 +79,7 @@ public class Http2Server {
                 .setServerOption(UndertowOptions.ENABLE_SPDY, true)
                 .addHttpListener(8080, bindAddress)
                 .addHttpsListener(8443, bindAddress, sslContext)
-                .setHandler(new SessionAttachmentHandler(new LearningPushHandler(100, -1, Handlers.header(predicate(secure(), resource(new FileResourceManager(new File(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
+                .setHandler(new SessionAttachmentHandler(new LearningPushHandler(100, -1, Handlers.header(predicate(secure(), resource(new PathResourceManager(Paths.get(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
                         .setDirectoryListingEnabled(true), new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -113,15 +112,13 @@ public class Http2Server {
         if(storeLoc == null) {
             stream = Http2Server.class.getResourceAsStream(name);
         } else {
-            stream = new FileInputStream(storeLoc);
+            stream = Files.newInputStream(Paths.get(storeLoc));
         }
 
-        try {
+        try(InputStream is = stream) {
             KeyStore loadedKeystore = KeyStore.getInstance("JKS");
-            loadedKeystore.load(stream, password(name));
+            loadedKeystore.load(is, password(name));
             return loadedKeystore;
-        } finally {
-            IoUtils.safeClose(stream);
         }
     }
 
@@ -137,7 +134,7 @@ public class Http2Server {
         keyManagerFactory.init(keyStore, password("key"));
         keyManagers = keyManagerFactory.getKeyManagers();
 
-        TrustManager[] trustManagers = null;
+        TrustManager[] trustManagers;
         TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         trustManagerFactory.init(trustStore);
         trustManagers = trustManagerFactory.getTrustManagers();

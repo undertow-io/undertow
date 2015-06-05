@@ -18,7 +18,7 @@
 
 package io.undertow.server.handlers.form;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
@@ -78,7 +78,7 @@ public final class FormData implements Iterable<String> {
         }
     }
 
-    public void add(String name, File value, String fileName, final HeaderMap headers) {
+    public void add(String name, Path value, String fileName, final HeaderMap headers) {
         Deque<FormValue> values = this.values.get(name);
         if (values == null) {
             this.values.put(name, values = new ArrayDeque<>(1));
@@ -162,7 +162,7 @@ public final class FormData implements Iterable<String> {
          * @return The temp file that the file data was saved to
          * @throws IllegalStateException if this is not a file
          */
-        File getFile();
+        Path getFile();
 
         /**
          * @return The filename specified in the disposition header.
@@ -182,7 +182,7 @@ public final class FormData implements Iterable<String> {
 
         private final String value;
         private final String fileName;
-        private final File file;
+        private final Path file;
         private final HeaderMap headers;
 
         FormValueImpl(String value, HeaderMap headers) {
@@ -192,7 +192,7 @@ public final class FormData implements Iterable<String> {
             this.fileName = null;
         }
 
-        FormValueImpl(File file, final String fileName, HeaderMap headers) {
+        FormValueImpl(Path file, final String fileName, HeaderMap headers) {
             this.file = file;
             this.headers = headers;
             this.fileName = fileName;
@@ -214,7 +214,7 @@ public final class FormData implements Iterable<String> {
         }
 
         @Override
-        public File getFile() {
+        public Path getFile() {
             if (file == null) {
                 throw UndertowMessages.MESSAGES.formValueIsAString();
             }

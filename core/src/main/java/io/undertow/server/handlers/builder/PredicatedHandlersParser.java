@@ -26,7 +26,10 @@ import io.undertow.util.ChainedHandlerWrapper;
 import io.undertow.util.FileUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -41,9 +44,16 @@ import java.util.List;
  */
 public class PredicatedHandlersParser {
 
-
     public static List<PredicatedHandler> parse(final File file, final ClassLoader classLoader) {
-        return parse(FileUtils.readFile(file), classLoader);
+        return parse(file.toPath(), classLoader);
+    }
+
+    public static List<PredicatedHandler> parse(final Path file, final ClassLoader classLoader) {
+        try {
+            return parse(new String(Files.readAllBytes(file)), classLoader);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static List<PredicatedHandler> parse(final InputStream inputStream, final ClassLoader classLoader) {

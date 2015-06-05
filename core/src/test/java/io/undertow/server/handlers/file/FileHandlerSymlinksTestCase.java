@@ -18,15 +18,15 @@
 
 package io.undertow.server.handlers.file;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -68,90 +68,81 @@ public class FileHandlerSymlinksTestCase {
          * $ROOT_PATH/newDir/innerSymlink -> $ROOT_PATH/newDir/innerDir/
          *
          */
-        File filePath = new File(getClass().getResource("page.html").toURI());
-        File rootPath = filePath.getParentFile();
+        Path filePath = Paths.get(getClass().getResource("page.html").toURI());
+        Path rootPath = filePath.getParent();
 
-        File newDir = new File(rootPath, "newDir");
-        newDir.mkdir();
-        Path newDirPath = newDir.toPath();
+        Path newDir = rootPath.resolve("newDir");
+        Files.createDirectories(newDir);
 
-        File innerDir = new File(newDir, "innerDir");
-        innerDir.mkdir();
-        Path innerDirPath = innerDir.toPath();
+        Path innerDir = newDir.resolve("innerDir");
+        Files.createDirectories(innerDir);
 
-        Files.copy(filePath.toPath(), newDirPath.resolve(filePath.toPath().getFileName()));
-        Files.copy(filePath.toPath(), innerDirPath.resolve(filePath.toPath().getFileName()));
+        Files.copy(filePath, newDir.resolve(filePath.getFileName()));
+        Files.copy(filePath, innerDir.resolve(filePath.getFileName()));
 
-        File newSymlink = new File(rootPath, "newSymlink");
-        Path newSymlinkPath = newSymlink.toPath();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
-        Files.createSymbolicLink(newSymlinkPath, newDirPath);
+        Files.createSymbolicLink(newSymlink, newDir);
 
-        File innerSymlink = new File(newDir, "innerSymlink");
-        Path innerSymlinkPath = innerSymlink.toPath();
+        Path innerSymlink = newDir.resolve("innerSymlink");
 
-        Files.createSymbolicLink(innerSymlinkPath, innerDirPath);
+        Files.createSymbolicLink(innerSymlink, innerDir);
     }
 
     @After
     public void deleteSymlinksScenario() throws IOException, URISyntaxException {
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
 
-        File newSymlink = new File(rootPath, "newSymlink");
-        File newDir = new File(rootPath, "newDir");
-        File page = new File(newDir, "page.html");
-        File innerDir = new File(newDir, "innerDir");
-        File innerSymlink = new File(newDir, "innerSymlink");
-        File innerPage = new File(innerDir, "page.html");
+        Path newSymlink = rootPath.resolve("newSymlink");
+        Path newDir = rootPath.resolve("newDir");
+        Path page = newDir.resolve("page.html");
+        Path innerDir = newDir.resolve("innerDir");
+        Path innerSymlink = newDir.resolve("innerSymlink");
+        Path innerPage = innerDir.resolve("page.html");
 
-        innerSymlink.delete();
-        newSymlink.delete();
-        innerPage.delete();
-        page.delete();
-        innerDir.delete();
-        newDir.delete();
+        Files.delete(innerSymlink);
+        Files.delete(newSymlink);
+        Files.delete(innerPage);
+        Files.delete(page);
+        Files.delete(innerDir);
+        Files.delete(newDir);
     }
 
     @Test
     public void testCreateSymlinks() throws IOException, URISyntaxException {
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
 
-        File newDir = new File(rootPath, "newDir");
-        Path newDirPath = newDir.toPath();
-        Assert.assertFalse(Files.isSymbolicLink(newDirPath));
+        Path newDir = rootPath.resolve("newDir");
+        Assert.assertFalse(Files.isSymbolicLink(newDir));
 
-        File innerDir = new File(newDir, "innerDir");
-        Path innerDirPath = innerDir.toPath();
-        Assert.assertFalse(Files.isSymbolicLink(innerDirPath));
+        Path innerDir = newDir.resolve("innerDir");
+        Assert.assertFalse(Files.isSymbolicLink(innerDir));
 
-        File newSymlink = new File(rootPath, "newSymlink");
-        Path newSymlinkPath = newSymlink.toPath();
-        Assert.assertTrue(Files.isSymbolicLink(newSymlinkPath));
+        Path newSymlink = rootPath.resolve("newSymlink");
+        Assert.assertTrue(Files.isSymbolicLink(newSymlink));
 
-        File innerSymlink = new File(newSymlink, "innerSymlink");
-        Path innerSymlinkPath = innerSymlink.toPath();
-        Assert.assertTrue(Files.isSymbolicLink(innerSymlinkPath));
+        Path innerSymlink = newSymlink.resolve("innerSymlink");
+        Assert.assertTrue(Files.isSymbolicLink(innerSymlink));
 
-        File f = innerSymlinkPath.getRoot().toFile();
-        for (int i=0; i<innerSymlinkPath.getNameCount(); i++) {
-            f = new File(f, innerSymlinkPath.getName(i).toString());
-            System.out.println(f + " " + Files.isSymbolicLink(f.toPath()));
+        Path f = innerSymlink.getRoot();
+        for (int i=0; i<innerSymlink.getNameCount(); i++) {
+            f = f.resolve(innerSymlink.getName(i).toString());
+            System.out.println(f + " " + Files.isSymbolicLink(f));
         }
-        f = new File(f, ".");
-        System.out.println(f + " " + Files.isSymbolicLink(f.toPath()));
+        f = f.resolve(".");
+        System.out.println(f + " " + Files.isSymbolicLink(f));
     }
 
     @Test
     public void testDefaultAccessSymlinkDenied() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**
@@ -168,14 +159,13 @@ public class FileHandlerSymlinksTestCase {
     @Test
     public void testExplicitAccessSymlinkDeniedForEmptySafePath() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, ""))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, ""))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**
@@ -192,14 +182,13 @@ public class FileHandlerSymlinksTestCase {
     @Test
     public void testExplicitAccessSymlinkDeniedForInsideSymlinks() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newDir");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newDir");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, ""))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, ""))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**
@@ -229,14 +218,13 @@ public class FileHandlerSymlinksTestCase {
     @Test
     public void testExplicitAccessSymlinkGranted() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, "/"))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, "/"))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**
@@ -257,14 +245,13 @@ public class FileHandlerSymlinksTestCase {
     @Test
     public void testExplicitAccessSymlinkGrantedUsingSpecificFilters() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, rootPath.getAbsolutePath().concat("/newDir")))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, rootPath.toAbsolutePath().toString().concat("/newDir")))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**
@@ -291,13 +278,12 @@ public class FileHandlerSymlinksTestCase {
 
         TestHttpClient client = new TestHttpClient(params);
 
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, rootPath.getAbsolutePath().concat("/newDir")))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, rootPath.toAbsolutePath().toString().concat("/newDir")))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html")));
             /**
@@ -318,14 +304,13 @@ public class FileHandlerSymlinksTestCase {
     @Test
     public void testExplicitAccessSymlinkDeniedUsingSpecificFilters() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, rootPath.getAbsolutePath().concat("/otherDir")))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, rootPath.toAbsolutePath().toString().concat("/otherDir")))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**
@@ -342,14 +327,13 @@ public class FileHandlerSymlinksTestCase {
     @Test
     public void testExplicitAccessSymlinkDeniedUsingSameSymlinkName() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, rootPath.getAbsolutePath().concat("/innerSymlink")))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, rootPath.toAbsolutePath().toString().concat("/innerSymlink")))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**
@@ -366,14 +350,13 @@ public class FileHandlerSymlinksTestCase {
     @Test
     public void testResourceManagerBaseSymlink() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, ""))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, ""))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**
@@ -402,14 +385,13 @@ public class FileHandlerSymlinksTestCase {
     @Test
     public void testRelativePathSymlinkFilter() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
-        File newSymlink = new File(rootPath, "newSymlink");
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path newSymlink = rootPath.resolve("newSymlink");
 
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(newSymlink, 10485760, true, "innerDir"))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(newSymlink, 10485760, true, "innerDir"))
                                     .setDirectoryListingEnabled(false)
                                     .addWelcomeFiles("page.html"))));
             /**

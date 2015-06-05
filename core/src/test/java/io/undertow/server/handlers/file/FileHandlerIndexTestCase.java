@@ -18,13 +18,14 @@
 
 package io.undertow.server.handlers.file;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -47,12 +48,11 @@ public class FileHandlerIndexTestCase {
     @Test
     public void testWelcomeFile() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(rootPath, 10485760))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true)
                                     .addWelcomeFiles("page.html"))));
 
@@ -72,11 +72,10 @@ public class FileHandlerIndexTestCase {
     @Test
     public void testDirectoryIndex() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
         try {
             DefaultServer.setRootHandler(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(rootPath, 10485760))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true)));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");

@@ -104,7 +104,7 @@ public class TestMessagesReceivedInOrder {
 
                                          try {
                                              RemoteEndpoint.Basic rem = session.getBasicRemote();
-                                             List<String> messages = new ArrayList<String>();
+                                             List<String> messages = new ArrayList<>();
                                              for (int i = 0; i < MESSAGES; i++) {
                                                  byte[] data = new byte[2048];
                                                  (new Random()).nextBytes(data);
