@@ -19,21 +19,23 @@
 package io.undertow.server.handlers.file;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.FileUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
@@ -54,12 +56,11 @@ public class FileHandlerTestCase {
     @Test
     public void testFileIsServed() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(rootPath, 10485760))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
@@ -78,19 +79,18 @@ public class FileHandlerTestCase {
     @Test
     public void testHeadRequest() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File file = new File(getClass().getResource("page.html").toURI());
-        File rootPath = file.getParentFile();
+        Path file = Paths.get(getClass().getResource("page.html").toURI());
+        Path rootPath = file.getParent();
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
-                                    .setResourceManager(new FileResourceManager(rootPath, 10485760))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true))));
 
             HttpHead get = new HttpHead(DefaultServer.getDefaultServerURL() + "/path/page.html");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(Long.toString(file.length()), result.getHeaders(Headers.CONTENT_LENGTH_STRING)[0].getValue());
+            Assert.assertEquals(Long.toString(Files.size(file)), result.getHeaders(Headers.CONTENT_LENGTH_STRING)[0].getValue());
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
 
@@ -102,13 +102,12 @@ public class FileHandlerTestCase {
     @Test
     public void testFileTransfer() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
                                     // 1 byte = force transfer
-                                    .setResourceManager(new FileResourceManager(rootPath, 1))
                                     .setDirectoryListingEnabled(true))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
@@ -127,21 +126,21 @@ public class FileHandlerTestCase {
     @Test
     public void testFileTransferLargeFile() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File tmp = new File(System.getProperty("java.io.tmpdir"));
+        Path tmp = Paths.get(System.getProperty("java.io.tmpdir"));
         StringBuilder message = new StringBuilder();
         for(int i = 0; i < 100000; ++i) {
             message.append("Hello World");
         }
-        File large = new File(tmp, "undertow.txt");
+        Path large = Files.createTempFile(null, ".txt");
         try {
-            FileUtils.copyFile(new ByteArrayInputStream(message.toString().getBytes(StandardCharsets.UTF_8)), large);
+            Files.copy(new ByteArrayInputStream(message.toString().getBytes(StandardCharsets.UTF_8)), large, StandardCopyOption.REPLACE_EXISTING);
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler(new FileResourceManager(tmp, 1))
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(tmp, 1))
                                     // 1 byte = force transfer
                                     .setDirectoryListingEnabled(true))));
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/undertow.txt");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/" + large.getFileName().toString());
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
@@ -157,13 +156,12 @@ public class FileHandlerTestCase {
     @Test
     public void testRangeRequests() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler()
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
                                     // 1 byte = force transfer
-                                    .setResourceManager(new FileResourceManager(rootPath, 1))
                                     .setDirectoryListingEnabled(true))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
@@ -193,12 +191,11 @@ public class FileHandlerTestCase {
     Starts simple file server, it is useful for testing directory browsing
      */
     public static void main(String[] args) throws URISyntaxException {
-        File rootPath = new File(FileHandlerTestCase.class.getResource("page.html").toURI()).getParentFile().getParentFile();
+        Path rootPath = Paths.get(FileHandlerTestCase.class.getResource("page.html").toURI()).getParent().getParent();
         HttpHandler root = new CanonicalPathHandler()
                 .setNext(new PathHandler()
-                        .addPrefixPath("/path", new ResourceHandler()
+                        .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
                                 // 1 byte = force transfer
-                                .setResourceManager(new FileResourceManager(rootPath, 1))
                                 .setDirectoryListingEnabled(true)));
         Undertow undertow = Undertow.builder()
                 .addHttpListener(8888, "localhost")

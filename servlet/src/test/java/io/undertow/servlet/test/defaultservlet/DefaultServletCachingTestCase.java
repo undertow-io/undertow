@@ -18,9 +18,9 @@
 
 package io.undertow.servlet.test.defaultservlet;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
@@ -28,7 +28,7 @@ import javax.servlet.ServletException;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
-import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -59,16 +59,14 @@ import org.xnio.BufferAllocator;
 public class DefaultServletCachingTestCase {
 
     private static final int METADATA_MAX_AGE = 2000;
-    public static final String DIR_NAME = "/cacheTest";
+    public static final String DIR_NAME = "cacheTest";
 
-    static File tmpDir;
+    static Path tmpDir;
 
     @BeforeClass
-    public static void setup() throws ServletException {
+    public static void setup() throws ServletException, IOException {
 
-        tmpDir = new File(System.getProperty("java.io.tmpdir") + DIR_NAME);
-        tmpDir.mkdirs();
-        tmpDir.deleteOnExit();
+        tmpDir = Files.createTempDirectory(DIR_NAME);
 
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
@@ -78,7 +76,7 @@ public class DefaultServletCachingTestCase {
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceManager(new CachingResourceManager(100, 10000, new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE), new FileResourceManager(tmpDir, 10485760), METADATA_MAX_AGE));
+                .setResourceManager(new CachingResourceManager(100, 10000, new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE), new PathResourceManager(tmpDir, 10485760), METADATA_MAX_AGE));
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("/path/default"))
@@ -93,7 +91,7 @@ public class DefaultServletCachingTestCase {
     }
 
     @AfterClass
-    public static void after() {
+    public static void after() throws IOException{
         FileUtils.deleteRecursive(tmpDir);
     }
 
@@ -107,8 +105,8 @@ public class DefaultServletCachingTestCase {
             Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            File f = new File(tmpDir, fileName);
-            writeFile(f, "hello");
+            Path f = tmpDir.resolve(fileName);
+            Files.write(f, "hello".getBytes());
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
@@ -129,8 +127,8 @@ public class DefaultServletCachingTestCase {
     public void testFileContentsCached() throws IOException, InterruptedException {
         TestHttpClient client = new TestHttpClient();
         String fileName = "hello.html";
-        File f = new File(tmpDir, fileName);
-        writeFile(f, "hello");
+        Path f = tmpDir.resolve(fileName);
+        Files.write(f, "hello".getBytes());
         try {
             for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
@@ -139,8 +137,7 @@ public class DefaultServletCachingTestCase {
                 String response = HttpClientUtils.readResponse(result);
                 Assert.assertEquals("hello", response);
             }
-            writeFile(f, "hello world");
-
+            Files.write(f, "hello world".getBytes());
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             HttpResponse result = client.execute(get);
@@ -165,8 +162,8 @@ public class DefaultServletCachingTestCase {
     public void testFileContentsCachedWithFilter() throws IOException, InterruptedException {
         TestHttpClient client = new TestHttpClient();
         String fileName = "hello.txt";
-        File f = new File(tmpDir, fileName);
-        writeFile(f, "hello");
+        Path f = tmpDir.resolve(fileName);
+        Files.write(f, "hello".getBytes());
         try {
             for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
@@ -175,8 +172,7 @@ public class DefaultServletCachingTestCase {
                 String response = HttpClientUtils.readResponse(result);
                 Assert.assertEquals("FILTER_TEXT hello", response);
             }
-            writeFile(f, "hello world");
-
+            Files.write(f, "hello world".getBytes());
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             HttpResponse result = client.execute(get);
@@ -196,14 +192,4 @@ public class DefaultServletCachingTestCase {
             client.getConnectionManager().shutdown();
         }
     }
-
-    private void writeFile(final File f, final String contents) throws IOException {
-        FileOutputStream out = new FileOutputStream(f);
-        try {
-            out.write(contents.getBytes());
-        } finally {
-            out.close();
-        }
-    }
-
 }

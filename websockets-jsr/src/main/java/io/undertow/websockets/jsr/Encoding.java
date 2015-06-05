@@ -132,7 +132,7 @@ public class Encoding implements Closeable {
         if (targetType == Boolean.class || targetType == boolean.class) {
             return Boolean.valueOf(message);
         } else if (targetType == Character.class || targetType == char.class) {
-            return Character.valueOf(message.charAt(0));
+            return message.charAt(0);
         } else if (targetType == Byte.class || targetType == byte.class) {
             return Byte.valueOf(message);
         } else if (targetType == Short.class || targetType == short.class) {

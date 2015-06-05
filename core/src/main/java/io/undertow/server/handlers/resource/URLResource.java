@@ -31,11 +31,14 @@ import org.xnio.IoUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -90,9 +93,9 @@ public class URLResource implements Resource, RangeAwareResource {
 
     @Override
     public boolean isDirectory() {
-        File file = getFile();
+        Path file = getFilePath();
         if (file != null) {
-            return file.isDirectory();
+            return Files.isDirectory(file);
         } else if (url.getPath().endsWith("/")) {
             return true;
         }
@@ -102,14 +105,16 @@ public class URLResource implements Resource, RangeAwareResource {
     @Override
     public List<Resource> list() {
         List<Resource> result = new LinkedList<>();
-        File file = getFile();
+        Path file = getFilePath();
         try {
             if (file != null) {
-                for (File f : file.listFiles()) {
-                    result.add(new URLResource(f.toURI().toURL(), connection, f.getPath()));
+                try(DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
+                    for (Path child : stream) {
+                        result.add(new URLResource(child.toUri().toURL(), connection, child.toString()));
+                    }
                 }
             }
-        } catch (MalformedURLException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
         return result;
@@ -234,9 +239,15 @@ public class URLResource implements Resource, RangeAwareResource {
 
     @Override
     public File getFile() {
+        Path path = getFilePath();
+        return path != null ? path.toFile() : null;
+    }
+
+    @Override
+    public Path getFilePath() {
         if (url.getProtocol().equals("file")) {
             try {
-                return new File(url.toURI());
+                return Paths.get(url.toURI());
             } catch (URISyntaxException e) {
                 return null;
             }
@@ -246,6 +257,11 @@ public class URLResource implements Resource, RangeAwareResource {
 
     @Override
     public File getResourceManagerRoot() {
+        return null;
+    }
+
+    @Override
+    public Path getResourceManagerRootPath() {
         return null;
     }
 

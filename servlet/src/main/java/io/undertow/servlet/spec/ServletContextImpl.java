@@ -77,6 +77,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
@@ -211,15 +213,15 @@ public class ServletContextImpl implements ServletContext {
         }
         final Set<String> resources = new HashSet<>();
         for (Resource res : resource.list()) {
-            File file = res.getFile();
+            Path file = res.getFilePath();
             if (file != null) {
-                File base = res.getResourceManagerRoot();
+                Path base = res.getResourceManagerRootPath();
                 if (base == null) {
-                    resources.add(file.getPath()); //not much else we can do here
+                    resources.add(file.toString()); //not much else we can do here
                 } else {
-                    String filePath = file.getAbsolutePath().substring(base.getAbsolutePath().length());
+                    String filePath = file.toAbsolutePath().toString().substring(base.toAbsolutePath().toString().length());
                     filePath = filePath.replace('\\', '/'); //for windows systems
-                    if (file.isDirectory()) {
+                    if (Files.isDirectory(file)) {
                         filePath = filePath + "/";
                     }
                     resources.add(filePath);
@@ -322,7 +324,7 @@ public class ServletContextImpl implements ServletContext {
             return null;
         }
         String canonicalPath = CanonicalPathUtils.canonicalize(path);
-        Resource resource = null;
+        Resource resource;
         try {
             resource = deploymentInfo.getResourceManager().getResource(canonicalPath);
 
@@ -332,7 +334,7 @@ public class ServletContextImpl implements ServletContext {
                 if(deploymentRoot == null) {
                     return null;
                 }
-                File root = deploymentRoot.getFile();
+                Path root = deploymentRoot.getFilePath();
                 if(root == null) {
                     return null;
                 }
@@ -342,16 +344,16 @@ public class ServletContextImpl implements ServletContext {
                 if(File.separatorChar != '/') {
                     canonicalPath = canonicalPath.replace('/', File.separatorChar);
                 }
-                return root.getAbsolutePath() + canonicalPath;
+                return root.toAbsolutePath().toString() + canonicalPath;
             }
         } catch (IOException e) {
             return null;
         }
-        File file = resource.getFile();
+        Path file = resource.getFilePath();
         if (file == null) {
             return null;
         }
-        return file.getAbsolutePath();
+        return file.toAbsolutePath().toString();
     }
 
     @Override

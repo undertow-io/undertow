@@ -19,7 +19,7 @@
 package io.undertow.servlet.test.servletcontext;
 
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -38,14 +38,14 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.IoUtils;
 
 import javax.servlet.ServletException;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * @author Stuart Douglas
@@ -110,22 +110,12 @@ public class GetResourceTestCase {
     @Test
     public void testSpecialCharacterInFileURL() throws IOException {
         String tmp = System.getProperty("java.io.tmpdir");
-        FileResourceManager fileResourceManager = new FileResourceManager(new File(tmp), 1);
-        File file = new File(tmp, "1#2.txt");
-        FileOutputStream f = null;
-        try {
-            f = new FileOutputStream(file);
-            f.write("Hi".getBytes());
-        } finally {
-            IoUtils.safeClose(f);
-        }
-        Resource res = fileResourceManager.getResource("1#2.txt");
-        InputStream in = null;
-        try {
-            in = res.getUrl().openStream();
+        PathResourceManager pathResourceManager = new PathResourceManager(Paths.get(tmp), 1);
+        Path file = Paths.get(tmp, "1#2.txt");
+        Files.write(file, "Hi".getBytes());
+        Resource res = pathResourceManager.getResource("1#2.txt");
+        try(InputStream in = res.getUrl().openStream()) {
             Assert.assertEquals("Hi", FileUtils.readFile(in));
-        } finally {
-            IoUtils.safeClose(in);
         }
     }
 

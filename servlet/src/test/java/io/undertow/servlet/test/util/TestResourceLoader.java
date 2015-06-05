@@ -30,6 +30,7 @@ import io.undertow.util.MimeMappings;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
@@ -119,8 +120,18 @@ public class TestResourceLoader extends ClassPathResourceManager {
         }
 
         @Override
+        public Path getFilePath() {
+            return delegate.getFilePath();
+        }
+
+        @Override
         public File getResourceManagerRoot() {
             return delegate.getResourceManagerRoot();
+        }
+
+        @Override
+        public Path getResourceManagerRootPath() {
+            return delegate.getResourceManagerRootPath();
         }
 
         @Override

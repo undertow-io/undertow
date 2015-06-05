@@ -20,6 +20,7 @@ package io.undertow.server.handlers.resource;
 
 import java.io.File;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
@@ -103,12 +104,25 @@ public interface Resource {
     File getFile();
 
     /**
+     * @return The underlying file that matches the resource. This may return null if the resource does not map to a file
+     */
+    Path getFilePath();
+
+    /**
      * Returns the resource manager root. If the resource manager has multiple roots then this returns the one that
      * is the parent of this resource.
      *
      * @return a file representing the resource manager root. This may return null if the resource does not map to a file
      */
     File getResourceManagerRoot();
+
+    /**
+     * Returns the resource manager root. If the resource manager has multiple roots then this returns the one that
+     * is the parent of this resource.
+     *
+     * @return a path representing the resource manager root. This may return null if the resource does not map to a file
+     */
+    Path getResourceManagerRootPath();
 
     /**
      * @return The URL of the resource

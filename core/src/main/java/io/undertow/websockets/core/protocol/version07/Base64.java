@@ -20,6 +20,9 @@ package io.undertow.websockets.core.protocol.version07;
 import io.undertow.UndertowLogger;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * <p>
@@ -1355,19 +1358,19 @@ class Base64 {
         Base64.InputStream bis = null;
         try {
             // Set up some useful variables
-            java.io.File file = new java.io.File(filename);
-            byte[] buffer = null;
+            Path file = Paths.get(filename);
+            byte[] buffer;
             int length = 0;
-            int numBytes = 0;
+            int numBytes;
 
             // Check for size of file
-            if (file.length() > Integer.MAX_VALUE) {
-                throw new java.io.IOException("File is too big for this convenience method (" + file.length() + " bytes).");
+            if (Files.size(file) > Integer.MAX_VALUE) {
+                throw new java.io.IOException("File is too big for this convenience method (" + Files.size(file) + " bytes).");
             } // end if: file too big for int index
-            buffer = new byte[(int) file.length()];
+            buffer = new byte[(int) Files.size(file)];
 
             // Open a stream
-            bis = new Base64.InputStream(new java.io.BufferedInputStream(new java.io.FileInputStream(file)), Base64.DECODE);
+            bis = new Base64.InputStream(new java.io.BufferedInputStream(Files.newInputStream(file)), Base64.DECODE);
 
             // Read until done
             while ((numBytes = bis.read(buffer, length, 4096)) >= 0) {
@@ -1411,15 +1414,15 @@ class Base64 {
         Base64.InputStream bis = null;
         try {
             // Set up some useful variables
-            java.io.File file = new java.io.File(filename);
-            byte[] buffer = new byte[Math.max((int) (file.length() * 1.4 + 1), 40)]; // Need max() for math on small files
+            Path file = Paths.get(filename);
+            byte[] buffer = new byte[Math.max((int) (Files.size(file) * 1.4 + 1), 40)]; // Need max() for math on small files
                                                                                      // (v2.2.1); Need +1 for a few corner cases
                                                                                      // (v2.3.5)
             int length = 0;
-            int numBytes = 0;
+            int numBytes;
 
             // Open a stream
-            bis = new Base64.InputStream(new java.io.BufferedInputStream(new java.io.FileInputStream(file)), Base64.ENCODE);
+            bis = new Base64.InputStream(new java.io.BufferedInputStream(Files.newInputStream(file)), Base64.ENCODE);
 
             // Read until done
             while ((numBytes = bis.read(buffer, length, 4096)) >= 0) {
