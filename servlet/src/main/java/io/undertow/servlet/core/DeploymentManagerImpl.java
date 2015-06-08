@@ -435,7 +435,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private void initializeMimeMappings(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
         final Map<String, String> mappings = new HashMap<>(MimeMappings.DEFAULT_MIME_MAPPINGS);
         for (MimeMapping mapping : deploymentInfo.getMimeMappings()) {
-            mappings.put(mapping.getExtension(), mapping.getMimeType());
+            mappings.put(mapping.getExtension().toLowerCase(Locale.ENGLISH), mapping.getMimeType());
         }
         deployment.setMimeExtensionMappings(mappings);
     }

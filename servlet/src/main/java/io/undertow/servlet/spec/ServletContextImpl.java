@@ -196,7 +196,7 @@ public class ServletContextImpl implements ServletContext {
         if(file == null) {
             return null;
         }
-        String lower = file.toLowerCase();
+        String lower = file.toLowerCase(Locale.ENGLISH);
         int pos = lower.lastIndexOf('.');
         if (pos == -1) {
             return deployment.getMimeExtensionMappings().get(lower);
