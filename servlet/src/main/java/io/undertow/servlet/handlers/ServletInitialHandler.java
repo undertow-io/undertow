@@ -201,7 +201,15 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void dispatchToServlet(final HttpServerExchange exchange, final ServletChain servletchain, final DispatcherType dispatcherType) throws Exception {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        dispatchRequest(exchange, servletRequestContext, servletchain, dispatcherType);
+
+        DispatcherType oldDispatch = servletRequestContext.getDispatcherType();
+        ServletChain oldChain = servletRequestContext.getCurrentServlet();
+        try {
+            dispatchRequest(exchange, servletRequestContext, servletchain, dispatcherType);
+        } finally {
+            servletRequestContext.setDispatcherType(oldDispatch);
+            servletRequestContext.setCurrentServlet(oldChain);
+        }
     }
 
     @Override
