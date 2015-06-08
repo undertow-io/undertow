@@ -89,14 +89,14 @@ public class ManagedServlet implements Lifecycle {
             }
             final Path tempDir;
             if(config.getLocation() == null || config.getLocation().isEmpty()) {
-                tempDir = servletContext.getDeployment().getDeploymentInfo().getTempDirPath();
+                tempDir = servletContext.getDeployment().getDeploymentInfo().getTempPath();
             } else {
                 String location = config.getLocation();
                 Path locFile = Paths.get(location);
                 if(locFile.isAbsolute()) {
                     tempDir = locFile;
                 } else {
-                    tempDir = servletContext.getDeployment().getDeploymentInfo().getTempDirPath().resolve(location);
+                    tempDir = servletContext.getDeployment().getDeploymentInfo().getTempPath().resolve(location);
                 }
             }
 

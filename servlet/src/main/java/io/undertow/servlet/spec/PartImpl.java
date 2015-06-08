@@ -98,7 +98,7 @@ public class PartImpl implements Part {
         Path target = Paths.get(fileName);
         if(!target.isAbsolute()) {
             if(config.getLocation().isEmpty()) {
-                target = servletContext.getDeployment().getDeploymentInfo().getTempDirPath().resolve(fileName);
+                target = servletContext.getDeployment().getDeploymentInfo().getTempPath().resolve(fileName);
             } else {
                 target = Paths.get(config.getLocation(), fileName);
             }
