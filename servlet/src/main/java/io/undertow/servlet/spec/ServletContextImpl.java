@@ -193,11 +193,15 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getMimeType(final String file) {
-        int pos = file.lastIndexOf('.');
-        if (pos == -1) {
-            return deployment.getMimeExtensionMappings().get(file);
+        if(file == null) {
+            return null;
         }
-        return deployment.getMimeExtensionMappings().get(file.substring(pos + 1));
+        String lower = file.toLowerCase();
+        int pos = lower.lastIndexOf('.');
+        if (pos == -1) {
+            return deployment.getMimeExtensionMappings().get(lower);
+        }
+        return deployment.getMimeExtensionMappings().get(lower.substring(pos + 1));
     }
 
     @Override
