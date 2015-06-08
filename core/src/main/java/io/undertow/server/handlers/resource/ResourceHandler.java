@@ -87,14 +87,6 @@ public class ResourceHandler implements HttpHandler {
      * This will only be used if the {@link #cachable} predicate returns true
      */
     private volatile Integer cacheTime;
-    /**
-     * we do not calculate a new expiry date every request. Instead calculate it once
-     * and cache it until it is in the past.
-     * <p/>
-     * TODO: do we need this policy to be pluggable
-     */
-    private volatile long lastExpiryDate;
-    private volatile String lastExpiryHeader;
 
     private volatile ContentEncodedResourceManager contentEncodedResourceManager;
 
@@ -152,12 +144,9 @@ public class ResourceHandler implements HttpHandler {
         //we set caching headers before we try and serve from the cache
         if (cachable && cacheTime != null) {
             exchange.getResponseHeaders().put(Headers.CACHE_CONTROL, "public, max-age=" + cacheTime);
-            if (System.currentTimeMillis() > lastExpiryDate) {
-                long date = System.currentTimeMillis();
-                lastExpiryHeader = DateUtils.toDateString(new Date(date));
-                lastExpiryDate = date;
-            }
-            exchange.getResponseHeaders().put(Headers.EXPIRES, lastExpiryHeader);
+            long date = System.currentTimeMillis() + cacheTime;
+            String dateHeader = DateUtils.toDateString(new Date(date));
+            exchange.getResponseHeaders().put(Headers.EXPIRES, dateHeader);
         }
 
         if (cache != null && cachable) {
