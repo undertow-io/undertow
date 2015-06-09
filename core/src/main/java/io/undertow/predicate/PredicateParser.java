@@ -215,6 +215,9 @@ public class PredicateParser {
                 }
                 while (!next.token.equals(endChar)) {
                     Token equals = tokens.poll();
+                    if(equals == null) {
+                        throw error(string, string.length(), "Unexpected end of input");
+                    }
                     if (!equals.token.equals("=")) {
                         if (equals.token.equals(endChar) && values.isEmpty()) {
                             //single value case
