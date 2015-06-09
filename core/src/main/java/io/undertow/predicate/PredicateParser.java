@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeParser;
@@ -63,7 +64,6 @@ import io.undertow.attribute.ExchangeAttributes;
  * @author Stuart Douglas
  */
 public class PredicateParser {
-
 
     public static final Predicate parse(String string, final ClassLoader classLoader) {
         final Map<String, PredicateBuilder> builders = loadBuilders(classLoader);
@@ -197,7 +197,12 @@ public class PredicateParser {
                 throw error(string, token.position, "no predicate named " + token.token + " known predicates: " + builders.keySet());
             }
             Token next = tokens.peek();
-            if (next.token.equals("[")) {
+            String endChar = ")";
+            if (next.token.equals("[") || next.token.equals("(")) {
+                if(next.token.equals("[")) {
+                    endChar = "]";
+                    UndertowLogger.ROOT_LOGGER.oldStylePredicateSyntax(string);
+                }
                 final Map<String, Object> values = new HashMap<>();
 
                 tokens.poll();
@@ -208,10 +213,10 @@ public class PredicateParser {
                 if (next.token.equals("{")) {
                     return handleSingleArrayValue(string, builder, tokens, next, attributeParser);
                 }
-                while (!next.token.equals("]")) {
+                while (!next.token.equals(endChar)) {
                     Token equals = tokens.poll();
                     if (!equals.token.equals("=")) {
-                        if (equals.token.equals("]") && values.isEmpty()) {
+                        if (equals.token.equals(endChar) && values.isEmpty()) {
                             //single value case
                             return handleSingleValue(string, builder, next, attributeParser);
                         } else if (equals.token.equals(",")) {
@@ -243,9 +248,9 @@ public class PredicateParser {
                     if (next == null) {
                         throw error(string, string.length(), "Unexpected end of input");
                     }
-                    if (!next.token.equals("]")) {
+                    if (!next.token.equals(endChar)) {
                         if (!next.token.equals(",")) {
-                            throw error(string, string.length(), "Expecting , or ]");
+                            throw error(string, string.length(), "Expecting , or " + endChar);
                         }
                         next = tokens.poll();
                         if (next == null) {

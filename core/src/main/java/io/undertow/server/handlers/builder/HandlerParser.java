@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.builder;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeParser;
@@ -49,7 +50,6 @@ import java.util.Set;
  * <p>
  * Array types are represented via a comma separated list of values enclosed in curly braces.
  * <p>
- * TODO: some way of
  *
  * @author Stuart Douglas
  */
@@ -103,7 +103,12 @@ public class HandlerParser {
             throw error(string, token.position, "no predicate named " + token.token);
         }
         Token next = tokens.peek();
-        if (next.token.equals("[")) {
+        String endChar = ")";
+        if (next.token.equals("(") || next.token.equals("[")) {
+            if(next.token.equals("[")) {
+                UndertowLogger.ROOT_LOGGER.oldStylePredicateSyntax(string);
+                endChar = "]";
+            }
             final Map<String, Object> values = new HashMap<>();
 
             tokens.poll();
@@ -114,7 +119,7 @@ public class HandlerParser {
             if (next.token.equals("{")) {
                 return handleSingleArrayValue(string, builder, tokens, next, attributeParser);
             }
-            while (!next.token.equals("]")) {
+            while (!next.token.equals(endChar)) {
                 Token equals = tokens.poll();
                 if (!equals.token.equals("=")) {
                     if (equals.token.equals("]") && values.isEmpty()) {
@@ -149,9 +154,9 @@ public class HandlerParser {
                 if (next == null) {
                     throw error(string, string.length(), "Unexpected end of input");
                 }
-                if (!next.token.equals("]")) {
+                if (!next.token.equals(endChar)) {
                     if (!next.token.equals(",")) {
-                        throw error(string, string.length(), "Expecting , or ]");
+                        throw error(string, string.length(), "Expecting , or " + endChar);
                     }
                     next = tokens.poll();
                     if (next == null) {

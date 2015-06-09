@@ -293,4 +293,9 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5059, value = "Request dumping handler is in use. This handler is intended for debugging use only, and may dump sensitive data to the logs")
     void warnRequestDumpingHandler();
+
+    @LogMessage(level = org.jboss.logging.Logger.Level.WARN)
+    @Message(id = 5060, value = "Predicate %s uses old style square braces to define predicates, which will be removed in a future release. predicate[value] should be changed to predicate(value)")
+    void oldStylePredicateSyntax(String string);
+
 }
