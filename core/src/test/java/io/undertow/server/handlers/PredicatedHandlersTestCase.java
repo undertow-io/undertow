@@ -50,7 +50,8 @@ public class PredicatedHandlersTestCase {
                                         "regex('(.*).css') -> rewrite['${1}.xcss'] -> set[attribute='%{o,chained}', value=true]\n" +
                                         "regex('(.*).redirect$') -> redirect['${1}.redirected']\n" +
                                         "set[attribute='%{o,someHeader}', value=always]\n" +
-                                        "path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']", getClass().getClassLoader()), new HttpHandler() {
+                                        "path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']\n" +
+                                        "path-template('/bar->foo') -> redirect(/)", getClass().getClassLoader()), new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send(exchange.getRelativePath());

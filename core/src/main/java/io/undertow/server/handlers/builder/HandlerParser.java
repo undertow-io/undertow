@@ -24,6 +24,7 @@ import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeParser;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.HandlerWrapper;
+import io.undertow.util.PredicateTokeniser.Token;
 
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
@@ -59,7 +60,15 @@ public class HandlerParser {
     public static final HandlerWrapper parse(String string, final ClassLoader classLoader) {
         final Map<String, HandlerBuilder> builders = loadBuilders(classLoader);
         final ExchangeAttributeParser attributeParser = ExchangeAttributes.parser(classLoader);
-        return parse(string, builders, attributeParser);
+        Deque<Token> tokens = tokenize(string);
+        return parse(string, tokens, builders, attributeParser);
+    }
+
+
+    public static final HandlerWrapper parse(String string, Deque<Token> tokens, final ClassLoader classLoader) {
+        final Map<String, HandlerBuilder> builders = loadBuilders(classLoader);
+        final ExchangeAttributeParser attributeParser = ExchangeAttributes.parser(classLoader);
+        return parse(string, new ArrayDeque<Token>(tokens), builders, attributeParser);
     }
 
     private static Map<String, HandlerBuilder> loadBuilders(final ClassLoader classLoader) {
@@ -97,15 +106,19 @@ public class HandlerParser {
 
     }
 
+    static HandlerWrapper parse(final String string, Deque<Token> tokens, final Map<String, HandlerBuilder> builders, final ExchangeAttributeParser attributeParser) {
+        return parseBuilder(string, tokens.pop(), tokens, builders, attributeParser);
+    }
+
     private static HandlerWrapper parseBuilder(final String string, final Token token, final Deque<Token> tokens, final Map<String, HandlerBuilder> builders, final ExchangeAttributeParser attributeParser) {
-        HandlerBuilder builder = builders.get(token.token);
+        HandlerBuilder builder = builders.get(token.getToken());
         if (builder == null) {
-            throw error(string, token.position, "no predicate named " + token.token);
+            throw error(string, token.getPosition(), "no handler named " + token.getToken());
         }
         Token next = tokens.peek();
         String endChar = ")";
-        if (next.token.equals("(") || next.token.equals("[")) {
-            if(next.token.equals("[")) {
+        if (next.getToken().equals("(") || next.getToken().equals("[")) {
+            if(next.getToken().equals("[")) {
                 UndertowLogger.ROOT_LOGGER.oldStylePredicateSyntax(string);
                 endChar = "]";
             }
@@ -116,46 +129,46 @@ public class HandlerParser {
             if (next == null) {
                 throw error(string, string.length(), "Unexpected end of input");
             }
-            if (next.token.equals("{")) {
-                return handleSingleArrayValue(string, builder, tokens, next, attributeParser);
+            if (next.getToken().equals("{")) {
+                return handleSingleArrayValue(string, builder, tokens, next, attributeParser, endChar);
             }
-            while (!next.token.equals(endChar)) {
+            while (!next.getToken().equals(endChar)) {
                 Token equals = tokens.poll();
-                if (!equals.token.equals("=")) {
-                    if (equals.token.equals("]") && values.isEmpty()) {
+                if (!equals.getToken().equals("=")) {
+                    if (equals.getToken().equals(endChar) && values.isEmpty()) {
                         //single value case
                         return handleSingleValue(string, builder, next, attributeParser);
-                    } else if (equals.token.equals(",")) {
+                    } else if (equals.getToken().equals(",")) {
                         tokens.push(equals);
                         tokens.push(next);
-                        return handleSingleVarArgsValue(string, builder, tokens, next, attributeParser);
+                        return handleSingleVarArgsValue(string, builder, tokens, next, attributeParser, endChar);
                     }
-                    throw error(string, equals.position, "Unexpected token");
+                    throw error(string, equals.getPosition(), "Unexpected token");
                 }
                 Token value = tokens.poll();
                 if (value == null) {
                     throw error(string, string.length(), "Unexpected end of input");
                 }
-                if (value.token.equals("{")) {
-                    values.put(next.token, readArrayType(string, tokens, next, builder, attributeParser, "}"));
+                if (value.getToken().equals("{")) {
+                    values.put(next.getToken(), readArrayType(string, tokens, next, builder, attributeParser, "}"));
                 } else {
-                    if (isOperator(value.token) || isSpecialChar(value.token)) {
-                        throw error(string, value.position, "Unexpected token");
+                    if (isOperator(value.getToken()) || isSpecialChar(value.getToken())) {
+                        throw error(string, value.getPosition(), "Unexpected token");
                     }
 
-                    Class<?> type = builder.parameters().get(next.token);
+                    Class<?> type = builder.parameters().get(next.getToken());
                     if (type == null) {
-                        throw error(string, next.position, "Unexpected parameter " + next.token);
+                        throw error(string, next.getPosition(), "Unexpected parameter " + next.getToken());
                     }
-                    values.put(next.token, coerceToType(string, value, type, attributeParser));
+                    values.put(next.getToken(), coerceToType(string, value, type, attributeParser));
                 }
 
                 next = tokens.poll();
                 if (next == null) {
                     throw error(string, string.length(), "Unexpected end of input");
                 }
-                if (!next.token.equals(endChar)) {
-                    if (!next.token.equals(",")) {
+                if (!next.getToken().equals(endChar)) {
+                    if (!next.getToken().equals(",")) {
                         throw error(string, string.length(), "Expecting , or " + endChar);
                     }
                     next = tokens.poll();
@@ -164,42 +177,42 @@ public class HandlerParser {
                     }
                 }
             }
-            checkParameters(string, next.position, values, builder);
+            checkParameters(string, next.getPosition(), values, builder);
             return builder.build(values);
 
         } else {
-            throw error(string, next.position, "Unexpected character");
+            throw error(string, next.getPosition(), "Unexpected character");
         }
     }
 
-    private static HandlerWrapper handleSingleArrayValue(final String string, final HandlerBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser) {
+    private static HandlerWrapper handleSingleArrayValue(final String string, final HandlerBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser, String endChar) {
         String sv = builder.defaultParameter();
         if (sv == null) {
-            throw error(string, token.position, "default parameter not supported");
+            throw error(string, token.getPosition(), "default parameter not supported");
         }
-        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder, attributeParser, "}");
+        Object array = readArrayType(string, tokens, new Token(sv, token.getPosition()), builder, attributeParser, "}");
         Token close = tokens.poll();
-        if (!close.token.equals("]")) {
-            throw error(string, close.position, "expected ]");
+        if (!close.getToken().equals(endChar)) {
+            throw error(string, close.getPosition(), "expected " + endChar);
         }
         return builder.build(Collections.singletonMap(sv, array));
     }
 
-    private static HandlerWrapper handleSingleVarArgsValue(final String string, final HandlerBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser) {
+    private static HandlerWrapper handleSingleVarArgsValue(final String string, final HandlerBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser, String endChar) {
         String sv = builder.defaultParameter();
         if (sv == null) {
-            throw error(string, token.position, "default parameter not supported");
+            throw error(string, token.getPosition(), "default parameter not supported");
         }
-        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder, attributeParser, "]");
+        Object array = readArrayType(string, tokens, new Token(sv, token.getPosition()), builder, attributeParser, endChar);
         return builder.build(Collections.singletonMap(sv, array));
     }
 
     private static Object readArrayType(final String string, final Deque<Token> tokens, Token paramName, HandlerBuilder builder, final ExchangeAttributeParser attributeParser, String expectedEndToken) {
-        Class<?> type = builder.parameters().get(paramName.token);
+        Class<?> type = builder.parameters().get(paramName.getToken());
         if (type == null) {
-            throw error(string, paramName.position, "no parameter called " + paramName.token);
+            throw error(string, paramName.getPosition(), "no parameter called " + paramName.getToken());
         } else if (!type.isArray()) {
-            throw error(string, paramName.position, "parameter is not an array type " + paramName.token);
+            throw error(string, paramName.getPosition(), "parameter is not an array type " + paramName.getToken());
         }
 
         Class<?> componentType = type.getComponentType();
@@ -208,14 +221,14 @@ public class HandlerParser {
         while (token != null) {
             Token commaOrEnd = tokens.poll();
             values.add(coerceToType(string, token, componentType, attributeParser));
-            if (commaOrEnd.token.equals(expectedEndToken)) {
+            if (commaOrEnd.getToken().equals(expectedEndToken)) {
                 Object array = Array.newInstance(componentType, values.size());
                 for (int i = 0; i < values.size(); ++i) {
                     Array.set(array, i, values.get(i));
                 }
                 return array;
-            } else if (!commaOrEnd.token.equals(",")) {
-                throw error(string, commaOrEnd.position, "expected either , or }");
+            } else if (!commaOrEnd.getToken().equals(",")) {
+                throw error(string, commaOrEnd.getPosition(), "expected either , or }");
             }
             token = tokens.poll();
         }
@@ -226,10 +239,10 @@ public class HandlerParser {
     private static HandlerWrapper handleSingleValue(final String string, final HandlerBuilder builder, final Token next, final ExchangeAttributeParser attributeParser) {
         String sv = builder.defaultParameter();
         if (sv == null) {
-            throw error(string, next.position, "default parameter not supported");
+            throw error(string, next.getPosition(), "default parameter not supported");
         }
         Map<String, Object> values = Collections.singletonMap(sv, coerceToType(string, next, builder.parameters().get(sv), attributeParser));
-        checkParameters(string, next.position, values, builder);
+        checkParameters(string, next.getPosition(), values, builder);
         return builder.build(values);
     }
 
@@ -252,31 +265,31 @@ public class HandlerParser {
         }
 
         if (type == String.class) {
-            return token.token;
+            return token.getToken();
         } else if (type.equals(Boolean.class) || type.equals(boolean.class)) {
-            return Boolean.valueOf(token.token);
+            return Boolean.valueOf(token.getToken());
         } else if (type.equals(Byte.class) || type.equals(byte.class)) {
-            return Byte.valueOf(token.token);
+            return Byte.valueOf(token.getToken());
         } else if (type.equals(Character.class) || type.equals(char.class)) {
-            if (token.token.length() != 1) {
-                throw error(string, token.position, "Cannot coerce " + token.token + " to a Character");
+            if (token.getToken().length() != 1) {
+                throw error(string, token.getPosition(), "Cannot coerce " + token.getToken() + " to a Character");
             }
-            return Character.valueOf(token.token.charAt(0));
+            return Character.valueOf(token.getToken().charAt(0));
         } else if (type.equals(Short.class) || type.equals(short.class)) {
-            return Short.valueOf(token.token);
+            return Short.valueOf(token.getToken());
         } else if (type.equals(Integer.class) || type.equals(int.class)) {
-            return Integer.valueOf(token.token);
+            return Integer.valueOf(token.getToken());
         } else if (type.equals(Long.class) || type.equals(long.class)) {
-            return Long.valueOf(token.token);
+            return Long.valueOf(token.getToken());
         } else if (type.equals(Float.class) || type.equals(float.class)) {
-            return Float.valueOf(token.token);
+            return Float.valueOf(token.getToken());
         } else if (type.equals(Double.class) || type.equals(double.class)) {
-            return Double.valueOf(token.token);
+            return Double.valueOf(token.getToken());
         } else if (type.equals(ExchangeAttribute.class)) {
-            return attributeParser.parse(token.token);
+            return attributeParser.parse(token.getToken());
         }
 
-        return token.token;
+        return token.getToken();
     }
 
     private static int precedence(String operator) {
@@ -390,16 +403,4 @@ public class HandlerParser {
         }
         return ret;
     }
-
-
-    static final class Token {
-        final String token;
-        final int position;
-
-        private Token(final String token, final int position) {
-            this.token = token;
-            this.position = position;
-        }
-    }
-
 }

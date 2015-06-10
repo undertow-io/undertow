@@ -24,14 +24,18 @@ import io.undertow.predicate.Predicates;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.util.ChainedHandlerWrapper;
 import io.undertow.util.FileUtils;
+import io.undertow.util.PredicateTokeniser;
+import io.undertow.util.PredicateTokeniser.Token;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
 
 /**
@@ -66,20 +70,32 @@ public class PredicatedHandlersParser {
 
         for (String line : lines) {
             if (line.trim().length() > 0) {
+                Deque<Token> tokens = PredicateTokeniser.tokenize(line);
+                List<Deque<Token>> others = new ArrayList<>();
                 Predicate predicate;
                 HandlerWrapper handler;
-                String[] parts = line.split("->");
-                if (parts.length == 2) {
-                    predicate = PredicateParser.parse(parts[0], classLoader);
-                    handler = HandlerParser.parse(parts[1], classLoader);
-                } else if (parts.length == 1) {
+                Deque<Token> predicatePart = new ArrayDeque<>();
+                Deque<Token> current = predicatePart;
+                while (!tokens.isEmpty()) {
+                    Token token = tokens.poll();
+                    if(token.getToken().equals("->")) {
+                        current = new ArrayDeque<>();
+                        others.add(current);
+                    } else {
+                        current.add(token);
+                    }
+                }
+                if (others.isEmpty()) {
                     predicate = Predicates.truePredicate();
-                    handler = HandlerParser.parse(parts[0], classLoader);
+                    handler = HandlerParser.parse(line, predicatePart, classLoader);
+                } else if(others.size() == 1){
+                    predicate = PredicateParser.parse(line, predicatePart, classLoader);
+                    handler = HandlerParser.parse(line, others.get(0), classLoader);
                 } else {
-                    predicate = PredicateParser.parse(parts[0], classLoader);
-                    HandlerWrapper[] handlers = new HandlerWrapper[parts.length -1];
+                    predicate = PredicateParser.parse(line, predicatePart, classLoader);
+                    HandlerWrapper[] handlers = new HandlerWrapper[others.size()];
                     for(int i = 0; i < handlers.length; ++i) {
-                        handlers[i] = HandlerParser.parse(parts[i + 1], classLoader);
+                        handlers[i] = HandlerParser.parse(line, others.get(i), classLoader);
                     }
                     handler = new ChainedHandlerWrapper(Arrays.asList(handlers));
                 }

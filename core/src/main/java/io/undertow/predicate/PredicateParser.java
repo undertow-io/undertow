@@ -35,6 +35,8 @@ import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeParser;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.util.PredicateTokeniser;
+import io.undertow.util.PredicateTokeniser.Token;
 
 /**
  * Parser that can build a predicate from a string representation. The underlying syntax is quite simple, and example is
@@ -68,7 +70,14 @@ public class PredicateParser {
     public static final Predicate parse(String string, final ClassLoader classLoader) {
         final Map<String, PredicateBuilder> builders = loadBuilders(classLoader);
         final ExchangeAttributeParser attributeParser = ExchangeAttributes.parser(classLoader);
-        return parse(string, builders, attributeParser);
+        Deque<Token> tokens = PredicateTokeniser.tokenize(string);
+        return parse(string, tokens, builders, attributeParser);
+    }
+
+    public static final Predicate parse(String string, Deque<Token> tokens, final ClassLoader classLoader) {
+        final Map<String, PredicateBuilder> builders = loadBuilders(classLoader);
+        final ExchangeAttributeParser attributeParser = ExchangeAttributes.parser(classLoader);
+        return parse(string, new ArrayDeque<>(tokens), builders, attributeParser);
     }
 
     private static Map<String, PredicateBuilder> loadBuilders(final ClassLoader classLoader) {
@@ -86,22 +95,10 @@ public class PredicateParser {
         return ret;
     }
 
-    private static IllegalStateException error(final String string, int pos, String reason) {
-        StringBuilder b = new StringBuilder();
-        b.append(string);
-        b.append('\n');
-        for (int i = 0; i < pos; ++i) {
-            b.append(' ');
-        }
-        b.append('^');
-        throw UndertowMessages.MESSAGES.errorParsingPredicateString(reason, b.toString());
-    }
-
-    static Predicate parse(final String string, final Map<String, PredicateBuilder> builders, final ExchangeAttributeParser attributeParser) {
+    static Predicate parse(final String string, Deque<Token> tokens, final Map<String, PredicateBuilder> builders, final ExchangeAttributeParser attributeParser) {
 
         //shunting yard algorithm
         //gets rid or parentheses and fixes up operator ordering
-        Deque<Token> tokens = tokenize(string);
         Deque<String> operatorStack = new ArrayDeque<>();
 
         //the output, consisting of predicate nodes and string representations of operators
@@ -110,14 +107,14 @@ public class PredicateParser {
 
         while (!tokens.isEmpty()) {
             Token token = tokens.poll();
-            if (isSpecialChar(token.token)) {
-                if (token.token.equals("(")) {
+            if (isSpecialChar(token.getToken())) {
+                if (token.getToken().equals("(")) {
                     operatorStack.push("(");
-                } else if (token.token.equals(")")) {
+                } else if (token.getToken().equals(")")) {
                     for (; ; ) {
                         String op = operatorStack.pop();
                         if (op == null) {
-                            throw error(string, token.position, "Unexpected end of input");
+                            throw PredicateTokeniser.error(string, token.getPosition(), "Unexpected end of input");
                         } else if (op.equals("(")) {
                             break;
                         } else {
@@ -125,11 +122,11 @@ public class PredicateParser {
                         }
                     }
                 } else {
-                    throw error(string, token.position, "Mismatched parenthesis");
+                    throw PredicateTokeniser.error(string, token.getPosition(), "Mismatched parenthesis");
                 }
             } else {
-                if (isOperator(token.token)) {
-                    int prec = precedence(token.token);
+                if (isOperator(token.getToken())) {
+                    int prec = precedence(token.getToken());
                     String top = operatorStack.peek();
                     while (top != null) {
                         if (top.equals("(")) {
@@ -143,7 +140,7 @@ public class PredicateParser {
                         }
                         top = operatorStack.peek();
                     }
-                    operatorStack.push(token.token);
+                    operatorStack.push(token.getToken());
                 } else {
                     output.push(parsePredicate(string, token, tokens, builders, attributeParser));
                 }
@@ -152,14 +149,14 @@ public class PredicateParser {
         while (!operatorStack.isEmpty()) {
             String op = operatorStack.pop();
             if (op.equals(")")) {
-                throw error(string, string.length(), "Mismatched parenthesis");
+                throw PredicateTokeniser.error(string, string.length(), "Mismatched parenthesis");
             }
             output.push(op);
         }
         //now we have our tokens
         Predicate predicate = collapseOutput(output.pop(), output).resolve();
         if (!output.isEmpty()) {
-            throw error(string, 0, "Invalid expression");
+            throw PredicateTokeniser.error(string, 0, "Invalid expression");
         }
         return predicate;
 
@@ -186,20 +183,20 @@ public class PredicateParser {
     }
 
     private static Object parsePredicate(final String string, final Token token, final Deque<Token> tokens, final Map<String, PredicateBuilder> builders, final ExchangeAttributeParser attributeParser) {
-        if (token.token.equals("true")) {
+        if (token.getToken().equals("true")) {
             return new PredicateNode(TruePredicate.instance());
-        } else if (token.token.equals("false")) {
+        } else if (token.getToken().equals("false")) {
             return new PredicateNode(FalsePredicate.instance());
         } else {
-            PredicateBuilder builder = builders.get(token.token);
+            PredicateBuilder builder = builders.get(token.getToken());
             if (builder == null) {
 
-                throw error(string, token.position, "no predicate named " + token.token + " known predicates: " + builders.keySet());
+                throw PredicateTokeniser.error(string, token.getPosition(), "no predicate named " + token.getToken() + " known predicates: " + builders.keySet());
             }
             Token next = tokens.peek();
             String endChar = ")";
-            if (next.token.equals("[") || next.token.equals("(")) {
-                if(next.token.equals("[")) {
+            if (next.getToken().equals("[") || next.getToken().equals("(")) {
+                if(next.getToken().equals("[")) {
                     endChar = "]";
                     UndertowLogger.ROOT_LOGGER.oldStylePredicateSyntax(string);
                 }
@@ -208,99 +205,99 @@ public class PredicateParser {
                 tokens.poll();
                 next = tokens.poll();
                 if (next == null) {
-                    throw error(string, string.length(), "Unexpected end of input");
+                    throw PredicateTokeniser.error(string, string.length(), "Unexpected end of input");
                 }
-                if (next.token.equals("{")) {
-                    return handleSingleArrayValue(string, builder, tokens, next, attributeParser);
+                if (next.getToken().equals("{")) {
+                    return handleSingleArrayValue(string, builder, tokens, next, attributeParser, endChar);
                 }
-                while (!next.token.equals(endChar)) {
+                while (!next.getToken().equals(endChar)) {
                     Token equals = tokens.poll();
                     if(equals == null) {
-                        throw error(string, string.length(), "Unexpected end of input");
+                        throw PredicateTokeniser.error(string, string.length(), "Unexpected end of input");
                     }
-                    if (!equals.token.equals("=")) {
-                        if (equals.token.equals(endChar) && values.isEmpty()) {
+                    if (!equals.getToken().equals("=")) {
+                        if (equals.getToken().equals(endChar) && values.isEmpty()) {
                             //single value case
                             return handleSingleValue(string, builder, next, attributeParser);
-                        } else if (equals.token.equals(",")) {
+                        } else if (equals.getToken().equals(",")) {
                             tokens.push(equals);
                             tokens.push(next);
-                            return handleSingleVarArgsValue(string, builder, tokens, next, attributeParser);
+                            return handleSingleVarArgsValue(string, builder, tokens, next, attributeParser, endChar);
                         }
-                        throw error(string, equals.position, "Unexpected token");
+                        throw PredicateTokeniser.error(string, equals.getPosition(), "Unexpected token");
                     }
                     Token value = tokens.poll();
                     if (value == null) {
-                        throw error(string, string.length(), "Unexpected end of input");
+                        throw PredicateTokeniser.error(string, string.length(), "Unexpected end of input");
                     }
-                    if (value.token.equals("{")) {
-                        values.put(next.token, readArrayType(string, tokens, next, builder, attributeParser, "}"));
+                    if (value.getToken().equals("{")) {
+                        values.put(next.getToken(), readArrayType(string, tokens, next, builder, attributeParser, "}"));
                     } else {
-                        if (isOperator(value.token) || isSpecialChar(value.token)) {
-                            throw error(string, value.position, "Unexpected token");
+                        if (isOperator(value.getToken()) || isSpecialChar(value.getToken())) {
+                            throw PredicateTokeniser.error(string, value.getPosition(), "Unexpected token");
                         }
 
-                        Class<?> type = builder.parameters().get(next.token);
+                        Class<?> type = builder.parameters().get(next.getToken());
                         if (type == null) {
-                            throw error(string, next.position, "Unexpected parameter " + next.token);
+                            throw PredicateTokeniser.error(string, next.getPosition(), "Unexpected parameter " + next.getToken());
                         }
-                        values.put(next.token, coerceToType(string, value, type, attributeParser));
+                        values.put(next.getToken(), coerceToType(string, value, type, attributeParser));
                     }
 
                     next = tokens.poll();
                     if (next == null) {
-                        throw error(string, string.length(), "Unexpected end of input");
+                        throw PredicateTokeniser.error(string, string.length(), "Unexpected end of input");
                     }
-                    if (!next.token.equals(endChar)) {
-                        if (!next.token.equals(",")) {
-                            throw error(string, string.length(), "Expecting , or " + endChar);
+                    if (!next.getToken().equals(endChar)) {
+                        if (!next.getToken().equals(",")) {
+                            throw PredicateTokeniser.error(string, string.length(), "Expecting , or " + endChar);
                         }
                         next = tokens.poll();
                         if (next == null) {
-                            throw error(string, string.length(), "Unexpected end of input");
+                            throw PredicateTokeniser.error(string, string.length(), "Unexpected end of input");
                         }
                     }
                 }
-                checkParameters(string, next.position, values, builder);
+                checkParameters(string, next.getPosition(), values, builder);
                 return new BuilderNode(builder, values);
 
             } else {
-                if (isSpecialChar(next.token)) {
-                    throw error(string, next.position, "Unexpected character");
+                if (isSpecialChar(next.getToken())) {
+                    throw PredicateTokeniser.error(string, next.getPosition(), "Unexpected character");
                 }
                 return new BuilderNode(builder);
             }
         }
     }
 
-    private static Node handleSingleArrayValue(final String string, final PredicateBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser) {
+    private static Node handleSingleArrayValue(final String string, final PredicateBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser, String endChar) {
         String sv = builder.defaultParameter();
         if (sv == null) {
-            throw error(string, token.position, "default parameter not supported");
+            throw PredicateTokeniser.error(string, token.getPosition(), "default parameter not supported");
         }
-        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder, attributeParser, "}");
+        Object array = readArrayType(string, tokens, new Token(sv, token.getPosition()), builder, attributeParser, "}");
         Token close = tokens.poll();
-        if (!close.token.equals("]")) {
-            throw error(string, close.position, "expected ]");
+        if (!close.getToken().equals(endChar)) {
+            throw PredicateTokeniser.error(string, close.getPosition(), "expected " + endChar);
         }
         return new BuilderNode(builder, Collections.singletonMap(sv, array));
     }
 
-    private static Node handleSingleVarArgsValue(final String string, final PredicateBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser) {
+    private static Node handleSingleVarArgsValue(final String string, final PredicateBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser, String endChar) {
         String sv = builder.defaultParameter();
         if (sv == null) {
-            throw error(string, token.position, "default parameter not supported");
+            throw PredicateTokeniser.error(string, token.getPosition(), "default parameter not supported");
         }
-        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder, attributeParser, "]");
+        Object array = readArrayType(string, tokens, new Token(sv, token.getPosition()), builder, attributeParser, endChar);
         return new BuilderNode(builder, Collections.singletonMap(sv, array));
     }
 
     private static Object readArrayType(final String string, final Deque<Token> tokens, Token paramName, PredicateBuilder builder, final ExchangeAttributeParser attributeParser, String expectedEndToken) {
-        Class<?> type = builder.parameters().get(paramName.token);
+        Class<?> type = builder.parameters().get(paramName.getToken());
         if (type == null) {
-            throw error(string, paramName.position, "no parameter called " + paramName.token);
+            throw PredicateTokeniser.error(string, paramName.getPosition(), "no parameter called " + paramName.getToken());
         } else if (!type.isArray()) {
-            throw error(string, paramName.position, "parameter is not an array type " + paramName.token);
+            throw PredicateTokeniser.error(string, paramName.getPosition(), "parameter is not an array type " + paramName.getToken());
         }
 
         Class<?> componentType = type.getComponentType();
@@ -309,28 +306,28 @@ public class PredicateParser {
         while (token != null) {
             Token commaOrEnd = tokens.poll();
             values.add(coerceToType(string, token, componentType, attributeParser));
-            if (commaOrEnd.token.equals(expectedEndToken)) {
+            if (commaOrEnd.getToken().equals(expectedEndToken)) {
                 Object array = Array.newInstance(componentType, values.size());
                 for (int i = 0; i < values.size(); ++i) {
                     Array.set(array, i, values.get(i));
                 }
                 return array;
-            } else if (!commaOrEnd.token.equals(",")) {
-                throw error(string, commaOrEnd.position, "expected either , or }");
+            } else if (!commaOrEnd.getToken().equals(",")) {
+                throw PredicateTokeniser.error(string, commaOrEnd.getPosition(), "expected either , or }");
             }
             token = tokens.poll();
         }
-        throw error(string, string.length(), "unexpected end of input in array");
+        throw PredicateTokeniser.error(string, string.length(), "unexpected end of input in array");
     }
 
 
     private static Object handleSingleValue(final String string, final PredicateBuilder builder, final Token next, final ExchangeAttributeParser attributeParser) {
         String sv = builder.defaultParameter();
         if (sv == null) {
-            throw error(string, next.position, "default parameter not supported");
+            throw PredicateTokeniser.error(string, next.getPosition(), "default parameter not supported");
         }
         Map<String, Object> values = Collections.singletonMap(sv, coerceToType(string, next, builder.parameters().get(sv), attributeParser));
-        checkParameters(string, next.position, values, builder);
+        checkParameters(string, next.getPosition(), values, builder);
         return new BuilderNode(builder, values);
     }
 
@@ -340,7 +337,7 @@ public class PredicateParser {
             required.remove(key);
         }
         if (!required.isEmpty()) {
-            throw error(string, pos, "Missing required parameters " + required);
+            throw PredicateTokeniser.error(string, pos, "Missing required parameters " + required);
         }
     }
 
@@ -353,31 +350,31 @@ public class PredicateParser {
         }
 
         if (type == String.class) {
-            return token.token;
+            return token.getToken();
         } else if (type.equals(Boolean.class) || type.equals(boolean.class)) {
-            return Boolean.valueOf(token.token);
+            return Boolean.valueOf(token.getToken());
         } else if (type.equals(Byte.class) || type.equals(byte.class)) {
-            return Byte.valueOf(token.token);
+            return Byte.valueOf(token.getToken());
         } else if (type.equals(Character.class) || type.equals(char.class)) {
-            if (token.token.length() != 1) {
-                throw error(string, token.position, "Cannot coerce " + token.token + " to a Character");
+            if (token.getToken().length() != 1) {
+                throw PredicateTokeniser.error(string, token.getPosition(), "Cannot coerce " + token.getToken() + " to a Character");
             }
-            return Character.valueOf(token.token.charAt(0));
+            return Character.valueOf(token.getToken().charAt(0));
         } else if (type.equals(Short.class) || type.equals(short.class)) {
-            return Short.valueOf(token.token);
+            return Short.valueOf(token.getToken());
         } else if (type.equals(Integer.class) || type.equals(int.class)) {
-            return Integer.valueOf(token.token);
+            return Integer.valueOf(token.getToken());
         } else if (type.equals(Long.class) || type.equals(long.class)) {
-            return Long.valueOf(token.token);
+            return Long.valueOf(token.getToken());
         } else if (type.equals(Float.class) || type.equals(float.class)) {
-            return Float.valueOf(token.token);
+            return Float.valueOf(token.getToken());
         } else if (type.equals(Double.class) || type.equals(double.class)) {
-            return Double.valueOf(token.token);
+            return Double.valueOf(token.getToken());
         } else if (type.equals(ExchangeAttribute.class)) {
-            return attributeParser.parse(token.token);
+            return attributeParser.parse(token.getToken());
         }
 
-        return token.token;
+        return token.getToken();
     }
 
     private static int precedence(String operator) {
@@ -413,94 +410,6 @@ public class PredicateParser {
                 return true;
             default:
                 return false;
-        }
-    }
-
-    static Deque<Token> tokenize(final String string) {
-        char currentStringDelim = 0;
-        boolean inVariable = false;
-
-        int pos = 0;
-        StringBuilder current = new StringBuilder();
-        Deque<Token> ret = new ArrayDeque<>();
-        while (pos < string.length()) {
-            char c = string.charAt(pos);
-            if (currentStringDelim != 0) {
-                if (c == currentStringDelim && current.charAt(current.length() - 1) != '\\') {
-                    ret.add(new Token(current.toString(), pos));
-                    current.setLength(0);
-                    currentStringDelim = 0;
-                } else {
-                    current.append(c);
-                }
-            } else {
-                switch (c) {
-                    case ' ':
-                    case '\t': {
-                        if (current.length() != 0) {
-                            ret.add(new Token(current.toString(), pos));
-                            current.setLength(0);
-                        }
-                        break;
-                    }
-                    case '(':
-                    case ')':
-                    case ',':
-                    case '=':
-                    case '[':
-                    case ']':
-                    case '{':
-                    case '}': {
-                        if (inVariable) {
-                            current.append(c);
-                            if (c == '}') {
-                                inVariable = false;
-                            }
-                        } else {
-                            if (current.length() != 0) {
-                                ret.add(new Token(current.toString(), pos));
-                                current.setLength(0);
-                            }
-                            ret.add(new Token("" + c, pos));
-                        }
-                        break;
-                    }
-                    case '"':
-                    case '\'': {
-                        if (current.length() != 0) {
-                            throw error(string, pos, "Unexpected token");
-                        }
-                        currentStringDelim = c;
-                        break;
-                    }
-                    case '%':
-                    case '$': {
-                        current.append(c);
-                        if (string.charAt(pos + 1) == '{') {
-                            inVariable = true;
-                        }
-                        break;
-                    }
-                    default:
-                        current.append(c);
-                }
-            }
-            ++pos;
-        }
-        if (current.length() > 0) {
-            ret.add(new Token(current.toString(), string.length()));
-        }
-        return ret;
-    }
-
-
-    static final class Token {
-        final String token;
-        final int position;
-
-        private Token(final String token, final int position) {
-            this.token = token;
-            this.position = position;
         }
     }
 
