@@ -163,7 +163,7 @@ public interface UndertowMessages {
     @Message(id = 44, value = "More than one predicate with name %s. Builder class %s and %s")
     IllegalStateException moreThanOnePredicateWithName(String name, Class<? extends PredicateBuilder> aClass, Class<? extends PredicateBuilder> existing);
 
-    @Message(id = 45, value = "Error parsing predicate string %s:%n%s")
+    @Message(id = 45, value = "Error parsing predicated handler string %s:%n%s")
     IllegalArgumentException errorParsingPredicateString(String reason, String s);
 
     @Message(id = 46, value = "The number of cookies sent exceeded the maximum of %s")

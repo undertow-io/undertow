@@ -46,6 +46,11 @@ public class PredicateTokeniser {
                     ret.add(new Token(current.toString(), pos));
                     current.setLength(0);
                     currentStringDelim = 0;
+                } else if(c == '\n') {
+                    ret.add(new Token(current.toString(), pos));
+                    current.setLength(0);
+                    currentStringDelim = 0;
+                    ret.add(new Token("\n", pos));
                 } else {
                     current.append(c);
                 }
@@ -57,6 +62,14 @@ public class PredicateTokeniser {
                             ret.add(new Token(current.toString(), pos));
                             current.setLength(0);
                         }
+                        break;
+                    }
+                    case '\n': {
+                        if (current.length() != 0) {
+                            ret.add(new Token(current.toString(), pos));
+                            current.setLength(0);
+                        }
+                        ret.add(new Token("\n", pos));
                         break;
                     }
                     case '(':
@@ -151,9 +164,22 @@ public class PredicateTokeniser {
 
     public static IllegalStateException error(final String string, int pos, String reason) {
         StringBuilder b = new StringBuilder();
-        b.append(string);
+        int linePos = 0;
+        for(int i = 0; i < string.length(); ++i) {
+            if(string.charAt(i) == '\n') {
+                if(i >= pos) {
+                    //truncate the string at the error line
+                    break;
+                } else {
+                    linePos = 0;
+                }
+            } else if(i < pos) {
+                linePos++;
+            }
+            b.append(string.charAt(i));
+        }
         b.append('\n');
-        for (int i = 0; i < pos; ++i) {
+        for (int i = 0; i < linePos; ++i) {
             b.append(' ');
         }
         b.append('^');

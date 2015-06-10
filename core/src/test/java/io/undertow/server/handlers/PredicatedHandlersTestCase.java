@@ -47,7 +47,7 @@ public class PredicatedHandlersTestCase {
 
                         PredicatedHandlersParser.parse(
                                 "method(GET) -> set(attribute='%{o,type}', value=get)\n" +
-                                        "regex('(.*).css') -> rewrite['${1}.xcss'] -> set[attribute='%{o,chained}', value=true]\n" +
+                                        "regex('(.*).css') -> rewrite['${1}.xcss'] -> set(attribute='%{o,chained}', value=true)\n" +
                                         "regex('(.*).redirect$') -> redirect['${1}.redirected']\n" +
                                         "set[attribute='%{o,someHeader}', value=always]\n" +
                                         "path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']\n" +

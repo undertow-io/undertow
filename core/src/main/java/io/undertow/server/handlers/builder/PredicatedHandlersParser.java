@@ -68,40 +68,43 @@ public class PredicatedHandlersParser {
         String[] lines = contents.split("\\n");
         final List<PredicatedHandler> wrappers = new ArrayList<>();
 
-        for (String line : lines) {
-            if (line.trim().length() > 0) {
-                Deque<Token> tokens = PredicateTokeniser.tokenize(line);
-                List<Deque<Token>> others = new ArrayList<>();
-                Predicate predicate;
-                HandlerWrapper handler;
-                Deque<Token> predicatePart = new ArrayDeque<>();
-                Deque<Token> current = predicatePart;
-                while (!tokens.isEmpty()) {
-                    Token token = tokens.poll();
-                    if(token.getToken().equals("->")) {
-                        current = new ArrayDeque<>();
-                        others.add(current);
-                    } else {
-                        current.add(token);
-                    }
-                }
-                if (others.isEmpty()) {
-                    predicate = Predicates.truePredicate();
-                    handler = HandlerParser.parse(line, predicatePart, classLoader);
-                } else if(others.size() == 1){
-                    predicate = PredicateParser.parse(line, predicatePart, classLoader);
-                    handler = HandlerParser.parse(line, others.get(0), classLoader);
+        Deque<Token> tokens = PredicateTokeniser.tokenize(contents);
+        while (!tokens.isEmpty()) {
+            List<Deque<Token>> others = new ArrayList<>();
+            Predicate predicate;
+            HandlerWrapper handler;
+            Deque<Token> predicatePart = new ArrayDeque<>();
+            Deque<Token> current = predicatePart;
+            boolean done = false;
+            while (!tokens.isEmpty() && !done) {
+                Token token = tokens.poll();
+                if (token.getToken().equals("->")) {
+                    current = new ArrayDeque<>();
+                    others.add(current);
+                } else if(token.getToken().equals("\n")) {
+                    done = true;
                 } else {
-                    predicate = PredicateParser.parse(line, predicatePart, classLoader);
-                    HandlerWrapper[] handlers = new HandlerWrapper[others.size()];
-                    for(int i = 0; i < handlers.length; ++i) {
-                        handlers[i] = HandlerParser.parse(line, others.get(i), classLoader);
-                    }
-                    handler = new ChainedHandlerWrapper(Arrays.asList(handlers));
+                    current.add(token);
                 }
-                wrappers.add(new PredicatedHandler(predicate, handler));
             }
+            if (others.isEmpty()) {
+                predicate = Predicates.truePredicate();
+                handler = HandlerParser.parse(contents, predicatePart, classLoader);
+            } else if (others.size() == 1) {
+                predicate = PredicateParser.parse(contents, predicatePart, classLoader);
+                handler = HandlerParser.parse(contents, others.get(0), classLoader);
+            } else {
+                predicate = PredicateParser.parse(contents, predicatePart, classLoader);
+                HandlerWrapper[] handlers = new HandlerWrapper[others.size()];
+                for (int i = 0; i < handlers.length; ++i) {
+                    handlers[i] = HandlerParser.parse(contents, others.get(i), classLoader);
+                }
+                handler = new ChainedHandlerWrapper(Arrays.asList(handlers));
+            }
+            wrappers.add(new PredicatedHandler(predicate, handler));
         }
+
+
         return wrappers;
     }
 
