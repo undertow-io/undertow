@@ -298,4 +298,6 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5060, value = "Predicate %s uses old style square braces to define predicates, which will be removed in a future release. predicate[value] should be changed to predicate(value)")
     void oldStylePredicateSyntax(String string);
 
+    @Message(id=5061, value = "More than %s restarts detected, breaking assumed infinite loop")
+    IllegalStateException maxRestartsExceeded(int maxRestarts);
 }

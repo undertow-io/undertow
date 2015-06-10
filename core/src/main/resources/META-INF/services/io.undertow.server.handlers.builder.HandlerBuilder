@@ -28,3 +28,4 @@ io.undertow.server.handlers.encoding.EncodingHandler$Builder
 io.undertow.server.handlers.LearningPushHandler$Builder
 io.undertow.server.handlers.SetHeaderHandler$Builder
 io.undertow.predicate.PredicatesHandler$DoneHandlerBuilder
+io.undertow.predicate.PredicatesHandler$RestartHandlerBuilder

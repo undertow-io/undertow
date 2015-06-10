@@ -31,7 +31,7 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-class ContainsPredicate implements Predicate {
+public class ContainsPredicate implements Predicate {
 
     private final ExchangeAttribute attribute;
     private final String[] values;
@@ -54,6 +54,16 @@ class ContainsPredicate implements Predicate {
             }
         }
         return false;
+    }
+
+    public ExchangeAttribute getAttribute() {
+        return attribute;
+    }
+
+    public String[] getValues() {
+        String[] ret = new String[values.length];
+        System.arraycopy(values, 0, ret, 0, values.length);
+        return ret;
     }
 
     public static class Builder implements PredicateBuilder {

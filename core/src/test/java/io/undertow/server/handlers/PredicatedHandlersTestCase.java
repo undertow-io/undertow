@@ -46,18 +46,20 @@ public class PredicatedHandlersTestCase {
                 Handlers.predicates(
 
                         PredicatedHandlersParser.parse(
-                                        "path(/skipallrules) -> done\n" +
-                                        "method(GET) -> set(attribute='%{o,type}', value=get)\n" +
-                                        "regex('(.*).css') -> rewrite['${1}.xcss'] -> set(attribute='%{o,chained}', value=true)\n" +
+                                        "path(/skipallrules) and true -> done\n" +
+                                        "method(GET) -> set(attribute='%{o,type}', value=get) \n" +
+                                        "regex('(.*).css') -> {rewrite['${1}.xcss'];set(attribute='%{o,chained}', value=true)} \n" +
                                         "regex('(.*).redirect$') -> redirect['${1}.redirected']\n" +
                                         "set[attribute='%{o,someHeader}', value=always]\n" +
                                         "path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']\n" +
-                                        "path-template('/bar->foo') -> redirect(/)", getClass().getClassLoader()), new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send(exchange.getRelativePath());
-                    }
-                }));
+                                        "path-template('/bar->foo') -> redirect(/);" +
+                                        "regex('(.*).css') -> set[attribute='%{o,css}', value='true'] else set[attribute='%{o,css}', value='false']; " +
+                                        "path(/restart) -> {rewrite(/foo/a/b); restart; }", getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.getResponseSender().send(exchange.getRelativePath());
+                            }
+                        }));
 
         TestHttpClient client = new TestHttpClient();
         try {
@@ -68,6 +70,7 @@ public class PredicatedHandlersTestCase {
             Assert.assertEquals("get", result.getHeaders("type")[0].getValue());
             Assert.assertEquals("always", result.getHeaders("someHeader")[0].getValue());
             Assert.assertEquals("a", result.getHeaders("template")[0].getValue());
+            Assert.assertEquals("false", result.getHeaders("css")[0].getValue());
             Assert.assertEquals("/foo/a/b", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b.css");
@@ -76,9 +79,10 @@ public class PredicatedHandlersTestCase {
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("get", result.getHeaders("type")[0].getValue());
             Assert.assertEquals("true", result.getHeaders("chained")[0].getValue());
-            Assert.assertEquals("always", result.getHeaders("someHeader")[0].getValue());
-            Assert.assertEquals("a", result.getHeaders("template")[0].getValue());
             Assert.assertEquals("/foo/a/b.xcss", response);
+            Assert.assertEquals("always", result.getHeaders("someHeader")[0].getValue());
+            Assert.assertEquals("true", result.getHeaders("css")[0].getValue());
+            Assert.assertEquals("a", result.getHeaders("template")[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b.redirect");
             result = client.execute(get);
@@ -95,6 +99,15 @@ public class PredicatedHandlersTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(0, result.getHeaders("someHeader").length);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/restart");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("get", result.getHeaders("type")[0].getValue());
+            Assert.assertEquals("always", result.getHeaders("someHeader")[0].getValue());
+            Assert.assertEquals("a", result.getHeaders("template")[0].getValue());
+            Assert.assertEquals("/foo/a/b", response);
         } finally {
             client.getConnectionManager().shutdown();
         }

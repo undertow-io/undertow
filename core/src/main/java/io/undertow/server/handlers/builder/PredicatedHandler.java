@@ -27,10 +27,16 @@ import io.undertow.server.HandlerWrapper;
 public class PredicatedHandler {
     private final Predicate predicate;
     private final HandlerWrapper handler;
+    private final HandlerWrapper elseHandler;
 
     public PredicatedHandler(Predicate predicate, HandlerWrapper handler) {
+        this(predicate, handler, null);
+    }
+
+    public PredicatedHandler(Predicate predicate, HandlerWrapper handler, HandlerWrapper elseHandler) {
         this.predicate = predicate;
         this.handler = handler;
+        this.elseHandler = elseHandler;
     }
 
     public Predicate getPredicate() {
@@ -39,5 +45,9 @@ public class PredicatedHandler {
 
     public HandlerWrapper getHandler() {
         return handler;
+    }
+
+    public HandlerWrapper getElseHandler() {
+        return elseHandler;
     }
 }

@@ -62,6 +62,10 @@ public class AllowedMethodsHandler implements HttpHandler {
         }
     }
 
+    public Set<HttpString> getAllowedMethods() {
+        return Collections.unmodifiableSet(allowedMethods);
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

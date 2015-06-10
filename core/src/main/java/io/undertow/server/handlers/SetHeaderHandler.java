@@ -90,6 +90,13 @@ public class SetHeaderHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
+    public ExchangeAttribute getValue() {
+        return value;
+    }
+
+    public HttpString getHeader() {
+        return header;
+    }
 
     public static class Builder implements HandlerBuilder {
         @Override
