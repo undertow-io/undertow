@@ -105,74 +105,79 @@ public class HandlerParser {
         if (builder == null) {
             throw PredicateTokeniser.error(string, token.getPosition(), "no handler named " + token.getToken());
         }
-        Token last = tokens.getLast();
-        Token next = tokens.peek();
-        String endChar = ")";
-        if (next.getToken().equals("(") || next.getToken().equals("[")) {
-            if(next.getToken().equals("[")) {
-                UndertowLogger.ROOT_LOGGER.oldStylePredicateSyntax(string);
-                endChar = "]";
-            }
-            final Map<String, Object> values = new HashMap<>();
-
-            tokens.poll();
-            next = tokens.poll();
-            if (next == null) {
-                throw PredicateTokeniser.error(string, last.getPosition(), "Unexpected end of input");
-            }
-            if (next.getToken().equals("{")) {
-                return handleSingleArrayValue(string, builder, tokens, next, attributeParser, endChar, last);
-            }
-            while (!next.getToken().equals(endChar)) {
-                Token equals = tokens.poll();
-                if (!equals.getToken().equals("=")) {
-                    if (equals.getToken().equals(endChar) && values.isEmpty()) {
-                        //single value case
-                        return handleSingleValue(string, builder, next, attributeParser);
-                    } else if (equals.getToken().equals(",")) {
-                        tokens.push(equals);
-                        tokens.push(next);
-                        return handleSingleVarArgsValue(string, builder, tokens, next, attributeParser, endChar, last);
-                    }
-                    throw PredicateTokeniser.error(string, equals.getPosition(), "Unexpected token");
+        if(!tokens.isEmpty()) {
+            Token last = tokens.isEmpty() ? token : tokens.getLast();
+            Token next = tokens.peek();
+            String endChar = ")";
+            if (next.getToken().equals("(") || next.getToken().equals("[")) {
+                if (next.getToken().equals("[")) {
+                    UndertowLogger.ROOT_LOGGER.oldStylePredicateSyntax(string);
+                    endChar = "]";
                 }
-                Token value = tokens.poll();
-                if (value == null) {
-                    throw PredicateTokeniser.error(string, string.length(), "Unexpected end of input");
-                }
-                if (value.getToken().equals("{")) {
-                    values.put(next.getToken(), readArrayType(string, tokens, next, builder, attributeParser, "}", last));
-                } else {
-                    if (isOperator(value.getToken()) || isSpecialChar(value.getToken())) {
-                        throw PredicateTokeniser.error(string, value.getPosition(), "Unexpected token");
-                    }
+                final Map<String, Object> values = new HashMap<>();
 
-                    Class<?> type = builder.parameters().get(next.getToken());
-                    if (type == null) {
-                        throw PredicateTokeniser.error(string, next.getPosition(), "Unexpected parameter " + next.getToken());
-                    }
-                    values.put(next.getToken(), coerceToType(string, value, type, attributeParser));
-                }
-
+                tokens.poll();
                 next = tokens.poll();
                 if (next == null) {
                     throw PredicateTokeniser.error(string, last.getPosition(), "Unexpected end of input");
                 }
-                if (!next.getToken().equals(endChar)) {
-                    if (!next.getToken().equals(",")) {
-                        throw PredicateTokeniser.error(string, next.getPosition(), "Expecting , or " + endChar);
+                if (next.getToken().equals("{")) {
+                    return handleSingleArrayValue(string, builder, tokens, next, attributeParser, endChar, last);
+                }
+                while (!next.getToken().equals(endChar)) {
+                    Token equals = tokens.poll();
+                    if (!equals.getToken().equals("=")) {
+                        if (equals.getToken().equals(endChar) && values.isEmpty()) {
+                            //single value case
+                            return handleSingleValue(string, builder, next, attributeParser);
+                        } else if (equals.getToken().equals(",")) {
+                            tokens.push(equals);
+                            tokens.push(next);
+                            return handleSingleVarArgsValue(string, builder, tokens, next, attributeParser, endChar, last);
+                        }
+                        throw PredicateTokeniser.error(string, equals.getPosition(), "Unexpected token");
                     }
+                    Token value = tokens.poll();
+                    if (value == null) {
+                        throw PredicateTokeniser.error(string, string.length(), "Unexpected end of input");
+                    }
+                    if (value.getToken().equals("{")) {
+                        values.put(next.getToken(), readArrayType(string, tokens, next, builder, attributeParser, "}", last));
+                    } else {
+                        if (isOperator(value.getToken()) || isSpecialChar(value.getToken())) {
+                            throw PredicateTokeniser.error(string, value.getPosition(), "Unexpected token");
+                        }
+
+                        Class<?> type = builder.parameters().get(next.getToken());
+                        if (type == null) {
+                            throw PredicateTokeniser.error(string, next.getPosition(), "Unexpected parameter " + next.getToken());
+                        }
+                        values.put(next.getToken(), coerceToType(string, value, type, attributeParser));
+                    }
+
                     next = tokens.poll();
                     if (next == null) {
                         throw PredicateTokeniser.error(string, last.getPosition(), "Unexpected end of input");
                     }
+                    if (!next.getToken().equals(endChar)) {
+                        if (!next.getToken().equals(",")) {
+                            throw PredicateTokeniser.error(string, next.getPosition(), "Expecting , or " + endChar);
+                        }
+                        next = tokens.poll();
+                        if (next == null) {
+                            throw PredicateTokeniser.error(string, last.getPosition(), "Unexpected end of input");
+                        }
+                    }
                 }
-            }
-            checkParameters(string, next.getPosition(), values, builder);
-            return builder.build(values);
+                checkParameters(string, next.getPosition(), values, builder);
+                return builder.build(values);
 
+            } else {
+                throw PredicateTokeniser.error(string, next.getPosition(), "Unexpected character");
+            }
         } else {
-            throw PredicateTokeniser.error(string, next.getPosition(), "Unexpected character");
+            checkParameters(string, token.getPosition(), Collections.<String,Object>emptyMap(), builder);
+            return builder.build(Collections.<String,Object>emptyMap());
         }
     }
 

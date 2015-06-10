@@ -21,9 +21,13 @@ package io.undertow.predicate;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.util.AttachmentKey;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -34,14 +38,25 @@ import java.util.TreeMap;
  */
 public class PredicatesHandler implements HttpHandler {
 
+    /**
+     * static done marker. If this is attached to the exchange it will drop out immediately.
+     */
+    public static final AttachmentKey<Boolean> DONE = AttachmentKey.create(Boolean.class);
+
     private volatile Holder[] handlers = new Holder[0];
     private volatile HttpHandler next;
+    private final boolean outerHandler;
 
     //non-static, so multiple handlers can co-exist
     private final AttachmentKey<Integer> CURRENT_POSITION = AttachmentKey.create(Integer.class);
 
     public PredicatesHandler(HttpHandler next) {
         this.next = next;
+        this.outerHandler = true;
+    }
+    public PredicatesHandler(HttpHandler next, boolean outerHandler) {
+        this.next = next;
+        this.outerHandler = outerHandler;
     }
 
     @Override
@@ -50,9 +65,18 @@ public class PredicatesHandler implements HttpHandler {
         Integer current = exchange.getAttachment(CURRENT_POSITION);
         int pos;
         if (current == null) {
+            if(outerHandler) {
+                exchange.removeAttachment(DONE);
+            }
             pos = 0;
             exchange.putAttachment(Predicate.PREDICATE_CONTEXT, new TreeMap<String, Object>());
         } else {
+            //if it has been marked as done
+            if(exchange.getAttachment(DONE) != null) {
+                exchange.removeAttachment(CURRENT_POSITION);
+                next.handleRequest(exchange);
+                return;
+            }
             pos = current;
         }
         for (; pos < length; ++pos) {
@@ -102,6 +126,45 @@ public class PredicatesHandler implements HttpHandler {
         private Holder(Predicate predicate, HttpHandler handler) {
             this.predicate = predicate;
             this.handler = handler;
+        }
+    }
+
+    public static final class DoneHandlerBuilder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "done";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new HandlerWrapper() {
+                @Override
+                public HttpHandler wrap(final HttpHandler handler) {
+                    return new HttpHandler() {
+                        @Override
+                        public void handleRequest(HttpServerExchange exchange) throws Exception {
+                            exchange.putAttachment(DONE, true);
+                            handler.handleRequest(exchange);
+                        }
+                    };
+                }
+            };
         }
     }
 }

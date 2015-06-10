@@ -46,7 +46,8 @@ public class PredicatedHandlersTestCase {
                 Handlers.predicates(
 
                         PredicatedHandlersParser.parse(
-                                "method(GET) -> set(attribute='%{o,type}', value=get)\n" +
+                                        "path(/skipallrules) -> done\n" +
+                                        "method(GET) -> set(attribute='%{o,type}', value=get)\n" +
                                         "regex('(.*).css') -> rewrite['${1}.xcss'] -> set(attribute='%{o,chained}', value=true)\n" +
                                         "regex('(.*).redirect$') -> redirect['${1}.redirected']\n" +
                                         "set[attribute='%{o,someHeader}', value=always]\n" +
@@ -88,6 +89,12 @@ public class PredicatedHandlersTestCase {
             Assert.assertEquals("a", result.getHeaders("template")[0].getValue());
             Assert.assertEquals("/foo/a/b.redirected", response);
 
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/skipallrules");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(0, result.getHeaders("someHeader").length);
         } finally {
             client.getConnectionManager().shutdown();
         }
