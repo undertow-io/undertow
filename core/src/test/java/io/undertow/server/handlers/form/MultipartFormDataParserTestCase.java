@@ -60,8 +60,8 @@ public class MultipartFormDataParserTestCase {
                     if (data.getFirst("formValue").getValue().equals("myValue")) {
                         FormData.FormValue file = data.getFirst("file");
                         if (file.isFile()) {
-                            if (file.getFile() != null) {
-                                if (new String(Files.readAllBytes(file.getFile())).startsWith("file contents")) {
+                            if (file.getPath() != null) {
+                                if (new String(Files.readAllBytes(file.getPath())).startsWith("file contents")) {
                                     exchange.setResponseCode(StatusCodes.OK);
                                 }
                             }

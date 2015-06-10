@@ -59,7 +59,7 @@ public class PartImpl implements Part {
     @Override
     public InputStream getInputStream() throws IOException {
         if (formValue.isFile()) {
-            return new BufferedInputStream(Files.newInputStream(formValue.getFile()));
+            return new BufferedInputStream(Files.newInputStream(formValue.getPath()));
         } else {
             return new ByteArrayInputStream(formValue.getValue().getBytes());
         }
@@ -84,7 +84,7 @@ public class PartImpl implements Part {
     public long getSize() {
         try {
             if (formValue.isFile()) {
-                return Files.size(formValue.getFile());
+                return Files.size(formValue.getPath());
             } else {
                 return formValue.getValue().length();
             }
@@ -104,18 +104,18 @@ public class PartImpl implements Part {
             }
         }
         try {
-            Files.move(formValue.getFile(), target);
+            Files.move(formValue.getPath(), target);
         } catch (IOException e) {
-            Files.copy(formValue.getFile(), target);
+            Files.copy(formValue.getPath(), target);
         }
     }
 
     @Override
     public void delete() throws IOException {
         try {
-            Files.delete(formValue.getFile());
+            Files.delete(formValue.getPath());
         } catch (IOException e) {
-            throw UndertowServletMessages.MESSAGES.deleteFailed(formValue.getFile());
+            throw UndertowServletMessages.MESSAGES.deleteFailed(formValue.getPath());
         }
     }
 

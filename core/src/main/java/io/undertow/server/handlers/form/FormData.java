@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.form;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -162,7 +163,10 @@ public final class FormData implements Iterable<String> {
          * @return The temp file that the file data was saved to
          * @throws IllegalStateException if this is not a file
          */
-        Path getFile();
+        Path getPath();
+
+        @Deprecated
+        File getFile();
 
         /**
          * @return The filename specified in the disposition header.
@@ -214,11 +218,16 @@ public final class FormData implements Iterable<String> {
         }
 
         @Override
-        public Path getFile() {
+        public Path getPath() {
             if (file == null) {
                 throw UndertowMessages.MESSAGES.formValueIsAString();
             }
             return file;
+        }
+
+        @Override
+        public File getFile() {
+            return getPath().toFile();
         }
 
         @Override
