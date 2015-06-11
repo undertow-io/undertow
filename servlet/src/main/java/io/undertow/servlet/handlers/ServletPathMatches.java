@@ -404,10 +404,10 @@ public class ServletPathMatches {
         for (final Map.Entry<String, ServletHandler> entry : pathServlets.entrySet()) {
             String key = entry.getKey();
             if (key.endsWith("/*")) {
-                final String base = key.substring(0, key.length() - 2);
+                final String base = key.substring(0, key.length() - 1);
                 if (match == null || base.length() > match.length()) {
                     if (path.startsWith(base)) {
-                        match = base;
+                        match = base.substring(0, base.length() - 1);
                         servlet = entry.getValue();
                     }
                 }
