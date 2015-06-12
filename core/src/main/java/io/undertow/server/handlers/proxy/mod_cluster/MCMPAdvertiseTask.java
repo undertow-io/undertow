@@ -43,10 +43,12 @@ class MCMPAdvertiseTask implements Runnable {
     public static final String RFC_822_FMT = "EEE, d MMM yyyy HH:mm:ss Z";
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(RFC_822_FMT);
     private static final boolean linuxLike;
+    private static final boolean windows;
 
     static {
         String value = System.getProperty("os.name");
         linuxLike = (value != null) && (value.toLowerCase().startsWith("linux") || value.toLowerCase().startsWith("mac") || value.toLowerCase().startsWith("hp"));
+        windows = (value != null) && value.toLowerCase().contains("win");
     }
 
     private volatile int seq = 0;
@@ -64,10 +66,10 @@ class MCMPAdvertiseTask implements Runnable {
     static void advertise(final ModClusterContainer container, final MCMPConfig.AdvertiseConfig config, final XnioWorker worker) throws IOException {
         InetSocketAddress bindAddress;
         final InetAddress group = InetAddress.getByName(config.getAdvertiseGroup());
-        if (group != null && linuxLike) {
-            bindAddress = new InetSocketAddress(group, config.getAdvertisePort());
-        } else {
+        if (group == null || linuxLike || windows) {
             bindAddress = new InetSocketAddress(config.getAdvertisePort());
+        } else {
+            bindAddress = new InetSocketAddress(group, config.getAdvertisePort());
         }
         MulticastMessageChannel channel;
         try {
