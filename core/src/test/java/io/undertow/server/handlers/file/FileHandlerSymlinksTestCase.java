@@ -100,12 +100,12 @@ public class FileHandlerSymlinksTestCase {
         Path innerSymlink = newDir.resolve("innerSymlink");
         Path innerPage = innerDir.resolve("page.html");
 
-        Files.delete(innerSymlink);
-        Files.delete(newSymlink);
-        Files.delete(innerPage);
-        Files.delete(page);
-        Files.delete(innerDir);
-        Files.delete(newDir);
+        Files.deleteIfExists(innerSymlink);
+        Files.deleteIfExists(newSymlink);
+        Files.deleteIfExists(innerPage);
+        Files.deleteIfExists(page);
+        Files.deleteIfExists(innerDir);
+        Files.deleteIfExists(newDir);
     }
 
     @Test
