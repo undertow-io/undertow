@@ -60,6 +60,12 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
     public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
         ConfiguredServerEndpoint config = HandshakeUtil.getConfig(channel);
         try {
+            if(container.isClosed()) {
+                //if the underlying container is closed we just reject
+                channel.sendClose();
+                channel.resumeReceives();
+                return;
+            }
             InstanceFactory<?> endpointFactory = config.getEndpointFactory();
             ServerEndpointConfig.Configurator configurator = config.getEndpointConfiguration().getConfigurator();
             final InstanceHandle<?> instance;
@@ -112,6 +118,7 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
 
             UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, endpointInstance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions(), channel.getSubProtocol(), Collections.<Extension>emptyList(), null);
             config.getOpenSessions().add(session);
+
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
             session.setMaxIdleTimeout(getContainer().getDefaultMaxSessionIdleTimeout());

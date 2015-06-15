@@ -40,6 +40,8 @@ public class ConfiguredServerEndpoint {
     private final EncodingFactory encodingFactory;
     private final Set<Session> openSessions = Collections.newSetFromMap(new ConcurrentHashMap<Session, Boolean>());
 
+    private volatile int waiterCount;
+
     public ConfiguredServerEndpoint(final ServerEndpointConfig endpointConfiguration, final InstanceFactory<?> endpointFactory, final PathTemplate pathTemplate, final EncodingFactory encodingFactory, AnnotatedEndpointFactory annotatedEndpointFactory) {
         this.endpointConfiguration = endpointConfiguration;
         this.endpointFactory = endpointFactory;
@@ -66,6 +68,39 @@ public class ConfiguredServerEndpoint {
 
     public Set<Session> getOpenSessions() {
         return openSessions;
+    }
+
+    public void addOpenSession(Session session) {
+        openSessions.add(session);
+    }
+
+    public void removeOpenSession(Session session) {
+        synchronized (this) {
+            openSessions.remove(session);
+            if (waiterCount > 0 && openSessions.isEmpty()) {
+                notifyAll();
+            }
+        }
+    }
+
+    public void awaitClose(long timeout) {
+        waiterCount++;
+        long end = System.currentTimeMillis() + timeout;
+        synchronized (this) {
+            if(openSessions.isEmpty()) {
+                return;
+            }
+            try {
+                while (System.currentTimeMillis() < end) {
+                    wait(end - System.currentTimeMillis());
+                }
+            } catch (InterruptedException e) {
+                //ignore
+                return;
+            } finally {
+                waiterCount--;
+            }
+        }
     }
 
     public AnnotatedEndpointFactory getAnnotatedEndpointFactory() {

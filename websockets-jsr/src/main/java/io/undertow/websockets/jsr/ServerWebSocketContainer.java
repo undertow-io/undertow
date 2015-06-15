@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -67,6 +68,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+
+import static java.lang.System.*;
 
 
 /**
@@ -108,6 +111,8 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     private final List<WebsocketClientSslProvider> clientSslProviders;
 
+    private volatile boolean closed = false;
+
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
         this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, null, null);
     }
@@ -143,6 +148,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
     public Session connectToServer(final Object annotatedEndpointInstance, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+        if(closed) {
+            throw new ClosedChannelException();
+        }
         ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
@@ -153,6 +161,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public Session connectToServer(final Object annotatedEndpointInstance, final URI path) throws DeploymentException, IOException {
+        if(closed) {
+            throw new ClosedChannelException();
+        }
         ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
@@ -169,6 +180,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
     public Session connectToServer(Class<?> aClass, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+        if(closed) {
+            throw new ClosedChannelException();
+        }
         ConfiguredClientEndpoint config = getClientEndpoint(aClass, true);
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
@@ -184,6 +198,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public Session connectToServer(Class<?> aClass, URI uri) throws DeploymentException, IOException {
+        if(closed) {
+            throw new ClosedChannelException();
+        }
         ConfiguredClientEndpoint config = getClientEndpoint(aClass, true);
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
@@ -208,6 +225,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, final URI path) throws DeploymentException, IOException {
+        if(closed) {
+            throw new ClosedChannelException();
+        }
         ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
         XnioSsl ssl = null;
         for (WebsocketClientSslProvider provider : clientSslProviders) {
@@ -229,6 +249,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+        if(closed) {
+            throw new ClosedChannelException();
+        }
         ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
 
         WebSocketClientNegotiation clientNegotiation = connectionBuilder.getClientNegotiation();
@@ -279,6 +302,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public Session connectToServer(final Class<? extends Endpoint> endpointClass, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
+        if(closed) {
+            throw new ClosedChannelException();
+        }
         try {
             Endpoint endpoint = classIntrospecter.createInstanceFactory(endpointClass).createInstance().getInstance();
             return connectToServer(endpoint, cec, path);
@@ -605,6 +631,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public synchronized void close() {
+        closed = true;
         for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
             for (Session session : endpoint.getOpenSessions()) {
                 try {
@@ -613,6 +640,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                     JsrWebSocketLogger.ROOT_LOGGER.couldNotCloseOnUndeploy(e);
                 }
             }
+        }
+        //wait up to 10 seconds for them to close
+        long end = currentTimeMillis() + 10000;
+        for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
+            endpoint.awaitClose(end - System.currentTimeMillis());
         }
     }
 
@@ -688,5 +720,9 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     public WebSocketReconnectHandler getWebSocketReconnectHandler() {
         return webSocketReconnectHandler;
+    }
+
+    public boolean isClosed() {
+        return closed;
     }
 }
