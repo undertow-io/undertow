@@ -34,7 +34,7 @@ public class SecureRandomSessionIdGenerator implements SessionIdGenerator {
 
     private final SecureRandom random = new SecureRandom();
 
-    private volatile int length = 18;
+    private volatile int length = 30;
 
     private static final char[] SESSION_ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".toCharArray();
 
