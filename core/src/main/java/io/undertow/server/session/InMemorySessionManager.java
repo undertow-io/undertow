@@ -233,7 +233,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         return this.deploymentName;
     }
 
-
+    @Override
+    public SessionManagerStatistics getStatistics() {
+        return this;
+    }
 
     public long getCreatedSessionCount() {
         return createdSessionCount.get();

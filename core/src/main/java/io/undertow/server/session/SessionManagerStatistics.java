@@ -24,7 +24,7 @@ package io.undertow.server.session;
  *
  * @author Stuart Douglas
  */
-public interface SessionManagerStatistics extends SessionManager {
+public interface SessionManagerStatistics {
 
     /**
      *

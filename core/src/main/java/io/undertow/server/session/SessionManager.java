@@ -122,4 +122,9 @@ public interface SessionManager {
      * passive
      */
     Set<String> getAllSessions();
+
+    /**
+     * Returns the statistics for this session manager, or null, if statistics are not supported.
+     */
+    SessionManagerStatistics getStatistics();
 }
