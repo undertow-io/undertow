@@ -8,12 +8,10 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
 import io.undertow.util.StatusCodes;
-import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -21,7 +19,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -117,11 +117,11 @@ public class PathResource implements RangeAwareResource {
 
             protected boolean openFile() {
                 try {
-                    fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file.toFile(), FileAccess.READ_ONLY);
+                    fileChannel = FileChannel.open(file, StandardOpenOption.READ);
                     if(range) {
                         fileChannel.position(start);
                     }
-                } catch (FileNotFoundException e) {
+                } catch (NoSuchFileException e) {
                     exchange.setResponseCode(StatusCodes.NOT_FOUND);
                     callback.onException(exchange, sender, e);
                     return false;
