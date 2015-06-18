@@ -747,6 +747,81 @@ class ModClusterContainer implements ModClusterController {
         public NodeStatus getStatus() {
             return node.getStatus();
         }
+
+        @Override
+        public int getOpenConnections() {
+            return node.getStats().getOpenConnections();
+        }
+
+        @Override
+        public long getTransferred() {
+            return node.getStats().getTransferred();
+        }
+
+        @Override
+        public long getRead() {
+            return node.getStats().getRead();
+        }
+
+        @Override
+        public int getCacheConnections() {
+            return node.getNodeConfig().getCacheConnections();
+        }
+
+        @Override
+        public String getJvmRoute() {
+            return node.getNodeConfig().getJvmRoute();
+        }
+
+        @Override
+        public String getDomain() {
+            return node.getNodeConfig().getDomain();
+        }
+
+        @Override
+        public int getFlushWait() {
+            return node.getNodeConfig().getFlushwait();
+        }
+
+        @Override
+        public int getMaxConnections() {
+            return node.getNodeConfig().getMaxConnections();
+        }
+
+        @Override
+        public int getPing() {
+            return node.getNodeConfig().getPing();
+        }
+
+        @Override
+        public int getRequestQueueSize() {
+            return node.getNodeConfig().getRequestQueueSize();
+        }
+
+        @Override
+        public int getSmax() {
+            return node.getNodeConfig().getSmax();
+        }
+
+        @Override
+        public int getTimeout() {
+            return node.getNodeConfig().getTimeout();
+        }
+
+        @Override
+        public long getTtl() {
+            return node.getNodeConfig().getTtl();
+        }
+
+        @Override
+        public boolean isFlushPackets() {
+            return node.getNodeConfig().isFlushPackets();
+        }
+
+        @Override
+        public boolean isQueueNewRequests() {
+            return node.getNodeConfig().isQueueNewRequests();
+        }
     }
 
     private class ContextImpl implements ModClusterStatus.Context {

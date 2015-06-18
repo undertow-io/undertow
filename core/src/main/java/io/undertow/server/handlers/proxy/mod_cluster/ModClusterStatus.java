@@ -99,6 +99,36 @@ public interface ModClusterStatus {
         int getLoad();
 
         NodeStatus getStatus();
+
+        int getOpenConnections();
+
+        long getTransferred();
+
+        long getRead();
+
+        int getCacheConnections();
+
+        String getJvmRoute();
+
+        String getDomain();
+
+        int getFlushWait();
+
+        int getMaxConnections();
+
+        int getPing();
+
+        int getRequestQueueSize();
+
+        int getSmax();
+
+        int getTimeout();
+
+        long getTtl();
+
+        boolean isFlushPackets();
+
+        boolean isQueueNewRequests();
     }
 
     interface Context {
