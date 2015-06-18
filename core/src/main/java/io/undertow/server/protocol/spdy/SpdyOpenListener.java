@@ -86,7 +86,7 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
     public void handleEvent(final StreamConnection channel, Pooled<ByteBuffer> buffer) {
 
         //cool, we have a spdy connection.
-        SpdyChannel spdyChannel = new SpdyChannel(channel, bufferPool, buffer, heapBufferPool, false);
+        SpdyChannel spdyChannel = new SpdyChannel(channel, bufferPool, buffer, heapBufferPool, false, undertowOptions);
         Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
         if (idleTimeout != null && idleTimeout > 0) {
             spdyChannel.setIdleTimeout(idleTimeout);

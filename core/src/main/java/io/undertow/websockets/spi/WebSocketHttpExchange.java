@@ -22,6 +22,7 @@ import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
 import io.undertow.websockets.core.WebSocketChannel;
 import org.xnio.IoFuture;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 
 import java.io.Closeable;
@@ -160,4 +161,6 @@ public interface WebSocketHttpExchange extends Closeable {
     boolean isUserInRole(String role);
 
     Set<WebSocketChannel> getPeerConnections();
+
+    OptionMap getOptions();
 }

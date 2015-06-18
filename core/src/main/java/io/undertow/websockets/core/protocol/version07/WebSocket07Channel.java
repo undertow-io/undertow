@@ -32,6 +32,7 @@ import io.undertow.websockets.core.function.ChannelFunction;
 
 import io.undertow.websockets.extensions.ExtensionFunction;
 import org.xnio.IoUtils;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
@@ -89,8 +90,8 @@ public class WebSocket07Channel extends WebSocketChannel {
      * @param wsUrl      The url for which the {@link WebSocket07Channel} was created.
      */
     public WebSocket07Channel(StreamConnection channel, Pool<ByteBuffer> bufferPool,
-                              String wsUrl, String subProtocol, final boolean client, boolean allowExtensions, final List<ExtensionFunction> extensions, Set<WebSocketChannel> openConnections) {
-        super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocol, client, allowExtensions, extensions, openConnections);
+                              String wsUrl, String subProtocol, final boolean client, boolean allowExtensions, final List<ExtensionFunction> extensions, Set<WebSocketChannel> openConnections, OptionMap options) {
+        super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocol, client, allowExtensions, extensions, openConnections, options);
     }
 
     @Override

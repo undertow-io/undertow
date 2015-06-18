@@ -83,7 +83,7 @@ public final class SpdyPlainOpenListener implements ChannelListener<StreamConnec
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
-        SpdyChannel spdy = new SpdyChannel(channel, bufferPool, null, heapBufferPool, false);
+        SpdyChannel spdy = new SpdyChannel(channel, bufferPool, null, heapBufferPool, false, undertowOptions);
         Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
         if (idleTimeout != null && idleTimeout > 0) {
             spdy.setIdleTimeout(idleTimeout);

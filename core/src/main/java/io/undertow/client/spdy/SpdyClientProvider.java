@@ -188,7 +188,7 @@ public class SpdyClientProvider implements ClientProvider {
                 }
             });
         } else {
-            listener.completed(createSpdyChannel(connection, bufferPool));
+            listener.completed(createSpdyChannel(connection, bufferPool, options));
         }
     }
 
@@ -224,7 +224,7 @@ public class SpdyClientProvider implements ClientProvider {
                             spdyFailedListener.handleEvent(sslConnection);
                             return;
                         } else if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
-                            listener.completed(createSpdyChannel(connection, bufferPool));
+                            listener.completed(createSpdyChannel(connection, bufferPool, options));
                         }
                     } else {
                         ByteBuffer buf = ByteBuffer.allocate(100);
@@ -246,7 +246,7 @@ public class SpdyClientProvider implements ClientProvider {
                             } else if (spdySelectionProvider.selected != null) {
                                 //we have spdy
                                 if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
-                                    listener.completed(createSpdyChannel(connection, bufferPool));
+                                    listener.completed(createSpdyChannel(connection, bufferPool, options));
                                 }
                             }
                         } catch (IOException e) {
@@ -264,8 +264,8 @@ public class SpdyClientProvider implements ClientProvider {
 
     }
 
-    private static SpdyClientConnection createSpdyChannel(StreamConnection connection, Pool<ByteBuffer> bufferPool) {
-        SpdyChannel spdyChannel = new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192), true);
+    private static SpdyClientConnection createSpdyChannel(StreamConnection connection, Pool<ByteBuffer> bufferPool, OptionMap options) {
+        SpdyChannel spdyChannel = new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192), true, options);
         return new SpdyClientConnection(spdyChannel);
     }
 

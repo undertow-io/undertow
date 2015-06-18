@@ -42,20 +42,24 @@ public class ReferenceCountedPooled implements Pooled<ByteBuffer> {
     private volatile boolean discard = false;
     boolean mainFreed = false;
     private ByteBuffer slice = null;
+    private final FreeNotifier freeNotifier;
 
     private static final AtomicIntegerFieldUpdater<ReferenceCountedPooled> referenceCountUpdater = AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedPooled.class, "referenceCount");
 
     public ReferenceCountedPooled(Pooled<ByteBuffer> underlying, int referenceCount) {
+        this(underlying, referenceCount, null);
+    }
+
+    public ReferenceCountedPooled(Pooled<ByteBuffer> underlying, int referenceCount, FreeNotifier freeNotifier) {
         this.underlying = underlying;
         this.referenceCount = referenceCount;
+        this.freeNotifier = freeNotifier;
     }
 
     @Override
     public void discard() {
         this.discard = true;
-        if(referenceCountUpdater.decrementAndGet(this) == 0) {
-            underlying.free(); //we never discard, as discard is basically a big memory leak
-        }
+        freeInternal();
     }
 
     @Override
@@ -90,6 +94,9 @@ public class ReferenceCountedPooled implements Pooled<ByteBuffer> {
     private void freeInternal() {
         if(referenceCountUpdater.decrementAndGet(this) == 0) {
             underlying.free();
+            if(freeNotifier != null) {
+                freeNotifier.freed();
+            }
         }
     }
 
@@ -157,5 +164,9 @@ public class ReferenceCountedPooled implements Pooled<ByteBuffer> {
                 throw UndertowMessages.MESSAGES.objectWasFreed();
             }
         } while (!referenceCountUpdater.compareAndSet(this, val, val + 1));
+    }
+
+    public interface FreeNotifier {
+        void freed();
     }
 }
