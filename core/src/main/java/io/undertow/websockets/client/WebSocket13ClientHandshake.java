@@ -27,6 +27,7 @@ import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.ExtensionHandshake;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.http.ExtendedHandshakeChecker;
@@ -69,7 +70,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     }
 
     @Override
-    public WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool) {
+    public WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool, OptionMap options) {
         if (negotiation != null && negotiation.getSelectedExtensions() != null && !negotiation.getSelectedExtensions().isEmpty()) {
 
             List<WebSocketExtension> selected = negotiation.getSelectedExtensions();
@@ -83,9 +84,9 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                     }
                 }
             }
-            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation.getSelectedSubProtocol(), true, !negotiated.isEmpty(), negotiated, new HashSet<WebSocketChannel>());
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation.getSelectedSubProtocol(), true, !negotiated.isEmpty(), negotiated, new HashSet<WebSocketChannel>(), options);
         } else {
-            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, null, new HashSet<WebSocketChannel>());
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, null, new HashSet<WebSocketChannel>(), options);
         }
     }
 

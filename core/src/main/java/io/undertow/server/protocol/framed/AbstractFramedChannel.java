@@ -37,6 +37,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import io.undertow.UndertowOptions;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -44,6 +45,7 @@ import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
@@ -68,6 +70,14 @@ import org.xnio.channels.SuspendableWriteChannel;
  * @author Stuart Douglas
  */
 public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R, S>, R extends AbstractFramedStreamSourceChannel<C, R, S>, S extends AbstractFramedStreamSinkChannel<C, R, S>> implements ConnectedChannel {
+
+    /**
+     * The maximum number of buffers we will queue before suspending reads and
+     * waiting for the buffers to be consumed
+     *
+     * TODO: make the configurable
+     */
+    private final int maxQueuedBuffers;
 
     private final StreamConnection channel;
     private final IdleTimeoutConduit idleTimeoutConduit;
@@ -116,17 +126,36 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     private final Set<AbstractFramedStreamSourceChannel<C, R, S>> receivers = new HashSet<>();
 
+    @SuppressWarnings("unused")
+    private volatile int outstandingBuffers;
+    private volatile AtomicIntegerFieldUpdater<AbstractFramedChannel> outstandingBuffersUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "outstandingBuffers");
+
+    private final ReferenceCountedPooled.FreeNotifier freeNotifier = new ReferenceCountedPooled.FreeNotifier() {
+        @Override
+        public void freed() {
+            int res = outstandingBuffersUpdater.decrementAndGet(AbstractFramedChannel.this);
+            if(!receivesSuspended && res == maxQueuedBuffers - 1) {
+                synchronized (AbstractFramedChannel.this) {
+                    if(outstandingBuffersUpdater.get(AbstractFramedChannel.this) < maxQueuedBuffers) {
+                        channel.getSourceChannel().resumeReads();
+                    }
+                }
+            }
+        }
+    };
+
     /**
      * Create a new {@link io.undertow.server.protocol.framed.AbstractFramedChannel}
      * 8
-     *
-     * @param connectedStreamChannel The {@link org.xnio.channels.ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     *  @param connectedStreamChannel The {@link org.xnio.channels.ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
      *                               Be aware that it already must be "upgraded".
-     * @param bufferPool             The {@link org.xnio.Pool} which will be used to acquire {@link java.nio.ByteBuffer}'s from.
+     * @param bufferPool             The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
      * @param framePriority
+     * @param settings               The settings
      */
-    protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, FramePriority<C, R, S> framePriority, final Pooled<ByteBuffer> readData) {
+    protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, FramePriority<C, R, S> framePriority, final Pooled<ByteBuffer> readData, OptionMap settings) {
         this.framePriority = framePriority;
+        this.maxQueuedBuffers = settings.get(UndertowOptions.MAX_QUEUED_READ_BUFFERS, 10);
         if (readData != null) {
             if(readData.getResource().hasRemaining()) {
                 this.readData = new ReferenceCountedPooled(readData, 1);
@@ -260,14 +289,18 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         ReferenceCountedPooled pooled = this.readData;
         boolean hasData;
         if (pooled == null) {
-            Pooled<ByteBuffer> buf = bufferPool.allocate();
-            this.readData = pooled = new ReferenceCountedPooled(buf, 1);
+            pooled = allocateReferenceCountedBuffer();
+            if (pooled == null) {
+                return null;
+            }
             hasData = false;
         } else if(pooled.isFreed()) {
             //we attempt to re-used an existing buffer
             if(!pooled.tryUnfree()) {
-                Pooled<ByteBuffer> buf = bufferPool.allocate();
-                this.readData = pooled = new ReferenceCountedPooled(buf, 1);
+                pooled = allocateReferenceCountedBuffer();
+                if (pooled == null) {
+                    return null;
+                }
             } else {
                 pooled.getResource().limit(pooled.getResource().capacity());
             }
@@ -397,6 +430,27 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
             }
         }
+    }
+
+    private ReferenceCountedPooled allocateReferenceCountedBuffer() {
+        if(maxQueuedBuffers > 0) {
+            int expect;
+            do {
+                expect = outstandingBuffersUpdater.get(this);
+                if (expect == maxQueuedBuffers) {
+                    synchronized (this) {
+                        //we need to re-read in a sync block, to prevent races
+                        expect = outstandingBuffersUpdater.get(this);
+                        if (expect == maxQueuedBuffers) {
+                            channel.getSourceChannel().suspendReads();
+                            return null;
+                        }
+                    }
+                }
+            } while (!outstandingBuffersUpdater.compareAndSet(this, expect, expect + 1));
+        }
+        Pooled<ByteBuffer> buf = bufferPool.allocate();
+        return this.readData = new ReferenceCountedPooled(buf, 1, maxQueuedBuffers > 0 ? freeNotifier : null);
     }
 
     /**

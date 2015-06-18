@@ -106,7 +106,7 @@ public class AjpClientProvider implements ClientProvider {
     }
 
     private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
-        listener.completed(new AjpClientConnection(new AjpClientChannel(connection, bufferPool) , options, bufferPool));
+        listener.completed(new AjpClientConnection(new AjpClientChannel(connection, bufferPool, options) , options, bufferPool));
     }
 
 

@@ -25,6 +25,7 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
@@ -92,8 +93,8 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * @param client
      * @param peerConnections        The concurrent set that is used to track open connections associtated with an endpoint
      */
-    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final List<ExtensionFunction> extensions, Set<WebSocketChannel> peerConnections) {
-        super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null);
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final List<ExtensionFunction> extensions, Set<WebSocketChannel> peerConnections, OptionMap options) {
+        super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null, options);
         this.client = client;
         this.version = version;
         this.wsUrl = wsUrl;

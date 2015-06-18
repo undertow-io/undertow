@@ -21,6 +21,7 @@ package io.undertow.websockets.client;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.extensions.ExtensionHandshake;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.http.ExtendedHandshakeChecker;
@@ -54,7 +55,7 @@ public abstract class WebSocketClientHandshake {
         this.url = url;
     }
 
-    public abstract WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool);
+    public abstract WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool, OptionMap options);
 
     public abstract Map<String, String> createHeaders();
 

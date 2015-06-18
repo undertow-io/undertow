@@ -25,8 +25,10 @@ import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
@@ -66,8 +68,8 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
      *                               Be aware that it already must be "upgraded".
      * @param bufferPool             The {@link org.xnio.Pool} which will be used to acquire {@link java.nio.ByteBuffer}'s from.
      */
-    public AjpClientChannel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool) {
-        super(connectedStreamChannel, bufferPool, AjpClientFramePriority.INSTANCE, null);
+    public AjpClientChannel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, OptionMap settings) {
+        super(connectedStreamChannel, bufferPool, AjpClientFramePriority.INSTANCE, null, settings);
         ajpParser = new AjpResponseParser();
     }
 

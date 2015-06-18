@@ -24,6 +24,7 @@ import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoUtils;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
@@ -71,6 +72,6 @@ public class Hybi13Handshake extends Hybi07Handshake {
 
     @Override
     public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final Pool<ByteBuffer> pool) {
-        return new WebSocket13Channel(channel, pool, getWebSocketLocation(exchange), exchange.getResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING), false, allowExtensions, initExtensions(exchange), exchange.getPeerConnections());
+        return new WebSocket13Channel(channel, pool, getWebSocketLocation(exchange), exchange.getResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING), false, allowExtensions, initExtensions(exchange), exchange.getPeerConnections(), OptionMap.EMPTY);
     }
 }

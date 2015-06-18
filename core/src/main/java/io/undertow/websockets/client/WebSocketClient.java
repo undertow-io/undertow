@@ -268,7 +268,7 @@ public class WebSocketClient {
                                     private void handleConnectionWithExistingConnection(StreamConnection targetConnection) {
                                         final IoFuture<?> result;
 
-                                        result = HttpUpgrade.performUpgrade(targetConnection, newUri, headers, new WebsocketConnectionListener(handshake, newUri, ioFuture), handshake.handshakeChecker(newUri, headers));
+                                        result = HttpUpgrade.performUpgrade(targetConnection, newUri, headers, new WebsocketConnectionListener(optionMap, handshake, newUri, ioFuture), handshake.handshakeChecker(newUri, headers));
 
                                         result.addNotifier(new IoFuture.Notifier<Object, Object>() {
                                             @Override
@@ -308,9 +308,9 @@ public class WebSocketClient {
             } else {
                 final IoFuture<?> result;
                 if (ssl != null) {
-                    result = HttpUpgrade.performUpgrade(worker, ssl, toBind, newUri, headers, new WebsocketConnectionListener(handshake, newUri, ioFuture), null, optionMap, handshake.handshakeChecker(newUri, headers));
+                    result = HttpUpgrade.performUpgrade(worker, ssl, toBind, newUri, headers, new WebsocketConnectionListener(optionMap, handshake, newUri, ioFuture), null, optionMap, handshake.handshakeChecker(newUri, headers));
                 } else {
-                    result = HttpUpgrade.performUpgrade(worker, toBind, newUri, headers, new WebsocketConnectionListener(handshake, newUri, ioFuture), null, optionMap, handshake.handshakeChecker(newUri, headers));
+                    result = HttpUpgrade.performUpgrade(worker, toBind, newUri, headers, new WebsocketConnectionListener(optionMap, handshake, newUri, ioFuture), null, optionMap, handshake.handshakeChecker(newUri, headers));
                 }
                 result.addNotifier(new IoFuture.Notifier<Object, Object>() {
                     @Override
@@ -332,11 +332,13 @@ public class WebSocketClient {
         }
 
         private class WebsocketConnectionListener implements ChannelListener<StreamConnection> {
+            private final OptionMap options;
             private final WebSocketClientHandshake handshake;
             private final URI newUri;
             private final FutureResult<WebSocketChannel> ioFuture;
 
-            public WebsocketConnectionListener(WebSocketClientHandshake handshake, URI newUri, FutureResult<WebSocketChannel> ioFuture) {
+            public WebsocketConnectionListener(OptionMap options, WebSocketClientHandshake handshake, URI newUri, FutureResult<WebSocketChannel> ioFuture) {
+                this.options = options;
                 this.handshake = handshake;
                 this.newUri = newUri;
                 this.ioFuture = ioFuture;
@@ -344,7 +346,7 @@ public class WebSocketClient {
 
             @Override
             public void handleEvent(StreamConnection channel) {
-                WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool);
+                WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool, options);
                 ioFuture.setResult(result);
             }
         }
