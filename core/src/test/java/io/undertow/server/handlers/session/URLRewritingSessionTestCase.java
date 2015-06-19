@@ -90,7 +90,7 @@ public class URLRewritingSessionTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setCookieStore(new BasicCookieStore());
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath;foo=bar");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String url = HttpClientUtils.readResponse(result);
@@ -122,13 +122,13 @@ public class URLRewritingSessionTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setCookieStore(new BasicCookieStore());
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath?a=b");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath?a=b;c");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String url = HttpClientUtils.readResponse(result);
             Header[] header = result.getHeaders(COUNT);
             Assert.assertEquals("0", header[0].getValue());
-            Assert.assertEquals("b", result.getHeaders("a")[0].getValue());
+            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
 
 
             get = new HttpGet(url);
@@ -137,7 +137,7 @@ public class URLRewritingSessionTestCase {
             url = HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("1", header[0].getValue());
-            Assert.assertEquals("b", result.getHeaders("a")[0].getValue());
+            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
 
             get = new HttpGet(url);
             result = client.execute(get);
@@ -145,7 +145,7 @@ public class URLRewritingSessionTestCase {
             url = HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("2", header[0].getValue());
-            Assert.assertEquals("b", result.getHeaders("a")[0].getValue());
+            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
 
 
         } finally {

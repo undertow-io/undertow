@@ -91,7 +91,7 @@ public class PathParameterSessionConfig implements SessionConfig {
             anchor = path.substring(pound);
             path = path.substring(0, pound);
         }
-        int fragmentIndex = url.lastIndexOf(';');
+        int fragmentIndex = path.lastIndexOf(';');
         if(fragmentIndex >= 0) {
             fragment = path.substring(fragmentIndex);
             path = path.substring(0, fragmentIndex);
