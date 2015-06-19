@@ -73,15 +73,15 @@ public class HttpClientProvider implements ClientProvider {
             }
             OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
             if (bindAddress == null) {
-                ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
+                ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions, uri), tlsOptions).addNotifier(createNotifier(listener), null);
             } else {
-                ssl.openSslConnection(worker, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
+                ssl.openSslConnection(worker, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions, uri), tlsOptions).addNotifier(createNotifier(listener), null);
             }
         } else {
             if (bindAddress == null) {
-                worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+                worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri), options).addNotifier(createNotifier(listener), null);
             } else {
-                worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options), null, options).addNotifier(createNotifier(listener), null);
+                worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri), null, options).addNotifier(createNotifier(listener), null);
             }
         }
     }
@@ -95,15 +95,15 @@ public class HttpClientProvider implements ClientProvider {
             }
             OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
             if (bindAddress == null) {
-                ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
+                ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions, uri), tlsOptions).addNotifier(createNotifier(listener), null);
             } else {
-                ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
+                ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions, uri), tlsOptions).addNotifier(createNotifier(listener), null);
             }
         } else {
             if (bindAddress == null) {
-                ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+                ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri), options).addNotifier(createNotifier(listener), null);
             } else {
-                ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options), null, options).addNotifier(createNotifier(listener), null);
+                ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri), null, options).addNotifier(createNotifier(listener), null);
             }
         }
     }
@@ -119,17 +119,17 @@ public class HttpClientProvider implements ClientProvider {
         };
     }
 
-    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final URI uri) {
         return new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
-                handleConnected(connection, listener, bufferPool, options);
+                handleConnected(connection, listener, bufferPool, options, uri);
             }
         };
     }
 
 
-    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, URI uri) {
         if (options.get(UndertowOptions.ENABLE_SPDY, false) && connection instanceof SslConnection && SpdyClientProvider.isEnabled()) {
             try {
                 SpdyClientProvider.handlePotentialSpdyConnection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
@@ -148,7 +148,7 @@ public class HttpClientProvider implements ClientProvider {
                     public void handleEvent(SslConnection channel) {
                         listener.completed(new HttpClientConnection(connection, options, bufferPool));
                     }
-                });
+                }, uri);
             } catch (Exception e) {
                 listener.failed(new IOException(e));
             }

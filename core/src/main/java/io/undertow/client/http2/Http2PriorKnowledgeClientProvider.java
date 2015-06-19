@@ -68,18 +68,18 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
     public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
 
         if (bindAddress == null) {
-            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), options).addNotifier(createNotifier(listener), null);
         } else {
-            worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options), null, options).addNotifier(createNotifier(listener), null);
+            worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), null, options).addNotifier(createNotifier(listener), null);
         }}
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
 
         if (bindAddress == null) {
-            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), options).addNotifier(createNotifier(listener), null);
         } else {
-            ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options), null, options).addNotifier(createNotifier(listener), null);
+            ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), null, options).addNotifier(createNotifier(listener), null);
         }
     }
 
@@ -94,16 +94,16 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
         };
     }
 
-    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final String defaultHost) {
         return new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
-                handleConnected(connection, listener, bufferPool, options);
+                handleConnected(connection, listener, bufferPool, options, defaultHost);
             }
         };
     }
 
-    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final String defaultHost) {
         try {
             final ByteBuffer pri = ByteBuffer.wrap(PRI_REQUEST);
             pri.flip();
@@ -118,7 +118,7 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
                             if(pri.hasRemaining()) {
                                 return;
                             }
-                            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false));
+                            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost));
                         } catch (IOException e) {
                             listener.failed(e);
                         }
@@ -126,7 +126,7 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
                 });
                 return;
             }
-            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false));
+            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost));
         } catch (IOException e) {
             listener.failed(e);
         }

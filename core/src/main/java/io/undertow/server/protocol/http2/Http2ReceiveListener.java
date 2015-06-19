@@ -44,6 +44,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import org.xnio.channels.Channels;
 
 /**
  * The recieve listener for a Http2 connection.
@@ -119,6 +120,19 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         //we have a request
         final Http2StreamSourceChannel dataChannel = frame;
         final Http2ServerConnection connection = new Http2ServerConnection(channel, dataChannel, undertowOptions, bufferSize, rootHandler);
+
+        if(!dataChannel.getHeaders().contains(SCHEME) ||
+                !dataChannel.getHeaders().contains(METHOD) ||
+                !dataChannel.getHeaders().contains(AUTHORITY) ||
+                !dataChannel.getHeaders().contains(PATH)) {
+            channel.sendRstStream(frame.getStreamId(), Http2Channel.ERROR_PROTOCOL_ERROR);
+            try {
+                Channels.drain(frame, Long.MAX_VALUE);
+            } catch (IOException e) {
+                //ignore, this is expected because of the RST
+            }
+            return;
+        }
 
 
         final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);

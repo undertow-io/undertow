@@ -76,9 +76,11 @@ public class Http2ClientConnection implements ClientConnection {
     private final Map<Integer, Http2ClientExchange> currentExchanges = new ConcurrentHashMap<>();
 
     private boolean initialUpgradeRequest;
+    private final String defaultHost;
 
-    public Http2ClientConnection(Http2Channel http2Channel, boolean initialUpgradeRequest) {
+    public Http2ClientConnection(Http2Channel http2Channel, boolean initialUpgradeRequest, String defaultHost) {
         this.http2Channel = http2Channel;
+        this.defaultHost = defaultHost;
         http2Channel.getReceiveSetter().set(new Http2ReceiveListener());
         http2Channel.resumeReceives();
         http2Channel.addCloseTask(new ChannelListener<Http2Channel>() {
@@ -95,7 +97,12 @@ public class Http2ClientConnection implements ClientConnection {
         request.getRequestHeaders().put(PATH, request.getPath());
         request.getRequestHeaders().put(SCHEME, "https");
         request.getRequestHeaders().put(METHOD, request.getMethod().toString());
-        request.getRequestHeaders().put(AUTHORITY, request.getRequestHeaders().getFirst(Headers.HOST));
+        final String host = request.getRequestHeaders().getFirst(Headers.HOST);
+        if(host != null) {
+            request.getRequestHeaders().put(AUTHORITY, host);
+        } else {
+            request.getRequestHeaders().put(AUTHORITY, defaultHost);
+        }
         request.getRequestHeaders().remove(Headers.HOST);
 
 
