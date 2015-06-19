@@ -81,7 +81,7 @@ public class Http2ClearClientProvider implements ClientProvider {
             return;
         }
         Map<String, String> headers = createHeaders(options, bufferPool, uri);
-        HttpUpgrade.performUpgrade(worker, bindAddress, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null, options, null).addNotifier(new FailedNotifier(listener), null);
+        HttpUpgrade.performUpgrade(worker, bindAddress, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener, uri.getHost()), null, options, null).addNotifier(new FailedNotifier(listener), null);
     }
 
     @Override
@@ -99,7 +99,7 @@ public class Http2ClearClientProvider implements ClientProvider {
                 @Override
                 public void handleEvent(StreamConnection channel) {
                     Map<String, String> headers = createHeaders(options, bufferPool, uri);
-                    HttpUpgrade.performUpgrade(channel, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null).addNotifier(new FailedNotifier(listener), null);
+                    HttpUpgrade.performUpgrade(channel, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener, uri.getHost()), null).addNotifier(new FailedNotifier(listener), null);
                 }
             }, new ChannelListener<BoundChannel>() {
                 @Override
@@ -112,7 +112,7 @@ public class Http2ClearClientProvider implements ClientProvider {
                 @Override
                 public void handleEvent(StreamConnection channel) {
                     Map<String, String> headers = createHeaders(options, bufferPool, uri);
-                    HttpUpgrade.performUpgrade(channel, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener), null).addNotifier(new FailedNotifier(listener), null);
+                    HttpUpgrade.performUpgrade(channel, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener, uri.getHost()), null).addNotifier(new FailedNotifier(listener), null);
                 }
             }, new ChannelListener<BoundChannel>() {
                 @Override
@@ -179,20 +179,23 @@ public class Http2ClearClientProvider implements ClientProvider {
     }
 
     private static class Http2ClearOpenListener implements ChannelListener<StreamConnection> {
+
         private final Pool<ByteBuffer> bufferPool;
         private final OptionMap options;
         private final ClientCallback<ClientConnection> listener;
+        private final String defaultHost;
 
-        public Http2ClearOpenListener(Pool<ByteBuffer> bufferPool, OptionMap options, ClientCallback<ClientConnection> listener) {
+        public Http2ClearOpenListener(Pool<ByteBuffer> bufferPool, OptionMap options, ClientCallback<ClientConnection> listener, String defaultHost) {
             this.bufferPool = bufferPool;
             this.options = options;
             this.listener = listener;
+            this.defaultHost = defaultHost;
         }
 
         @Override
         public void handleEvent(StreamConnection channel) {
             Http2Channel http2Channel = new Http2Channel(channel, null, bufferPool, null, true, true, options);
-            Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, true);
+            Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, true, defaultHost);
 
             listener.completed(http2ClientConnection);
         }

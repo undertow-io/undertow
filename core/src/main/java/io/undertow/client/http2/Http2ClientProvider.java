@@ -161,7 +161,7 @@ public class Http2ClientProvider implements ClientProvider {
             public void handleEvent(SslConnection channel) {
                 listener.failed(UndertowMessages.MESSAGES.spdyNotSupported());
             }
-        });
+        }, uri);
     }
 
     public static boolean isEnabled() {
@@ -171,7 +171,7 @@ public class Http2ClientProvider implements ClientProvider {
     /**
      * Not really part of the public API, but is used by the HTTP client to initiate a HTTP2 connection for HTTPS requests.
      */
-    public static void handlePotentialHttp2Connection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> http2FailedListener) {
+    public static void handlePotentialHttp2Connection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> http2FailedListener, final URI uri) {
 
         final SslConnection sslConnection = (SslConnection) connection;
         final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(sslConnection);
@@ -196,7 +196,7 @@ public class Http2ClientProvider implements ClientProvider {
                             http2FailedListener.handleEvent(sslConnection);
                             return;
                         } else if (http2SelectionProvider.selected.equals(HTTP2)) {
-                            listener.completed(createHttp2Channel(connection, bufferPool, options));
+                            listener.completed(createHttp2Channel(connection, bufferPool, options, uri.getHost()));
                         }
                     } else {
                         ByteBuffer buf = ByteBuffer.allocate(100);
@@ -218,7 +218,7 @@ public class Http2ClientProvider implements ClientProvider {
                             } else if (http2SelectionProvider.selected != null) {
                                 //we have spdy
                                 if (http2SelectionProvider.selected.equals(HTTP2)) {
-                                    listener.completed(createHttp2Channel(connection, bufferPool, options));
+                                    listener.completed(createHttp2Channel(connection, bufferPool, options, uri.getHost()));
                                 }
                             }
                         } catch (IOException e) {
@@ -238,9 +238,9 @@ public class Http2ClientProvider implements ClientProvider {
 
     }
 
-    private static Http2ClientConnection createHttp2Channel(StreamConnection connection, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    private static Http2ClientConnection createHttp2Channel(StreamConnection connection, Pool<ByteBuffer> bufferPool, OptionMap options, String defaultHost) {
         Http2Channel http2Channel = new Http2Channel(connection, null, bufferPool, null, true, false, options);
-        return new Http2ClientConnection(http2Channel, false);
+        return new Http2ClientConnection(http2Channel, false, defaultHost);
     }
 
     private static class Http2SelectionProvider implements ALPN.ClientProvider {
