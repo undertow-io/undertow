@@ -17,6 +17,25 @@
  */
 package io.undertow.websockets.jsr.test.annotated;
 
+import javax.websocket.ClientEndpoint;
+import javax.websocket.CloseReason;
+import javax.websocket.Session;
+
+import java.net.URI;
+import java.util.Set;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.ByteBufferSlicePool;
+import org.xnio.FutureResult;
+
+
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -31,22 +50,6 @@ import io.undertow.websockets.jsr.UndertowSession;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.ByteBufferSlicePool;
-import org.xnio.FutureResult;
-
-import javax.websocket.ClientEndpoint;
-import javax.websocket.CloseReason;
-import javax.websocket.Session;
-import java.net.URI;
-import java.util.Set;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -194,6 +197,29 @@ public class AnnotatedEndpointTest {
 
     }
 
+
+    @Test
+    public void testGenericMessageHandling() throws Exception {
+        //make a sub class
+        AnnotatedGenericClientEndpoint c = new AnnotatedGenericClientEndpoint() {
+
+        };
+
+        Session session = deployment.connectToServer(c, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/error"));
+        Assert.assertEquals("hi", ErrorEndpoint.getMessage());
+        session.getAsyncRemote().sendText("app-error");
+        Assert.assertEquals("app-error", ErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.lang.RuntimeException", ErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+
+        session.getBasicRemote().sendText("io-error");
+        Assert.assertEquals("io-error", ErrorEndpoint.getMessage());
+        Assert.assertEquals("ERROR: java.io.IOException", ErrorEndpoint.getMessage());
+        Assert.assertTrue(c.isOpen());
+        ((UndertowSession)session).forceClose();
+        Assert.assertEquals("CLOSED", ErrorEndpoint.getMessage());
+
+    }
 
     @Test
     public void testImplicitIntegerConversion() throws Exception {
