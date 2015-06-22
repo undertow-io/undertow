@@ -84,13 +84,13 @@ public class SecureRandomSessionIdGenerator implements SessionIdGenerator {
                 val |= (0xFF & (int) data[i + 2]);
                 quad = true;
             }
-            out[index + 3] = alphabet[(quad ? (val & 0x3F) : 64)];
+            out[index + 3] = alphabet[(quad ? (val & 0x3F) : 63)];
             val >>= 6;
-            out[index + 2] = alphabet[(trip ? (val & 0x3F) : 64)];
+            out[index + 2] = alphabet[(trip ? (val & 0x3F) : 63)];
             val >>= 6;
             out[index + 1] = alphabet[val & 0x3F];
             val >>= 6;
-            out[index + 0] = alphabet[val & 0x3F];
+            out[index] = alphabet[val & 0x3F];
         }
         return out;
     }
