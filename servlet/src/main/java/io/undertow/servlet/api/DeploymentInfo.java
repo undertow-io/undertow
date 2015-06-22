@@ -45,6 +45,8 @@ import io.undertow.security.api.SecurityContextFactory;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.server.session.SecureRandomSessionIdGenerator;
+import io.undertow.server.session.SessionIdGenerator;
 import io.undertow.server.session.SessionListener;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
@@ -158,6 +160,8 @@ public class DeploymentInfo implements Cloneable {
      * Cache of common content types, to prevent allocations when parsing the charset
      */
     private int contentTypeCacheSize = 100;
+
+    private SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
     public void validate() {
         if (deploymentName == null) {
@@ -1126,6 +1130,14 @@ public class DeploymentInfo implements Cloneable {
         this.contentTypeCacheSize = contentTypeCacheSize;
     }
 
+    public SessionIdGenerator getSessionIdGenerator() {
+        return sessionIdGenerator;
+    }
+
+    public void setSessionIdGenerator(SessionIdGenerator sessionIdGenerator) {
+        this.sessionIdGenerator = sessionIdGenerator;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1204,6 +1216,7 @@ public class DeploymentInfo implements Cloneable {
         info.authenticationMode = authenticationMode;
         info.defaultMultipartConfig = defaultMultipartConfig;
         info.contentTypeCacheSize = contentTypeCacheSize;
+        info.sessionIdGenerator = sessionIdGenerator;
         return info;
     }
 

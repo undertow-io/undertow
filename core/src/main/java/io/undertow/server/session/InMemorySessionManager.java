@@ -47,7 +47,7 @@ import org.xnio.XnioWorker;
  */
 public class InMemorySessionManager implements SessionManager, SessionManagerStatistics {
 
-    private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
+    private final SessionIdGenerator sessionIdGenerator;
 
     private final ConcurrentMap<String, SessionImpl> sessions;
 
@@ -76,6 +76,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
 
     public InMemorySessionManager(String deploymentName, int maxSessions, boolean expireOldestUnusedSessionOnMax) {
+        this(new SecureRandomSessionIdGenerator(), deploymentName, maxSessions, expireOldestUnusedSessionOnMax);
+    }
+
+    public InMemorySessionManager(SessionIdGenerator sessionIdGenerator, String deploymentName, int maxSessions, boolean expireOldestUnusedSessionOnMax) {
+        this.sessionIdGenerator = sessionIdGenerator;
         this.deploymentName = deploymentName;
         this.expireOldestUnusedSessionOnMax = expireOldestUnusedSessionOnMax;
         this.sessions = new ConcurrentHashMap<>();
