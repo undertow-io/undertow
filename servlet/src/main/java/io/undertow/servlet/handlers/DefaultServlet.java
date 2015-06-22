@@ -252,15 +252,17 @@ public class DefaultServlet extends HttpServlet {
     private void serveFileBlocking(final HttpServletRequest req, final HttpServletResponse resp, final Resource resource) throws IOException {
         final ETag etag = resource.getETag();
         final Date lastModified = resource.getLastModified();
-        if (!ETagUtils.handleIfMatch(req.getHeader(Headers.IF_MATCH_STRING), etag, false) ||
-                !DateUtils.handleIfUnmodifiedSince(req.getHeader(Headers.IF_UNMODIFIED_SINCE_STRING), lastModified)) {
-            resp.setStatus(StatusCodes.PRECONDITION_FAILED);
-            return;
-        }
-        if (!ETagUtils.handleIfNoneMatch(req.getHeader(Headers.IF_NONE_MATCH_STRING), etag, true) ||
-                !DateUtils.handleIfModifiedSince(req.getHeader(Headers.IF_MODIFIED_SINCE_STRING), lastModified)) {
-            resp.setStatus(StatusCodes.NOT_MODIFIED);
-            return;
+        if(req.getDispatcherType() != DispatcherType.INCLUDE) {
+            if (!ETagUtils.handleIfMatch(req.getHeader(Headers.IF_MATCH_STRING), etag, false) ||
+                    !DateUtils.handleIfUnmodifiedSince(req.getHeader(Headers.IF_UNMODIFIED_SINCE_STRING), lastModified)) {
+                resp.setStatus(StatusCodes.PRECONDITION_FAILED);
+                return;
+            }
+            if (!ETagUtils.handleIfNoneMatch(req.getHeader(Headers.IF_NONE_MATCH_STRING), etag, true) ||
+                    !DateUtils.handleIfModifiedSince(req.getHeader(Headers.IF_MODIFIED_SINCE_STRING), lastModified)) {
+                resp.setStatus(StatusCodes.NOT_MODIFIED);
+                return;
+            }
         }
 
         //we are going to proceed. Set the appropriate headers
