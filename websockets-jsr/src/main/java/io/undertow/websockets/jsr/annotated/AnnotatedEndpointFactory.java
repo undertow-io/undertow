@@ -18,12 +18,6 @@
 
 package io.undertow.websockets.jsr.annotated;
 
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.websockets.jsr.Encoding;
-import io.undertow.websockets.jsr.EncodingFactory;
-import io.undertow.websockets.jsr.JsrWebSocketLogger;
-import io.undertow.websockets.jsr.JsrWebSocketMessages;
-
 import javax.websocket.CloseReason;
 import javax.websocket.DecodeException;
 import javax.websocket.DeploymentException;
@@ -35,6 +29,7 @@ import javax.websocket.OnOpen;
 import javax.websocket.PongMessage;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.lang.annotation.Annotation;
@@ -44,6 +39,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.websockets.jsr.Encoding;
+import io.undertow.websockets.jsr.EncodingFactory;
+import io.undertow.websockets.jsr.JsrWebSocketLogger;
+import io.undertow.websockets.jsr.JsrWebSocketMessages;
 
 /**
  * Factory that creates annotated end points.
@@ -124,7 +126,7 @@ public class AnnotatedEndpointFactory {
                             new BoundSingleParameter(method, Throwable.class, false),
                             createBoundPathParameters(method, paths, endpointClass));
                 }
-                if (method.isAnnotationPresent(OnMessage.class)) {
+                if (method.isAnnotationPresent(OnMessage.class) && ! method.isBridge()) {
                     if(binaryMessage != null && binaryMessage.overrides(method)) {
                         continue;
                     }
