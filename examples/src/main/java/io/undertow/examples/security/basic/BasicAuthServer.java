@@ -40,7 +40,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * Example of HTTP Basic auth
- * <p/>
+ * <p>
  * TODO: this needs to be cleaned up
  *
  * @author Stuart Douglas
