@@ -21,7 +21,7 @@ package io.undertow.protocols.http2;
 import java.nio.ByteBuffer;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * The go away
@@ -53,7 +53,7 @@ class Http2GoAwayStreamSinkChannel extends Http2NoDataStreamSinkChannel {
         Http2ProtocolUtils.putInt(buf, lastGoodStreamId);
         Http2ProtocolUtils.putInt(buf, status);
         buf.flip();
-        return new SendFrameHeader(new ImmediatePooled<>(buf));
+        return new SendFrameHeader(new ImmediatePooledByteBuffer(buf));
     }
 
     @Override

@@ -21,7 +21,7 @@ package io.undertow.client;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
@@ -29,7 +29,6 @@ import org.xnio.ssl.XnioSsl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,19 +61,19 @@ public final class UndertowClient {
         this.clientProviders = Collections.unmodifiableMap(map);
     }
 
-    public IoFuture<ClientConnection> connect(final URI uri, final XnioWorker worker, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public IoFuture<ClientConnection> connect(final URI uri, final XnioWorker worker, ByteBufferPool bufferPool, OptionMap options) {
         return connect(uri, worker, null, bufferPool, options);
     }
 
-    public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, ByteBufferPool bufferPool, OptionMap options) {
         return connect(bindAddress, uri, worker, null, bufferPool, options);
     }
 
-    public IoFuture<ClientConnection> connect(final URI uri, final XnioWorker worker, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public IoFuture<ClientConnection> connect(final URI uri, final XnioWorker worker, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         return connect((InetSocketAddress) null, uri, worker, ssl, bufferPool, options);
     }
 
-    public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
         final FutureResult<ClientConnection> result = new FutureResult<>();
         provider.connect(new ClientCallback<ClientConnection>() {
@@ -91,20 +90,20 @@ public final class UndertowClient {
         return result.getIoFuture();
     }
 
-    public IoFuture<ClientConnection> connect(final URI uri, final XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public IoFuture<ClientConnection> connect(final URI uri, final XnioIoThread ioThread, ByteBufferPool bufferPool, OptionMap options) {
         return connect((InetSocketAddress) null, uri, ioThread, null, bufferPool, options);
     }
 
 
-    public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, ByteBufferPool bufferPool, OptionMap options) {
         return connect(bindAddress, uri, ioThread, null, bufferPool, options);
     }
 
-    public IoFuture<ClientConnection> connect(final URI uri, final XnioIoThread ioThread, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public IoFuture<ClientConnection> connect(final URI uri, final XnioIoThread ioThread, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         return connect((InetSocketAddress) null, uri, ioThread, ssl, bufferPool, options);
     }
 
-    public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public IoFuture<ClientConnection> connect(InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
         final FutureResult<ClientConnection> result = new FutureResult<>();
         provider.connect(new ClientCallback<ClientConnection>() {
@@ -121,39 +120,39 @@ public final class UndertowClient {
         return result.getIoFuture();
     }
 
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, ByteBufferPool bufferPool, OptionMap options) {
         connect(listener, uri, worker, null, bufferPool, options);
     }
 
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, ByteBufferPool bufferPool, OptionMap options) {
         connect(listener, bindAddress, uri, worker, null, bufferPool, options);
     }
 
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
         provider.connect(listener, uri, worker, ssl, bufferPool, options);
     }
 
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
         provider.connect(listener, bindAddress, uri, worker, ssl, bufferPool, options);
     }
 
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, ByteBufferPool bufferPool, OptionMap options) {
         connect(listener, uri, ioThread, null, bufferPool, options);
     }
 
 
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, ByteBufferPool bufferPool, OptionMap options) {
         connect(listener, bindAddress, uri, ioThread, null, bufferPool, options);
     }
 
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
         provider.connect(listener, uri, ioThread, ssl, bufferPool, options);
     }
 
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         ClientProvider provider = getClientProvider(uri);
         provider.connect(listener, bindAddress, uri, ioThread, ssl, bufferPool, options);
     }

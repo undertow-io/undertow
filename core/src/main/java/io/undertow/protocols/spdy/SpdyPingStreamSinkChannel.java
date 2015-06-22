@@ -19,7 +19,7 @@
 package io.undertow.protocols.spdy;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 import java.nio.ByteBuffer;
 
@@ -43,7 +43,7 @@ class SpdyPingStreamSinkChannel extends SpdyControlFrameStreamSinkChannel {
         SpdyProtocolUtils.putInt(buf, firstInt);
         SpdyProtocolUtils.putInt(buf, 4); //we back fill the length
         SpdyProtocolUtils.putInt(buf, id);
-        return new SendFrameHeader(new ImmediatePooled<>(buf));
+        return new SendFrameHeader(new ImmediatePooledByteBuffer(buf));
     }
 
 }

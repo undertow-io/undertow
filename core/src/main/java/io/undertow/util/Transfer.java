@@ -19,11 +19,11 @@
 package io.undertow.util;
 
 import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -50,14 +50,14 @@ public class Transfer {
      * @param writeExceptionHandler the write exception handler to call if an error occurs during a write operation
      * @param pool the pool from which the transfer buffer should be allocated
      */
-    public static <I extends StreamSourceChannel, O extends StreamSinkChannel> void initiateTransfer(final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super I> readExceptionHandler, final ChannelExceptionHandler<? super O> writeExceptionHandler, Pool<ByteBuffer> pool) {
+    public static <I extends StreamSourceChannel, O extends StreamSinkChannel> void initiateTransfer(final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super I> readExceptionHandler, final ChannelExceptionHandler<? super O> writeExceptionHandler, ByteBufferPool pool) {
         if (pool == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("pool");
         }
-        final Pooled<ByteBuffer> allocated = pool.allocate();
+        final PooledByteBuffer allocated = pool.allocate();
         boolean free = true;
         try {
-            final ByteBuffer buffer = allocated.getResource();
+            final ByteBuffer buffer = allocated.getBuffer();
             long read;
             for(;;) {
                 try {
@@ -91,7 +91,7 @@ public class Transfer {
                 }
                 buffer.clear();
             }
-            Pooled<ByteBuffer> current = null;
+            PooledByteBuffer current = null;
             if(buffer.hasRemaining()) {
                 current = allocated;
                 free = false;
@@ -111,7 +111,7 @@ public class Transfer {
             }
         } finally {
             if (free) {
-                allocated.free();
+                allocated.close();
             }
         }
     }
@@ -133,8 +133,8 @@ public class Transfer {
     }
 
     static final class TransferListener<I extends StreamSourceChannel, O extends StreamSinkChannel> implements ChannelListener<Channel> {
-        private Pooled<ByteBuffer> pooledBuffer;
-        private final Pool<ByteBuffer> pool;
+        private PooledByteBuffer pooledBuffer;
+        private final ByteBufferPool pool;
         private final I source;
         private final O sink;
         private final ChannelListener<? super I> sourceListener;
@@ -144,7 +144,7 @@ public class Transfer {
         private boolean sourceDone;
         private boolean done = false;
 
-        TransferListener(Pool<ByteBuffer> pool, final Pooled<ByteBuffer> pooledBuffer, final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super O> writeExceptionHandler, final ChannelExceptionHandler<? super I> readExceptionHandler, boolean sourceDone) {
+        TransferListener(ByteBufferPool pool, final PooledByteBuffer pooledBuffer, final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super O> writeExceptionHandler, final ChannelExceptionHandler<? super I> readExceptionHandler, boolean sourceDone) {
             this.pool = pool;
             this.pooledBuffer = pooledBuffer;
             this.source = source;
@@ -171,10 +171,10 @@ public class Transfer {
                 noWrite = true;
             } else if(channel instanceof StreamSourceChannel) {
                 noWrite = true; //attempt a read first, as this is a read notification
-                pooledBuffer.getResource().compact();
+                pooledBuffer.getBuffer().compact();
             }
 
-            final ByteBuffer buffer = pooledBuffer.getResource();
+            final ByteBuffer buffer = pooledBuffer.getBuffer();
             try {
                 long read;
 
@@ -187,7 +187,7 @@ public class Transfer {
                             try {
                                 res = sink.write(buffer);
                             } catch (IOException e) {
-                                pooledBuffer.free();
+                                pooledBuffer.close();
                                 pooledBuffer = null;
                                 done = true;
                                 ChannelListeners.invokeChannelExceptionHandler(sink, writeExceptionHandler, e);
@@ -212,7 +212,7 @@ public class Transfer {
                             read = source.read(buffer);
                             buffer.flip();
                         } catch (IOException e) {
-                            pooledBuffer.free();
+                            pooledBuffer.close();
                             pooledBuffer = null;
                             done = true;
                             ChannelListeners.invokeChannelExceptionHandler(source, readExceptionHandler, e);
@@ -250,7 +250,7 @@ public class Transfer {
                 }
             } finally {
                 if (pooledBuffer != null && !buffer.hasRemaining()) {
-                    pooledBuffer.free();
+                    pooledBuffer.close();
                     pooledBuffer = null;
                 }
             }

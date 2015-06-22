@@ -18,8 +18,7 @@
 
 package io.undertow.protocols.http2;
 
-import java.nio.ByteBuffer;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * A HTTP2 RST Stream channel
@@ -31,7 +30,7 @@ public class Http2RstStreamStreamSourceChannel extends AbstractHttp2StreamSource
     private final int errorCode;
     private final int streamId;
 
-    Http2RstStreamStreamSourceChannel(Http2Channel framedChannel, Pooled<ByteBuffer> data, int errorCode, int streamId) {
+    Http2RstStreamStreamSourceChannel(Http2Channel framedChannel, PooledByteBuffer data, int errorCode, int streamId) {
         super(framedChannel, data, 0);
         this.errorCode = errorCode;
         this.streamId = streamId;

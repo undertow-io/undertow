@@ -100,7 +100,7 @@ public class DebugExtensionsListener extends AbstractReceiveListener {
                 }
             }
         } finally {
-            pooled.free();
+            pooled.close();
         }
     }
 

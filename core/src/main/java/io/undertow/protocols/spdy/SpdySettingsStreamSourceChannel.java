@@ -18,9 +18,8 @@
 
 package io.undertow.protocols.spdy;
 
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
@@ -35,7 +34,7 @@ public class SpdySettingsStreamSourceChannel extends SpdyStreamSourceChannel {
     private final List<SpdySetting> settings;
 
 
-    SpdySettingsStreamSourceChannel(SpdyChannel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, List<SpdySetting> settings) {
+    SpdySettingsStreamSourceChannel(SpdyChannel framedChannel, PooledByteBuffer data, long frameDataRemaining, List<SpdySetting> settings) {
         super(framedChannel, data, frameDataRemaining);
         this.settings = settings;
         lastFrame();

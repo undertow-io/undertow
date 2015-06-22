@@ -48,7 +48,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
-import org.xnio.ByteBufferSlicePool;
 
 /**
  * @author Andrej Golovnin
@@ -77,7 +76,7 @@ public class BinaryEndpointTest {
                 .addServlet(Servlets.servlet("bin", BinaryEndpointServlet.class).setLoadOnStartup(100))
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
-                                .setBuffers(new ByteBufferSlicePool(16 * 1024, 16 * 1024))
+                                .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorker())
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override

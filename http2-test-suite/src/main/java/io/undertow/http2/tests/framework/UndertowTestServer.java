@@ -22,9 +22,8 @@ import io.undertow.UndertowOptions;
 import io.undertow.server.OpenListener;
 import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
+import io.undertow.server.DefaultByteBufferPool;
 import org.jboss.logging.Logger;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.OptionMap;
@@ -77,7 +76,7 @@ public class UndertowTestServer implements ServerController {
                     .set(Options.BALANCING_CONNECTIONS, 2)
                     .getMap();
 
-            ByteBufferSlicePool pool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2 * BUFFER_SIZE, 100 * BUFFER_SIZE);
+            final DefaultByteBufferPool pool = new DefaultByteBufferPool(true, BUFFER_SIZE);
             openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
             acceptListener = ChannelListeners.openListenerAdapter(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10));
 

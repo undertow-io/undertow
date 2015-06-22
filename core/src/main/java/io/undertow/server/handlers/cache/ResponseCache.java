@@ -180,7 +180,7 @@ public class ResponseCache {
             buffers = new ByteBuffer[pooled.length];
             for (int i = 0; i < buffers.length; i++) {
                 // Keep position from mutating
-                buffers[i] = pooled[i].getResource().duplicate();
+                buffers[i] = pooled[i].getBuffer().duplicate();
             }
             ok = true;
         } finally {

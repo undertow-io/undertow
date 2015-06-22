@@ -33,11 +33,11 @@ import io.undertow.server.ServerConnection;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.util.Methods;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.SslChannel;
 import org.xnio.conduits.StreamSinkConduit;
@@ -65,7 +65,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
     private HttpUpgradeListener upgradeListener;
     private boolean connectHandled;
 
-    public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
+    public HttpServerConnection(StreamConnection channel, final ByteBufferPool bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         if (channel instanceof SslChannel) {
             sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel), this);
@@ -107,7 +107,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
             @Override
             public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
 
-                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(new HttpResponseConduit(getSinkChannel().getConduit(), getBufferPool(), exchange), false, false);
+                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(new HttpResponseConduit(getSinkChannel().getConduit(), getByteBufferPool(), exchange), false, false);
                 fixed.reset(0, exchange);
                 return fixed;
             }
@@ -140,20 +140,20 @@ public final class HttpServerConnection extends AbstractServerConnection {
      *
      * @param unget The buffer to push back
      */
-    public void ungetRequestBytes(final Pooled<ByteBuffer> unget) {
+    public void ungetRequestBytes(final PooledByteBuffer unget) {
         if (getExtraBytes() == null) {
             setExtraBytes(unget);
         } else {
-            Pooled<ByteBuffer> eb = getExtraBytes();
-            ByteBuffer buf = eb.getResource();
-            final ByteBuffer ugBuffer = unget.getResource();
+            PooledByteBuffer eb = getExtraBytes();
+            ByteBuffer buf = eb.getBuffer();
+            final ByteBuffer ugBuffer = unget.getBuffer();
 
             if (ugBuffer.limit() - ugBuffer.remaining() > buf.remaining()) {
                 //stuff the existing data after the data we are ungetting
                 ugBuffer.compact();
                 ugBuffer.put(buf);
                 ugBuffer.flip();
-                eb.free();
+                eb.close();
                 setExtraBytes(unget);
             } else {
                 //TODO: this is horrible, but should not happen often
@@ -161,10 +161,10 @@ public final class HttpServerConnection extends AbstractServerConnection {
                 int first = ugBuffer.remaining();
                 ugBuffer.get(data, 0, ugBuffer.remaining());
                 buf.get(data, first, buf.remaining());
-                eb.free();
-                unget.free();
+                eb.close();
+                unget.close();
                 final ByteBuffer newBuffer = ByteBuffer.wrap(data);
-                setExtraBytes(new ImmediatePooled<>(newBuffer));
+                setExtraBytes(new ImmediatePooledByteBuffer(newBuffer));
             }
         }
     }

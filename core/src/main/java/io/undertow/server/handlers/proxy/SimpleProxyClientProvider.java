@@ -69,7 +69,7 @@ public class SimpleProxyClientProvider implements ProxyClient {
                 exchange.getConnection().removeAttachment(clientAttachmentKey);
             }
         }
-        client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
+        client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getByteBufferPool(), OptionMap.EMPTY);
     }
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {

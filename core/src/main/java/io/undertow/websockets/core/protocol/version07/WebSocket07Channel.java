@@ -32,8 +32,8 @@ import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
@@ -82,10 +82,10 @@ public class WebSocket07Channel extends WebSocketChannel {
      *
      * @param channel    The {@link StreamConnection} over which the WebSocket Frames should get send and received.
      *                   Be aware that it already must be "upgraded".
-     * @param bufferPool The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
+     * @param bufferPool The {@link ByteBufferPool} which will be used to acquire {@link ByteBuffer}'s from.
      * @param wsUrl      The url for which the {@link WebSocket07Channel} was created.
      */
-    public WebSocket07Channel(StreamConnection channel, Pool<ByteBuffer> bufferPool,
+    public WebSocket07Channel(StreamConnection channel, ByteBufferPool bufferPool,
                               String wsUrl, String subProtocol, final boolean client, boolean allowExtensions, final ExtensionFunction extensionFunction, Set<WebSocketChannel> openConnections, OptionMap options) {
         super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocol, client, allowExtensions, extensionFunction, openConnections, options);
     }
@@ -136,7 +136,7 @@ public class WebSocket07Channel extends WebSocketChannel {
         private boolean done = false;
 
         @Override
-        public StreamSourceFrameChannel getChannel(Pooled<ByteBuffer> pooled) {
+        public StreamSourceFrameChannel getChannel(PooledByteBuffer pooled) {
             StreamSourceFrameChannel channel = createChannel(pooled);
             if (frameFinalFlag) {
                 channel.finalFrame();
@@ -146,7 +146,7 @@ public class WebSocket07Channel extends WebSocketChannel {
             return channel;
         }
 
-        public StreamSourceFrameChannel createChannel(Pooled<ByteBuffer> pooled) {
+        public StreamSourceFrameChannel createChannel(PooledByteBuffer pooled) {
 
 
             // Processing ping/pong/close frames because they cannot be

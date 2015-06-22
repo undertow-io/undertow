@@ -23,7 +23,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.websockets.core.WebSocketChannel;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
@@ -140,7 +140,7 @@ public interface WebSocketHttpExchange extends Closeable {
     /**
      * @return The buffer pool
      */
-    Pool<ByteBuffer> getBufferPool();
+    ByteBufferPool getBufferPool();
 
     /**
      * @return The query string

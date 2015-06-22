@@ -21,8 +21,8 @@ package io.undertow.io;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.Buffers;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -43,7 +43,7 @@ import static org.xnio.Bits.anyAreSet;
 public class UndertowInputStream extends InputStream {
 
     private final StreamSourceChannel channel;
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
 
     /**
      * If this stream is ready for a read
@@ -52,7 +52,7 @@ public class UndertowInputStream extends InputStream {
     private static final int FLAG_FINISHED = 1 << 1;
 
     private int state;
-    private Pooled<ByteBuffer> pooled;
+    private PooledByteBuffer pooled;
 
     public UndertowInputStream(final HttpServerExchange exchange) {
         if (exchange.isRequestChannelAvailable()) {
@@ -60,7 +60,7 @@ public class UndertowInputStream extends InputStream {
         } else {
             this.channel = new EmptyStreamSourceChannel(exchange.getIoThread());
         }
-        this.bufferPool = exchange.getConnection().getBufferPool();
+        this.bufferPool = exchange.getConnection().getByteBufferPool();
     }
 
     @Override
@@ -93,10 +93,10 @@ public class UndertowInputStream extends InputStream {
         if (len == 0) {
             return 0;
         }
-        ByteBuffer buffer = pooled.getResource();
+        ByteBuffer buffer = pooled.getBuffer();
         int copied = Buffers.copy(ByteBuffer.wrap(b, off, len), buffer);
         if (!buffer.hasRemaining()) {
-            pooled.free();
+            pooled.close();
             pooled = null;
         }
         return copied;
@@ -106,11 +106,11 @@ public class UndertowInputStream extends InputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
 
-            int res = Channels.readBlocking(channel, pooled.getResource());
-            pooled.getResource().flip();
+            int res = Channels.readBlocking(channel, pooled.getBuffer());
+            pooled.getBuffer().flip();
             if (res == -1) {
                 state |= FLAG_FINISHED;
-                pooled.free();
+                pooled.close();
                 pooled = null;
             }
         }
@@ -119,16 +119,16 @@ public class UndertowInputStream extends InputStream {
     private void readIntoBufferNonBlocking() throws IOException {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
-            int res = channel.read(pooled.getResource());
+            int res = channel.read(pooled.getBuffer());
             if (res == 0) {
-                pooled.free();
+                pooled.close();
                 pooled = null;
                 return;
             }
-            pooled.getResource().flip();
+            pooled.getBuffer().flip();
             if (res == -1) {
                 state |= FLAG_FINISHED;
-                pooled.free();
+                pooled.close();
                 pooled = null;
             }
         }
@@ -146,7 +146,7 @@ public class UndertowInputStream extends InputStream {
         if (pooled == null) {
             return 0;
         }
-        return pooled.getResource().remaining();
+        return pooled.getBuffer().remaining();
     }
 
     @Override
@@ -159,13 +159,13 @@ public class UndertowInputStream extends InputStream {
             while (allAreClear(state, FLAG_FINISHED)) {
                 readIntoBuffer();
                 if (pooled != null) {
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                 }
             }
         } finally {
             if (pooled != null) {
-                pooled.free();
+                pooled.close();
                 pooled = null;
             }
             channel.shutdownReads();

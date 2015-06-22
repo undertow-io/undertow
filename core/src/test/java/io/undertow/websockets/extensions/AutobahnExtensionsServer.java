@@ -21,6 +21,7 @@ package io.undertow.websockets.extensions;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.websockets.WebSocketConnectionCallback;
@@ -29,8 +30,6 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.apache.log4j.BasicConfigurator;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.OptionMap;
@@ -90,7 +89,7 @@ public class AutobahnExtensionsServer {
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
-            openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
+            openListener = new HttpOpenListener(new DefaultByteBufferPool(false, 8192));
             ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
             server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 

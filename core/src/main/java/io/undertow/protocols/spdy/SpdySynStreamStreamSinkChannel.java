@@ -21,8 +21,8 @@ package io.undertow.protocols.spdy;
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
-import io.undertow.util.ImmediatePooled;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 import java.nio.ByteBuffer;
 import java.util.zip.Deflater;
@@ -52,9 +52,9 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
             return new SendFrameHeader(getBuffer().remaining(), null);
         }
         final boolean finalFrame = isWritesShutdown() && fcWindow >= getBuffer().remaining();
-        Pooled<ByteBuffer> firstHeaderBuffer = getChannel().getBufferPool().allocate();
-        Pooled<ByteBuffer>[] allHeaderBuffers = null;
-        ByteBuffer firstBuffer = firstHeaderBuffer.getResource();
+        PooledByteBuffer firstHeaderBuffer = getChannel().getBufferPool().allocate();
+        PooledByteBuffer[] allHeaderBuffers = null;
+        ByteBuffer firstBuffer = firstHeaderBuffer.getBuffer();
         boolean firstFrame = false;
         if (first) {
             firstFrame = true;
@@ -76,8 +76,8 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
 
             allHeaderBuffers = createHeaderBlock(firstHeaderBuffer, allHeaderBuffers, firstBuffer, headers, associatedStreamId > 0);
         }
-        Pooled<ByteBuffer> currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
-        ByteBuffer currentBuffer = currentPooled.getResource();
+        PooledByteBuffer currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
+        ByteBuffer currentBuffer = currentPooled.getBuffer();
         int remainingInBuffer = 0;
         if (getBuffer().remaining() > 0) {
             remainingInBuffer = getBuffer().remaining() - fcWindow;
@@ -85,7 +85,7 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
             if (currentBuffer.remaining() < 8) {
                 allHeaderBuffers = allocateAll(allHeaderBuffers, currentPooled);
                 currentPooled = allHeaderBuffers[allHeaderBuffers.length - 1];
-                currentBuffer = currentPooled.getResource();
+                currentBuffer = currentPooled.getBuffer();
             }
             SpdyProtocolUtils.putInt(currentBuffer, getStreamId());
             SpdyProtocolUtils.putInt(currentBuffer, ((finalFrame ? SpdyChannel.FLAG_FIN : 0) << 24) + fcWindow);
@@ -102,20 +102,20 @@ public class SpdySynStreamStreamSinkChannel extends SpdyStreamStreamSinkChannel 
             //for now we will just copy them into a big buffer
             int length = 0;
             for (int i = 0; i < allHeaderBuffers.length; ++i) {
-                length += allHeaderBuffers[i].getResource().position();
-                allHeaderBuffers[i].getResource().flip();
+                length += allHeaderBuffers[i].getBuffer().position();
+                allHeaderBuffers[i].getBuffer().flip();
             }
             try {
                 ByteBuffer newBuf = ByteBuffer.allocate(length);
                 for (int i = 0; i < allHeaderBuffers.length; ++i) {
-                    newBuf.put(allHeaderBuffers[i].getResource());
+                    newBuf.put(allHeaderBuffers[i].getBuffer());
                 }
                 newBuf.flip();
-                return new SendFrameHeader(remainingInBuffer, new ImmediatePooled<>(newBuf));
+                return new SendFrameHeader(remainingInBuffer, new ImmediatePooledByteBuffer(newBuf));
             } finally {
                 //the allocate can oome
                 for (int i = 0; i < allHeaderBuffers.length; ++i) {
-                    allHeaderBuffers[i].free();
+                    allHeaderBuffers[i].close();
                 }
             }
         }

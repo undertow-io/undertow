@@ -19,16 +19,14 @@
 package io.undertow.protocols.spdy;
 
 import io.undertow.util.HeaderMap;
-import org.xnio.Pooled;
-
-import java.nio.ByteBuffer;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * @author Stuart Douglas
  */
 public class SpdySynReplyStreamSourceChannel extends SpdyStreamStreamSourceChannel {
 
-    SpdySynReplyStreamSourceChannel(SpdyChannel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, HeaderMap headers, int streamId) {
+    SpdySynReplyStreamSourceChannel(SpdyChannel framedChannel, PooledByteBuffer data, long frameDataRemaining, HeaderMap headers, int streamId) {
         super(framedChannel, data, frameDataRemaining, headers, streamId);
     }
 }

@@ -108,7 +108,7 @@ class FrameHandler extends AbstractReceiveListener {
                 } catch (IOException e) {
                     invokeOnError(e);
                 } finally {
-                    pooled.free();
+                    pooled.close();
                 }
             }
         });
@@ -138,7 +138,7 @@ class FrameHandler extends AbstractReceiveListener {
                     } catch (Exception e) {
                         invokeOnError(e);
                     } finally {
-                        pooled.free();
+                        pooled.close();
                     }
                 }
             });
@@ -230,7 +230,7 @@ class FrameHandler extends AbstractReceiveListener {
                 } catch (Exception e) {
                     invokeOnError(e);
                 } finally {
-                    pooled.free();
+                    pooled.close();
                 }
             }
         });
@@ -294,7 +294,7 @@ class FrameHandler extends AbstractReceiveListener {
         if (handler != null) {
             invokeBinaryHandler(message, handler, true);
         } else {
-            message.getData().free();
+            message.getData().close();
         }
     }
 

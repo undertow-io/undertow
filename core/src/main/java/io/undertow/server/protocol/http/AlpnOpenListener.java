@@ -19,7 +19,6 @@
 package io.undertow.server.protocol.http;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,8 +39,8 @@ import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.SslConnection;
@@ -57,7 +56,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
 
     private static final String PROTOCOL_KEY = AlpnOpenListener.class.getName() + ".protocol";
 
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
 
     private final Map<String, ListenerEntry> listeners = new HashMap<>();
     private final String fallbackProtocol;
@@ -65,7 +64,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
     private volatile OptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
 
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool, OptionMap undertowOptions, String fallbackProtocol, DelegateOpenListener fallbackListener) {
+    public AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions, String fallbackProtocol, DelegateOpenListener fallbackListener) {
         this.bufferPool = bufferPool;
         this.fallbackProtocol = fallbackProtocol;
         if(fallbackProtocol != null && fallbackListener != null) {
@@ -75,27 +74,27 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         this.undertowOptions = undertowOptions;
     }
 
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool, OptionMap undertowOptions, DelegateOpenListener httpListener) {
+    public AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions, DelegateOpenListener httpListener) {
         this(bufferPool, undertowOptions, "http/1.1", httpListener);
     }
 
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool,  OptionMap undertowOptions) {
+    public AlpnOpenListener(ByteBufferPool bufferPool,  OptionMap undertowOptions) {
         this(bufferPool, undertowOptions, null, null);
     }
 
     @Deprecated
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool, String fallbackProtocol, DelegateOpenListener fallbackListener) {
+    public AlpnOpenListener(ByteBufferPool bufferPool, String fallbackProtocol, DelegateOpenListener fallbackListener) {
         this(bufferPool, OptionMap.EMPTY, fallbackProtocol, fallbackListener);
     }
 
     @Deprecated
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool, DelegateOpenListener httpListener) {
+    public AlpnOpenListener(ByteBufferPool bufferPool, DelegateOpenListener httpListener) {
         this(bufferPool, OptionMap.EMPTY, "http/1.1", httpListener);
     }
 
 
     @Deprecated
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool) {
+    public AlpnOpenListener(ByteBufferPool bufferPool) {
         this(bufferPool, OptionMap.EMPTY, null, null);
     }
 
@@ -131,7 +130,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
     }
 
     @Override
-    public Pool<ByteBuffer> getBufferPool() {
+    public ByteBufferPool getBufferPool() {
         return bufferPool;
     }
 
@@ -231,16 +230,16 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
 
         @Override
         public void handleEvent(StreamSourceChannel source) {
-            Pooled<ByteBuffer> buffer = bufferPool.allocate();
+            PooledByteBuffer buffer = bufferPool.allocate();
             boolean free = true;
             try {
                 while (true) {
-                    int res = channel.getSourceChannel().read(buffer.getResource());
+                    int res = channel.getSourceChannel().read(buffer.getBuffer());
                     if (res == -1) {
                         IoUtils.safeClose(channel);
                         return;
                     }
-                    buffer.getResource().flip();
+                    buffer.getBuffer().flip();
                     if(selected != null) {
                         DelegateOpenListener listener = listeners.get(selected).listener;
                         source.getReadSetter().set(null);
@@ -269,7 +268,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
                 IoUtils.safeClose(channel);
             } finally {
                 if (free) {
-                    buffer.free();
+                    buffer.close();
                 }
             }
         }

@@ -31,7 +31,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
-import org.xnio.ByteBufferSlicePool;
 
 import javax.net.ssl.SSLContext;
 import javax.websocket.ClientEndpointConfig;
@@ -68,7 +67,7 @@ public class ProgramaticLazyEndpointTest {
                 .addServlet(Servlets.servlet("add", AddEndpointServlet.class).setLoadOnStartup(100))
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
-                                .setBuffers(new ByteBufferSlicePool(100, 1000))
+                                .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorker())
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override

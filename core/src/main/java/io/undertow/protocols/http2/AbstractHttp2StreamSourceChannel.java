@@ -18,8 +18,7 @@
 
 package io.undertow.protocols.http2;
 
-import java.nio.ByteBuffer;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
@@ -35,7 +34,7 @@ public class AbstractHttp2StreamSourceChannel extends AbstractFramedStreamSource
         super(framedChannel);
     }
 
-    AbstractHttp2StreamSourceChannel(Http2Channel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining) {
+    AbstractHttp2StreamSourceChannel(Http2Channel framedChannel, PooledByteBuffer data, long frameDataRemaining) {
         super(framedChannel, data, frameDataRemaining);
     }
 

@@ -165,6 +165,11 @@ public final class WebSocketTestClient {
         if (ch != null) {
             ch.close().syncUninterruptibly();
         }
+        try {
+            bootstrap.group().shutdownGracefully().await(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public interface FrameListener {

@@ -18,8 +18,7 @@
 
 package io.undertow.protocols.ssl;
 
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
+import io.undertow.server.DefaultByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
@@ -27,7 +26,7 @@ import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioExecutor;
@@ -48,7 +47,6 @@ import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -61,9 +59,9 @@ import static org.xnio.IoUtils.safeClose;
  */
 public class UndertowXnioSsl extends XnioSsl {
 
-    private static final Pool<ByteBuffer> DEFAULT_BUFFER_POOL = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 17 * 1024, 17 * 1024 * 128);
+    private static final ByteBufferPool DEFAULT_BUFFER_POOL = new DefaultByteBufferPool(true, 17 * 1024, -1, 12);
 
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
     private volatile SSLContext sslContext;
 
     /**
@@ -99,7 +97,7 @@ public class UndertowXnioSsl extends XnioSsl {
      * @throws java.security.NoSuchAlgorithmException if the given SSL algorithm is not supported
      * @throws java.security.KeyManagementException if the SSL context could not be initialized
      */
-    public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, Pool<ByteBuffer> bufferPool) throws NoSuchProviderException, NoSuchAlgorithmException, KeyManagementException {
+    public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, ByteBufferPool bufferPool) throws NoSuchProviderException, NoSuchAlgorithmException, KeyManagementException {
         this(xnio, optionMap, bufferPool, JsseSslUtils.createSSLContext(optionMap));
     }
 
@@ -110,7 +108,7 @@ public class UndertowXnioSsl extends XnioSsl {
      * @param bufferPool
      * @param sslContext the SSL context to use for this instance
      */
-    public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, Pool<ByteBuffer> bufferPool, final SSLContext sslContext) {
+    public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, ByteBufferPool bufferPool, final SSLContext sslContext) {
         super(xnio, sslContext, optionMap);
         this.bufferPool = bufferPool;
         this.sslContext = sslContext;

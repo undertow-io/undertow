@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * @author Stuart Douglas
@@ -54,7 +54,7 @@ class Http2PingStreamSinkChannel extends Http2NoDataStreamSinkChannel {
             buf.put(data[i]);
         }
         buf.flip();
-        return new SendFrameHeader(new ImmediatePooled<>(buf));
+        return new SendFrameHeader(new ImmediatePooledByteBuffer(buf));
     }
 
 }

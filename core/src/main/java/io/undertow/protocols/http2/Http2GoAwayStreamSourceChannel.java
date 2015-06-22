@@ -18,8 +18,7 @@
 
 package io.undertow.protocols.http2;
 
-import java.nio.ByteBuffer;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * A HTTP2 go away frame
@@ -31,7 +30,7 @@ public class Http2GoAwayStreamSourceChannel extends AbstractHttp2StreamSourceCha
     private final int status;
     private final int lastGoodStreamId;
 
-    Http2GoAwayStreamSourceChannel(Http2Channel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, int status, int lastGoodStreamId) {
+    Http2GoAwayStreamSourceChannel(Http2Channel framedChannel, PooledByteBuffer data, long frameDataRemaining, int status, int lastGoodStreamId) {
         super(framedChannel, data, frameDataRemaining);
         this.status = status;
         this.lastGoodStreamId = lastGoodStreamId;

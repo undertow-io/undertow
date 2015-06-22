@@ -33,8 +33,10 @@ import static io.undertow.protocols.ajp.AjpUtils.putString;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.ChannelListener;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import io.undertow.UndertowMessages;
 import io.undertow.client.ProxiedRequestAttachments;
@@ -44,7 +46,6 @@ import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.ImmediatePooled;
 
 /**
  * AJP stream sink channel that corresponds to a request send from the load balancer to the backend
@@ -88,10 +89,10 @@ public class AjpClientRequestClientStreamSinkChannel extends AbstractAjpClientSt
         if(discardMode) {
             getBuffer().clear();
             getBuffer().flip();
-            return new SendFrameHeader(new ImmediatePooled<>(ByteBuffer.wrap(new byte[0])));
+            return new SendFrameHeader(new ImmediatePooledByteBuffer(ByteBuffer.wrap(new byte[0])));
         }
-        Pooled<ByteBuffer> pooledHeaderBuffer = getChannel().getBufferPool().allocate();
-        final ByteBuffer buffer = pooledHeaderBuffer.getResource();
+        PooledByteBuffer pooledHeaderBuffer = getChannel().getBufferPool().allocate();
+        final ByteBuffer buffer = pooledHeaderBuffer.getBuffer();
         ByteBuffer dataBuffer = getBuffer();
         int dataInBuffer = dataBuffer.remaining();
         if (!firstFrameWritten && requestedChunkSize == 0) {
@@ -267,7 +268,7 @@ public class AjpClientRequestClientStreamSinkChannel extends AbstractAjpClientSt
             //they need to send us a read body chunk in order to get any data
             buffer.flip();
             if(buffer.remaining() == 0) {
-                pooledHeaderBuffer.free();
+                pooledHeaderBuffer.close();
                 return new SendFrameHeader(dataInBuffer, null, true);
             }
             dataBuffer.limit(dataBuffer.position());

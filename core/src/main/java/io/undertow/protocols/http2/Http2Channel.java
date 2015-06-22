@@ -34,8 +34,8 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.SslConnection;
@@ -166,14 +166,14 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private final Http2PriorityTree priorityTree;
 
 
-    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
+    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, true, null, settings);
     }
-    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, OptionMap settings) {
+    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, prefaceRequired, null, settings);
     }
 
-    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, ByteBuffer initialOtherSideSettings, OptionMap settings) {
+    public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, ByteBuffer initialOtherSideSettings, OptionMap settings) {
         super(connectedStreamChannel, bufferPool, Http2FramePriority.INSTANCE, data, settings);
         streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
@@ -253,7 +253,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
 
     @Override
-    protected AbstractHttp2StreamSourceChannel createChannel(FrameHeaderData frameHeaderData, Pooled<ByteBuffer> frameData) throws IOException {
+    protected AbstractHttp2StreamSourceChannel createChannel(FrameHeaderData frameHeaderData, PooledByteBuffer frameData) throws IOException {
 
         Http2FrameHeaderParser frameParser = (Http2FrameHeaderParser) frameHeaderData;
         AbstractHttp2StreamSourceChannel channel;
@@ -315,7 +315,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 Http2RstStreamParser parser = (Http2RstStreamParser) frameParser.parser;
                 if (frameParser.streamId == 0) {
                     if(frameData != null) {
-                        frameData.free();
+                        frameData.close();
                     }
                     throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(FRAME_TYPE_RST_STREAM));
                 }
@@ -334,7 +334,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             }
             case FRAME_TYPE_PING: {
                 Http2PingParser pingParser = (Http2PingParser) frameParser.parser;
-                frameData.free();
+                frameData.close();
                 boolean ack = Bits.anyAreSet(frameParser.flags, PING_FLAG_ACK);
                 channel = new Http2PingStreamSourceChannel(this, pingParser.getData(), ack);
                 if(!ack) { //not an ack from one of our pings, so send it back
@@ -351,7 +351,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             case FRAME_TYPE_WINDOW_UPDATE: {
                 Http2WindowUpdateParser parser = (Http2WindowUpdateParser) frameParser.parser;
                 handleWindowUpdate(frameParser.streamId, parser.getDeltaWindowSize());
-                frameData.free();
+                frameData.close();
                 //we don't return window update notifications, they are handled internally
                 return null;
             }
@@ -362,7 +362,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     sendRstStream(frameParser.streamId, ERROR_PROTOCOL_ERROR);
                     return null;
                 }
-                frameData.free();
+                frameData.close();
                 if(priorityTree == null) {
                     //we don't care, because we are the client side
                     //so this situation should never happen

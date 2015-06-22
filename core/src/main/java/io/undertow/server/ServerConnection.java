@@ -18,6 +18,7 @@
 
 package io.undertow.server;
 
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.util.AbstractAttachable;
 
 import io.undertow.util.HeaderMap;
@@ -48,7 +49,14 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      *
      * @return The connections buffer pool
      */
+    @Deprecated
     public abstract Pool<ByteBuffer> getBufferPool();
+
+    /**
+     *
+     * @return The connections buffer pool
+     */
+    public abstract ByteBufferPool getByteBufferPool();
 
     /**
      *

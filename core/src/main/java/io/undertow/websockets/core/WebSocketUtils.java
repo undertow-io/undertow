@@ -23,8 +23,8 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -230,14 +230,14 @@ public final class WebSocketUtils {
      * @param writeExceptionHandler the write exception handler to call if an error occurs during a write operation
      * @param pool                  the pool from which the transfer buffer should be allocated
      */
-    public static <I extends StreamSourceChannel, O extends StreamSinkChannel> void initiateTransfer(final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super I> readExceptionHandler, final ChannelExceptionHandler<? super O> writeExceptionHandler, Pool<ByteBuffer> pool) {
+    public static <I extends StreamSourceChannel, O extends StreamSinkChannel> void initiateTransfer(final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super I> readExceptionHandler, final ChannelExceptionHandler<? super O> writeExceptionHandler, ByteBufferPool pool) {
         if (pool == null) {
             throw new IllegalArgumentException("pool is null");
         }
-        final Pooled<ByteBuffer> allocated = pool.allocate();
+        final PooledByteBuffer allocated = pool.allocate();
         boolean free = true;
         try {
-            final ByteBuffer buffer = allocated.getResource();
+            final ByteBuffer buffer = allocated.getBuffer();
             buffer.clear();
             long transferred;
             do {
@@ -290,14 +290,14 @@ public final class WebSocketUtils {
             free = false;
         } finally {
             if (free) {
-                allocated.free();
+                allocated.close();
             }
         }
     }
 
 
     static final class TransferListener<I extends StreamSourceChannel, O extends StreamSinkChannel> implements ChannelListener<Channel> {
-        private final Pooled<ByteBuffer> pooledBuffer;
+        private final PooledByteBuffer pooledBuffer;
         private final I source;
         private final O sink;
         private final ChannelListener<? super I> sourceListener;
@@ -306,7 +306,7 @@ public final class WebSocketUtils {
         private final ChannelExceptionHandler<? super I> readExceptionHandler;
         private volatile int state;
 
-        TransferListener(final Pooled<ByteBuffer> pooledBuffer, final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super O> writeExceptionHandler, final ChannelExceptionHandler<? super I> readExceptionHandler, final int state) {
+        TransferListener(final PooledByteBuffer pooledBuffer, final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super O> writeExceptionHandler, final ChannelExceptionHandler<? super I> readExceptionHandler, final int state) {
             this.pooledBuffer = pooledBuffer;
             this.source = source;
             this.sink = sink;
@@ -319,7 +319,7 @@ public final class WebSocketUtils {
 
         @Override
         public void handleEvent(final Channel channel) {
-            final ByteBuffer buffer = pooledBuffer.getResource();
+            final ByteBuffer buffer = pooledBuffer.getBuffer();
             int state = this.state;
             long lres;
             int ires;
@@ -403,7 +403,7 @@ public final class WebSocketUtils {
                 sink.suspendWrites();
                 ChannelListeners.invokeChannelExceptionHandler(sink, writeExceptionHandler, e);
             } finally {
-                pooledBuffer.free();
+                pooledBuffer.close();
             }
         }
 
@@ -413,7 +413,7 @@ public final class WebSocketUtils {
                 sink.suspendWrites();
                 ChannelListeners.invokeChannelExceptionHandler(source, readExceptionHandler, e);
             } finally {
-                pooledBuffer.free();
+                pooledBuffer.close();
             }
         }
 
@@ -429,7 +429,7 @@ public final class WebSocketUtils {
                 ChannelListeners.invokeChannelListener(source, sourceListener);
                 ChannelListeners.invokeChannelListener(sink, sinkListener);
             } finally {
-                pooledBuffer.free();
+                pooledBuffer.close();
             }
         }
 

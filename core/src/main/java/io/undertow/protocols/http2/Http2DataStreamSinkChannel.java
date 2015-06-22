@@ -19,13 +19,14 @@
 package io.undertow.protocols.http2;
 
 import java.nio.ByteBuffer;
+
+import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.ImmediatePooled;
 
 /**
  * Headers channel
@@ -62,9 +63,9 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             return new SendFrameHeader(getBuffer().remaining(), null);
         }
         final boolean finalFrame = isWritesShutdown() && fcWindow >= getBuffer().remaining();
-        Pooled<ByteBuffer> firstHeaderBuffer = getChannel().getBufferPool().allocate();
-        Pooled<ByteBuffer>[] allHeaderBuffers = null;
-        ByteBuffer firstBuffer = firstHeaderBuffer.getResource();
+        PooledByteBuffer firstHeaderBuffer = getChannel().getBufferPool().allocate();
+        PooledByteBuffer[] allHeaderBuffers = null;
+        ByteBuffer firstBuffer = firstHeaderBuffer.getBuffer();
         boolean firstFrame = false;
         if (first) {
             firstFrame = true;
@@ -79,7 +80,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             writeBeforeHeaderBlock(firstBuffer);
 
             HpackEncoder.State result = encoder.encode(headers, firstBuffer);
-            Pooled<ByteBuffer> current = firstHeaderBuffer;
+            PooledByteBuffer current = firstHeaderBuffer;
             int headerFrameLength = firstBuffer.position() - 9;
             firstBuffer.put(0, (byte) ((headerFrameLength >> 16) & 0xFF));
             firstBuffer.put(1, (byte) ((headerFrameLength >> 8) & 0xFF));
@@ -94,7 +95,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
                 //note that if the buffers are small we may not actually need a continuation here
                 //but it greatly reduces the code complexity
                 //back fill the length
-                ByteBuffer currentBuffer = current.getResource();
+                ByteBuffer currentBuffer = current.getBuffer();
                 currentBuffer.put((byte) 0);
                 currentBuffer.put((byte) 0);
                 currentBuffer.put((byte) 0);
@@ -110,8 +111,8 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             }
         }
 
-        Pooled<ByteBuffer> currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
-        ByteBuffer currentBuffer = currentPooled.getResource();
+        PooledByteBuffer currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
+        ByteBuffer currentBuffer = currentPooled.getBuffer();
         int remainingInBuffer = 0;
         if (getBuffer().remaining() > 0) {
             if (fcWindow > 0) {
@@ -119,7 +120,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
                 if (currentBuffer.remaining() < 8) {
                     allHeaderBuffers = allocateAll(allHeaderBuffers, currentPooled);
                     currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
-                    currentBuffer = currentPooled.getResource();
+                    currentBuffer = currentPooled.getBuffer();
                 }
                 remainingInBuffer = getBuffer().remaining() - fcWindow;
                 getBuffer().limit(getBuffer().position() + fcWindow);
@@ -151,21 +152,21 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             //for now we will just copy them into a big buffer
             int length = 0;
             for (int i = 0; i < allHeaderBuffers.length; ++i) {
-                length += allHeaderBuffers[i].getResource().position();
-                allHeaderBuffers[i].getResource().flip();
+                length += allHeaderBuffers[i].getBuffer().position();
+                allHeaderBuffers[i].getBuffer().flip();
             }
             try {
                 ByteBuffer newBuf = ByteBuffer.allocate(length);
 
                 for (int i = 0; i < allHeaderBuffers.length; ++i) {
-                    newBuf.put(allHeaderBuffers[i].getResource());
+                    newBuf.put(allHeaderBuffers[i].getBuffer());
                 }
                 newBuf.flip();
-                return new SendFrameHeader(remainingInBuffer, new ImmediatePooled<>(newBuf));
+                return new SendFrameHeader(remainingInBuffer, new ImmediatePooledByteBuffer(newBuf));
             } finally {
                 //the allocate can oome
                 for (int i = 0; i < allHeaderBuffers.length; ++i) {
-                    allHeaderBuffers[i].free();
+                    allHeaderBuffers[i].close();
                 }
             }
         }

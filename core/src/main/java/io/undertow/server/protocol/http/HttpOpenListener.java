@@ -33,12 +33,11 @@ import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -48,7 +47,7 @@ import java.nio.ByteBuffer;
  */
 public final class HttpOpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
 
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
     private final int bufferSize;
 
     private volatile HttpHandler rootHandler;
@@ -61,25 +60,25 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     private final ConnectorStatisticsImpl connectorStatistics;
 
     @Deprecated
-    public HttpOpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
+    public HttpOpenListener(final ByteBufferPool pool, final int bufferSize) {
         this(pool, OptionMap.EMPTY);
     }
 
     @Deprecated
-    public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, final int bufferSize) {
+    public HttpOpenListener(final ByteBufferPool pool, final OptionMap undertowOptions, final int bufferSize) {
         this(pool, undertowOptions);
     }
 
-    public HttpOpenListener(final Pool<ByteBuffer> pool) {
+    public HttpOpenListener(final ByteBufferPool pool) {
         this(pool, OptionMap.EMPTY);
     }
 
-    public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+    public HttpOpenListener(final ByteBufferPool pool, final OptionMap undertowOptions) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
-        Pooled<ByteBuffer> buf = pool.allocate();
-        this.bufferSize = buf.getResource().remaining();
-        buf.free();
+        PooledByteBuffer buf = pool.allocate();
+        this.bufferSize = buf.getBuffer().remaining();
+        buf.close();
         parser = HttpRequestParser.instance(undertowOptions);
         connectorStatistics = new ConnectorStatisticsImpl();
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
@@ -90,7 +89,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         handleEvent(channel, null);
     }
     @Override
-    public void handleEvent(final StreamConnection channel, Pooled<ByteBuffer> buffer) {
+    public void handleEvent(final StreamConnection channel, PooledByteBuffer buffer) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
@@ -130,10 +129,10 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
 
         if(buffer != null) {
-            if(buffer.getResource().hasRemaining()) {
+            if(buffer.getBuffer().hasRemaining()) {
                 connection.setExtraBytes(buffer);
             } else {
-                buffer.free();
+                buffer.close();
             }
         }
 
@@ -169,7 +168,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     }
 
     @Override
-    public Pool<ByteBuffer> getBufferPool() {
+    public ByteBufferPool getBufferPool() {
         return bufferPool;
     }
 

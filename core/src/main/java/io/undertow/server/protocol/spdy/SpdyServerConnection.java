@@ -32,6 +32,7 @@ import io.undertow.server.ServerConnection;
 import io.undertow.protocols.spdy.SpdyChannel;
 import io.undertow.protocols.spdy.SpdySynReplyStreamSinkChannel;
 import io.undertow.protocols.spdy.SpdySynStreamStreamSourceChannel;
+import io.undertow.server.XnioBufferPoolAdaptor;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.DateUtils;
@@ -42,6 +43,7 @@ import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.OptionMap;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
@@ -84,6 +86,7 @@ public class SpdyServerConnection extends ServerConnection {
     private final int bufferSize;
     private SSLSessionInfo sessionInfo;
     private HttpServerExchange exchange;
+    private XnioBufferPoolAdaptor poolAdaptor;
 
     public SpdyServerConnection(HttpHandler rootHandler, SpdyChannel channel, SpdySynStreamStreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize) {
         this.rootHandler = rootHandler;
@@ -117,6 +120,15 @@ public class SpdyServerConnection extends ServerConnection {
 
     @Override
     public Pool<ByteBuffer> getBufferPool() {
+        if(poolAdaptor == null) {
+            poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
+        }
+        return poolAdaptor;
+    }
+
+
+    @Override
+    public ByteBufferPool getByteBufferPool() {
         return channel.getBufferPool();
     }
 

@@ -21,10 +21,9 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 
-import java.nio.ByteBuffer;
 import java.util.Collections;
 
 /**
@@ -48,7 +47,7 @@ public final class JsrHybi07Handshake extends Hybi07Handshake {
     }
 
     @Override
-    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection c, final Pool<ByteBuffer> buffers) {
+    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection c, final ByteBufferPool buffers) {
         WebSocketChannel channel = super.createChannel(exchange, c, buffers);
         HandshakeUtil.setConfig(channel, config);
         return channel;

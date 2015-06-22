@@ -22,8 +22,8 @@ import io.undertow.servlet.UndertowServletMessages;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -45,7 +45,7 @@ import static org.xnio.Bits.anyAreSet;
 public class UpgradeServletInputStream extends ServletInputStream {
 
     private final StreamSourceChannel channel;
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
     private final Executor ioExecutor;
 
     private volatile ReadListener listener;
@@ -59,9 +59,9 @@ public class UpgradeServletInputStream extends ServletInputStream {
     private static final int FLAG_ON_DATA_READ_CALLED = 1 << 3;
 
     private int state;
-    private Pooled<ByteBuffer> pooled;
+    private PooledByteBuffer pooled;
 
-    public UpgradeServletInputStream(final StreamSourceChannel channel, final Pool<ByteBuffer> bufferPool, Executor ioExecutor) {
+    public UpgradeServletInputStream(final StreamSourceChannel channel, final ByteBufferPool bufferPool, Executor ioExecutor) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.ioExecutor = ioExecutor;
@@ -131,10 +131,10 @@ public class UpgradeServletInputStream extends ServletInputStream {
         if (len == 0) {
             return 0;
         }
-        ByteBuffer buffer = pooled.getResource();
+        ByteBuffer buffer = pooled.getBuffer();
         int copied = Buffers.copy(ByteBuffer.wrap(b, off, len), buffer);
         if (!buffer.hasRemaining()) {
-            pooled.free();
+            pooled.close();
             pooled = null;
             if (listener != null) {
                 readIntoBufferNonBlocking();
@@ -147,11 +147,11 @@ public class UpgradeServletInputStream extends ServletInputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
 
-            int res = Channels.readBlocking(channel, pooled.getResource());
-            pooled.getResource().flip();
+            int res = Channels.readBlocking(channel, pooled.getBuffer());
+            pooled.getBuffer().flip();
             if (res == -1) {
                 state |= FLAG_FINISHED;
-                pooled.free();
+                pooled.close();
                 pooled = null;
             }
         }
@@ -161,31 +161,31 @@ public class UpgradeServletInputStream extends ServletInputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED | FLAG_CLOSED)) {
             pooled = bufferPool.allocate();
             if (listener == null) {
-                int res = channel.read(pooled.getResource());
+                int res = channel.read(pooled.getBuffer());
                 if (res == 0) {
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                     return;
                 }
-                pooled.getResource().flip();
+                pooled.getBuffer().flip();
                 if (res == -1) {
                     state |= FLAG_FINISHED;
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                 }
             } else {
                 if (anyAreClear(state, FLAG_READY)) {
                     throw UndertowServletMessages.MESSAGES.streamNotReady();
                 }
-                int res = channel.read(pooled.getResource());
-                pooled.getResource().flip();
+                int res = channel.read(pooled.getBuffer());
+                pooled.getBuffer().flip();
                 if (res == -1) {
                     state |= FLAG_FINISHED;
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                 } else if (res == 0) {
                     state &= ~FLAG_READY;
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                     if(Thread.currentThread() == channel.getIoThread()) {
                         channel.resumeReads();
@@ -214,7 +214,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
         if (pooled == null) {
             return 0;
         }
-        return pooled.getResource().remaining();
+        return pooled.getBuffer().remaining();
     }
 
     @Override
@@ -224,7 +224,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
         }
         state |= FLAG_FINISHED | FLAG_CLOSED;
         if (pooled != null) {
-            pooled.free();
+            pooled.close();
             pooled = null;
         }
         channel.suspendReads();
@@ -248,7 +248,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
                 }
             } catch (Exception e) {
                 if(pooled != null) {
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                 }
                 listener.onError(e);
@@ -262,7 +262,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
                         listener.onAllDataRead();
                     } catch (IOException e) {
                         if(pooled != null) {
-                            pooled.free();
+                            pooled.close();
                             pooled = null;
                         }
                         listener.onError(e);

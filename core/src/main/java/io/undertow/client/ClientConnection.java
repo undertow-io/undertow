@@ -20,14 +20,13 @@ package io.undertow.client;
 
 import org.xnio.ChannelListener;
 import org.xnio.Option;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 
 /**
@@ -69,7 +68,7 @@ public interface ClientConnection extends Channel {
      *
      * @return The buffer pool used by the client
      */
-    Pool<ByteBuffer> getBufferPool();
+    ByteBufferPool getBufferPool();
 
     SocketAddress getPeerAddress();
 

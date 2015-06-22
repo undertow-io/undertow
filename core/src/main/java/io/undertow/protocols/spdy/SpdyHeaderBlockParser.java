@@ -20,8 +20,7 @@ package io.undertow.protocols.spdy;
 
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -53,7 +52,7 @@ abstract class SpdyHeaderBlockParser extends SpdyPushBackParser {
     private byte[] dataOverflow;
 
 
-    public SpdyHeaderBlockParser(Pool<ByteBuffer> bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
+    public SpdyHeaderBlockParser(SpdyChannel channel, int frameLength, Inflater inflater) {
         super(frameLength);
         this.channel = channel;
         this.inflater = inflater;
@@ -67,13 +66,13 @@ abstract class SpdyHeaderBlockParser extends SpdyPushBackParser {
             }
         }
         beforeHeadersHandled = true;
-        Pooled<ByteBuffer> outPooled = channel.getHeapBufferPool().allocate();
-        Pooled<ByteBuffer> inPooled = channel.getHeapBufferPool().allocate();
+        PooledByteBuffer outPooled = channel.getHeapBufferPool().allocate();
+        PooledByteBuffer inPooled = channel.getHeapBufferPool().allocate();
 
         boolean extraOutput = false;
         try {
-            ByteBuffer outputBuffer = outPooled.getResource();
-            ByteBuffer inPooledResource = inPooled.getResource();
+            ByteBuffer outputBuffer = outPooled.getBuffer();
+            ByteBuffer inPooledResource = inPooled.getBuffer();
             if(dataOverflow != null) {
                 outputBuffer.put(dataOverflow);
                 dataOverflow = null;
@@ -113,12 +112,12 @@ abstract class SpdyHeaderBlockParser extends SpdyPushBackParser {
             }
         } finally {
             if(extraOutput) {
-                outPooled.getResource().flip();
-                dataOverflow = new byte[outPooled.getResource().remaining()];
-                outPooled.getResource().get(dataOverflow);
+                outPooled.getBuffer().flip();
+                dataOverflow = new byte[outPooled.getBuffer().remaining()];
+                outPooled.getBuffer().get(dataOverflow);
             }
-            inPooled.free();
-            outPooled.free();
+            inPooled.close();
+            outPooled.close();
         }
     }
 

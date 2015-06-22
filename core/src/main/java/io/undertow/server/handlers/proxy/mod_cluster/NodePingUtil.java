@@ -21,7 +21,6 @@ package io.undertow.server.handlers.proxy.mod_cluster;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
@@ -42,7 +41,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
@@ -114,7 +113,7 @@ class NodePingUtil {
 
         final XnioIoThread thread = exchange.getIoThread();
         final RequestExchangeListener exchangeListener = new RequestExchangeListener(callback, NodeHealthChecker.NO_CHECK, true);
-        final Runnable r = new HttpClientPingTask(connection, exchangeListener, thread, client, xnioSsl, exchange.getConnection().getBufferPool(), options);
+        final Runnable r = new HttpClientPingTask(connection, exchangeListener, thread, client, xnioSsl, exchange.getConnection().getByteBufferPool(), options);
         exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : thread, r);
         // Schedule timeout task
         scheduleCancelTask(exchange.getIoThread(), exchangeListener, 5, TimeUnit.SECONDS);
@@ -177,7 +176,7 @@ class NodePingUtil {
      * @param xnioSsl       the ssl setup
      * @param options       the options
      */
-    static void internalPingNode(Node node, PingCallback callback, NodeHealthChecker healthChecker, XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, UndertowClient client, XnioSsl xnioSsl, OptionMap options) {
+    static void internalPingNode(Node node, PingCallback callback, NodeHealthChecker healthChecker, XnioIoThread ioThread, ByteBufferPool bufferPool, UndertowClient client, XnioSsl xnioSsl, OptionMap options) {
 
         final URI uri = node.getNodeConfig().getConnectionURI();
         final long timeout = node.getNodeConfig().getPing();
@@ -292,11 +291,11 @@ class NodePingUtil {
         private final XnioIoThread thread;
         private final UndertowClient client;
         private final XnioSsl xnioSsl;
-        private final Pool<ByteBuffer> bufferPool;
+        private final ByteBufferPool bufferPool;
         private final OptionMap options;
         private final RequestExchangeListener exchangeListener;
 
-        HttpClientPingTask(URI connection, RequestExchangeListener exchangeListener, XnioIoThread thread, UndertowClient client, XnioSsl xnioSsl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+        HttpClientPingTask(URI connection, RequestExchangeListener exchangeListener, XnioIoThread thread, UndertowClient client, XnioSsl xnioSsl, ByteBufferPool bufferPool, OptionMap options) {
             this.connection = connection;
             this.thread = thread;
             this.client = client;

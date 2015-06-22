@@ -23,13 +23,13 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.websockets.core.function.ChannelFunction;
 import io.undertow.websockets.core.function.ChannelFunctionFileChannel;
 import io.undertow.websockets.core.protocol.version07.Masker;
 import io.undertow.websockets.core.protocol.version07.UTF8Checker;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.NoopExtensionFunction;
-import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
@@ -51,11 +51,11 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
     private Masker masker;
     private UTF8Checker checker;
 
-    protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, Pooled<ByteBuffer> pooled, long frameLength) {
+    protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, PooledByteBuffer pooled, long frameLength) {
         this(wsChannel, type, 0, true, pooled, frameLength, null);
     }
 
-    protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, Pooled<ByteBuffer> pooled, long frameLength, Masker masker, ChannelFunction... functions) {
+    protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, PooledByteBuffer pooled, long frameLength, Masker masker, ChannelFunction... functions) {
         super(wsChannel, pooled, frameLength);
         this.type = type;
         this.finalFragment = finalFragment;
@@ -242,9 +242,9 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
     }
 
     @Override
-    protected Pooled<ByteBuffer> processFrameData(Pooled<ByteBuffer> frameData, boolean lastFragmentOfFrame) throws IOException {
+    protected PooledByteBuffer processFrameData(PooledByteBuffer frameData, boolean lastFragmentOfFrame) throws IOException {
         if(masker != null) {
-            masker.afterRead(frameData.getResource(), frameData.getResource().position(), frameData.getResource().remaining());
+            masker.afterRead(frameData.getBuffer(), frameData.getBuffer().position(), frameData.getBuffer().remaining());
         }
         return extensionFunction.transformForRead(frameData, getWebSocketChannel(), lastFragmentOfFrame);
     }

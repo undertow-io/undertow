@@ -24,8 +24,9 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.OptionMap;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.Pool;
-import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -43,7 +44,7 @@ import java.util.List;
 public abstract class AbstractServerConnection  extends ServerConnection {
     protected final StreamConnection channel;
     protected final CloseSetter closeSetter;
-    protected final Pool<ByteBuffer> bufferPool;
+    protected final ByteBufferPool bufferPool;
     protected final HttpHandler rootHandler;
     protected final OptionMap undertowOptions;
     protected final StreamSourceConduit originalSourceConduit;
@@ -53,12 +54,15 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     protected HttpServerExchange current;
 
     private final int bufferSize;
+
+    private XnioBufferPoolAdaptor poolAdaptor;
+
     /**
      * Any extra bytes that were read from the channel. This could be data for this requests, or the next response.
      */
-    protected Pooled<ByteBuffer> extraBytes;
+    protected PooledByteBuffer extraBytes;
 
-    public AbstractServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
+    public AbstractServerConnection(StreamConnection channel, final ByteBufferPool bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
@@ -73,6 +77,14 @@ public abstract class AbstractServerConnection  extends ServerConnection {
             this.originalSinkConduit = null;
             this.originalSourceConduit = null;
         }
+    }
+
+    @Override
+    public Pool<ByteBuffer> getBufferPool() {
+        if(poolAdaptor == null) {
+            poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
+        }
+        return poolAdaptor;
     }
 
     /**
@@ -90,7 +102,7 @@ public abstract class AbstractServerConnection  extends ServerConnection {
      * @return the buffer pool for this connection
      */
     @Override
-    public Pool<ByteBuffer> getBufferPool() {
+    public ByteBufferPool getByteBufferPool() {
         return bufferPool;
     }
 
@@ -180,16 +192,16 @@ public abstract class AbstractServerConnection  extends ServerConnection {
         return bufferSize;
     }
 
-    public Pooled<ByteBuffer> getExtraBytes() {
-        if(extraBytes != null && !extraBytes.getResource().hasRemaining()) {
-            extraBytes.free();
+    public PooledByteBuffer getExtraBytes() {
+        if(extraBytes != null && !extraBytes.getBuffer().hasRemaining()) {
+            extraBytes.close();
             extraBytes = null;
             return null;
         }
         return extraBytes;
     }
 
-    public void setExtraBytes(final Pooled<ByteBuffer> extraBytes) {
+    public void setExtraBytes(final PooledByteBuffer extraBytes) {
         this.extraBytes = extraBytes;
     }
 
@@ -306,7 +318,7 @@ public abstract class AbstractServerConnection  extends ServerConnection {
                 ChannelListeners.invokeChannelListener(AbstractServerConnection.this, listener);
             } finally {
                 if(extraBytes != null) {
-                    extraBytes.free();
+                    extraBytes.close();
                     extraBytes = null;
                 }
             }

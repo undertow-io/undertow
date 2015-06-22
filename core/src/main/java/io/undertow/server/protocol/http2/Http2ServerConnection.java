@@ -30,6 +30,7 @@ import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.XnioBufferPoolAdaptor;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.DateUtils;
@@ -38,6 +39,7 @@ import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.OptionMap;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
@@ -88,6 +90,7 @@ public class Http2ServerConnection extends ServerConnection {
     private final HttpHandler rootHandler;
     private HttpServerExchange exchange;
     private boolean continueSent = false;
+    private XnioBufferPoolAdaptor poolAdaptor;
 
     public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
@@ -125,9 +128,16 @@ public class Http2ServerConnection extends ServerConnection {
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = null;
     }
-
     @Override
     public Pool<ByteBuffer> getBufferPool() {
+        if(poolAdaptor == null) {
+            poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
+        }
+        return poolAdaptor;
+    }
+
+    @Override
+    public ByteBufferPool getByteBufferPool() {
         return channel.getBufferPool();
     }
 

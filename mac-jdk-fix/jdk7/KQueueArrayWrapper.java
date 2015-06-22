@@ -179,7 +179,7 @@ class KQueueArrayWrapper {
 
     void close() throws IOException {
         if (keventArray != null) {
-            keventArray.free();
+            keventArray.close();
             keventArray = null;
         }
         if (kq >= 0) {

@@ -23,23 +23,21 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.testutils.DefaultServer;
 import org.junit.Assert;
 import org.junit.Test;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 
 /**
  * @author Stuart Douglas
  */
 public class MimeDecodingTestCase {
 
-    final ByteBufferSlicePool bufferPool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 512, 512 * 6);
-
     @Test
     public void testSimpleMimeDecodingWithPreamble() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime1.txt"));
         TestPartHandler handler = new TestPartHandler();
-        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
+        MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
         ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
@@ -56,7 +54,7 @@ public class MimeDecodingTestCase {
     public void testMimeDecodingWithUTF8Headers() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime-utf8.txt"));
         TestPartHandler handler = new TestPartHandler();
-        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes(), "UTF-8");
+        MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "UTF-8");
 
         ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
@@ -72,7 +70,7 @@ public class MimeDecodingTestCase {
     public void testSimpleMimeDecodingWithoutPreamble() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime2.txt"));
         TestPartHandler handler = new TestPartHandler();
-        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
+        MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
         ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
@@ -88,7 +86,7 @@ public class MimeDecodingTestCase {
     public void testBase64MimeDecoding() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime3.txt"));
         TestPartHandler handler = new TestPartHandler();
-        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
+        MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
         ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
@@ -104,7 +102,7 @@ public class MimeDecodingTestCase {
     public void testBase64MimeDecodingWithSmallBuffers() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime3.txt"));
         TestPartHandler handler = new TestPartHandler();
-        MultipartParser.ParseState parser = MultipartParser.beginParse(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 6, 6 * 6), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
+        MultipartParser.ParseState parser = MultipartParser.beginParse(new DefaultByteBufferPool(true, 6, 100, 0), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
         ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
@@ -120,7 +118,7 @@ public class MimeDecodingTestCase {
     public void testQuotedPrintable() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime4.txt"));
         TestPartHandler handler = new TestPartHandler();
-        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "someboundarytext".getBytes(), "ISO-8859-1");
+        MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "someboundarytext".getBytes(), "ISO-8859-1");
 
         ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);

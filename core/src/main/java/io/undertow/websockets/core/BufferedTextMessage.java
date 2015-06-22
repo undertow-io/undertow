@@ -19,7 +19,7 @@
 package io.undertow.websockets.core;
 
 import org.xnio.ChannelListener;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -62,8 +62,8 @@ public class BufferedTextMessage {
     }
 
     public void readBlocking(StreamSourceFrameChannel channel) throws IOException {
-        Pooled<ByteBuffer> pooled = channel.getWebSocketChannel().getBufferPool().allocate();
-        final ByteBuffer buffer = pooled.getResource();
+        PooledByteBuffer pooled = channel.getWebSocketChannel().getBufferPool().allocate();
+        final ByteBuffer buffer = pooled.getBuffer();
         try {
             for (; ; ) {
                 int res = channel.read(buffer);
@@ -87,13 +87,13 @@ public class BufferedTextMessage {
                 }
             }
         } finally {
-            pooled.free();
+            pooled.close();
         }
     }
 
     public void read(final StreamSourceFrameChannel channel, final WebSocketCallback<BufferedTextMessage> callback) {
-        Pooled<ByteBuffer> pooled = channel.getWebSocketChannel().getBufferPool().allocate();
-        final ByteBuffer buffer = pooled.getResource();
+        PooledByteBuffer pooled = channel.getWebSocketChannel().getBufferPool().allocate();
+        final ByteBuffer buffer = pooled.getBuffer();
         try {
             try {
                 for (; ; ) {
@@ -118,8 +118,8 @@ public class BufferedTextMessage {
                                 if(complete ) {
                                     return;
                                 }
-                                Pooled<ByteBuffer> pooled = channel.getWebSocketChannel().getBufferPool().allocate();
-                                final ByteBuffer buffer = pooled.getResource();
+                                PooledByteBuffer pooled = channel.getWebSocketChannel().getBufferPool().allocate();
+                                final ByteBuffer buffer = pooled.getBuffer();
                                 try {
                                     try {
                                         for (; ; ) {
@@ -154,7 +154,7 @@ public class BufferedTextMessage {
                                         callback.onError(channel.getWebSocketChannel(), BufferedTextMessage.this, e);
                                     }
                                 } finally {
-                                    pooled.free();
+                                    pooled.close();
                                 }
                             }
                         });
@@ -175,7 +175,7 @@ public class BufferedTextMessage {
                 callback.onError(channel.getWebSocketChannel(), this, e);
             }
         } finally {
-            pooled.free();
+            pooled.close();
         }
     }
 

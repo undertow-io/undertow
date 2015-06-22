@@ -19,7 +19,7 @@
 package io.undertow.util;
 
 import io.undertow.UndertowMessages;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -34,41 +34,39 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  *
  * @author Stuart Douglas
  */
-public class ReferenceCountedPooled implements Pooled<ByteBuffer> {
+public class ReferenceCountedPooled implements PooledByteBuffer {
 
-    private final Pooled<ByteBuffer> underlying;
+    private final PooledByteBuffer underlying;
     @SuppressWarnings("unused")
     private volatile int referenceCount;
-    private volatile boolean discard = false;
     boolean mainFreed = false;
     private ByteBuffer slice = null;
     private final FreeNotifier freeNotifier;
 
     private static final AtomicIntegerFieldUpdater<ReferenceCountedPooled> referenceCountUpdater = AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedPooled.class, "referenceCount");
 
-    public ReferenceCountedPooled(Pooled<ByteBuffer> underlying, int referenceCount) {
+    public ReferenceCountedPooled(PooledByteBuffer underlying, int referenceCount) {
         this(underlying, referenceCount, null);
     }
 
-    public ReferenceCountedPooled(Pooled<ByteBuffer> underlying, int referenceCount, FreeNotifier freeNotifier) {
+    public ReferenceCountedPooled(PooledByteBuffer underlying, int referenceCount, FreeNotifier freeNotifier) {
         this.underlying = underlying;
         this.referenceCount = referenceCount;
         this.freeNotifier = freeNotifier;
     }
 
     @Override
-    public void discard() {
-        this.discard = true;
-        freeInternal();
-    }
-
-    @Override
-    public void free() {
+    public void close() {
         if(mainFreed) {
             return;
         }
         mainFreed = true;
         freeInternal();
+    }
+
+    @Override
+    public boolean isOpen() {
+        return !mainFreed;
     }
 
     public boolean isFreed() {
@@ -83,7 +81,7 @@ public class ReferenceCountedPooled implements Pooled<ByteBuffer> {
                  return false;
             }
         } while (!referenceCountUpdater.compareAndSet(this, refs, refs + 1));
-        ByteBuffer resource = slice != null ? slice : underlying.getResource();
+        ByteBuffer resource = slice != null ? slice : underlying.getBuffer();
         resource.position(resource.limit());
         resource.limit(resource.capacity());
         slice = resource.slice();
@@ -93,7 +91,7 @@ public class ReferenceCountedPooled implements Pooled<ByteBuffer> {
 
     private void freeInternal() {
         if(referenceCountUpdater.decrementAndGet(this) == 0) {
-            underlying.free();
+            underlying.close();
             if(freeNotifier != null) {
                 freeNotifier.freed();
             }
@@ -101,37 +99,24 @@ public class ReferenceCountedPooled implements Pooled<ByteBuffer> {
     }
 
     @Override
-    public ByteBuffer getResource() throws IllegalStateException {
+    public ByteBuffer getBuffer() throws IllegalStateException {
         if(mainFreed) {
             throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
         }
         if(slice != null) {
             return slice;
         }
-        return underlying.getResource();
+        return underlying.getBuffer();
     }
 
-    @Override
-    public void close() {
-        free();
-    }
-
-    public Pooled<ByteBuffer> createView(final ByteBuffer newValue) {
+    public PooledByteBuffer createView(final ByteBuffer newValue) {
         increaseReferenceCount();
-        return new Pooled<ByteBuffer>() {
+        return new PooledByteBuffer() {
 
             boolean free = false;
 
             @Override
-            public void discard() {
-                if(!free) {
-                    free = true;
-                    ReferenceCountedPooled.this.freeInternal();
-                }
-            }
-
-            @Override
-            public void free() {
+            public void close() {
                 //make sure that a given view can only be freed once
                 if(!free) {
                     free = true;
@@ -140,16 +125,16 @@ public class ReferenceCountedPooled implements Pooled<ByteBuffer> {
             }
 
             @Override
-            public ByteBuffer getResource() throws IllegalStateException {
+            public boolean isOpen() {
+                return !free;
+            }
+
+            @Override
+            public ByteBuffer getBuffer() throws IllegalStateException {
                 if(free) {
                     throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
                 }
                 return newValue;
-            }
-
-            @Override
-            public void close() {
-                free();
             }
         };
     }

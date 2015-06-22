@@ -40,7 +40,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -133,7 +132,7 @@ public class HttpClientTestCase {
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -170,7 +169,7 @@ public class HttpClientTestCase {
         SSLContext context = DefaultServer.getClientSSLContext();
         XnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, context);
 
-        final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -203,7 +202,7 @@ public class HttpClientTestCase {
         final UndertowClient client = createClient();
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection = client.connect(ADDRESS, worker, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
         try {
             ClientRequest request = new ClientRequest().setPath("/1324").setMethod(Methods.GET);
             final List<ClientResponse> responses = new CopyOnWriteArrayList<>();

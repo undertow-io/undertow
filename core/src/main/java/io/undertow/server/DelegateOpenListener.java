@@ -18,10 +18,8 @@
 
 package io.undertow.server;
 
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
-
-import java.nio.ByteBuffer;
 
 /**
  * An open listener that handles being delegated to, e.g. by NPN or ALPN
@@ -35,5 +33,5 @@ public interface DelegateOpenListener extends OpenListener {
      * @param channel The channel
      * @param additionalData Any additional data that was read from the stream as part of the handshake process
      */
-    void handleEvent(final StreamConnection channel, Pooled<ByteBuffer> additionalData);
+    void handleEvent(final StreamConnection channel, PooledByteBuffer additionalData);
 }

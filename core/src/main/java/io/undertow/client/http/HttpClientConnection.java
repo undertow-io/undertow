@@ -39,6 +39,7 @@ import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
+import io.undertow.util.PooledAdaptor;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelExceptionHandler;
@@ -46,8 +47,8 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -104,8 +105,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private final PushBackStreamSourceConduit pushBackStreamSourceConduit;
     private final ClientReadListener clientReadListener = new ClientReadListener();
 
-    private final Pool<ByteBuffer> bufferPool;
-    private Pooled<ByteBuffer> pooledBuffer;
+    private final ByteBufferPool bufferPool;
+    private PooledByteBuffer pooledBuffer;
     private final StreamSinkConduit originalSinkConduit;
 
     private static final int UPGRADED = 1 << 28;
@@ -121,7 +122,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private int requestCount;
     private int read, written;
 
-    HttpClientConnection(final StreamConnection connection, final OptionMap options, final Pool<ByteBuffer> bufferPool) {
+    HttpClientConnection(final StreamConnection connection, final OptionMap options, final ByteBufferPool bufferPool) {
 
         //first we set up statistics, if required
         if(options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
@@ -141,7 +142,6 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         } else {
             clientStatistics = null;
         }
-
         this.options = options;
         this.connection = connection;
         this.pushBackStreamSourceConduit = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
@@ -156,7 +156,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 ChannelListeners.invokeChannelListener(HttpClientConnection.this, closeSetter.get());
                 try {
                     if (pooledBuffer != null) {
-                        pooledBuffer.free();
+                        pooledBuffer.close();
                     }
                 } catch (Throwable ignored){}
             }
@@ -164,7 +164,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
 
     @Override
-    public Pool<ByteBuffer> getBufferPool() {
+    public ByteBufferPool getBufferPool() {
         return bufferPool;
     }
 
@@ -408,8 +408,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         public void handleEvent(StreamSourceChannel channel) {
 
             HttpResponseBuilder builder = pendingResponse;
-            final Pooled<ByteBuffer> pooled = bufferPool.allocate();
-            final ByteBuffer buffer = pooled.getResource();
+            final PooledByteBuffer pooled = bufferPool.allocate();
+            final ByteBuffer buffer = pooled.getBuffer();
             boolean free = true;
 
             try {
@@ -469,7 +469,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     HttpResponseParser.INSTANCE.handle(buffer, state, builder);
                     if (buffer.hasRemaining()) {
                         free = false;
-                        pushBackStreamSourceConduit.pushBack(pooled);
+                        pushBackStreamSourceConduit.pushBack(new PooledAdaptor(pooled));
                     }
 
                 } while (!state.isComplete());
@@ -524,7 +524,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 currentRequest.setFailed(new IOException(e));
             } finally {
                 if (free) {
-                    pooled.free();
+                    pooled.close();
                     pooledBuffer = null;
                 } else {
                     pooledBuffer = pooled;

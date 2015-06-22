@@ -22,12 +22,11 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.http.ExtendedHandshakeChecker;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,7 +54,7 @@ public abstract class WebSocketClientHandshake {
         this.url = url;
     }
 
-    public abstract WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool, OptionMap options);
+    public abstract WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final ByteBufferPool bufferPool, OptionMap options);
 
     public abstract Map<String, String> createHeaders();
 

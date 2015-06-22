@@ -33,10 +33,10 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
@@ -68,7 +68,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private final ConduitListener<? super ChunkedStreamSinkConduit> finishListener;
     private final int config;
 
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
 
     /**
      * "0\r\n" as bytes in US ASCII encoding.
@@ -86,7 +86,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     private final ByteBuffer chunkingBuffer = ByteBuffer.allocate(12); //12 is the most
     private final ByteBuffer chunkingSepBuffer;
-    private Pooled<ByteBuffer> lastChunkBuffer;
+    private PooledByteBuffer lastChunkBuffer;
 
 
     private static final int CONF_FLAG_CONFIGURABLE = 1 << 0;
@@ -111,7 +111,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
      * @param finishListener  The finish listener
      * @param attachable      The attachable
      */
-    public ChunkedStreamSinkConduit(final StreamSinkConduit next, final Pool<ByteBuffer> bufferPool, final boolean configurable, final boolean passClose, HeaderMap responseHeaders, final ConduitListener<? super ChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
+    public ChunkedStreamSinkConduit(final StreamSinkConduit next, final ByteBufferPool bufferPool, final boolean configurable, final boolean passClose, HeaderMap responseHeaders, final ConduitListener<? super ChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
         super(next);
         this.bufferPool = bufferPool;
         this.responseHeaders = responseHeaders;
@@ -162,7 +162,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                     final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src, chunkingSepBuffer};
                     result = next.write(buf, 0, buf.length);
                 } else {
-                    final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src, lastChunkBuffer.getResource()};
+                    final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src, lastChunkBuffer.getBuffer()};
                     if (anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
                         result = next.writeFinal(buf, 0, buf.length);
                     } else {
@@ -171,9 +171,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                     if (!src.hasRemaining()) {
                         state |= FLAG_WRITES_SHUTDOWN;
                     }
-                    if (!lastChunkBuffer.getResource().hasRemaining()) {
+                    if (!lastChunkBuffer.getBuffer().hasRemaining()) {
                         state |= FLAG_NEXT_SHUTDOWN;
-                        lastChunkBuffer.free();
+                        lastChunkBuffer.close();
                     }
                 }
                 int srcWritten = originalRemaining - src.remaining();
@@ -199,7 +199,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     public void truncateWrites() throws IOException {
         try {
             if (lastChunkBuffer != null) {
-                lastChunkBuffer.free();
+                lastChunkBuffer.close();
             }
             if (allAreClear(state, FLAG_FINISHED)) {
                 invokeFinishListener();
@@ -264,9 +264,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                 }
                 return val;
             } else {
-                next.write(lastChunkBuffer.getResource());
-                if (!lastChunkBuffer.getResource().hasRemaining()) {
-                    lastChunkBuffer.free();
+                next.write(lastChunkBuffer.getBuffer());
+                if (!lastChunkBuffer.getBuffer().hasRemaining()) {
+                    lastChunkBuffer.close();
                     if (anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
                         next.terminateWrites();
                     }
@@ -318,8 +318,8 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     }
 
     private void createLastChunk(final boolean writeFinal) throws UnsupportedEncodingException {
-        Pooled<ByteBuffer> lastChunkBufferPooled =  bufferPool.allocate();
-        ByteBuffer lastChunkBuffer = lastChunkBufferPooled.getResource();
+        PooledByteBuffer lastChunkBufferPooled =  bufferPool.allocate();
+        ByteBuffer lastChunkBuffer = lastChunkBufferPooled.getBuffer();
         if (writeFinal) {
             lastChunkBuffer.put(CRLF);
         } else if(chunkingSepBuffer.hasRemaining()) {
@@ -351,9 +351,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         ByteBuffer data = ByteBuffer.allocate(lastChunkBuffer.remaining());
         data.put(lastChunkBuffer);
         data.flip();
-        this.lastChunkBuffer = new ImmediatePooled<>(data);
+        this.lastChunkBuffer = new ImmediatePooledByteBuffer(data);
 
-        lastChunkBufferPooled.free();
+        lastChunkBufferPooled.close();
     }
 
     @Override

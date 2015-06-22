@@ -134,7 +134,7 @@ public class ResponseCachingSender implements Sender {
         LimitedBufferSlicePool.PooledByteBuffer[] pooled = cacheEntry.buffers();
         ByteBuffer[] buffers = new ByteBuffer[pooled.length];
         for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = pooled[i].getResource();
+            buffers[i] = pooled[i].getBuffer();
         }
         written += Buffers.copy(buffers, 0, buffers.length, origSrc);
         if (written == length) {
@@ -150,7 +150,7 @@ public class ResponseCachingSender implements Sender {
         LimitedBufferSlicePool.PooledByteBuffer[] pooled = cacheEntry.buffers();
         ByteBuffer[] buffers = new ByteBuffer[pooled.length];
         for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = pooled[i].getResource();
+            buffers[i] = pooled[i].getBuffer();
         }
         long leftToCopy = totalWritten;
         for (int i = 0; i < origSrc.length; ++i) {

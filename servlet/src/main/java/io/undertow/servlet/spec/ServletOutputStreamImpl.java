@@ -27,8 +27,8 @@ import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -66,7 +66,7 @@ import static org.xnio.Bits.anyAreSet;
 public class ServletOutputStreamImpl extends ServletOutputStream implements BufferWritableOutputStream {
 
     private final ServletRequestContext servletRequestContext;
-    private Pooled<ByteBuffer> pooledBuffer;
+    private PooledByteBuffer pooledBuffer;
     private ByteBuffer buffer;
     private Integer bufferSize;
     private StreamSinkChannel channel;
@@ -152,9 +152,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 if (channel == null) {
                     this.channel = channel = servletRequestContext.getExchange().getResponseChannel();
                 }
-                final Pool<ByteBuffer> bufferPool = servletRequestContext.getExchange().getConnection().getBufferPool();
+                final ByteBufferPool bufferPool = servletRequestContext.getExchange().getConnection().getByteBufferPool();
                 ByteBuffer[] buffers = new ByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
-                Pooled[] pooledBuffers = new Pooled[MAX_BUFFERS_TO_ALLOCATE];
+                PooledByteBuffer[] pooledBuffers = new PooledByteBuffer[MAX_BUFFERS_TO_ALLOCATE];
                 try {
                     buffers[0] = buffer;
                     int bytesWritten = 0;
@@ -164,10 +164,10 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     bytesWritten += rem;
                     int bufferCount = 1;
                     for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
-                        Pooled<ByteBuffer> pooled = bufferPool.allocate();
+                        PooledByteBuffer pooled = bufferPool.allocate();
                         pooledBuffers[bufferCount - 1] = pooled;
-                        buffers[bufferCount++] = pooled.getResource();
-                        ByteBuffer cb = pooled.getResource();
+                        buffers[bufferCount++] = pooled.getBuffer();
+                        ByteBuffer cb = pooled.getBuffer();
                         int toWrite = len - bytesWritten;
                         if (toWrite > cb.remaining()) {
                             rem = cb.remaining();
@@ -207,11 +207,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     buffer.clear();
                 } finally {
                     for (int i = 0; i < pooledBuffers.length; ++i) {
-                        Pooled p = pooledBuffers[i];
+                        PooledByteBuffer p = pooledBuffers[i];
                         if (p == null) {
                             break;
                         }
-                        p.free();
+                        p.close();
                     }
                 }
             } else {
@@ -378,7 +378,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     state |= FLAG_DELEGATE_SHUTDOWN;
                     channel.flush();
                     if(pooledBuffer != null) {
-                        pooledBuffer.free();
+                        pooledBuffer.close();
                         buffer = null;
                         pooledBuffer = null;
                     }
@@ -613,7 +613,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 throw e;
             } finally {
                 if (pooledBuffer != null) {
-                    pooledBuffer.free();
+                    pooledBuffer.close();
                     buffer = null;
                 } else {
                     buffer = null;
@@ -658,7 +658,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 }
 
                 if (pooledBuffer != null) {
-                    pooledBuffer.free();
+                    pooledBuffer.close();
                     buffer = null;
                 } else {
                     buffer = null;
@@ -671,7 +671,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
         } catch (IOException e) {
             if(pooledBuffer != null) {
-                pooledBuffer.free();
+                pooledBuffer.close();
                 pooledBuffer = null;
                 buffer = null;
             }
@@ -698,8 +698,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             this.buffer = ByteBuffer.allocateDirect(bufferSize);
             return this.buffer;
         } else {
-            this.pooledBuffer = servletRequestContext.getExchange().getConnection().getBufferPool().allocate();
-            this.buffer = pooledBuffer.getResource();
+            this.pooledBuffer = servletRequestContext.getExchange().getConnection().getByteBufferPool().allocate();
+            this.buffer = pooledBuffer.getBuffer();
             return this.buffer;
         }
     }
@@ -707,7 +707,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     public void resetBuffer() {
         if (allAreClear(state, FLAG_WRITE_STARTED)) {
             if (pooledBuffer != null) {
-                pooledBuffer.free();
+                pooledBuffer.close();
                 pooledBuffer = null;
             }
             buffer = null;
@@ -842,7 +842,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 try {
 
                     if (pooledBuffer != null) {
-                        pooledBuffer.free();
+                        pooledBuffer.close();
                         buffer = null;
                     } else {
                         buffer = null;

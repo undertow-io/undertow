@@ -289,7 +289,7 @@ public class ProxyConnectionPool implements Closeable {
                 }
                 callback.failed(exchange);
             }
-        }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
+        }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
     }
 
     private void redistributeQueued(HostThreadData hostData) {
@@ -389,7 +389,7 @@ public class ProxyConnectionPool implements Closeable {
                             connectionPoolManager.handleError();
                             scheduleFailedHostRetry(exchange);
                         }
-                    }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getBufferPool(), options);
+                    }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
                 }
             }, retry, TimeUnit.SECONDS);
         }
