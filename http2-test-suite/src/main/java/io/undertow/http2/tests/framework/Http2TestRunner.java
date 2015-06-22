@@ -129,7 +129,7 @@ public class Http2TestRunner extends BlockJUnit4ClassRunner {
 
     /**
      * When using the default SSL settings returns the corresponding client context.
-     * <p/>
+     * <p>
      * If a test case is initialising a custom server side SSLContext then the test case will be responsible for creating it's
      * own client side.
      *
