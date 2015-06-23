@@ -45,7 +45,7 @@ import java.util.List;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class GetRequestedSessionIdTestCase {
+public class SessionIdHandlingTestCase {
 
 
     @BeforeClass
@@ -118,6 +118,38 @@ public class GetRequestedSessionIdTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(createdSessionId, response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testIsRequestedSessionIdValid() throws IOException, InterruptedException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=create");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("null", response);
+            String sessionId = getSession(client.getCookieStore().getCookies());
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=timeout");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(sessionId, response);
+            Thread.sleep(2500);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=isvalid");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("false", response);
+
 
         } finally {
             client.getConnectionManager().shutdown();

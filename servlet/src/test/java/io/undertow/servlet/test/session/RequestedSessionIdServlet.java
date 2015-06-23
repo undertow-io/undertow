@@ -50,6 +50,13 @@ public class RequestedSessionIdServlet extends HttpServlet {
                 req.changeSessionId();
                 resp.getWriter().write(req.getRequestedSessionId());
                 break;
+            case "timeout":
+                req.getSession(true).setMaxInactiveInterval(1);
+                resp.getWriter().write(req.getRequestedSessionId());
+                break;
+            case "isvalid":
+                resp.getWriter().write(req.isRequestedSessionIdValid() + "");
+                break;
             case "default":
                 resp.getWriter().write(req.getRequestedSessionId());
                 break;
