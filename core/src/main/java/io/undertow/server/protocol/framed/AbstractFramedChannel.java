@@ -130,6 +130,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private volatile int outstandingBuffers;
     private volatile AtomicIntegerFieldUpdater<AbstractFramedChannel> outstandingBuffersUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "outstandingBuffers");
 
+    private final LinkedBlockingDeque<Runnable> taskRunQueue = new LinkedBlockingDeque<>();
+
     private final ReferenceCountedPooled.FreeNotifier freeNotifier = new ReferenceCountedPooled.FreeNotifier() {
         @Override
         public void freed() {
@@ -190,6 +192,18 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     protected IdleTimeoutConduit createIdleTimeoutChannel(StreamConnection connectedStreamChannel) {
         return new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit());
+    }
+
+    void runInIoThread(Runnable task) {
+        this.taskRunQueue.add(task);
+        getIoThread().execute(new Runnable() {
+            @Override
+            public void run() {
+                while (!taskRunQueue.isEmpty()) {
+                    taskRunQueue.poll().run();
+                }
+            }
+        });
     }
 
     /**
@@ -355,7 +369,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     pooled.getResource().position((int) (pooled.getResource().position() + frameDataRemaining));
                     frameDataRemaining = 0;
                     Pooled<ByteBuffer> frameData = pooled.createView(buf);
-                    //note that we don't return here, there may be another frame
                     if(receiver != null) {
                         receiver.dataReady(null, frameData);
                     } else{
@@ -368,6 +381,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 //see https://issues.jboss.org/browse/UNDERTOW-410
                 //basically if we don't do this we loose some message ordering semantics
                 //as the second message may be processed before the first one
+
+                //this is problematic for HTTPS, where the read listener may also be invoked by a queued task
+                //and not by the selector mechanism
                 return null;
             }
             FrameHeaderData data = parseFrame(pooled.getResource());
@@ -592,7 +608,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         } finally {
             flushingSenders = false;
             if(!newFrames.isEmpty()) {
-                getIoThread().execute(new Runnable() {
+                runInIoThread(new Runnable() {
                     @Override
                     public void run() {
                         flushSenders();
@@ -629,7 +645,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if(channel.getIoThread() == Thread.currentThread()) {
                 flushSenders();
             } else {
-                channel.getIoThread().execute(new Runnable() {
+                runInIoThread(new Runnable() {
                     @Override
                     public void run() {
                         flushSenders();
@@ -816,6 +832,11 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         @SuppressWarnings({"unchecked", "rawtypes"})
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
+            //clear the task queue before reading
+            while (!taskRunQueue.isEmpty()) {
+                taskRunQueue.poll().run();
+            }
+
             final R receiver = AbstractFramedChannel.this.receiver;
             if ((isLastFrameReceived() || receivesSuspended) && receiver == null) {
                 channel.suspendReads();
@@ -831,7 +852,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
             if (readData != null  && !readData.isFreed() && channel.isOpen()) {
                 try {
-                    channel.getIoThread().execute(new Runnable() {
+                    runInIoThread(new Runnable() {
                         @Override
                         public void run() {
                             ChannelListeners.invokeChannelListener(channel, FrameReadListener.this);
@@ -872,13 +893,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 //we make sure there is no data left to receive, if there is then we invoke the receive listener
                 final ChannelListener<? super C> listener = receiveSetter.get();
                 if(listener != null) {
-                    channel.getIoThread().execute(new Runnable() {
+                    runInIoThread(new Runnable() {
                         @Override
                         public void run() {
-                            while (readData != null  && !readData.isFreed()) {
+                            while (readData != null && !readData.isFreed()) {
                                 int rem = readData.getResource().remaining();
                                 ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, (ChannelListener) receiveSetter.get());
-                                if(readData != null && rem == readData.getResource().remaining()) {
+                                if (readData != null && rem == readData.getResource().remaining()) {
                                     break;//make sure we are making progress
                                 }
                             }
@@ -890,7 +911,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
 
             if (Thread.currentThread() != c.getIoThread()) {
-                ChannelListeners.invokeChannelListener(c.getIoThread(), c, this);
+                runInIoThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ChannelListeners.invokeChannelListener(c, FrameCloseListener.this);
+                    }
+                });
                 return;
             }
             R receiver = AbstractFramedChannel.this.receiver;

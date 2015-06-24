@@ -196,7 +196,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
         if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
             state |= STATE_IN_LISTENER_LOOP;
-            getIoThread().execute(new Runnable() {
+            getChannel().runInIoThread(new Runnable() {
 
                 int loopCount = 0;
 
