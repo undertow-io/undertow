@@ -311,6 +311,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         private final SessionConfig sessionCookieConfig;
         private volatile long expireTime = -1;
         private volatile boolean invalid = false;
+        private volatile boolean invalidationStarted = false;
 
         final XnioExecutor executor;
         final XnioWorker worker;
@@ -346,6 +347,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         }
 
         synchronized void bumpTimeout() {
+            if(invalidationStarted) {
+                return;
+            }
+
             final int maxInactiveInterval = getMaxInactiveInterval();
             if (maxInactiveInterval > 0) {
                 long newExpireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000L);
@@ -468,17 +473,21 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             invalidate(exchange, SessionListener.SessionDestroyedReason.INVALIDATED);
         }
 
-        synchronized void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
-            if (timerCancelKey != null) {
-                timerCancelKey.remove();
-            }
-            SessionImpl sess = sessionManager.sessions.remove(sessionId);
-            if (sess == null) {
-                if (reason == SessionListener.SessionDestroyedReason.INVALIDATED) {
-                    throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
+        void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
+            synchronized(SessionImpl.this) {
+                if (timerCancelKey != null) {
+                    timerCancelKey.remove();
                 }
-                return;
+                SessionImpl sess = sessionManager.sessions.remove(sessionId);
+                if (sess == null) {
+                    if (reason == SessionListener.SessionDestroyedReason.INVALIDATED) {
+                        throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
+                    }
+                    return;
+                }
+                invalidationStarted = true;
             }
+
             sessionManager.sessionListeners.sessionDestroyed(this, exchange, reason);
             invalid = true;
 
