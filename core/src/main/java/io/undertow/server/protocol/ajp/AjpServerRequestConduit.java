@@ -125,12 +125,22 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
 
     @Override
     public long transferTo(long position, long count, FileChannel target) throws IOException {
-        return target.transferFrom(new ConduitReadableByteChannel(this), position, count);
+        try {
+            return target.transferFrom(new ConduitReadableByteChannel(this), position, count);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
+        }
     }
 
     @Override
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
+        try {
+            return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
+        }
     }
 
     @Override
@@ -144,46 +154,56 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
 
     @Override
     public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        long total = 0;
-        for (int i = offset; i < length; ++i) {
-            while (dsts[i].hasRemaining()) {
-                int r = read(dsts[i]);
-                if (r <= 0 && total > 0) {
-                    return total;
-                } else if (r <= 0) {
-                    return r;
-                } else {
-                    total += r;
+        try {
+            long total = 0;
+            for (int i = offset; i < length; ++i) {
+                while (dsts[i].hasRemaining()) {
+                    int r = read(dsts[i]);
+                    if (r <= 0 && total > 0) {
+                        return total;
+                    } else if (r <= 0) {
+                        return r;
+                    } else {
+                        total += r;
+                    }
                 }
             }
+            return total;
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
-        return total;
     }
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
-        long state = this.state;
-        if (anyAreSet(state, STATE_FINISHED)) {
-            return -1;
-        } else if (anyAreSet(state, STATE_SEND_REQUIRED)) {
-            state = this.state = (state & STATE_MASK) | STATE_READING;
-            if(ajpResponseConduit.isWriteShutdown()) {
-                this.state = STATE_FINISHED;
-                if (finishListener != null) {
-                    finishListener.handleEvent(this);
-                }
+        try {
+            long state = this.state;
+            if (anyAreSet(state, STATE_FINISHED)) {
                 return -1;
+            } else if (anyAreSet(state, STATE_SEND_REQUIRED)) {
+                state = this.state = (state & STATE_MASK) | STATE_READING;
+                if (ajpResponseConduit.isWriteShutdown()) {
+                    this.state = STATE_FINISHED;
+                    if (finishListener != null) {
+                        finishListener.handleEvent(this);
+                    }
+                    return -1;
+                }
+                if (!ajpResponseConduit.doGetRequestBodyChunk(READ_BODY_CHUNK.duplicate(), this)) {
+                    return 0;
+                }
             }
-            if (!ajpResponseConduit.doGetRequestBodyChunk(READ_BODY_CHUNK.duplicate(), this)) {
-                return 0;
+            //we might have gone into state_reading above
+            if (anyAreSet(state, STATE_READING)) {
+                return doRead(dst, state);
             }
+            assert STATE_FINISHED == state;
+            return -1;
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
-        //we might have gone into state_reading above
-        if (anyAreSet(state, STATE_READING)) {
-            return doRead(dst, state);
-        }
-        assert STATE_FINISHED == state;
-        return -1;
     }
 
     private int doRead(final ByteBuffer dst, long state) throws IOException {
@@ -274,15 +294,25 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
 
     @Override
     public void awaitReadable() throws IOException {
-        if (anyAreSet(state, STATE_READING)) {
-            next.awaitReadable();
+        try {
+            if (anyAreSet(state, STATE_READING)) {
+                next.awaitReadable();
+            }
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
     }
 
     @Override
     public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
-        if (anyAreSet(state, STATE_READING)) {
-            next.awaitReadable(time, timeUnit);
+        try {
+            if (anyAreSet(state, STATE_READING)) {
+                next.awaitReadable(time, timeUnit);
+            }
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
     }
 
@@ -291,6 +321,9 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
      * @param e
      */
     void setReadBodyChunkError(IOException e) {
-        //TODO:
+        IoUtils.safeClose(exchange.getConnection());
+        if(isReadResumed()) {
+            wakeupReads();
+        }
     }
 }
