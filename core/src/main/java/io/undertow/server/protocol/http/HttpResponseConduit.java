@@ -561,29 +561,34 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public int write(final ByteBuffer src) throws IOException {
-        int oldState = this.state;
-        int state = oldState & MASK_STATE;
-        int alreadyWritten = 0;
-        int originalRemaining = -1;
         try {
-            if (state != 0) {
-                originalRemaining = src.remaining();
-                state = processWrite(state, src, -1, -1);
+            int oldState = this.state;
+            int state = oldState & MASK_STATE;
+            int alreadyWritten = 0;
+            int originalRemaining = -1;
+            try {
                 if (state != 0) {
-                    return 0;
+                    originalRemaining = src.remaining();
+                    state = processWrite(state, src, -1, -1);
+                    if (state != 0) {
+                        return 0;
+                    }
+                    alreadyWritten = originalRemaining - src.remaining();
+                    if (allAreSet(oldState, FLAG_SHUTDOWN)) {
+                        next.terminateWrites();
+                        throw new ClosedChannelException();
+                    }
                 }
-                alreadyWritten = originalRemaining - src.remaining();
-                if (allAreSet(oldState, FLAG_SHUTDOWN)) {
-                    next.terminateWrites();
-                    throw new ClosedChannelException();
+                if (alreadyWritten != originalRemaining) {
+                    return next.write(src) + alreadyWritten;
                 }
+                return alreadyWritten;
+            } finally {
+                this.state = oldState & ~MASK_STATE | state;
             }
-            if (alreadyWritten != originalRemaining) {
-                return next.write(src) + alreadyWritten;
-            }
-            return alreadyWritten;
-        } finally {
-            this.state = oldState & ~MASK_STATE | state;
+        } catch(IOException|RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
     }
 
@@ -614,27 +619,35 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 return ret;
             }
             return length == 1 ? next.write(srcs[offset]) : next.write(srcs, offset, length);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         } finally {
             this.state = oldVal & ~MASK_STATE | state;
         }
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
-        if(state != 0) {
-            final Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-            ByteBuffer buffer = pooled.getResource();
-            try {
-                int res = src.read(buffer);
-                if(res <= 0) {
-                    return res;
+        try {
+            if (state != 0) {
+                final Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
+                ByteBuffer buffer = pooled.getResource();
+                try {
+                    int res = src.read(buffer);
+                    if (res <= 0) {
+                        return res;
+                    }
+                    buffer.flip();
+                    return write(buffer);
+                } finally {
+                    pooled.free();
                 }
-                buffer.flip();
-                return write(buffer);
-            } finally {
-                pooled.free();
+            } else {
+                return next.transferFrom(src, position, count);
             }
-        } else {
-            return next.transferFrom(src, position, count);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
     }
 
@@ -648,12 +661,22 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
     @Override
     public int writeFinal(ByteBuffer src) throws IOException {
-        return Conduits.writeFinalBasic(this, src);
+        try {
+            return Conduits.writeFinalBasic(this, src);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
+        }
     }
 
     @Override
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        return Conduits.writeFinalBasic(this, srcs, offset, length);
+        try {
+            return Conduits.writeFinalBasic(this, srcs, offset, length);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
+        }
     }
 
     public boolean flush() throws IOException {
@@ -671,6 +694,9 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
             }
             return next.flush();
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         } finally {
             this.state = oldVal & ~MASK_STATE | state;
         }
@@ -678,17 +704,25 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
 
     public void terminateWrites() throws IOException {
-        int oldVal = this.state;
-        if (allAreClear(oldVal, MASK_STATE)) {
-            next.terminateWrites();
-            return;
+        try {
+            int oldVal = this.state;
+            if (allAreClear(oldVal, MASK_STATE)) {
+                next.terminateWrites();
+                return;
+            }
+            this.state = oldVal | FLAG_SHUTDOWN;
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
-        this.state = oldVal | FLAG_SHUTDOWN;
     }
 
     public void truncateWrites() throws IOException {
         try {
             next.truncateWrites();
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         } finally {
             if (pooledBuffer != null) {
                 bufferDone();

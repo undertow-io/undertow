@@ -100,7 +100,12 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
-        return target.transferFrom(new ConduitReadableByteChannel(this), position, count);
+        try {
+            return target.transferFrom(new ConduitReadableByteChannel(this), position, count);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
+        }
     }
 
     private void updateRemainingAllowed(final int written) throws IOException {
@@ -127,7 +132,12 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     }
 
     public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
-        return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
+        try {
+            return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
+        }
     }
 
     public long read(final ByteBuffer[] dsts, final int offset, final int length) throws IOException {
@@ -142,114 +152,120 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     @Override
     public void terminateReads() throws IOException {
         if (!isFinished()) {
+            exchange.setPersistent(false);
             super.terminateReads();
             throw UndertowMessages.MESSAGES.chunkedChannelClosedMidChunk();
         }
     }
 
     public int read(final ByteBuffer dst) throws IOException {
-        long chunkRemaining = chunkReader.getChunkRemaining();
-        //we have read the last chunk, we just return EOF
-        if (chunkRemaining == -1) {
-            return -1;
-        }
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-        Pooled<ByteBuffer> pooled = bufferWrapper.allocate();
-        ByteBuffer buf = pooled.getResource();
-        boolean free = true;
         try {
-            //we need to do our initial read into a
-            int r = next.read(buf);
-            buf.flip();
-            if (r == -1) {
-                //Channel is broken, not sure how best to report it
+            long chunkRemaining = chunkReader.getChunkRemaining();
+            //we have read the last chunk, we just return EOF
+            if (chunkRemaining == -1) {
+                return -1;
+            }
+            if (closed) {
                 throw new ClosedChannelException();
-            } else if (r == 0) {
-                return 0;
             }
-            if (chunkRemaining == 0) {
-                chunkRemaining = chunkReader.readChunk(buf);
-                if (chunkRemaining <= 0) {
-                    return (int) chunkRemaining;
-                }
-            }
-
-
-            final int originalLimit = dst.limit();
+            Pooled<ByteBuffer> pooled = bufferWrapper.allocate();
+            ByteBuffer buf = pooled.getResource();
+            boolean free = true;
             try {
-                //now we may have some stuff in the raw buffer
-                //or the raw buffer may be exhausted, and we should read directly into the destination buffer
-                //from the next
+                //we need to do our initial read into a
+                int r = next.read(buf);
+                buf.flip();
+                if (r == -1) {
+                    //Channel is broken, not sure how best to report it
+                    throw new ClosedChannelException();
+                } else if (r == 0) {
+                    return 0;
+                }
+                if (chunkRemaining == 0) {
+                    chunkRemaining = chunkReader.readChunk(buf);
+                    if (chunkRemaining <= 0) {
+                        return (int) chunkRemaining;
+                    }
+                }
 
-                int read = 0;
-                long chunkInBuffer = Math.min(buf.remaining(), chunkRemaining);
-                int remaining = dst.remaining();
-                if (chunkInBuffer > remaining) {
-                    //it won't fit
-                    int orig = buf.limit();
-                    buf.limit(buf.position() + remaining);
-                    dst.put(buf);
-                    buf.limit(orig);
-                    chunkRemaining -= remaining;
-                    updateRemainingAllowed(remaining);
-                    free = false;
-                    return remaining;
-                } else if (buf.hasRemaining()) {
-                    int old = buf.limit();
-                    buf.limit((int) Math.min(old, buf.position() + chunkInBuffer));
-                    try {
+
+                final int originalLimit = dst.limit();
+                try {
+                    //now we may have some stuff in the raw buffer
+                    //or the raw buffer may be exhausted, and we should read directly into the destination buffer
+                    //from the next
+
+                    int read = 0;
+                    long chunkInBuffer = Math.min(buf.remaining(), chunkRemaining);
+                    int remaining = dst.remaining();
+                    if (chunkInBuffer > remaining) {
+                        //it won't fit
+                        int orig = buf.limit();
+                        buf.limit(buf.position() + remaining);
                         dst.put(buf);
-                    } finally {
-                        buf.limit(old);
-                    }
-                    read += chunkInBuffer;
-                    chunkRemaining -= chunkInBuffer;
-                }
-                //there is still more to read
-                //we attempt to just read it directly into the destination buffer
-                //adjusting the limit as necessary to make sure we do not read too much
-                if (chunkRemaining > 0) {
-                    int old = dst.limit();
-                    try {
-                        if (chunkRemaining < dst.remaining()) {
-                            dst.limit((int) (dst.position() + chunkRemaining));
+                        buf.limit(orig);
+                        chunkRemaining -= remaining;
+                        updateRemainingAllowed(remaining);
+                        free = false;
+                        return remaining;
+                    } else if (buf.hasRemaining()) {
+                        int old = buf.limit();
+                        buf.limit((int) Math.min(old, buf.position() + chunkInBuffer));
+                        try {
+                            dst.put(buf);
+                        } finally {
+                            buf.limit(old);
                         }
-                        int c = 0;
-                        do {
-                            c = next.read(dst);
-                            if (c > 0) {
-                                read += c;
-                                chunkRemaining -= c;
+                        read += chunkInBuffer;
+                        chunkRemaining -= chunkInBuffer;
+                    }
+                    //there is still more to read
+                    //we attempt to just read it directly into the destination buffer
+                    //adjusting the limit as necessary to make sure we do not read too much
+                    if (chunkRemaining > 0) {
+                        int old = dst.limit();
+                        try {
+                            if (chunkRemaining < dst.remaining()) {
+                                dst.limit((int) (dst.position() + chunkRemaining));
                             }
-                        } while (c > 0 && chunkRemaining > 0);
-                        if (c == -1) {
-                            throw new ClosedChannelException();
+                            int c = 0;
+                            do {
+                                c = next.read(dst);
+                                if (c > 0) {
+                                    read += c;
+                                    chunkRemaining -= c;
+                                }
+                            } while (c > 0 && chunkRemaining > 0);
+                            if (c == -1) {
+                                throw new ClosedChannelException();
+                            }
+                        } finally {
+                            dst.limit(old);
                         }
-                    } finally {
-                        dst.limit(old);
+                    } else {
+                        free = false;
                     }
-                } else {
-                    free = false;
+                    updateRemainingAllowed(read);
+                    return read;
+
+                } finally {
+                    //buffer will be freed if not needed in exitRead
+                    dst.limit(originalLimit);
                 }
-                updateRemainingAllowed(read);
-                return read;
 
             } finally {
-                //buffer will be freed if not needed in exitRead
-                dst.limit(originalLimit);
+                if (chunkRemaining >= 0) {
+                    chunkReader.setChunkRemaining(chunkRemaining);
+                }
+                if (!free && buf.hasRemaining()) {
+                    bufferWrapper.pushBack(pooled);
+                } else {
+                    pooled.free();
+                }
             }
-
-        } finally {
-            if(chunkRemaining >= 0) {
-                chunkReader.setChunkRemaining(chunkRemaining);
-            }
-            if (!free && buf.hasRemaining()) {
-                bufferWrapper.pushBack(pooled);
-            } else {
-                pooled.free();
-            }
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
 
     }
