@@ -235,6 +235,7 @@ public class InMemorySessionManager implements SessionManager {
         private volatile Object evictionToken;
         private final SessionConfig sessionCookieConfig;
         private volatile long expireTime = -1;
+        private volatile boolean invalidationStarted = false;
 
         final XnioExecutor executor;
         final XnioWorker worker;
@@ -268,6 +269,10 @@ public class InMemorySessionManager implements SessionManager {
         }
 
         synchronized void bumpTimeout() {
+            if(invalidationStarted) {
+                return;
+            }
+
             final int maxInactiveInterval = getMaxInactiveInterval();
             if (maxInactiveInterval > 0) {
                 long newExpireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000L);
@@ -399,18 +404,21 @@ public class InMemorySessionManager implements SessionManager {
             invalidate(exchange, SessionListener.SessionDestroyedReason.INVALIDATED);
         }
 
-        synchronized void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
-            if (timerCancelKey != null) {
-                timerCancelKey.remove();
-            }
-            InMemorySession sess = sessionManager.sessions.get(sessionId);
-            if (sess == null) {
-                if (reason == SessionListener.SessionDestroyedReason.INVALIDATED) {
-                    throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
+         void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
+            synchronized(SessionImpl.this) {
+                if (timerCancelKey != null) {
+                    timerCancelKey.remove();
                 }
-                return;
+                InMemorySession sess = sessionManager.sessions.get(sessionId);
+                if (sess == null) {
+                    if (reason == SessionListener.SessionDestroyedReason.INVALIDATED) {
+                        throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
+                    }
+                    return;
+                }
+                invalidationStarted = true;
             }
-            sessionManager.sessionListeners.sessionDestroyed(sess.session, exchange, reason);
+            sessionManager.sessionListeners.sessionDestroyed(this, exchange, reason);
             sessionManager.sessions.remove(sessionId);
             if (exchange != null) {
                 sessionCookieConfig.clearSession(exchange, this.getId());
