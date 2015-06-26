@@ -288,6 +288,9 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
                 }
             } while (toWrite > 0);
             return originalPayloadSize;
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         } finally {
             src.limit(limit);
         }
@@ -379,10 +382,15 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
 
     @Override
     protected void doTerminateWrites() throws IOException {
-        if (!exchange.isPersistent()) {
-            next.terminateWrites();
+        try {
+            if (!exchange.isPersistent()) {
+                next.terminateWrites();
+            }
+            state |= FLAG_WRITE_SHUTDOWN;
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         }
-        state |= FLAG_WRITE_SHUTDOWN;
     }
 
     @Override

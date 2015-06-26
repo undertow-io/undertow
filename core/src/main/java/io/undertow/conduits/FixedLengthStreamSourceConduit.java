@@ -21,6 +21,7 @@ package io.undertow.conduits;
 import io.undertow.UndertowMessages;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
@@ -122,6 +123,9 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         long res = 0L;
         try {
             return res = next.transferTo(position, min(count, val & MASK_COUNT), target);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         } finally {
             exitRead(res);
         }
@@ -142,6 +146,9 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         long res = 0L;
         try {
             return res = next.transferTo(min(count, val & MASK_COUNT), throughBuffer, target);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         } finally {
             exitRead(res == -1L ? val & MASK_COUNT : res + throughBuffer.remaining());
         }
@@ -205,6 +212,9 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             }
             // the total buffer space is less than the remaining count.
             return res = next.read(dsts, offset, length);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
         } finally {
             exitRead(res == -1L ? val & MASK_COUNT : res);
         }
@@ -238,7 +248,10 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             } else {
                 return res = next.read(dst);
             }
-        } finally {
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
+        }  finally {
             exitRead(res == -1 ? remaining : (long) res);
         }
     }
@@ -277,7 +290,12 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         if (allAreSet(val, FLAG_CLOSED) || val == 0L) {
             return;
         }
-        next.awaitReadable(time, timeUnit);
+        try {
+            next.awaitReadable(time, timeUnit);
+        } catch (IOException | RuntimeException e) {
+            IoUtils.safeClose(exchange.getConnection());
+            throw e;
+        }
     }
 
     /**
