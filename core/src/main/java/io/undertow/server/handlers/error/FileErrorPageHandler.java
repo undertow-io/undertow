@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.util.MimeMappings;
 import org.jboss.logging.Logger;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
@@ -68,6 +70,9 @@ public class FileErrorPageHandler implements HttpHandler {
 
     private volatile Path file;
 
+    private final MimeMappings mimeMappings;
+
+    @Deprecated
     public FileErrorPageHandler(final File file, final Integer... responseCodes) {
         this(file.toPath(), responseCodes);
     }
@@ -75,16 +80,23 @@ public class FileErrorPageHandler implements HttpHandler {
     public FileErrorPageHandler(final Path file, final Integer... responseCodes) {
         this.file = file;
         this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
+        this.mimeMappings = MimeMappings.DEFAULT;
     }
 
+    @Deprecated
     public FileErrorPageHandler(HttpHandler next, final File file, final Integer... responseCodes) {
         this(next, file.toPath(), responseCodes);
     }
 
     public FileErrorPageHandler(HttpHandler next, final Path file, final Integer... responseCodes) {
+        this(next, file, MimeMappings.DEFAULT, responseCodes);
+    }
+
+    public FileErrorPageHandler(HttpHandler next, final Path file, MimeMappings mimeMappings, final Integer... responseCodes) {
         this.next = next;
         this.file = file;
         this.responseCodes = new HashSet<>(Arrays.asList(responseCodes));
+        this.mimeMappings = mimeMappings;
     }
 
     @Override
