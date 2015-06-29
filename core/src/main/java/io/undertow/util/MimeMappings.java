@@ -20,6 +20,7 @@ package io.undertow.util;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -166,7 +167,7 @@ public class MimeMappings {
         }
 
         public Builder addMapping(final String extension, final String contentType) {
-            mappings.put(extension, contentType);
+            mappings.put(extension.toLowerCase(Locale.ENGLISH), contentType);
             return this;
         }
 
@@ -176,7 +177,7 @@ public class MimeMappings {
     }
 
     public String getMimeType(final String extension) {
-        return mappings.get(extension);
+        return mappings.get(extension.toLowerCase(Locale.ENGLISH));
     }
 
 }
