@@ -93,6 +93,14 @@ public class FileErrorPageHandler implements HttpHandler {
     }
 
     private void serveFile(final HttpServerExchange exchange) {
+        String fileName = file.toString();
+        int index = fileName.lastIndexOf(".");
+        if(index > 0) {
+            String contentType = mimeMappings.getMimeType(fileName.substring(index + 1));
+            if(contentType != null) {
+                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
+            }
+        }
         exchange.dispatch(new Runnable() {
             @Override
             public void run() {

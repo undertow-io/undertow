@@ -47,6 +47,7 @@ public class FileErrorPageHandlerTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
+            Assert.assertEquals("text/html", result.getHeaders("Content-Type")[0].getValue());
             Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
 
