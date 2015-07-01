@@ -53,6 +53,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_TASK;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_WRAP;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
@@ -152,6 +156,20 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private SslWriteReadyHandler writeReadyHandler;
     private SslReadReadyHandler readReadyHandler;
+
+    private static final Object NEED_UNWRAP_AGAIN;
+
+    static {
+        //in JDK9 the JDK team added a new status to the SSL handshake enum, which breaks compatibility with all
+        //existing SSL code
+        Object val;
+        try {
+            val = SSLEngineResult.HandshakeStatus.valueOf("NEED_UNWRAP_AGAIN");
+        } catch (IllegalArgumentException ignored) {
+            val = new Object();
+        }
+        NEED_UNWRAP_AGAIN = val;
+    }
 
 
     SslConduit(UndertowSslConnection connection, StreamConnection delegate, SSLEngine engine, Pool<ByteBuffer> bufferPool, Runnable handshakeCallback) {
@@ -822,43 +840,40 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     }
 
     private boolean handleHandshakeResult(SSLEngineResult result) throws IOException {
-        switch (result.getHandshakeStatus()) {
-            case NEED_TASK: {
-                state |= FLAG_IN_HANDSHAKE;
-                clearReadRequiresWrite();
-                clearWriteRequiresRead();
-                runTasks();
-                return false;
+        final SSLEngineResult.HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+        if (handshakeStatus == NEED_TASK) {
+            state |= FLAG_IN_HANDSHAKE;
+            clearReadRequiresWrite();
+            clearWriteRequiresRead();
+            runTasks();
+            return false;
+        } else if (handshakeStatus == NEED_UNWRAP || handshakeStatus == NEED_UNWRAP_AGAIN) {
+            clearReadRequiresWrite();
+            state |= FLAG_WRITE_REQUIRES_READ | FLAG_IN_HANDSHAKE;
+            sink.suspendWrites();
+            if (anyAreSet(state, FLAG_WRITES_RESUMED)) {
+                source.resumeReads();
             }
-            case NEED_UNWRAP: {
-                clearReadRequiresWrite();
-                state |= FLAG_WRITE_REQUIRES_READ | FLAG_IN_HANDSHAKE;
-                sink.suspendWrites();
-                if(anyAreSet(state, FLAG_WRITES_RESUMED)) {
-                    source.resumeReads();
-                }
-                if (anyAreSet(state, FLAG_DATA_TO_UNWRAP) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED)) {
-                    runReadListener();
-                }
+            if (anyAreSet(state, FLAG_DATA_TO_UNWRAP) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED)) {
+                runReadListener();
+            }
 
-                return false;
+            return false;
+        } else if (handshakeStatus == NEED_WRAP) {
+            clearWriteRequiresRead();
+            state |= FLAG_READ_REQUIRES_WRITE | FLAG_IN_HANDSHAKE;
+            source.suspendReads();
+            if (anyAreSet(state, FLAG_READS_RESUMED)) {
+                sink.resumeWrites();
             }
-            case NEED_WRAP: {
-                clearWriteRequiresRead();
-                state |= FLAG_READ_REQUIRES_WRITE | FLAG_IN_HANDSHAKE;
-                source.suspendReads();
-                if(anyAreSet(state, FLAG_READS_RESUMED)) {
-                    sink.resumeWrites();
-                }
-                return false;
-            }
-            case FINISHED: {
-                if(anyAreSet(state, FLAG_IN_HANDSHAKE)) {
-                    state &= ~FLAG_IN_HANDSHAKE;
-                    handshakeCallback.run();
-                }
+            return false;
+        } else if (handshakeStatus == FINISHED) {
+            if (anyAreSet(state, FLAG_IN_HANDSHAKE)) {
+                state &= ~FLAG_IN_HANDSHAKE;
+                handshakeCallback.run();
             }
         }
+
         clearReadRequiresWrite();
         clearWriteRequiresRead();
         return true;
