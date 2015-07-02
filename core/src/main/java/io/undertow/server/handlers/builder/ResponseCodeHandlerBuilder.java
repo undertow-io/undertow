@@ -52,7 +52,7 @@ public class ResponseCodeHandlerBuilder implements HandlerBuilder {
 
     @Override
     public String defaultParameter() {
-        return "200";
+        return "value";
     }
 
     @Override
