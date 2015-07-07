@@ -18,9 +18,11 @@
 
 package io.undertow.server;
 
+import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.server.protocol.http.HttpServerConnection;
 import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
 import org.xnio.Options;
 import org.xnio.Pooled;
 import org.xnio.SslClientAuthMode;
@@ -33,6 +35,7 @@ import javax.security.cert.X509Certificate;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.cert.Certificate;
+import java.util.concurrent.TimeUnit;
 
 /**
  * SSL session information that is read directly from the SSL session of the
@@ -41,6 +44,8 @@ import java.security.cert.Certificate;
  * @author Stuart Douglas
  */
 public class ConnectionSSLSessionInfo implements SSLSessionInfo {
+
+    private static final long MAX_RENEGOTIATION_WAIT = 30000;
 
     private final SslChannel channel;
     private final HttpServerConnection serverConnection;
@@ -155,14 +160,19 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                 channel.startHandshake();
                 serverConnection.getOriginalSinkConduit().flush();
                 ByteBuffer buff = ByteBuffer.wrap(new byte[1]);
-                while (!waiter.isDone() && serverConnection.isOpen()) {
+                long end = System.currentTimeMillis() + MAX_RENEGOTIATION_WAIT;
+                while (!waiter.isDone() && serverConnection.isOpen() && System.currentTimeMillis() < end) {
                     int read = serverConnection.getSourceChannel().read(buff);
                     if (read != 0) {
                         throw new SSLPeerUnverifiedException("");
                     }
                     if (!waiter.isDone()) {
-                        serverConnection.getSourceChannel().awaitReadable();
+                        serverConnection.getSourceChannel().awaitReadable(end - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
                     }
+                }
+                if(!waiter.isDone()) {
+                    IoUtils.safeClose(serverConnection);
+                    throw UndertowMessages.MESSAGES.rengotiationTimedOut();
                 }
             }
         } finally {
