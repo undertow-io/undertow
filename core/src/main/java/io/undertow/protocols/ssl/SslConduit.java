@@ -573,6 +573,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     }
 
     public void startHandshake() throws SSLException {
+        state |= FLAG_READ_REQUIRES_WRITE;
         engine.beginHandshake();
     }
 
