@@ -43,6 +43,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -67,7 +68,7 @@ public final class UndertowSession implements Session {
     private final InstanceHandle<Endpoint> endpoint;
     private final Encoding encoding;
     private final AtomicBoolean closed = new AtomicBoolean();
-    private final Set<Session> openSessions;
+    private final SessionContainer openSessions;
     private final String subProtocol;
     private final List<Extension> extensions;
     private final WebSocketClient.ConnectionBuilder clientConnectionBuilder;
@@ -81,8 +82,9 @@ public final class UndertowSession implements Session {
     UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
                     Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
                     InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
-                    final Encoding encoding, final Set<Session> openSessions, final String subProtocol,
+                    final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
                     final List<Extension> extensions, WebSocketClient.ConnectionBuilder clientConnectionBuilder) {
+        assert openSessions != null;
         this.webSocketChannel = webSocketChannel;
         this.queryString = queryString;
         this.encoding = encoding;
@@ -345,7 +347,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public Set<Session> getOpenSessions() {
-        return new HashSet<>(openSessions);
+        return new HashSet<>(openSessions.getOpenSessions());
     }
 
     @Override
@@ -354,12 +356,18 @@ public final class UndertowSession implements Session {
     }
 
     void close0() {
-        openSessions.remove(this);
-        try {
-            endpoint.release();
-        } finally {
-            encoding.close();
-        }
+        //we use the executor to preserve ordering
+        getExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                openSessions.removeOpenSession(UndertowSession.this);
+                try {
+                    endpoint.release();
+                } finally {
+                    encoding.close();
+                }
+            }
+        });
     }
 
     public Encoding getEncoding() {
@@ -394,5 +402,9 @@ public final class UndertowSession implements Session {
                 });
             }
         });
+    }
+
+    public Executor getExecutor() {
+        return frameHandler.getExecutor();
     }
 }

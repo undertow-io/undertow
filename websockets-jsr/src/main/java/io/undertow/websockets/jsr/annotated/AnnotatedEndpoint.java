@@ -21,7 +21,6 @@ package io.undertow.websockets.jsr.annotated;
 import io.undertow.UndertowLogger;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.websockets.core.WebSocketLogger;
-import io.undertow.websockets.jsr.OrderedExecutor;
 import io.undertow.websockets.jsr.UndertowSession;
 
 import javax.websocket.CloseReason;
@@ -35,7 +34,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executor;
 
 /**
  * @author Stuart Douglas
@@ -43,7 +41,6 @@ import java.util.concurrent.Executor;
 public class AnnotatedEndpoint extends Endpoint {
 
     private final InstanceHandle<?> instance;
-    private Executor executor;
 
     private final BoundMethod webSocketOpen;
     private final BoundMethod webSocketClose;
@@ -67,7 +64,6 @@ public class AnnotatedEndpoint extends Endpoint {
     @Override
     public void onOpen(final Session session, final EndpointConfig endpointConfiguration) {
         this.released = false;
-        this.executor = new OrderedExecutor(((UndertowSession)session).getWebSocketChannel().getWorker());
 
 
         final UndertowSession s = (UndertowSession) session;
@@ -164,7 +160,7 @@ public class AnnotatedEndpoint extends Endpoint {
     }
 
     private void invokeMethod(final Map<Class<?>, Object> params, final BoundMethod method, final UndertowSession session) {
-        session.getContainer().invokeEndpointMethod(executor, new Runnable() {
+        session.getContainer().invokeEndpointMethod(session.getExecutor(), new Runnable() {
             @Override
             public void run() {
                 if(!released) {
@@ -200,7 +196,7 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             params.put(CloseReason.class, closeReason);
-            ((UndertowSession) session).getContainer().invokeEndpointMethod(executor, new Runnable() {
+            ((UndertowSession) session).getContainer().invokeEndpointMethod(((UndertowSession)session).getExecutor(), new Runnable() {
                         @Override
                         public void run() {
                             if(!released) {
@@ -228,7 +224,7 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Session.class, session);
             params.put(Throwable.class, thr);
             params.put(Map.class, session.getPathParameters());
-            ((UndertowSession) session).getContainer().invokeEndpointMethod(executor, new Runnable() {
+            ((UndertowSession) session).getContainer().invokeEndpointMethod(((UndertowSession)session).getExecutor(), new Runnable() {
                 @Override
                 public void run() {
                     if(!released) {

@@ -24,6 +24,7 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.PathTemplate;
 import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.client.WebSocketClient;
@@ -59,7 +60,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -84,7 +84,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     private final ClassIntrospecter classIntrospecter;
 
-    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new HashMap<>();
+    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new CopyOnWriteMap<>();
 
     private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<>();
 
@@ -110,8 +110,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private ServletContextImpl contextToAddFilter = null;
 
     private final List<WebsocketClientSslProvider> clientSslProviders;
+    private final List<PauseListener> pauseListeners = new ArrayList<>();
 
     private volatile boolean closed = false;
+
+
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, boolean clientMode) {
         this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, null, null);
@@ -290,9 +293,18 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
             extensions.add(ExtensionImpl.create(e));
         }
+        ConfiguredClientEndpoint configured = clientEndpoints.get(endpointInstance.getClass());
+        if(configured == null) {
+            synchronized (clientEndpoints) {
+                configured = clientEndpoints.get(endpointInstance.getClass());
+                if(configured == null) {
+                    clientEndpoints.put(endpointInstance.getClass(), configured = new ConfiguredClientEndpoint());
+                }
+            }
+        }
 
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, connectionBuilder.getUri().getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>(), clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
+        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, connectionBuilder.getUri().getQuery(), encodingFactory.createEncoding(cec), configured, clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
         endpointInstance.onOpen(undertowSession, cec);
         channel.resumeReceives();
 
@@ -369,7 +381,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             subProtocol = connectionBuilder.getClientNegotiation().getSelectedSubProtocol();
         }
 
-        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), connectionBuilder.getUri().getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>(), subProtocol, extensions, connectionBuilder);
+        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), connectionBuilder.getUri().getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), cec, subProtocol, extensions, connectionBuilder);
         endpointInstance.onOpen(undertowSession, cec.getConfig());
         channel.resumeReceives();
 
@@ -455,7 +467,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         addEndpointInternal(endpoint, true);
     }
 
-    private void addEndpointInternal(final Class<?> endpoint, boolean requiresCreation) throws DeploymentException {
+    private synchronized void addEndpointInternal(final Class<?> endpoint, boolean requiresCreation) throws DeploymentException {
         ServerEndpoint serverEndpoint = endpoint.getAnnotation(ServerEndpoint.class);
         ClientEndpoint clientEndpoint = endpoint.getAnnotation(ClientEndpoint.class);
         if (serverEndpoint != null) {
@@ -631,16 +643,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public synchronized void close() {
-        closed = true;
-        for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
-            for (Session session : endpoint.getOpenSessions()) {
-                try {
-                    session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, ""));
-                } catch (Exception e) {
-                    JsrWebSocketLogger.ROOT_LOGGER.couldNotCloseOnUndeploy(e);
-                }
-            }
-        }
+        doClose();
         //wait up to 10 seconds for them to close
         long end = currentTimeMillis() + 10000;
         for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
@@ -718,11 +721,92 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
     }
 
+    /**
+     * Pauses the container
+     * @param listener
+     */
+    public synchronized void pause(PauseListener listener) {
+        closed = true;
+        if(listener != null) {
+            pauseListeners.add(listener);
+        }
+        for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
+            for (final Session session : endpoint.getOpenSessions()) {
+                ((UndertowSession)session).getExecutor().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, ""));
+                        } catch (Exception e) {
+                            JsrWebSocketLogger.ROOT_LOGGER.couldNotCloseOnUndeploy(e);
+                        }
+                    }
+                });
+            }
+        }
+
+        Runnable done = new Runnable() {
+
+            int count = configuredServerEndpoints.size();
+
+            @Override
+            public synchronized void run() {
+                synchronized (ServerWebSocketContainer.this) {
+                    count--;
+                    if (count == 0) {
+                        for(PauseListener p : pauseListeners) {
+                            p.paused();
+                        }
+                        pauseListeners.clear();
+                    }
+                }
+            }
+        };
+
+        for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
+            endpoint.notifyClosed(done);
+        }
+    }
+
+    private void doClose() {
+        closed = true;
+        for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
+            for (Session session : endpoint.getOpenSessions()) {
+                try {
+                    session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, ""));
+                } catch (Exception e) {
+                    JsrWebSocketLogger.ROOT_LOGGER.couldNotCloseOnUndeploy(e);
+                }
+            }
+        }
+    }
+
+    /**
+     * resumes a paused container
+     */
+    public synchronized void resume() {
+        closed = false;
+        for(PauseListener p : pauseListeners) {
+            p.resumed();
+        }
+        pauseListeners.clear();
+    }
+
     public WebSocketReconnectHandler getWebSocketReconnectHandler() {
         return webSocketReconnectHandler;
     }
 
     public boolean isClosed() {
         return closed;
+    }
+
+    public interface PauseListener {
+        void paused();
+
+        void resumed();
+    }
+
+    public boolean isDispatchToWorker() {
+        return dispatchToWorker;
     }
 }

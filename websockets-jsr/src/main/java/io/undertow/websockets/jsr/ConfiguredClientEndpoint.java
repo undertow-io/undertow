@@ -26,7 +26,7 @@ import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 /**
  * @author Stuart Douglas
  */
-public class ConfiguredClientEndpoint {
+public class ConfiguredClientEndpoint extends SessionContainer {
 
     private final ClientEndpointConfig config;
     private final AnnotatedEndpointFactory factory;
@@ -38,6 +38,10 @@ public class ConfiguredClientEndpoint {
         this.factory = factory;
         this.encodingFactory = encodingFactory;
         this.instanceFactory = instanceFactory;
+    }
+
+    public ConfiguredClientEndpoint() {
+        this(null, null, null, null);
     }
 
     public ClientEndpointConfig getConfig() {

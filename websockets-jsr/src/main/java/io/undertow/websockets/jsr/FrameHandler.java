@@ -70,7 +70,15 @@ class FrameHandler extends AbstractReceiveListener {
     protected FrameHandler(UndertowSession session, Endpoint endpoint) {
         this.session = session;
         this.endpoint = endpoint;
-        this.executor = new OrderedExecutor(session.getWebSocketChannel().getWorker());
+
+        final Executor executor;
+        if (session.getContainer().isDispatchToWorker()) {
+            executor = new OrderedExecutor(session.getWebSocketChannel().getWorker());
+        } else {
+            executor = session.getWebSocketChannel().getIoThread();
+        }
+
+        this.executor = executor;
     }
 
     @Override
@@ -464,6 +472,10 @@ class FrameHandler extends AbstractReceiveListener {
             return partialHandler;
         }
 
+    }
+
+    public Executor getExecutor() {
+        return executor;
     }
 
     UndertowSession getSession() {

@@ -23,6 +23,7 @@ import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.PathTemplateMatcher;
+import io.undertow.util.StatusCodes;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.Handshake;
@@ -55,7 +56,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * The use of a filter rather than a servlet allows for normal HTTP requests to be served from the same location
  * as a web socket endpoint if no upgrade header is found.
  * <p>
- * TODO: this needs a lot of work
  *
  * @author Stuart Douglas
  */
@@ -64,6 +64,7 @@ public class JsrWebSocketFilter implements Filter {
     private WebSocketConnectionCallback callback;
     private PathTemplateMatcher<WebSocketHandshakeHolder> pathTemplateMatcher;
     private Set<WebSocketChannel> peerConnections;
+    private ServerWebSocketContainer container;
 
     protected WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config) {
         List<Handshake> handshakes = new ArrayList<>();
@@ -92,7 +93,7 @@ public class JsrWebSocketFilter implements Filter {
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
         peerConnections = Collections.newSetFromMap(new ConcurrentHashMap<WebSocketChannel, Boolean>());
-        ServerWebSocketContainer container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
+        container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
         container.deploymentComplete();
         pathTemplateMatcher = new PathTemplateMatcher<>();
         WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)filterConfig.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
@@ -133,6 +134,10 @@ public class JsrWebSocketFilter implements Filter {
                 }
 
                 if (handshaker != null) {
+                    if(container.isClosed()) {
+                        resp.sendError(StatusCodes.SERVICE_UNAVAILABLE);
+                        return;
+                    }
                     facade.putAttachment(HandshakeUtil.PATH_PARAMS, matchResult.getParameters());
                     final Handshake selected = handshaker;
                     facade.upgradeChannel(new HttpUpgradeListener() {
