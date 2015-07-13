@@ -1046,6 +1046,7 @@ public class FlexBase64 {
                         break;
                     } else if (b != ' ' && b != '\t' && b != '\r') {
                         pos--;
+                        break;
                     }
 
 
