@@ -34,7 +34,6 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -56,7 +55,7 @@ import static org.xnio._private.Messages.msg;
  * @author Stuart Douglas
  */
 class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
-    private final SSLContext sslContext;
+    private final UndertowXnioSsl ssl;
     private final AcceptingChannel<? extends StreamConnection> tcpServer;
 
     private volatile SslClientAuthMode clientAuthMode;
@@ -82,9 +81,9 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
     protected final Pool<ByteBuffer> applicationBufferPool;
 
 
-    public UndertowAcceptingSslChannel(final SSLContext sslContext, final AcceptingChannel<? extends StreamConnection> tcpServer, final OptionMap optionMap, final Pool<ByteBuffer> applicationBufferPool, final boolean startTls) {
+    public UndertowAcceptingSslChannel(final UndertowXnioSsl ssl, final AcceptingChannel<? extends StreamConnection> tcpServer, final OptionMap optionMap, final Pool<ByteBuffer> applicationBufferPool, final boolean startTls) {
         this.tcpServer = tcpServer;
-        this.sslContext = sslContext;
+        this.ssl = ssl;
         this.applicationBufferPool = applicationBufferPool;
         this.startTls = startTls;
         clientAuthMode = optionMap.get(Options.SSL_CLIENT_AUTH_MODE);
@@ -139,7 +138,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
             return null;
         }
         final InetSocketAddress peerAddress = tcpConnection.getPeerAddress(InetSocketAddress.class);
-        final SSLEngine engine = sslContext.createSSLEngine(getHostNameNoResolve(peerAddress), peerAddress.getPort());
+        final SSLEngine engine = ssl.getSslContext().createSSLEngine(getHostNameNoResolve(peerAddress), peerAddress.getPort());
         final boolean clientMode = useClientMode != 0;
         engine.setUseClientMode(clientMode);
         if (! clientMode) {

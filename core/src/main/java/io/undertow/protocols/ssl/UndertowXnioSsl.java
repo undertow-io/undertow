@@ -64,7 +64,7 @@ public class UndertowXnioSsl extends XnioSsl {
     private static final Pool<ByteBuffer> DEFAULT_BUFFER_POOL = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 17 * 1024, 17 * 1024 * 128);
 
     private final Pool<ByteBuffer> bufferPool;
-    private final SSLContext sslContext;
+    private volatile SSLContext sslContext;
 
     /**
      * Construct a new instance.
@@ -285,8 +285,18 @@ public class UndertowXnioSsl extends XnioSsl {
         return acceptingChannel;
     }
 
+    /**
+     * Updates the SSLContext that is in use. All new connections will use this new context, however established connections
+     * will not be affected.
+     *
+     * @param context The new context
+     */
+    public void updateSSLContext(SSLContext context) {
+        this.sslContext = context;
+    }
+
     public AcceptingChannel<SslConnection> createSslConnectionServer(final XnioWorker worker, final InetSocketAddress bindAddress, final ChannelListener<? super AcceptingChannel<SslConnection>> acceptListener, final OptionMap optionMap) throws IOException {
-        final UndertowAcceptingSslChannel server = new UndertowAcceptingSslChannel(sslContext, worker.createStreamConnectionServer(bindAddress,  null,  optionMap), optionMap, bufferPool, false);
+        final UndertowAcceptingSslChannel server = new UndertowAcceptingSslChannel(this, worker.createStreamConnectionServer(bindAddress,  null,  optionMap), optionMap, bufferPool, false);
         if (acceptListener != null) server.getAcceptSetter().set(acceptListener);
         return server;
     }
