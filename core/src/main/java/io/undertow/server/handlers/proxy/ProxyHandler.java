@@ -98,7 +98,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class ProxyHandler implements HttpHandler {
 
-    private static final Logger log = Logger.getLogger(ProxyHandler.class);
+    private static final Logger log = Logger.getLogger(ProxyHandler.class.getPackage().getName());
 
     public static final String UTF_8 = StandardCharsets.UTF_8.name();
     private final ProxyClient proxyClient;
@@ -495,11 +495,16 @@ public final class ProxyHandler implements HttpHandler {
                 request.getRequestHeaders().put(Headers.HOST, targetAddress.getHostString() + ":" + targetAddress.getPort());
                 request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, exchange.getRequestHeaders().getFirst(Headers.HOST));
             }
-
+            if(log.isDebugEnabled()) {
+                log.debugf("Sending request %s to target %s for exchange %s", request, remoteHost, exchange);
+            }
             clientConnection.getConnection().sendRequest(request, new ClientCallback<ClientExchange>() {
                 @Override
                 public void completed(final ClientExchange result) {
 
+                    if(log.isDebugEnabled()) {
+                        log.debugf("Sent request %s to target %s for exchange %s", request, remoteHost, exchange);
+                    }
                     result.putAttachment(EXCHANGE, exchange);
 
                     boolean requiresContinueResponse = HttpContinue.requiresContinueResponse(exchange);
@@ -507,6 +512,9 @@ public final class ProxyHandler implements HttpHandler {
                         result.setContinueHandler(new ContinueNotification() {
                             @Override
                             public void handleContinue(final ClientExchange clientExchange) {
+                                if(log.isDebugEnabled()) {
+                                    log.debugf("Relieved continue response to request %s to target %s for exchange %s", request, remoteHost, exchange);
+                                }
                                 HttpContinue.sendContinueResponse(exchange, new IoCallback() {
                                     @Override
                                     public void onComplete(final HttpServerExchange exchange, final Sender sender) {
@@ -517,6 +525,7 @@ public final class ProxyHandler implements HttpHandler {
                                     public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
                                         IoUtils.safeClose(clientConnection.getConnection());
                                         exchange.endExchange();
+                                        UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                                     }
                                 });
                             }
@@ -528,6 +537,10 @@ public final class ProxyHandler implements HttpHandler {
                         result.setPushHandler(new PushCallback() {
                             @Override
                             public boolean handlePush(ClientExchange originalRequest, final ClientExchange pushedRequest) {
+
+                                if(log.isDebugEnabled()) {
+                                    log.debugf("Sending push request %s received from %s to target %s for exchange %s", pushedRequest.getRequest(), request, remoteHost, exchange);
+                                }
                                 final ClientRequest request = pushedRequest.getRequest();
                                 exchange.getConnection().pushResource(request.getPath(), request.getMethod(), request.getRequestHeaders(), new HttpHandler() {
                                     @Override
@@ -596,16 +609,26 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void completed(final ClientExchange result) {
+
             final ClientResponse response = result.getResponse();
+
+            if(log.isDebugEnabled()) {
+                log.debugf("Received response %s for request %s for exchange %s", response, result.getRequest(), exchange);
+            }
             final HeaderMap inboundResponseHeaders = response.getResponseHeaders();
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
             exchange.setResponseCode(response.getResponseCode());
             copyHeaders(outboundResponseHeaders, inboundResponseHeaders);
 
             if (exchange.isUpgrade()) {
+
                 exchange.upgradeChannel(new HttpUpgradeListener() {
                     @Override
                     public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+
+                        if(log.isDebugEnabled()) {
+                            log.debugf("Upgraded request %s to for exchange %s", result.getRequest(), exchange);
+                        }
                         StreamConnection clientChannel = null;
                         try {
                             clientChannel = result.getConnection().performUpgrade();
@@ -762,30 +785,6 @@ public final class ProxyHandler implements HttpHandler {
 
         return sb == null ? part : sb.toString();
     }
-
-    private static String realEncode(String part, int startPos) throws UnsupportedEncodingException {
-        StringBuilder sb = new StringBuilder();
-        sb.append(part.substring(0, startPos));
-        int pos = startPos;
-        for (int i = startPos; i < part.length(); ++i) {
-            char c = part.charAt(i);
-            if (c == '/') {
-                if (pos != i) {
-                    String original = part.substring(pos, i - 1);
-                    String encoded = URLEncoder.encode(original, UTF_8);
-                    sb.append(encoded);
-                    sb.append('/');
-                    pos = i + 1;
-                }
-            }
-        }
-
-        String original = part.substring(pos);
-        String encoded = URLEncoder.encode(original, UTF_8);
-        sb.append(encoded);
-        return sb.toString();
-    }
-
 
     public static class Builder implements HandlerBuilder {
 

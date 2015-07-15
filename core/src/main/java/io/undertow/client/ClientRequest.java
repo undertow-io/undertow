@@ -70,4 +70,12 @@ public final class ClientRequest extends AbstractAttachable {
         this.protocol = protocol;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "ClientRequest{path='" + path + '\'' +
+                ", method=" + method +
+                ", protocol=" + protocol +
+                '}';
+    }
 }
