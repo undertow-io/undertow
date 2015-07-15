@@ -104,7 +104,7 @@ public class ServletContextImpl implements ServletContext {
 
     private final ServletContainer servletContainer;
     private final Deployment deployment;
-    private DeploymentInfo deploymentInfo;
+    private volatile DeploymentInfo deploymentInfo;
     private final ConcurrentMap<String, Object> attributes;
     private final SessionCookieConfigImpl sessionCookieConfig;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
