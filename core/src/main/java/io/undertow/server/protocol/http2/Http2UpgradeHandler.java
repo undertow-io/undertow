@@ -53,7 +53,7 @@ public class Http2UpgradeHandler implements HttpHandler {
             String settings = exchange.getRequestHeaders().getFirst("HTTP2-Settings");
             if(settings != null) {
                 //required by spec
-                final ByteBuffer settingsFrame = FlexBase64.decode(settings);
+                final ByteBuffer settingsFrame = FlexBase64.decodeURL(settings);
                 exchange.upgradeChannel(new HttpUpgradeListener() {
                     @Override
                     public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {

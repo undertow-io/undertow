@@ -20,14 +20,16 @@ package io.undertow.util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 
 /**
- * An efficient and flexible MIME Base64 implementation.
+ * An efficient and flexible Base64 implementation.
+ *
+ * This class can deal with both MIME Base64 and Base64url.
  *
  * @author Jason T. Greene
  */
@@ -36,21 +38,26 @@ public class FlexBase64 {
      * Note that this code heavily favors performance over reuse and clean style.
      */
 
-    private static final byte[] ENCODING_TABLE;
-    private static final byte[] DECODING_TABLE = new byte[80];
+    private static final byte[] STANDARD_ENCODING_TABLE;
+    private static final byte[] STANDARD_DECODING_TABLE = new byte[80];
+    private static final byte[] URL_ENCODING_TABLE;
+    private static final byte[] URL_DECODING_TABLE = new byte[80];
     private static final Constructor<String> STRING_CONSTRUCTOR;
 
     static {
-        try {
-            ENCODING_TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".getBytes("ASCII");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException();
+        STANDARD_ENCODING_TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".getBytes(StandardCharsets.US_ASCII);
+        URL_ENCODING_TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".getBytes(StandardCharsets.US_ASCII);
+
+        for (int i = 0; i < STANDARD_ENCODING_TABLE.length; i++) {
+            int v = (STANDARD_ENCODING_TABLE[i] & 0xFF) - 43;
+            STANDARD_DECODING_TABLE[v] = (byte)(i + 1);  // zero = illegal
         }
 
-        for (int i = 0; i < ENCODING_TABLE.length; i++) {
-            int v = (ENCODING_TABLE[i] & 0xFF) - 43;
-            DECODING_TABLE[v] = (byte)(i + 1);  // zero = illegal
+        for (int i = 0; i < URL_ENCODING_TABLE.length; i++) {
+            int v = (URL_ENCODING_TABLE[i] & 0xFF) - 43;
+            URL_DECODING_TABLE[v] = (byte)(i + 1);  // zero = illegal
         }
+
 
         Constructor<String> c = null;
         try {
@@ -84,7 +91,21 @@ public class FlexBase64 {
      * @return an createEncoder instance
      */
     public static Encoder createEncoder(boolean wrap) {
-        return new Encoder(wrap);
+        return new Encoder(wrap, false);
+    }
+
+
+    /**
+     * Creates a state driven base64url encoder.
+     *
+     * <p>The Encoder instance is not thread-safe, and must not be shared between threads without establishing a
+     * happens-before relationship.</p>
+     *
+     * @param wrap whether or not to wrap at 76 characters with CRLF
+     * @return an createEncoder instance
+     */
+    public static Encoder createURLEncoder(boolean wrap) {
+        return new Encoder(wrap, true);
     }
 
     /**
@@ -96,7 +117,19 @@ public class FlexBase64 {
      * @return a new createDecoder instance
      */
     public static Decoder createDecoder() {
-        return new Decoder();
+        return new Decoder(false);
+    }
+
+    /**
+     * Creates a state driven base64url decoder.
+     *
+     * <p>The Decoder instance is not thread-safe, and must not be shared between threads without establishing a
+     * happens-before relationship.</p>
+     *
+     * @return a new createDecoder instance
+     */
+    public static Decoder createURLDecoder() {
+        return new Decoder(true);
     }
 
     /**
@@ -113,7 +146,25 @@ public class FlexBase64 {
      * @return a new String representing the Base64 output
      */
     public static String encodeString(byte[] source, boolean wrap) {
-        return Encoder.encodeString(source, 0, source.length, wrap);
+        return Encoder.encodeString(source, 0, source.length, wrap, false);
+    }
+
+
+    /**
+     * Encodes a fixed and complete byte array into a Base64url String.
+     *
+     * <p>This method is only useful for applications which require a String and have all data to be encoded up-front.
+     * Note that byte arrays or buffers are almost always a better storage choice. They consume half the memory and
+     * can be reused (modified). In other words, it is almost always better to use {@link #encodeBytes},
+     * {@link #createEncoder}, or {@link #createEncoderOutputStream} instead.
+     * instead.
+     *
+     * @param source the byte array to encode from
+     * @param wrap whether or not to wrap the output at 76 chars with CRLFs
+     * @return a new String representing the Base64url output
+     */
+    public static String encodeStringURL(byte[] source, boolean wrap) {
+        return Encoder.encodeString(source, 0, source.length, wrap, true);
     }
 
     /**
@@ -136,9 +187,31 @@ public class FlexBase64 {
      * @return a new String representing the Base64 output
      */
     public static String encodeString(byte[] source, int pos, int limit, boolean wrap) {
-        return Encoder.encodeString(source, pos, limit, wrap);
+        return Encoder.encodeString(source, pos, limit, wrap, false);
     }
 
+    /**
+     * Encodes a fixed and complete byte array into a Base64url String.
+     *
+     * <p>This method is only useful for applications which require a String and have all data to be encoded up-front.
+     * Note that byte arrays or buffers are almost always a better storage choice. They consume half the memory and
+     * can be reused (modified). In other words, it is almost always better to use {@link #encodeBytes},
+     * {@link #createEncoder}, or {@link #createEncoderOutputStream} instead.</p>
+     *
+     * <pre><code>
+     *    // Encodes "ell"
+     *    FlexBase64.encodeStringURL("hello".getBytes("US-ASCII"), 1, 4);
+     * </code></pre>
+     *
+     * @param source the byte array to encode from
+     * @param pos the position to start encoding from
+     * @param limit the position to halt encoding at (exclusive)
+     * @param wrap whether or not to wrap the output at 76 chars with CRLFs
+     * @return a new String representing the Base64url output
+     */
+    public static String encodeStringURL(byte[] source, int pos, int limit, boolean wrap) {
+        return Encoder.encodeString(source, pos, limit, wrap, true);
+    }
     /**
      * Encodes a fixed and complete byte buffer into a Base64 String.
      *
@@ -157,7 +230,28 @@ public class FlexBase64 {
      * @return a new String representing the Base64 output
      */
     public static String encodeString(ByteBuffer source, boolean wrap) {
-        return Encoder.encodeString(source, wrap);
+        return Encoder.encodeString(source, wrap, false);
+    }
+
+    /**
+     * Encodes a fixed and complete byte buffer into a Base64url String.
+     *
+     * <p>This method is only useful for applications which require a String and have all data to be encoded up-front.
+     * Note that byte arrays or buffers are almost always a better storage choice. They consume half the memory and
+     * can be reused (modified). In other words, it is almost always better to use {@link #encodeBytes},
+     * {@link #createEncoder}, or {@link #createEncoderOutputStream} instead.</p>
+     *
+     * <pre><code>
+     *    // Encodes "ell"
+     *    FlexBase64.ecncodeStringURL("hello".getBytes("US-ASCII"), 1, 4);
+     * </code></pre>
+     *
+     * @param source the byte buffer to encode from
+     * @param wrap whether or not to wrap the output at 76 chars with CRLFs
+     * @return a new String representing the Base64url output
+     */
+    public static String encodeStringURL(ByteBuffer source, boolean wrap) {
+        return Encoder.encodeString(source, wrap, false);
     }
 
     /**
@@ -175,7 +269,25 @@ public class FlexBase64 {
      * @return a new byte array containing the encoded ASCII values
      */
     public static byte[] encodeBytes(byte[] source, int pos, int limit, boolean wrap) {
-        return Encoder.encodeBytes(source, pos, limit, wrap);
+        return Encoder.encodeBytes(source, pos, limit, wrap, false);
+    }
+
+    /**
+     * Encodes a fixed and complete byte buffer into a Base64url byte array.
+     *
+     * <pre><code>
+     *    // Encodes "ell"
+     *    FlexBase64.ecncodeStringURL("hello".getBytes("US-ASCII"), 1, 4);
+     * </code></pre>
+     *
+     * @param source the byte array to encode from
+     * @param pos the position to start encoding at
+     * @param limit the position to halt encoding at (exclusive)
+     * @param wrap whether or not to wrap at 76 characters with CRLFs
+     * @return a new byte array containing the encoded ASCII values
+     */
+    public static byte[] encodeBytesURL(byte[] source, int pos, int limit, boolean wrap) {
+        return Encoder.encodeBytes(source, pos, limit, wrap, true);
     }
 
     /**
@@ -190,7 +302,22 @@ public class FlexBase64 {
      * @throws IOException if the encoding is invalid or corrupted
      */
     public static ByteBuffer decode(String source) throws IOException {
-        return Decoder.decode(source);
+        return Decoder.decode(source, false);
+    }
+
+    /**
+     * Decodes a Base64url encoded string into a new byte buffer. The returned byte buffer is a heap buffer,
+     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()},
+     * {@link java.nio.ByteBuffer#arrayOffset()} and {@link java.nio.ByteBuffer#limit()}. The latter is very
+     * important since the decoded array may be larger than the decoded data. This is due to length estimation which
+     * avoids an unnecessary array copy.
+     *
+     * @param source the Base64 string to decode
+     * @return a byte buffer containing the decoded output
+     * @throws IOException if the encoding is invalid or corrupted
+     */
+    public static ByteBuffer decodeURL(String source) throws IOException {
+        return Decoder.decode(source, true);
     }
 
     /**
@@ -205,7 +332,23 @@ public class FlexBase64 {
      * @throws IOException if the encoding is invalid or corrupted
      */
     public static ByteBuffer decode(ByteBuffer source) throws IOException {
-        return Decoder.decode(source);
+        return Decoder.decode(source, false);
+    }
+
+
+    /**
+     * Decodes a Base64url encoded byte buffer into a new byte buffer. The returned byte buffer is a heap buffer,
+     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()},
+     * {@link java.nio.ByteBuffer#arrayOffset()} and {@link java.nio.ByteBuffer#limit()}. The latter is very
+     * important since the decoded array may be larger than the decoded data. This is due to length estimation which
+     * avoids an unnecessary array copy.
+     *
+     * @param source the Base64 content to decode
+     * @return a byte buffer containing the decoded output
+     * @throws IOException if the encoding is invalid or corrupted
+     */
+    public static ByteBuffer decodeURL(ByteBuffer source) throws IOException {
+        return Decoder.decode(source, true);
     }
 
 
@@ -223,9 +366,25 @@ public class FlexBase64 {
      * @throws IOException if the encoding is invalid or corrupted
      */
     public static ByteBuffer decode(byte[] source, int off, int limit) throws IOException {
-        return Decoder.decode(source, off, limit);
+        return Decoder.decode(source, off, limit, false);
     }
 
+    /**
+     * Decodes a Base64url encoded byte array into a new byte buffer.  The returned byte buffer is a heap buffer,
+     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()},
+     * {@link java.nio.ByteBuffer#arrayOffset()} and {@link java.nio.ByteBuffer#limit()}. The latter is very
+     * important since the decoded array may be larger than the decoded data. This is due to length estimation which
+     * avoids an unnecessary array copy.
+     *
+     * @param source the Base64url content to decode
+     * @param off position to start decoding from in source
+     * @param limit position to stop decoding in source (exclusive)
+     * @return a byte buffer containing the decoded output
+     * @throws IOException if the encoding is invalid or corrupted
+     */
+    public static ByteBuffer decodeURL(byte[] source, int off, int limit) throws IOException {
+        return Decoder.decode(source, off, limit, true);
+    }
 
     /**
      * Creates an InputStream wrapper which encodes a source into base64 as it is read, until the source hits EOF.
@@ -243,7 +402,7 @@ public class FlexBase64 {
      * @return an encoded input stream instance.
      */
     public static EncoderInputStream createEncoderInputStream(InputStream source, int bufferSize, boolean wrap) {
-        return new EncoderInputStream(source, bufferSize, wrap);
+        return new EncoderInputStream(source, bufferSize, wrap, false);
     }
 
 
@@ -386,9 +545,12 @@ public class FlexBase64 {
         private int count;
         private final boolean wrap;
         private int lastPos;
+        private final byte[] encodingTable;
 
-        private Encoder(boolean wrap) {
+
+        private Encoder(boolean wrap, boolean url) {
             this.wrap = wrap;
+            this.encodingTable = url ? URL_ENCODING_TABLE : STANDARD_ENCODING_TABLE;
         }
 
         /**
@@ -409,7 +571,7 @@ public class FlexBase64 {
             int state = this.state;
             boolean wrap = this.wrap;
             int count = this.count;
-            final byte[] ENCODING_TABLE = FlexBase64.ENCODING_TABLE;
+            final byte[] ENCODING_TABLE = encodingTable;
 
             int remaining = source.remaining();
             while (remaining > 0) {
@@ -496,7 +658,7 @@ public class FlexBase64 {
             int state = this.state;
             int count = this.count;
             boolean wrap = this.wrap;
-            final byte[] ENCODING_TABLE = FlexBase64.ENCODING_TABLE;
+            final byte[] ENCODING_TABLE = encodingTable;
 
 
             while (limit > pos) {
@@ -551,7 +713,7 @@ public class FlexBase64 {
         }
 
 
-        private static String encodeString(byte[] source, int pos, int limit, boolean wrap) {
+        private static String encodeString(byte[] source, int pos, int limit, boolean wrap, boolean url) {
             int olimit = (limit - pos);
             int remainder = olimit % 3;
             olimit = (olimit + (remainder == 0 ? 0 : 3 - remainder)) / 3 * 4;
@@ -561,7 +723,7 @@ public class FlexBase64 {
             int last = 0;
             int count = 0;
             int state = 0;
-            final byte[] ENCODING_TABLE = FlexBase64.ENCODING_TABLE;
+            final byte[] ENCODING_TABLE = url ? URL_ENCODING_TABLE : STANDARD_ENCODING_TABLE;
 
             while (limit > pos) {
                 //  ( 6 | 2) (4 | 4) (2 | 6)
@@ -593,7 +755,7 @@ public class FlexBase64 {
                 }
             }
 
-            complete(target, opos, state, last, wrap);
+            complete(target, opos, state, last, wrap, url);
 
             try {
                 // Eliminate copying on Open/Oracle JDK
@@ -606,7 +768,7 @@ public class FlexBase64 {
             return new String(target);
         }
 
-        private static byte[] encodeBytes(byte[] source, int pos, int limit, boolean wrap) {
+        private static byte[] encodeBytes(byte[] source, int pos, int limit, boolean wrap, boolean url) {
             int olimit = (limit - pos);
             int remainder = olimit % 3;
             olimit = (olimit + (remainder == 0 ? 0 : 3 - remainder)) / 3 * 4;
@@ -616,7 +778,7 @@ public class FlexBase64 {
             int count = 0;
             int last = 0;
             int state = 0;
-            final byte[] ENCODING_TABLE = FlexBase64.ENCODING_TABLE;
+            final byte[] ENCODING_TABLE = url ? URL_ENCODING_TABLE : STANDARD_ENCODING_TABLE;
 
             while (limit > pos) {
                 //  ( 6 | 2) (4 | 4) (2 | 6)
@@ -648,12 +810,12 @@ public class FlexBase64 {
                 }
             }
 
-            complete(target, opos, state, last, wrap);
+            complete(target, opos, state, last, wrap, url);
 
             return target;
         }
 
-        private static String encodeString(ByteBuffer source, boolean wrap) {
+        private static String encodeString(ByteBuffer source, boolean wrap, boolean url) {
             int remaining = source.remaining();
             int remainder = remaining % 3;
             int olimit = (remaining + (remainder == 0 ? 0 : 3 - remainder)) / 3 * 4;
@@ -663,7 +825,7 @@ public class FlexBase64 {
             int last = 0;
             int state = 0;
             int count = 0;
-            final byte[] ENCODING_TABLE = FlexBase64.ENCODING_TABLE;
+            final byte[] ENCODING_TABLE = url ? URL_ENCODING_TABLE : STANDARD_ENCODING_TABLE;
 
 
             while (remaining > 0) {
@@ -697,7 +859,7 @@ public class FlexBase64 {
                 }
             }
 
-            complete(target, opos, state, last, wrap);
+            complete(target, opos, state, last, wrap, url);
 
             try {
                 // Eliminate copying on Open/Oracle JDK
@@ -744,7 +906,7 @@ public class FlexBase64 {
          */
         public int complete(byte[] target, int pos) {
             if (state > 0) {
-                target[pos++] = ENCODING_TABLE[last];
+                target[pos++] = encodingTable[last];
                 for (int i = state; i < 3; i++) {
                     target[pos++] = (byte)'=';
                 }
@@ -759,9 +921,9 @@ public class FlexBase64 {
             return pos;
         }
 
-        private static int complete(char[] target, int pos, int state, int last, boolean wrap) {
+        private static int complete(char[] target, int pos, int state, int last, boolean wrap, boolean url) {
             if (state > 0) {
-                target[pos++] = (char) ENCODING_TABLE[last];
+                target[pos++] = (char) (url ? URL_ENCODING_TABLE : STANDARD_ENCODING_TABLE)[last];
                 for (int i = state; i < 3; i++) {
                     target[pos++] = '=';
                 }
@@ -774,9 +936,9 @@ public class FlexBase64 {
             return pos;
         }
 
-        private static int complete(byte[] target, int pos, int state, int last, boolean wrap) {
+        private static int complete(byte[] target, int pos, int state, int last, boolean wrap, boolean url) {
             if (state > 0) {
-                target[pos++] = ENCODING_TABLE[last];
+                target[pos++] = (url ? URL_ENCODING_TABLE : STANDARD_ENCODING_TABLE)[last];
                 for (int i = state; i < 3; i++) {
                     target[pos++] = '=';
                 }
@@ -798,7 +960,7 @@ public class FlexBase64 {
          */
         public void complete(ByteBuffer target) {
             if (state > 0) {
-                target.put(ENCODING_TABLE[last]);
+                target.put(encodingTable[last]);
                 for (int i = state; i < 3; i++) {
                     target.put((byte)'=');
                 }
@@ -820,6 +982,8 @@ public class FlexBase64 {
         private int state;
         private int last;
         private int lastPos;
+        private final byte[] decodingTable;
+
         private static final int SKIP = 0x0FD00;
         private static final int MARK = 0x0FE00;
         private static final int DONE = 0x0FF00;
@@ -827,15 +991,16 @@ public class FlexBase64 {
 
 
 
-        private Decoder() {
+        private Decoder(boolean url) {
+            this.decodingTable = url ? URL_DECODING_TABLE : STANDARD_DECODING_TABLE;
         }
 
 
-        private static int nextByte(ByteBuffer buffer, int state, int last, boolean ignoreErrors) throws IOException {
+        private int nextByte(ByteBuffer buffer, int state, int last, boolean ignoreErrors) throws IOException {
             return nextByte(buffer.get() & 0xFF, state, last, ignoreErrors);
         }
 
-        private static int nextByte(Object source, int pos, int state, int last, boolean ignoreErrors) throws IOException {
+        private int nextByte(Object source, int pos, int state, int last, boolean ignoreErrors) throws IOException {
             int c;
             if (source instanceof byte[]) {
                 c = ((byte[])source)[pos] & 0xFF;
@@ -848,7 +1013,7 @@ public class FlexBase64 {
             return nextByte(c, state, last, ignoreErrors);
         }
 
-        private static int nextByte(int c, int state, int last, boolean ignoreErrors) throws IOException {
+        private int nextByte(int c, int state, int last, boolean ignoreErrors) throws IOException {
             if (last == MARK) {
                 if (c != '=') {
                     throw new IOException("Expected padding character");
@@ -873,7 +1038,7 @@ public class FlexBase64 {
                 }
                 throw new IOException("Invalid base64 character encountered: " + c);
             }
-            int b = (DECODING_TABLE[c - 43] & 0xFF) - 1;
+            int b = (decodingTable[c - 43] & 0xFF) - 1;
             if (b < 0) {
                 if (ignoreErrors) {
                     return ERROR;
@@ -976,7 +1141,7 @@ public class FlexBase64 {
             this.lastPos = source.position();
         }
 
-        private static void drain(ByteBuffer source, int b, int state, int last) {
+        private void drain(ByteBuffer source, int b, int state, int last) {
             while (b != DONE && source.remaining() > 0) {
                 try {
                     b = nextByte(source, state, last, true);
@@ -1011,7 +1176,7 @@ public class FlexBase64 {
             }
         }
 
-        private static int drain(Object source, int pos, int limit, int b, int state, int last) {
+        private int drain(Object source, int pos, int limit, int b, int state, int last) {
             while (b != DONE && limit > pos) {
                 try {
                     b = nextByte(source, pos++, state, last, true);
@@ -1239,29 +1404,29 @@ public class FlexBase64 {
             return decode((Object)source, sourcePos, sourceLimit, target, targetPos, targetLimit);
         }
 
-        private static ByteBuffer decode(String source) throws IOException {
+        private static ByteBuffer decode(String source, boolean url) throws IOException {
             int remainder = source.length() % 4;
             int size = ((source.length() / 4) + (remainder == 0 ? 0 : 4 - remainder)) * 3;
             byte[] buffer = new byte[size];
-            int actual = createDecoder().decode(source, 0, source.length(), buffer, 0, size);
+            int actual = new Decoder(url).decode(source, 0, source.length(), buffer, 0, size);
             return ByteBuffer.wrap(buffer, 0, actual);
         }
 
-        private static ByteBuffer decode(byte[] source, int off, int limit) throws IOException {
+        private static ByteBuffer decode(byte[] source, int off, int limit, boolean url) throws IOException {
             int len = limit - off;
             int remainder = len % 4;
             int size = ((len / 4) + (remainder == 0 ? 0 : 4 - remainder)) * 3;
             byte[] buffer = new byte[size];
-            int actual = createDecoder().decode(source, off, limit, buffer, 0, size);
+            int actual = new Decoder(url).decode(source, off, limit, buffer, 0, size);
             return ByteBuffer.wrap(buffer, 0, actual);
         }
 
-        private static ByteBuffer decode(ByteBuffer source) throws IOException {
+        private static ByteBuffer decode(ByteBuffer source, boolean url) throws IOException {
             int len = source.remaining();
             int remainder = len % 4;
             int size = ((len / 4) + (remainder == 0 ? 0 : 4 - remainder)) * 3;
             ByteBuffer buffer = ByteBuffer.allocate(size);
-            createDecoder().decode(source, buffer);
+            new Decoder(url).decode(source, buffer);
             buffer.flip();
             return buffer;
         }
@@ -1376,13 +1541,13 @@ public class FlexBase64 {
         private boolean complete;
 
         private EncoderInputStream(InputStream input) {
-            this(input, 8192, true);
+            this(input, 8192, true, false);
         }
 
-        private EncoderInputStream(InputStream input, int bufferSize, boolean wrap) {
+        private EncoderInputStream(InputStream input, int bufferSize, boolean wrap, boolean url) {
             this.input = input;
             buffer = new byte[bufferSize];
-            this.encoder = new Encoder(wrap);
+            this.encoder = new Encoder(wrap, url);
         }
 
         private int fill() throws IOException {
