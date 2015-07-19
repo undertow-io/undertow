@@ -26,6 +26,8 @@ import java.util.Set;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.attribute.SubstituteEmptyWrapper;
+import io.undertow.predicate.Predicate;
+import io.undertow.predicate.Predicates;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
@@ -92,10 +94,16 @@ public class AccessLogHandler implements HttpHandler {
     private final String formatString;
     private final ExchangeAttribute tokens;
     private final ExchangeCompletionListener exchangeCompletionListener = new AccessLogCompletionListener();
+    private final Predicate predicate;
 
     public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, final String formatString, ClassLoader classLoader) {
+        this(next, accessLogReceiver, formatString, classLoader, Predicates.truePredicate());
+    }
+
+    public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, final String formatString, ClassLoader classLoader, Predicate predicate) {
         this.next = next;
         this.accessLogReceiver = accessLogReceiver;
+        this.predicate = predicate;
         this.formatString = handleCommonNames(formatString);
         this.tokens = ExchangeAttributes.parser(classLoader, new SubstituteEmptyWrapper("-")).parse(this.formatString);
     }
@@ -120,7 +128,9 @@ public class AccessLogHandler implements HttpHandler {
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
             try {
-                accessLogReceiver.logMessage(tokens.readAttribute(exchange));
+                if(predicate == null || predicate.resolve(exchange)) {
+                    accessLogReceiver.logMessage(tokens.readAttribute(exchange));
+                }
             } finally {
                 nextListener.proceed();
             }
