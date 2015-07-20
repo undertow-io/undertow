@@ -249,7 +249,7 @@ public interface UndertowLogger extends BasicLogger {
     void nodeIsInError(String jvmRoute);
 
     @LogMessage(level = DEBUG)
-    @Message(id = 5049, value = "NodeConfig created: connectionURI: %s, balancer: %s, domain: %s, jvmRoute: %s, flushPackets: %s, flushwait: %s, ping: %s," +
+    @Message(id = 5049, value = "NodeConfig created: connectionURI: %s, balancer: %s, load balancing group: %s, jvmRoute: %s, flushPackets: %s, flushwait: %s, ping: %s," +
             "ttl: %s, timeout: %s, maxConnections: %s, cacheConnections: %s, requestQueueSize: %s, queueNewRequests: %s")
     void nodeConfigCreated(URI connectionURI, String balancer, String domain, String jvmRoute, boolean flushPackets, int flushwait, int ping, long ttl,
                            int timeout, int maxConnections, int cacheConnections, int requestQueueSize, boolean queueNewRequests);
