@@ -153,6 +153,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private SslWriteReadyHandler writeReadyHandler;
     private SslReadReadyHandler readReadyHandler;
 
+    private boolean invokingReadListenerHandshake = false;
 
     SslConduit(UndertowSslConnection connection, StreamConnection delegate, SSLEngine engine, Pool<ByteBuffer> bufferPool, Runnable handshakeCallback) {
         this.connection = connection;
@@ -539,7 +540,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         boolean runListener = isWriteResumed() && anyAreSet(state, FLAG_CLOSED);
         connection.writeClosed();
-        state |= FLAG_WRITE_CLOSED;
+        engine.closeOutbound();
+        state |= FLAG_WRITE_CLOSED | FLAG_ENGINE_OUTBOUND_SHUTDOWN;
         if(anyAreSet(state, FLAG_READ_CLOSED)) {
             closed();
         }
@@ -560,7 +562,13 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         boolean runListener = isReadResumed() && anyAreSet(state, FLAG_CLOSED);
         connection.readClosed();
 
-        state |= FLAG_READ_CLOSED;
+        try {
+            engine.closeInbound();
+        } catch (SSLException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
+        }
+
+        state |= FLAG_READ_CLOSED | FLAG_ENGINE_INBOUND_SHUTDOWN;
         if(anyAreSet(state, FLAG_WRITE_CLOSED)) {
             closed();
         }
@@ -733,7 +741,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     requiresListenerInvocation = true;
                 }
             }
-            if(requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED)) {
+            //if we are in the read listener handshake we don't need to invoke
+            //as it is about to be invoked anyway
+            if(requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
                 runReadListener();
             }
         }
@@ -1004,21 +1014,32 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
         @Override
         public void readReady() {
-            if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
+            if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
                 try {
+                    invokingReadListenerHandshake = true;
                     doHandshake();
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_LOGGER.ioException(e);
                     IoUtils.safeClose(delegate);
+                } finally {
+                    invokingReadListenerHandshake = false;
                 }
             }
+            boolean noProgress = false;
+            int initialUnwrapped = -1;
             if (anyAreSet(state, FLAG_READS_RESUMED)) {
                 if (delegateHandler == null) {
                     final ChannelListener<? super ConduitStreamSourceChannel> readListener = connection.getSourceChannel().getReadListener();
                     if (readListener == null) {
                         suspendReads();
                     } else {
+                        if(anyAreSet(state, FLAG_DATA_TO_UNWRAP)) {
+                            initialUnwrapped = dataToUnwrap.getResource().remaining();
+                        }
                         ChannelListeners.invokeChannelListener(connection.getSourceChannel(), readListener);
+                        if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) && initialUnwrapped == dataToUnwrap.getResource().remaining()) {
+                            noProgress = true;
+                        }
                     }
                 } else {
                     delegateHandler.readReady();
@@ -1042,7 +1063,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     //if we need to write for the SSL engine to progress we don't invoke the read listener
                     //otherwise it will run in a busy loop till the channel becomes writable
                     //we also don't re-run if we have outstanding tasks
-                    if(!(anyAreSet(state, FLAG_READ_REQUIRES_WRITE) && wrappedData != null) && outstandingTasks == 0) {
+                    if(!(anyAreSet(state, FLAG_READ_REQUIRES_WRITE) && wrappedData != null) && outstandingTasks == 0 && !noProgress) {
                         runReadListener();
                     }
                 }
