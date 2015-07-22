@@ -848,6 +848,11 @@ class ModClusterContainer implements ModClusterController {
         }
 
         @Override
+        public boolean isStopped() {
+            return context.isStopped();
+        }
+
+        @Override
         public int getRequests() {
             return context.getActiveRequests();
         }
@@ -860,6 +865,11 @@ class ModClusterContainer implements ModClusterController {
         @Override
         public void disable() {
             context.disable();
+        }
+
+        @Override
+        public void stop() {
+            context.stop();
         }
     }
 

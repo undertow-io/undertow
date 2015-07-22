@@ -140,10 +140,14 @@ public interface ModClusterStatus {
 
         boolean isEnabled();
 
+        boolean isStopped();
+
         int getRequests();
 
         void enable();
 
         void disable();
+
+        void stop();
     }
 }
