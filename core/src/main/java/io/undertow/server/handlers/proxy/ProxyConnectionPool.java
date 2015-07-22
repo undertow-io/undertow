@@ -41,6 +41,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A pool of connections to a target host.
@@ -96,6 +97,11 @@ public class ProxyConnectionPool implements Closeable {
      * to the core size no more connections will be timed out.
      */
     private final long timeToLive;
+
+    /**
+     * The total number of open connections, across all threads
+     */
+    private final AtomicInteger openConnections = new AtomicInteger(0);
 
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<>();
 
@@ -212,7 +218,7 @@ public class ProxyConnectionPool implements Closeable {
     }
 
     private void handleClosedConnection(HostThreadData hostData, final ConnectionHolder connection) {
-
+        openConnections.decrementAndGet();
         int connections = --hostData.connections;
         hostData.availableConnections.remove(connection);
         if (connections < maxConnections) {
@@ -233,6 +239,7 @@ public class ProxyConnectionPool implements Closeable {
         client.connect(new ClientCallback<ClientConnection>() {
             @Override
             public void completed(final ClientConnection result) {
+                openConnections.incrementAndGet();
                 final ConnectionHolder connectionHolder = new ConnectionHolder(result);
                 if (!exclusive) {
                     result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
@@ -426,6 +433,14 @@ public class ProxyConnectionPool implements Closeable {
             return existing;
         }
         return data;
+    }
+
+    /**
+     *
+     * @return The total number of open connections
+     */
+    public int getOpenConnections() {
+        return openConnections.get();
     }
 
     /**

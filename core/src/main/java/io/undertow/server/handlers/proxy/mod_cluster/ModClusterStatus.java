@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -92,6 +93,8 @@ public interface ModClusterStatus {
 
         String getName();
 
+        URI getUri();
+
         List<Context> getContexts();
 
         Context getContext(String name);
@@ -106,6 +109,8 @@ public interface ModClusterStatus {
 
         long getRead();
 
+        int getElected();
+
         int getCacheConnections();
 
         String getJvmRoute();
@@ -119,8 +124,6 @@ public interface ModClusterStatus {
         int getPing();
 
         int getRequestQueueSize();
-
-        int getSmax();
 
         int getTimeout();
 

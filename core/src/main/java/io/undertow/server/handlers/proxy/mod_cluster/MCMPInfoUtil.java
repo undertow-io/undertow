@@ -98,7 +98,7 @@ class MCMPInfoUtil {
                 .append(",Elected: ").append(node.getElected())
                 .append(",Read: ").append(node.getStats().getRead())
                 .append(",Transferred: ").append(node.getStats().getTransferred())
-                .append(",Connected: ").append(node.getStats().getOpenConnections())
+                .append(",Connected: ").append(node.getConnectionPool().getOpenConnections())
                 .append(",Load: ").append(node.getLoad())
 
                 .append(NEWLINE);

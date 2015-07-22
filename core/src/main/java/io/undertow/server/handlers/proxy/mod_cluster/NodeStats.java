@@ -31,8 +31,4 @@ class NodeStats {
         return -1;
     }
 
-    int getOpenConnections() {
-        return -1;
-    }
-
 }

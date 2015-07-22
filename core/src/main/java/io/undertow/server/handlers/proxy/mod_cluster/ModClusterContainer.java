@@ -32,6 +32,7 @@ import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
 
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -724,6 +725,11 @@ class ModClusterContainer implements ModClusterController {
         }
 
         @Override
+        public URI getUri() {
+            return node.getConnectionPool().getUri();
+        }
+
+        @Override
         public List<ModClusterStatus.Context> getContexts() {
             return Collections.unmodifiableList(contexts);
         }
@@ -750,7 +756,7 @@ class ModClusterContainer implements ModClusterController {
 
         @Override
         public int getOpenConnections() {
-            return node.getStats().getOpenConnections();
+            return node.getConnectionPool().getOpenConnections();
         }
 
         @Override
@@ -761,6 +767,11 @@ class ModClusterContainer implements ModClusterController {
         @Override
         public long getRead() {
             return node.getStats().getRead();
+        }
+
+        @Override
+        public int getElected() {
+            return node.getElected();
         }
 
         @Override
@@ -796,11 +807,6 @@ class ModClusterContainer implements ModClusterController {
         @Override
         public int getRequestQueueSize() {
             return node.getNodeConfig().getRequestQueueSize();
-        }
-
-        @Override
-        public int getSmax() {
-            return node.getNodeConfig().getSmax();
         }
 
         @Override
