@@ -828,6 +828,15 @@ class ModClusterContainer implements ModClusterController {
         public boolean isQueueNewRequests() {
             return node.getNodeConfig().isQueueNewRequests();
         }
+
+        @Override
+        public List<String> getAliases() {
+            List<String> ret = new ArrayList<>();
+            for(Node.VHostMapping host : node.getVHosts()) {
+                ret.addAll(host.getAliases());
+            }
+            return ret;
+        }
     }
 
     private class ContextImpl implements ModClusterStatus.Context {

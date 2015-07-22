@@ -132,6 +132,8 @@ public interface ModClusterStatus {
         boolean isFlushPackets();
 
         boolean isQueueNewRequests();
+
+        List<String> getAliases();
     }
 
     interface Context {
