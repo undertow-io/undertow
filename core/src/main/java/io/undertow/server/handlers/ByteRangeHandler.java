@@ -110,7 +110,7 @@ public class ByteRangeHandler implements HttpHandler {
                             return factory.create();
                         }
                         start = responseLength - end;
-                        end = responseLength;
+                        end = responseLength - 1;
                     } else if(end == -1) {
                         //prefix range
                         long toWrite = responseLength - start;
@@ -120,7 +120,7 @@ public class ByteRangeHandler implements HttpHandler {
                             //ignore the range request
                             return factory.create();
                         }
-                        end = responseLength;
+                        end = responseLength - 1;
                     } else {
                         long toWrite = end - start + 1;
                         exchange.setResponseContentLength(toWrite);

@@ -249,7 +249,7 @@ public class ResourceHandler implements HttpHandler {
                                 range = null;
                             }
                             start = contentLength - end;
-                            end = contentLength;
+                            end = contentLength -1;
                         } else if(end == -1) {
                             //prefix range
                             long toWrite = contentLength - start;
@@ -259,14 +259,14 @@ public class ResourceHandler implements HttpHandler {
                                 //ignore the range request
                                 range = null;
                             }
-                            end = contentLength;
+                            end = contentLength - 1;
                         } else {
                             long toWrite = end - start + 1;
                             exchange.setResponseContentLength(toWrite);
                         }
                         if(range != null) {
                             exchange.setResponseCode(StatusCodes.PARTIAL_CONTENT);
-                            exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
+                            exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, start + "-" + end + "/" + contentLength);
                         }
                     }
                 }
