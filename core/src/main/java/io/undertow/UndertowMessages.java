@@ -401,4 +401,10 @@ public interface UndertowMessages {
 
     @Message(id = 124, value = "renegotiation timed out")
     IllegalStateException rengotiationTimedOut();
+
+    @Message(id = 125, value = "Request body already read")
+    IllegalStateException requestBodyAlreadyRead();
+
+    @Message(id = 126, value = "Attempted to do blocking IO from the IO thread. This is prohibited as it may result in deadlocks")
+    IllegalStateException blockingIoFromIOThread();
 }

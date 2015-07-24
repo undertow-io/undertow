@@ -80,6 +80,9 @@ public class UndertowInputStream extends InputStream {
 
     @Override
     public int read(final byte[] b, final int off, final int len) throws IOException {
+        if(Thread.currentThread() == channel.getIoThread()) {
+            throw UndertowMessages.MESSAGES.blockingIoFromIOThread();
+        }
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }

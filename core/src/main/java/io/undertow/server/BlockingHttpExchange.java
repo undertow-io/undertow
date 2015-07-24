@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 
 
@@ -61,4 +62,10 @@ public interface BlockingHttpExchange extends Closeable {
      * Closes both the input and output streams
      */
     void close() throws IOException;
+
+    /**
+     * returns a receiver based on the provided input stream.
+     * @return The receiver
+     */
+    Receiver getReceiver();
 }

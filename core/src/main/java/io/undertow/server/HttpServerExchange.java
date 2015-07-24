@@ -24,8 +24,11 @@ import io.undertow.UndertowOptions;
 import io.undertow.channels.DetachableStreamSinkChannel;
 import io.undertow.channels.DetachableStreamSourceChannel;
 import io.undertow.conduits.EmptyStreamSourceConduit;
+import io.undertow.io.AsyncReceiverImpl;
 import io.undertow.io.AsyncSenderImpl;
+import io.undertow.io.BlockingReceiverImpl;
 import io.undertow.io.BlockingSenderImpl;
+import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
@@ -190,6 +193,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private ConduitWrapper<StreamSinkConduit>[] responseWrappers;
 
     private Sender sender;
+    private Receiver receiver;
 
     private long requestStartTime = -1;
 
@@ -1252,6 +1256,16 @@ public final class HttpServerExchange extends AbstractAttachable {
         return sender = new AsyncSenderImpl(this);
     }
 
+    public Receiver getRequestReceiver() {
+        if(blockingHttpExchange != null) {
+            return blockingHttpExchange.getReceiver();
+        }
+        if(receiver != null) {
+            return receiver;
+        }
+        return receiver = new AsyncReceiverImpl(this);
+    }
+
     /**
      * @return <code>true</code> if {@link #getResponseChannel()} has not been called
      */
@@ -1754,6 +1768,11 @@ public final class HttpServerExchange extends AbstractAttachable {
                 getOutputStream().close();
             }
         }
+
+        @Override
+        public Receiver getReceiver() {
+            return new BlockingReceiverImpl(exchange, getInputStream());
+        }
     }
 
     /**
@@ -1780,12 +1799,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void resumeWrites() {
-            if (isFinished()) {
-                return;
-            }
             if (isInCall()) {
                 state |= FLAG_SHOULD_RESUME_WRITES;
-            } else {
+            } else if(!isFinished()){
                 delegate.resumeWrites();
             }
         }
@@ -1809,12 +1825,16 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         public void runResume() {
-            if (!isFinished() && isWriteResumed()) {
-                if (wakeup) {
-                    wakeup = false;
-                    delegate.wakeupWrites();
+            if (isWriteResumed()) {
+                if(isFinished()) {
+                    invokeListener();
                 } else {
-                    delegate.resumeWrites();
+                    if (wakeup) {
+                        wakeup = false;
+                        delegate.wakeupWrites();
+                    } else {
+                        delegate.resumeWrites();
+                    }
                 }
             } else if(wakeup) {
                 wakeup = false;
@@ -1934,14 +1954,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void resumeReads() {
             readsResumed = true;
-            if (isFinished()) {
-                return;
-            }
             if (isInCall()) {
                 state |= FLAG_SHOULD_RESUME_READS;
-            } else {
+            } else if (!isFinished()) {
                 delegate.resumeReads();
             }
+
         }
 
         public void wakeupReads() {
@@ -2165,11 +2183,15 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         public void runResume() {
             if (isReadResumed()) {
-                if (wakeup) {
-                    wakeup = false;
-                    delegate.wakeupReads();
+                if(isFinished()) {
+                    invokeListener();
                 } else {
-                    delegate.resumeReads();
+                    if (wakeup) {
+                        wakeup = false;
+                        delegate.wakeupReads();
+                    } else {
+                        delegate.resumeReads();
+                    }
                 }
             } else if(wakeup) {
                 wakeup = false;
