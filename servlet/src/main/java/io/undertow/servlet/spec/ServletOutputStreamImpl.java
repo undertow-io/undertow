@@ -711,6 +711,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 pooledBuffer = null;
             }
             buffer = null;
+            this.written = 0;
         } else {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
