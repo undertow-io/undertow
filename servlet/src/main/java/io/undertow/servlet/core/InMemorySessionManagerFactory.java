@@ -41,6 +41,6 @@ public class InMemorySessionManagerFactory implements SessionManagerFactory {
 
     @Override
     public SessionManager createSessionManager(Deployment deployment) {
-        return new InMemorySessionManager(deployment.getDeploymentInfo().getSessionIdGenerator(), deployment.getDeploymentInfo().getDeploymentName(), maxSessions, false);
+        return new InMemorySessionManager(deployment.getDeploymentInfo().getSessionIdGenerator(), deployment.getDeploymentInfo().getDeploymentName(), maxSessions, deployment.getDeploymentInfo().getMetricsCollector() != null);
     }
 }
