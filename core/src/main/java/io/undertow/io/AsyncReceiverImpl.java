@@ -260,7 +260,7 @@ public class AsyncReceiverImpl implements Receiver {
         channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
             @Override
             public void handleEvent(final StreamSourceChannel channel) {
-                if(done) {
+                if(done || paused) {
                     return;
                 }
                 Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
@@ -513,7 +513,7 @@ public class AsyncReceiverImpl implements Receiver {
         channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
             @Override
             public void handleEvent(final StreamSourceChannel channel) {
-                if(done) {
+                if(done || paused) {
                     return;
                 }
                 Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
