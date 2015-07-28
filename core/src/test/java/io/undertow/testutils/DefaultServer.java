@@ -148,11 +148,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             loadedKeystore.load(stream, STORE_PASSWORD);
 
             return loadedKeystore;
-        } catch (KeyStoreException e) {
-            throw new IOException(String.format("Unable to load KeyStore %s", name), e);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IOException(String.format("Unable to load KeyStore %s", name), e);
-        } catch (CertificateException e) {
+        } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
             throw new IOException(String.format("Unable to load KeyStore %s", name), e);
         } finally {
             IoUtils.safeClose(stream);
@@ -165,11 +161,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             keyManagerFactory.init(keyStore, STORE_PASSWORD);
             keyManagers = keyManagerFactory.getKeyManagers();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IOException("Unable to initialise KeyManager[]", e);
-        } catch (UnrecoverableKeyException e) {
-            throw new IOException("Unable to initialise KeyManager[]", e);
-        } catch (KeyStoreException e) {
+        } catch (NoSuchAlgorithmException | UnrecoverableKeyException | KeyStoreException e) {
             throw new IOException("Unable to initialise KeyManager[]", e);
         }
 
@@ -178,9 +170,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             trustManagerFactory.init(trustStore);
             trustManagers = trustManagerFactory.getTrustManagers();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IOException("Unable to initialise TrustManager[]", e);
-        } catch (KeyStoreException e) {
+        } catch (NoSuchAlgorithmException | KeyStoreException e) {
             throw new IOException("Unable to initialise TrustManager[]", e);
         }
 
@@ -188,9 +178,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         try {
             sslContext = SSLContext.getInstance("TLS");
             sslContext.init(keyManagers, trustManagers, null);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IOException("Unable to create and initialise the SSLContext", e);
-        } catch (KeyManagementException e) {
+        } catch (NoSuchAlgorithmException | KeyManagementException e) {
             throw new IOException("Unable to create and initialise the SSLContext", e);
         }
 
