@@ -155,7 +155,15 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             this.maxIndividualFileSize = maxIndividualFileSize;
             this.defaultEncoding = defaultEncoding;
             this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
-            this.parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes(), exchange.getRequestCharset());
+            String charset = defaultEncoding;
+            String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+            if (contentType != null) {
+                String value = Headers.extractQuotedValueFromHeader(contentType, "charset");
+                if (value != null) {
+                    charset = value;
+                }
+            }
+           this.parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes(), charset);
         }
 
 
