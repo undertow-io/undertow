@@ -30,6 +30,11 @@ import java.util.List;
 import java.util.Set;
 import javax.net.ssl.SSLEngine;
 
+import io.undertow.UndertowOptions;
+import io.undertow.client.ClientStatistics;
+import io.undertow.conduits.ByteActivityCallback;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.ChannelListener;
@@ -239,8 +244,29 @@ public class Http2ClientProvider implements ClientProvider {
     }
 
     private static Http2ClientConnection createHttp2Channel(StreamConnection connection, Pool<ByteBuffer> bufferPool, OptionMap options, String defaultHost) {
+
+        final ClientStatisticsImpl clientStatistics;
+        //first we set up statistics, if required
+        if (options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+            clientStatistics = new ClientStatisticsImpl();
+            connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
+                @Override
+                public void activity(long bytes) {
+                    clientStatistics.written += bytes;
+                }
+            }));
+            connection.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(connection.getSourceChannel().getConduit(), new ByteActivityCallback() {
+                @Override
+                public void activity(long bytes) {
+                    clientStatistics.read += bytes;
+                }
+            }));
+        } else {
+            clientStatistics = null;
+        }
+
         Http2Channel http2Channel = new Http2Channel(connection, null, bufferPool, null, true, false, options);
-        return new Http2ClientConnection(http2Channel, false, defaultHost);
+        return new Http2ClientConnection(http2Channel, false, defaultHost, clientStatistics);
     }
 
     private static class Http2SelectionProvider implements ALPN.ClientProvider {
@@ -276,6 +302,32 @@ public class Http2ClientProvider implements ClientProvider {
 
         private String getSelected() {
             return selected;
+        }
+    }
+
+
+    private static class ClientStatisticsImpl implements ClientStatistics {
+        private long requestCount, read, written;
+        @Override
+        public long getRequests() {
+            return requestCount;
+        }
+
+        @Override
+        public long getRead() {
+            return read;
+        }
+
+        @Override
+        public long getWritten() {
+            return written;
+        }
+
+        @Override
+        public void reset() {
+            read = 0;
+            written = 0;
+            requestCount = 0;
         }
     }
 }

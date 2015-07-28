@@ -106,4 +106,10 @@ public interface ClientConnection extends Channel {
      * @return <code>true</code> if this client supports multiplexing
      */
     boolean isMultiplexingSupported();
+
+    /**
+     *
+     * @return the statistics information, or <code>null</code> if statistics are not supported or disabled
+     */
+    ClientStatistics getStatistics();
 }

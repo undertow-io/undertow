@@ -18,9 +18,14 @@
 
 package io.undertow.client.http2;
 
+import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
+import io.undertow.client.ClientStatistics;
+import io.undertow.conduits.ByteActivityCallback;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.protocols.http2.Http2Channel;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
@@ -105,6 +110,27 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
 
     private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final String defaultHost) {
         try {
+
+            final ClientStatisticsImpl clientStatistics;
+            //first we set up statistics, if required
+            if (options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+                clientStatistics = new ClientStatisticsImpl();
+                connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
+                    @Override
+                    public void activity(long bytes) {
+                        clientStatistics.written += bytes;
+                    }
+                }));
+                connection.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(connection.getSourceChannel().getConduit(), new ByteActivityCallback() {
+                    @Override
+                    public void activity(long bytes) {
+                        clientStatistics.read += bytes;
+                    }
+                }));
+            } else {
+                clientStatistics = null;
+            }
+
             final ByteBuffer pri = ByteBuffer.wrap(PRI_REQUEST);
             pri.flip();
             ConduitStreamSinkChannel sink = connection.getSinkChannel();
@@ -118,7 +144,7 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
                             if(pri.hasRemaining()) {
                                 return;
                             }
-                            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost));
+                            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics));
                         } catch (IOException e) {
                             listener.failed(e);
                         }
@@ -126,9 +152,33 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
                 });
                 return;
             }
-            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost));
+            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics));
         } catch (IOException e) {
             listener.failed(e);
+        }
+    }
+    private static class ClientStatisticsImpl implements ClientStatistics {
+        private long requestCount, read, written;
+        @Override
+        public long getRequests() {
+            return requestCount;
+        }
+
+        @Override
+        public long getRead() {
+            return read;
+        }
+
+        @Override
+        public long getWritten() {
+            return written;
+        }
+
+        @Override
+        public void reset() {
+            read = 0;
+            written = 0;
+            requestCount = 0;
         }
     }
 }

@@ -28,6 +28,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.client.ClientStatistics;
+import io.undertow.conduits.ByteActivityCallback;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
@@ -194,8 +199,29 @@ public class Http2ClearClientProvider implements ClientProvider {
 
         @Override
         public void handleEvent(StreamConnection channel) {
+
+            final ClientStatisticsImpl clientStatistics;
+            //first we set up statistics, if required
+            if (options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+                clientStatistics = new ClientStatisticsImpl();
+                channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), new ByteActivityCallback() {
+                    @Override
+                    public void activity(long bytes) {
+                        clientStatistics.written += bytes;
+                    }
+                }));
+                channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), new ByteActivityCallback() {
+                    @Override
+                    public void activity(long bytes) {
+                        clientStatistics.read += bytes;
+                    }
+                }));
+            } else {
+                clientStatistics = null;
+            }
+
             Http2Channel http2Channel = new Http2Channel(channel, null, bufferPool, null, true, true, options);
-            Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, true, defaultHost);
+            Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, true, defaultHost, clientStatistics);
 
             listener.completed(http2ClientConnection);
         }
@@ -213,6 +239,47 @@ public class Http2ClearClientProvider implements ClientProvider {
             if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
                 listener.failed(ioFuture.getException());
             }
+        }
+    }
+    private static class ClientStatisticsImpl implements ClientStatistics {
+        private long requestCount, read, written;
+
+        public long getRequestCount() {
+            return requestCount;
+        }
+
+        public void setRequestCount(long requestCount) {
+            this.requestCount = requestCount;
+        }
+
+        public void setRead(long read) {
+            this.read = read;
+        }
+
+        public void setWritten(long written) {
+            this.written = written;
+        }
+
+        @Override
+        public long getRequests() {
+            return requestCount;
+        }
+
+        @Override
+        public long getRead() {
+            return read;
+        }
+
+        @Override
+        public long getWritten() {
+            return written;
+        }
+
+        @Override
+        public void reset() {
+            read = 0;
+            written = 0;
+            requestCount = 0;
         }
     }
 }

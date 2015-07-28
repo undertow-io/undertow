@@ -19,12 +19,17 @@
 package io.undertow.client.http;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
+import io.undertow.client.ClientStatistics;
 import io.undertow.client.UndertowClientMessages;
+import io.undertow.conduits.ByteActivityCallback;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
@@ -110,10 +115,33 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private int count = 0;
 
     private int state;
-
     private final ChannelListener.SimpleSetter<HttpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
 
+    private final ClientStatistics clientStatistics;
+    private int requestCount;
+    private int read, written;
+
     HttpClientConnection(final StreamConnection connection, final OptionMap options, final Pool<ByteBuffer> bufferPool) {
+
+        //first we set up statistics, if required
+        if(options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+            clientStatistics = new ClientStatisticsImpl();
+            connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
+                @Override
+                public void activity(long bytes) {
+                    written+=bytes;
+                }
+            }));
+            connection.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(connection.getSourceChannel().getConduit(), new ByteActivityCallback() {
+                @Override
+                public void activity(long bytes) {
+                    read+=bytes;
+                }
+            }));
+        } else {
+            clientStatistics = null;
+        }
+
         this.options = options;
         this.connection = connection;
         this.pushBackStreamSourceConduit = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
@@ -217,6 +245,11 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
 
     @Override
+    public ClientStatistics getStatistics() {
+        return clientStatistics;
+    }
+
+    @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
         count++;
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
@@ -232,6 +265,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
 
     private void initiateRequest(HttpClientExchange httpClientExchange) {
+        this.requestCount++;
         currentRequest = httpClientExchange;
         pendingResponse = new HttpResponseBuilder();
         ClientRequest request = httpClientExchange.getRequest();
@@ -521,6 +555,31 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             connection.getSourceChannel().setConduit(new FixedLengthStreamSourceConduit(connection.getSourceChannel().getConduit(), 0, responseFinishedListener));
         } else {
             state |= CLOSE_REQ;
+        }
+    }
+
+    private class ClientStatisticsImpl implements ClientStatistics {
+
+        @Override
+        public long getRequests() {
+            return requestCount;
+        }
+
+        @Override
+        public long getRead() {
+            return read;
+        }
+
+        @Override
+        public long getWritten() {
+            return written;
+        }
+
+        @Override
+        public void reset() {
+            read = 0;
+            written = 0;
+            requestCount = 0;
         }
     }
 }

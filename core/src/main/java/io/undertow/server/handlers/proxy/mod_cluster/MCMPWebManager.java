@@ -243,7 +243,7 @@ class MCMPWebManager extends MCMPHandler {
         if (reduceDisplay) {
             buf.append(" " + status + " ");
         } else {
-            buf.append(",Status: " + status + ",Elected: " + node.getElected() + ",Read: " + node.getStats().getRead() + ",Transferred: " + node.getStats().getTransferred() + ",Connected: "
+            buf.append(",Status: " + status + ",Elected: " + node.getElected() + ",Read: " + node.getConnectionPool().getClientStatistics().getRead() + ",Transferred: " + node.getConnectionPool().getClientStatistics().getWritten() + ",Connected: "
                     + node.getConnectionPool().getOpenConnections() + ",Load: " + node.getLoad());
         }
     }

@@ -96,8 +96,8 @@ class MCMPInfoUtil {
                 .append(",timeout: ").append(node.getNodeConfig().getTimeout())
                 //
                 .append(",Elected: ").append(node.getElected())
-                .append(",Read: ").append(node.getStats().getRead())
-                .append(",Transferred: ").append(node.getStats().getTransferred())
+                .append(",Read: ").append(node.getConnectionPool().getClientStatistics().getRead())
+                .append(",Transferred: ").append(node.getConnectionPool().getClientStatistics().getWritten())
                 .append(",Connected: ").append(node.getConnectionPool().getOpenConnections())
                 .append(",Load: ").append(node.getLoad())
 

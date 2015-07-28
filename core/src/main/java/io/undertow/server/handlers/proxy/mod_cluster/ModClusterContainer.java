@@ -761,12 +761,12 @@ class ModClusterContainer implements ModClusterController {
 
         @Override
         public long getTransferred() {
-            return node.getStats().getTransferred();
+            return node.getConnectionPool().getClientStatistics().getWritten();
         }
 
         @Override
         public long getRead() {
-            return node.getStats().getRead();
+            return node.getConnectionPool().getClientStatistics().getRead();
         }
 
         @Override
@@ -836,6 +836,11 @@ class ModClusterContainer implements ModClusterController {
                 ret.addAll(host.getAliases());
             }
             return ret;
+        }
+
+        @Override
+        public void resetStatistics() {
+            node.getConnectionPool().getClientStatistics().reset();
         }
     }
 

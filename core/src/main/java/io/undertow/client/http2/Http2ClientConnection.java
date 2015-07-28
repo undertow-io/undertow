@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.undertow.client.ClientStatistics;
 import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Protocols;
@@ -77,10 +78,13 @@ public class Http2ClientConnection implements ClientConnection {
 
     private boolean initialUpgradeRequest;
     private final String defaultHost;
+    private final ClientStatistics clientStatistics;
 
-    public Http2ClientConnection(Http2Channel http2Channel, boolean initialUpgradeRequest, String defaultHost) {
+    public Http2ClientConnection(Http2Channel http2Channel, boolean initialUpgradeRequest, String defaultHost, ClientStatistics clientStatistics) {
+
         this.http2Channel = http2Channel;
         this.defaultHost = defaultHost;
+        this.clientStatistics = clientStatistics;
         http2Channel.getReceiveSetter().set(new Http2ReceiveListener());
         http2Channel.resumeReceives();
         http2Channel.addCloseTask(new ChannelListener<Http2Channel>() {
@@ -298,6 +302,11 @@ public class Http2ClientConnection implements ClientConnection {
     @Override
     public boolean isMultiplexingSupported() {
         return true;
+    }
+
+    @Override
+    public ClientStatistics getStatistics() {
+        return clientStatistics;
     }
 
     private class Http2ReceiveListener implements ChannelListener<Http2Channel> {

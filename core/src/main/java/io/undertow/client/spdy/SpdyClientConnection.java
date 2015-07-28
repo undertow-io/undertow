@@ -24,6 +24,7 @@ import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
+import io.undertow.client.ClientStatistics;
 import io.undertow.protocols.spdy.SpdyChannel;
 import io.undertow.protocols.spdy.SpdyPingStreamSourceChannel;
 import io.undertow.protocols.spdy.SpdyRstStreamStreamSourceChannel;
@@ -70,8 +71,10 @@ public class SpdyClientConnection implements ClientConnection {
 
     private final Map<Integer, SpdyClientExchange> currentExchanges = new ConcurrentHashMap<>();
 
-    public SpdyClientConnection(SpdyChannel spdyChannel) {
+    private final ClientStatistics clientStatistics;
+    public SpdyClientConnection(SpdyChannel spdyChannel, ClientStatistics clientStatistics) {
         this.spdyChannel = spdyChannel;
+        this.clientStatistics = clientStatistics;
         spdyChannel.getReceiveSetter().set(new SpdyReceiveListener());
         spdyChannel.resumeReceives();
         spdyChannel.addCloseTask(new ChannelListener<SpdyChannel>() {
@@ -257,6 +260,11 @@ public class SpdyClientConnection implements ClientConnection {
     @Override
     public boolean isMultiplexingSupported() {
         return true;
+    }
+
+    @Override
+    public ClientStatistics getStatistics() {
+        return clientStatistics;
     }
 
     private class SpdyReceiveListener implements ChannelListener<SpdyChannel> {

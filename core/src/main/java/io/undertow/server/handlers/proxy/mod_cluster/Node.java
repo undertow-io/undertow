@@ -49,7 +49,6 @@ class Node {
     private final NodeConfig nodeConfig;
     private final Balancer balancerConfig;
     private final ProxyConnectionPool connectionPool;
-    private final NodeStats stats = new NodeStats();
     private final NodeLbStatus lbStatus = new NodeLbStatus();
     private final ModClusterContainer container;
     private final List<VHostMapping> vHosts = new CopyOnWriteArrayList<>();
@@ -100,10 +99,6 @@ class Node {
 
     public NodeConfig getNodeConfig() {
         return nodeConfig;
-    }
-
-    public NodeStats getStats() {
-        return stats;
     }
 
     /**

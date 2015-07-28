@@ -30,6 +30,11 @@ import java.util.List;
 import java.util.Set;
 import javax.net.ssl.SSLEngine;
 
+import io.undertow.UndertowOptions;
+import io.undertow.client.ClientStatistics;
+import io.undertow.conduits.ByteActivityCallback;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.BufferAllocator;
@@ -265,8 +270,28 @@ public class SpdyClientProvider implements ClientProvider {
     }
 
     private static SpdyClientConnection createSpdyChannel(StreamConnection connection, Pool<ByteBuffer> bufferPool, OptionMap options) {
+
+        final ClientStatisticsImpl clientStatistics;
+        //first we set up statistics, if required
+        if (options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+            clientStatistics = new ClientStatisticsImpl();
+            connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
+                @Override
+                public void activity(long bytes) {
+                    clientStatistics.written += bytes;
+                }
+            }));
+            connection.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(connection.getSourceChannel().getConduit(), new ByteActivityCallback() {
+                @Override
+                public void activity(long bytes) {
+                    clientStatistics.read += bytes;
+                }
+            }));
+        } else {
+            clientStatistics = null;
+        }
         SpdyChannel spdyChannel = new SpdyChannel(connection, bufferPool, null, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192), true, options);
-        return new SpdyClientConnection(spdyChannel);
+        return new SpdyClientConnection(spdyChannel, clientStatistics);
     }
 
     private static class SpdySelectionProvider implements ALPN.ClientProvider {
@@ -302,6 +327,31 @@ public class SpdyClientProvider implements ClientProvider {
 
         private String getSelected() {
             return selected;
+        }
+    }
+
+    private static class ClientStatisticsImpl implements ClientStatistics {
+        private long requestCount, read, written;
+        @Override
+        public long getRequests() {
+            return requestCount;
+        }
+
+        @Override
+        public long getRead() {
+            return read;
+        }
+
+        @Override
+        public long getWritten() {
+            return written;
+        }
+
+        @Override
+        public void reset() {
+            read = 0;
+            written = 0;
+            requestCount = 0;
         }
     }
 }

@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import io.undertow.client.ClientStatistics;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -94,9 +95,10 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private int state;
 
     private final ChannelListener.SimpleSetter<AjpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
-    private final ClientReceiveListener clientReceiveListener = new ClientReceiveListener();
+    private final ClientStatistics clientStatistics;
 
-    AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final Pool<ByteBuffer> bufferPool) {
+    AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final Pool<ByteBuffer> bufferPool, ClientStatistics clientStatistics) {
+        this.clientStatistics = clientStatistics;
         this.options = options;
         this.connection = connection;
         this.bufferPool = bufferPool;
@@ -186,6 +188,11 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     @Override
     public boolean isMultiplexingSupported() {
         return false;
+    }
+
+    @Override
+    public ClientStatistics getStatistics() {
+        return clientStatistics;
     }
 
     @Override

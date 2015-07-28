@@ -134,6 +134,8 @@ public interface ModClusterStatus {
         boolean isQueueNewRequests();
 
         List<String> getAliases();
+
+        void resetStatistics();
     }
 
     interface Context {

@@ -22,6 +22,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientStatistics;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
@@ -42,6 +43,7 @@ import java.util.Deque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A pool of connections to a target host.
@@ -103,6 +105,19 @@ public class ProxyConnectionPool implements Closeable {
      */
     private final AtomicInteger openConnections = new AtomicInteger(0);
 
+    /**
+     * request count for all closed connections
+     */
+    private final AtomicLong requestCount = new AtomicLong();
+    /**
+     * read bytes for all closed connections
+     */
+    private final AtomicLong read = new AtomicLong();
+    /**
+     * written bytes for all closed connections
+     */
+    private final AtomicLong written = new AtomicLong();
+
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<>();
 
     public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, UndertowClient client, OptionMap options) {
@@ -154,6 +169,16 @@ public class ProxyConnectionPool implements Closeable {
      * @param connectionHolder The client connection holder
      */
     private void returnConnection(final ConnectionHolder connectionHolder) {
+
+        ClientStatistics stats = connectionHolder.clientConnection.getStatistics();
+        this.requestCount.incrementAndGet();
+        if(stats != null) {
+            //we update the stats when the connection is closed
+            this.read.addAndGet(stats.getRead());
+            this.written.addAndGet(stats.getWritten());
+            stats.reset();
+        }
+
         HostThreadData hostData = getData();
         if (closed) {
             //the host has been closed
@@ -433,6 +458,32 @@ public class ProxyConnectionPool implements Closeable {
             return existing;
         }
         return data;
+    }
+
+    public ClientStatistics getClientStatistics() {
+        return new ClientStatistics() {
+            @Override
+            public long getRequests() {
+                return requestCount.get();
+            }
+
+            @Override
+            public long getRead() {
+                return read.get();
+            }
+
+            @Override
+            public long getWritten() {
+                return written.get();
+            }
+
+            @Override
+            public void reset() {
+                requestCount.set(0);
+                read.set(0);
+                written.set(0);
+            }
+        };
     }
 
     /**

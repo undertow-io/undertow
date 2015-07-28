@@ -18,9 +18,14 @@
 
 package io.undertow.client.ajp;
 
+import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
+import io.undertow.client.ClientStatistics;
+import io.undertow.conduits.ByteActivityCallback;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.protocols.ajp.AjpClientChannel;
 
 import org.xnio.ChannelListener;
@@ -106,8 +111,53 @@ public class AjpClientProvider implements ClientProvider {
     }
 
     private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
-        listener.completed(new AjpClientConnection(new AjpClientChannel(connection, bufferPool, options) , options, bufferPool));
+
+        final ClientStatisticsImpl clientStatistics;
+        //first we set up statistics, if required
+        if (options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+            clientStatistics = new ClientStatisticsImpl();
+            connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
+                @Override
+                public void activity(long bytes) {
+                    clientStatistics.written += bytes;
+                }
+            }));
+            connection.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(connection.getSourceChannel().getConduit(), new ByteActivityCallback() {
+                @Override
+                public void activity(long bytes) {
+                    clientStatistics.read += bytes;
+                }
+            }));
+        } else {
+            clientStatistics = null;
+        }
+
+        listener.completed(new AjpClientConnection(new AjpClientChannel(connection, bufferPool, options), options, bufferPool, clientStatistics));
     }
 
 
+    private class ClientStatisticsImpl implements ClientStatistics {
+        private long requestCount, read, written;
+        @Override
+        public long getRequests() {
+            return requestCount;
+        }
+
+        @Override
+        public long getRead() {
+            return read;
+        }
+
+        @Override
+        public long getWritten() {
+            return written;
+        }
+
+        @Override
+        public void reset() {
+            read = 0;
+            written = 0;
+            requestCount = 0;
+        }
+    }
 }

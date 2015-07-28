@@ -181,8 +181,20 @@ public class UndertowOptions {
     /**
      * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
      * as bytes sent/recevied to be monitored.
+     *
+     * If this is passed to the client then client statistics will be enabled.
+     *
      */
-    public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = Option.simple(UndertowOptions.class, "ENABLE_CONNECTOR_STATISTICS", Boolean.class);
+    public static final Option<Boolean> ENABLE_STATISTICS = Option.simple(UndertowOptions.class, "ENABLE_STATISTICS", Boolean.class);
+
+
+    /**
+     * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
+     * as bytes sent/recevied to be monitored.
+     */
+    @Deprecated
+    public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = ENABLE_STATISTICS;
+
 
     /**
      * If unknown protocols should be allowed. The known protocols are:
