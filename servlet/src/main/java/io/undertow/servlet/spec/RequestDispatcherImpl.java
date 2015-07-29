@@ -23,9 +23,7 @@ import java.io.PrintWriter;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.servlet.DispatcherType;
@@ -427,35 +425,21 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         requestImpl.setAttribute(ERROR_MESSAGE, message);
         requestImpl.setAttribute(ERROR_STATUS_CODE, responseImpl.getStatus());
 
-        String newQueryString = "";
         int qsPos = path.indexOf("?");
         String newServletPath = path;
         if (qsPos != -1) {
-            newQueryString = newServletPath.substring(qsPos + 1);
+            Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
+            String newQueryString = newServletPath.substring(qsPos + 1);
             newServletPath = newServletPath.substring(0, qsPos);
+
+            String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
+            Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
+            requestImpl.getExchange().setQueryString(newQueryString);
+            requestImpl.setQueryParameters(newQueryParameters);
         }
         String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-        //todo: a more efficent impl
-        Map<String, Deque<String>> newQueryParameters = new HashMap<>();
-        for (String part : newQueryString.split("&")) {
-            String name = part;
-            String value = "";
-            int equals = part.indexOf('=');
-            if (equals != -1) {
-                name = part.substring(0, equals);
-                value = part.substring(equals + 1);
-            }
-            Deque<String> queue = newQueryParameters.get(name);
-            if (queue == null) {
-                newQueryParameters.put(name, queue = new ArrayDeque<>(1));
-            }
-            queue.add(value);
-        }
-        requestImpl.setQueryParameters(newQueryParameters);
-
         requestImpl.getExchange().setRelativePath(newServletPath);
-        requestImpl.getExchange().setQueryString(newQueryString);
         requestImpl.getExchange().setRequestPath(newRequestUri);
         requestImpl.getExchange().setRequestURI(newRequestUri);
         requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
