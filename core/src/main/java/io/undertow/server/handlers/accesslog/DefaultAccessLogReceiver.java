@@ -41,7 +41,7 @@ import io.undertow.UndertowLogger;
 /**
  * Log Receiver that stores logs in a directory under the specified file name, and rotates them after
  * midnight.
- * <p>
+ * <p/>
  * Web threads do not touch the log file, but simply queue messages to be written later by a worker thread.
  * A lightweight CAS based locking mechanism is used to ensure than only 1 thread is active writing messages at
  * any given time
@@ -78,6 +78,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     private volatile boolean closed = false;
     private boolean initialRun = true;
     private final boolean rotate;
+    private final LogFileHeaderGenerator fileHeaderGenerator;
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName) {
         this(logWriteExecutor, outputDirectory.toPath(), logBaseName, null);
@@ -100,10 +101,15 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     }
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final Path outputDirectory, final String logBaseName, final String logNameSuffix, boolean rotate) {
+        this(logWriteExecutor, outputDirectory, logBaseName, logNameSuffix, rotate, null);
+    }
+
+    private DefaultAccessLogReceiver(final Executor logWriteExecutor, final Path outputDirectory, final String logBaseName, final String logNameSuffix, boolean rotate, LogFileHeaderGenerator fileHeader) {
         this.logWriteExecutor = logWriteExecutor;
         this.outputDirectory = outputDirectory;
         this.logBaseName = logBaseName;
         this.rotate = rotate;
+        this.fileHeaderGenerator = fileHeader;
         this.logNameSuffix = (logNameSuffix != null) ? logNameSuffix : DEFAULT_LOG_SUFFIX;
         this.pendingMessages = new ConcurrentLinkedDeque<>();
         this.defaultLogFile = outputDirectory.resolve(logBaseName + this.logNameSuffix);
@@ -142,7 +148,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         }
         if (forceLogRotation) {
             doRotate();
-        } else if(initialRun && Files.exists(defaultLogFile)) {
+        } else if (initialRun && Files.exists(defaultLogFile)) {
             //if there is an existing log file check if it should be rotated
             long lm = 0;
             try {
@@ -153,7 +159,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             Calendar c = Calendar.getInstance();
             c.setTimeInMillis(changeOverPoint);
             c.add(Calendar.DATE, -1);
-            if(lm <= c.getTimeInMillis()) {
+            if (lm <= c.getTimeInMillis()) {
                 doRotate();
             }
         }
@@ -180,7 +186,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
                 if (stateUpdater.compareAndSet(this, 0, 1)) {
                     logWriteExecutor.execute(this);
                 }
-            } else if(closed) {
+            } else if (closed) {
                 try {
                     writer.flush();
                     writer.close();
@@ -213,7 +219,16 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         }
         try {
             if (writer == null) {
+                boolean created = !Files.exists(defaultLogFile);
                 writer = Files.newBufferedWriter(defaultLogFile, StandardCharsets.UTF_8, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+                if(created && fileHeaderGenerator != null) {
+                    String header = fileHeaderGenerator.generateHeader();
+                    if(header != null) {
+                        writer.write(header);
+                        writer.write("\n");
+                        writer.flush();
+                    }
+                }
             }
             for (String message : messages) {
                 writer.write(message);
@@ -227,7 +242,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
 
     private void doRotate() {
         forceLogRotation = false;
-        if(!rotate) {
+        if (!rotate) {
             return;
         }
         try {
@@ -236,7 +251,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
                 writer.close();
                 writer = null;
             }
-            if(!Files.exists(defaultLogFile)) {
+            if (!Files.exists(defaultLogFile)) {
                 return;
             }
             Path newFile = outputDirectory.resolve(logBaseName + "_" + currentDateString + logNameSuffix);
@@ -269,6 +284,77 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         closed = true;
         if (stateUpdater.compareAndSet(this, 0, 1)) {
             logWriteExecutor.execute(this);
+        }
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private Executor logWriteExecutor;
+        private Path outputDirectory;
+        private String logBaseName;
+        private String logNameSuffix;
+        private boolean rotate;
+        private LogFileHeaderGenerator logFileHeaderGenerator;
+
+        public Executor getLogWriteExecutor() {
+            return logWriteExecutor;
+        }
+
+        public Builder setLogWriteExecutor(Executor logWriteExecutor) {
+            this.logWriteExecutor = logWriteExecutor;
+            return this;
+        }
+
+        public Path getOutputDirectory() {
+            return outputDirectory;
+        }
+
+        public Builder setOutputDirectory(Path outputDirectory) {
+            this.outputDirectory = outputDirectory;
+            return this;
+        }
+
+        public String getLogBaseName() {
+            return logBaseName;
+        }
+
+        public Builder setLogBaseName(String logBaseName) {
+            this.logBaseName = logBaseName;
+            return this;
+        }
+
+        public String getLogNameSuffix() {
+            return logNameSuffix;
+        }
+
+        public Builder setLogNameSuffix(String logNameSuffix) {
+            this.logNameSuffix = logNameSuffix;
+            return this;
+        }
+
+        public boolean isRotate() {
+            return rotate;
+        }
+
+        public Builder setRotate(boolean rotate) {
+            this.rotate = rotate;
+            return this;
+        }
+
+        public LogFileHeaderGenerator getLogFileHeaderGenerator() {
+            return logFileHeaderGenerator;
+        }
+
+        public Builder setLogFileHeaderGenerator(LogFileHeaderGenerator logFileHeaderGenerator) {
+            this.logFileHeaderGenerator = logFileHeaderGenerator;
+            return this;
+        }
+
+        public DefaultAccessLogReceiver build() {
+            return new DefaultAccessLogReceiver(logWriteExecutor, outputDirectory, logBaseName, logNameSuffix, rotate, logFileHeaderGenerator);
         }
     }
 }
