@@ -268,6 +268,9 @@ public class AsyncReceiverImpl implements Receiver {
                 try {
                     int res;
                     do {
+                        if(paused) {
+                            return;
+                        }
                         try {
                             buffer.clear();
                             res = channel.read(buffer);
@@ -521,6 +524,9 @@ public class AsyncReceiverImpl implements Receiver {
                 try {
                     int res;
                     do {
+                        if(paused) {
+                            return;
+                        }
                         try {
                             buffer.clear();
                             res = channel.read(buffer);
