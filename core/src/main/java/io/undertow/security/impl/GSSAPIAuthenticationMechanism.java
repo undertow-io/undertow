@@ -209,7 +209,9 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
     private String getHostName(final HttpServerExchange exchange) {
         String hostName = exchange.getRequestHeaders().getFirst(HOST);
         if (hostName != null) {
-            if (hostName.contains(":")) {
+            if (hostName.startsWith("[") && hostName.contains("]")) {
+                hostName = hostName.substring(0, hostName.indexOf(']') + 1);
+            } else if (hostName.contains(":")) {
                 hostName = hostName.substring(0, hostName.indexOf(":"));
             }
             return hostName;
