@@ -36,18 +36,24 @@ import org.junit.runner.RunWith;
 
 import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
+import javax.websocket.MessageHandler;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 import javax.websocket.Session;
+import javax.websocket.WebSocketContainer;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -60,6 +66,8 @@ public class WebsocketStressTestCase {
     public static final int NUM_THREADS = 100;
     public static final int NUM_REQUESTS = 1000;
     private static ServerWebSocketContainer deployment;
+
+    private static WebSocketContainer defaultContainer = ContainerProvider.getWebSocketContainer();
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -99,7 +107,7 @@ public class WebsocketStressTestCase {
     }
 
     @Test
-    public void webSocketStressTestCase() throws Exception {
+    public void webSocketStringStressTestCase() throws Exception {
         final ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
             List<CountDownLatch> latches = new ArrayList<>();
@@ -149,6 +157,62 @@ public class WebsocketStressTestCase {
         Assert.assertEquals(0, StressEndpoint.MESSAGES.size());
     }
 
+    @Test
+    public void websocketFragmentationStressTestCase() throws Exception {
+
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        final CountDownLatch done = new CountDownLatch(1);
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 10000; ++i) {
+            sb.append("message ");
+            sb.append(i);
+        }
+        String toSend = sb.toString();
+
+        final Session session = defaultContainer.connectToServer(new Endpoint() {
+            @Override
+            public void onOpen(Session session, EndpointConfig config) {
+                session.addMessageHandler(new MessageHandler.Partial<byte[]>() {
+                    @Override
+                    public void onMessage(byte[] bytes, boolean b) {
+                        try {
+                            out.write(bytes);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            done.countDown();
+                        }
+                        if (b) {
+                            done.countDown();
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onClose(Session session, CloseReason closeReason) {
+                done.countDown();
+            }
+
+            @Override
+            public void onError(Session session, Throwable thr) {
+                thr.printStackTrace();
+                done.countDown();
+            }
+        }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
+
+        OutputStream stream = session.getBasicRemote().getSendStream();
+        for(int i = 0; i < toSend.length(); ++i) {
+            stream.write(toSend.charAt(i));
+            stream.flush();
+        }
+        stream.close();
+        done.await(40, TimeUnit.SECONDS);
+        Assert.assertEquals(toSend, new String(out.toByteArray()));
+
+    }
+
+
     @ClientEndpoint
     private static class ClientEndpointImpl {
     }
@@ -171,7 +235,7 @@ public class WebsocketStressTestCase {
             session.getAsyncRemote().sendText("t-" + thread + "-m-" + count.get(), new SendHandler() {
                 @Override
                 public void onResult(SendResult result) {
-                    if(!result.isOK()) {
+                    if (!result.isOK()) {
                         try {
                             result.getException().printStackTrace();
                             session.close();

@@ -18,10 +18,13 @@
 
 package io.undertow.websockets.jsr.test.stress;
 
+import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +39,8 @@ public class StressEndpoint {
 
     private volatile String closed;
 
+    private OutputStream out;
+
     @OnMessage
     public void handleMessage(Session session, final String message) throws IOException {
         if(closed != null) {
@@ -47,5 +52,30 @@ public class StressEndpoint {
             return;
         }
         MESSAGES.add(message);
+    }
+
+    @OnMessage
+    public void handleMessage(Session session, final ByteBuffer message, boolean last) throws IOException {
+        if(out == null) {
+            out = session.getBasicRemote().getSendStream();
+        }
+        byte[] data = new byte[message.remaining()];
+        message.get(data);
+        out.write(data);
+
+        if(last) {
+            out.close();
+            out = null;
+        } else {
+            out.flush();
+        }
+    }
+
+    @OnError
+    public void onError(Throwable e) throws IOException {
+        e.printStackTrace();
+        if(out != null) {
+            out.close();
+        }
     }
 }

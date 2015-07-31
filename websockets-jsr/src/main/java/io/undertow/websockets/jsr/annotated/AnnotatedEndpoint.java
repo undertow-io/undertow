@@ -120,7 +120,7 @@ public class AnnotatedEndpoint extends Endpoint {
                         final Object result;
                         try {
                             result = method.invoke(instance.getInstance(), params);
-                        } catch (Exception e) {
+                        } catch (Throwable e) {
                             AnnotatedEndpoint.this.onError(session, e);
                             return;
                         }
