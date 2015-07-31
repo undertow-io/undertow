@@ -65,6 +65,8 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     private static final int STATE_LAST_FRAME = 1 << 4;
     private static final int STATE_IN_LISTENER_LOOP = 1 << 5;
     private static final int STATE_STREAM_BROKEN = 1 << 6;
+    private static final int STATE_RETURNED_MINUS_ONE = 1 << 7;
+    private static final int STATE_WAITNG_MINUS_ONE = 1 << 8;
 
 
     /**
@@ -117,6 +119,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         try {
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
+                state |= STATE_RETURNED_MINUS_ONE;
                 return -1;
             } else if (data != null) {
                 int old = data.getResource().limit();
@@ -149,6 +152,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         try {
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
+                state |= STATE_RETURNED_MINUS_ONE;
                 return -1;
             } else if (data != null && data.getResource().hasRemaining()) {
                 int old = data.getResource().limit();
@@ -265,7 +269,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                                 //if writes are shutdown or we become active then we stop looping
                                 //we stop when writes are shutdown because we can't flush until we are active
                                 //although we may be flushed as part of a batch
-                                moreData = (frameDataRemaining > 0 &&  data != null) || !pendingFrameData.isEmpty();
+                                moreData = (frameDataRemaining > 0 &&  data != null) || !pendingFrameData.isEmpty() || anyAreSet(state, STATE_WAITNG_MINUS_ONE);
                             } while (allAreSet(state, STATE_READS_RESUMED) && allAreClear(state, STATE_CLOSED) && moreData);
                         } finally {
                             state &= ~STATE_IN_LISTENER_LOOP;
@@ -431,6 +435,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         try {
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
+                state |= STATE_RETURNED_MINUS_ONE;
                 return -1;
             } else if (data != null) {
                 int old = data.getResource().limit();
@@ -473,6 +478,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         try {
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
+                state |= STATE_RETURNED_MINUS_ONE;
                 return -1;
             } else if (data != null) {
                 int old = data.getResource().limit();
@@ -534,11 +540,13 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                 synchronized (lock) {
                     readFrameCount++;
                     if (pendingFrameData.isEmpty()) {
-                        if (anyAreSet(state, STATE_LAST_FRAME)) {
+                        if (anyAreSet(state, STATE_RETURNED_MINUS_ONE)) {
                             state |= STATE_DONE;
                             getFramedChannel().notifyClosed(this);
                             complete();
                             close();
+                        } else if(anyAreSet(state, STATE_LAST_FRAME)) {
+                            state |= STATE_WAITNG_MINUS_ONE;
                         } else {
                             waitingForFrame = true;
                         }
