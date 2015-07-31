@@ -154,6 +154,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private SslReadReadyHandler readReadyHandler;
 
     private boolean invokingReadListenerHandshake = false;
+    /**
+     * guard against read ops that don't make progress, which can cause the read listener to enter an infinite loop
+     */
+    private int readNoProgressCount = 0;
 
     SslConduit(UndertowSslConnection connection, StreamConnection delegate, SSLEngine engine, Pool<ByteBuffer> bufferPool, Runnable handshakeCallback) {
         this.connection = connection;
@@ -611,6 +615,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @throws SSLException
      */
     private long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
+        boolean progress = false;
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
@@ -635,6 +640,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             return copied;
         }
         try {
+            //we need to store how much data is in the unwrap buffer. If no progress can be made then we unset
+            //the data to unwrap flag
+            int dataToUnwrapLength = -1;
             //try and read some data if we don't already have some
             if(allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
                 if(dataToUnwrap == null) {
@@ -656,7 +664,12 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     return -1;
                 } else if(res == 0 && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
                     return 0;
+                } else {
+                    //we have read some data from the channel, which counts as progress
+                    progress = true;
                 }
+            } else {
+                dataToUnwrapLength = dataToUnwrap.getResource().remaining();
             }
             dataToUnwrapLength = dataToUnwrap.getBuffer().remaining();
 
@@ -703,7 +716,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
 
             if (!handleHandshakeResult(result)) {
-                if(this.dataToUnwrap.getResource().hasRemaining() && result.getStatus() != SSLEngineResult.Status.BUFFER_UNDERFLOW) {
+                if(this.dataToUnwrap.getResource().hasRemaining() && result.getStatus() != SSLEngineResult.Status.BUFFER_UNDERFLOW && dataToUnwrap.getResource().remaining() != dataToUnwrapLength) {
                     state |= FLAG_DATA_TO_UNWRAP;
                 }
                 return 0;
@@ -716,13 +729,19 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 state &= ~FLAG_DATA_TO_UNWRAP;
             } else if(result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
                 throw new IOException("overflow"); //todo: handle properly
-            } else if(this.dataToUnwrap.getResource().hasRemaining()) {
+            } else if(this.dataToUnwrap.getResource().hasRemaining() && dataToUnwrap.getResource().remaining() != dataToUnwrapLength) {
                 state |= FLAG_DATA_TO_UNWRAP;
+            } else {
+                state &= ~FLAG_DATA_TO_UNWRAP;
             }
             if(userBuffers == null) {
                 return 0;
             } else {
-                return original - Buffers.remaining(userBuffers);
+                final long ret = original - Buffers.remaining(userBuffers);
+                if(ret != 0) {
+                    progress = true;
+                }
+                return ret;
             }
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
@@ -742,6 +761,13 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     //there is more data, make sure we trigger a read listener invocation
                     requiresListenerInvocation = true;
                 }
+            }
+            //20 is an arbitrary number, but should be way more than enough
+            if(progress) {
+                readNoProgressCount = 0;
+            } else if(readNoProgressCount++ == 20) {
+                UndertowLogger.REQUEST_IO_LOGGER.debug("Closing SSL connection as no read process has been made");
+                close();
             }
             //if we are in the read listener handshake we don't need to invoke
             //as it is about to be invoked anyway
