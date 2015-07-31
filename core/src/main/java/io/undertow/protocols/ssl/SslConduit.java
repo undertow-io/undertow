@@ -154,10 +154,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private SslReadReadyHandler readReadyHandler;
 
     private boolean invokingReadListenerHandshake = false;
-    /**
-     * guard against read ops that don't make progress, which can cause the read listener to enter an infinite loop
-     */
-    private int readNoProgressCount = 0;
 
     SslConduit(UndertowSslConnection connection, StreamConnection delegate, SSLEngine engine, Pool<ByteBuffer> bufferPool, Runnable handshakeCallback) {
         this.connection = connection;
@@ -616,7 +612,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @throws SSLException
      */
     private long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
-        boolean progress = false;
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
@@ -665,9 +660,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     return -1;
                 } else if(res == 0 && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
                     return 0;
-                } else {
-                    //we have read some data from the channel, which counts as progress
-                    progress = true;
                 }
             } else {
                 dataToUnwrapLength = dataToUnwrap.getResource().remaining();
@@ -736,11 +728,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if(userBuffers == null) {
                 return 0;
             } else {
-                final long ret = original - Buffers.remaining(userBuffers);
-                if(ret != 0) {
-                    progress = true;
-                }
-                return ret;
+                return original - Buffers.remaining(userBuffers);
             }
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
@@ -760,13 +748,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     //there is more data, make sure we trigger a read listener invocation
                     requiresListenerInvocation = true;
                 }
-            }
-            //20 is an arbitrary number, but should be way more than enough
-            if(progress) {
-                readNoProgressCount = 0;
-            } else if(readNoProgressCount++ == 20) {
-                UndertowLogger.REQUEST_IO_LOGGER.debug("Closing SSL connection as no read process has been made");
-                close();
             }
             //if we are in the read listener handshake we don't need to invoke
             //as it is about to be invoked anyway
