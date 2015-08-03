@@ -21,7 +21,7 @@ package io.undertow.server.handlers;
 import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.resource.PathResourceManager;
+import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
@@ -57,7 +57,7 @@ public class RangeRequestTestCase {
                 exchange.getResponseSender().send("0123456789");
             }
         }, true));
-        path.addPrefixPath("/resource",  new ResourceHandler(new PathResourceManager(rootPath, 10485760))
+        path.addPrefixPath("/resource",  new ResourceHandler(new FileResourceManager(rootPath.toFile(), 10485760))
                         .setDirectoryListingEnabled(true));
         DefaultServer.setRootHandler(path);
     }
