@@ -33,20 +33,19 @@ class ServletRequestContextThreadSetupAction implements ThreadSetupAction {
 
     }
 
-    private static final Handle HANDLE = new Handle() {
-        @Override
-        public void tearDown() {
-            SecurityActions.clearCurrentServletAttachments();
-        }
-    };
-
     @Override
     public Handle setup(HttpServerExchange exchange) {
         if(exchange == null) {
             return null;
         }
         ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        final ServletRequestContext old = ServletRequestContext.current();
         SecurityActions.setCurrentRequestContext(servletRequestContext);
-        return HANDLE;
+        return new Handle() {
+            @Override
+            public void tearDown() {
+                ServletRequestContext.setCurrentRequestContext(old);
+            }
+        };
     }
 }
