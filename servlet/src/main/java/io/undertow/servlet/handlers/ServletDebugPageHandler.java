@@ -20,9 +20,9 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.util.Headers;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * generates a servlet error page with a stack trace
@@ -102,7 +102,13 @@ public class ServletDebugPageHandler {
             sb.append("<br/>");
         }
         sb.append("</body></html>");
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html; charset=UTF-8");
+        servletRequestContext.getOriginalResponse().setContentType("text/html");
+        servletRequestContext.getOriginalResponse().setCharacterEncoding("UTF-8");
+        try {
+            servletRequestContext.getOriginalResponse().getOutputStream().write(sb.toString().getBytes(StandardCharsets.UTF_8));
+        } catch (IllegalStateException e) {
+            servletRequestContext.getOriginalResponse().getWriter().write(sb.toString());
+        }
         exchange.getResponseSender().send(sb.toString());
     }
 
