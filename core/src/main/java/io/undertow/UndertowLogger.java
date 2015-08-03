@@ -290,10 +290,6 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5058, value = "Could not bind multicast socket to %s (%s address): %s; make sure your multicast address is of the same type as the IP stack (IPv4 or IPv6). Multicast socket will not be bound to an address, but this may lead to cross talking (see http://www.jboss.org/community/docs/DOC-9469 for details).")
     void potentialCrossTalking(InetAddress group, String s, String localizedMessage);
 
-    @LogMessage(level = WARN)
-    @Message(id = 5059, value = "Request dumping handler is in use. This handler is intended for debugging use only, and may dump sensitive data to the logs")
-    void warnRequestDumpingHandler();
-
     @LogMessage(level = org.jboss.logging.Logger.Level.WARN)
     @Message(id = 5060, value = "Predicate %s uses old style square braces to define predicates, which will be removed in a future release. predicate[value] should be changed to predicate(value)")
     void oldStylePredicateSyntax(String string);
