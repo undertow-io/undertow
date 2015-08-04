@@ -407,4 +407,7 @@ public interface UndertowMessages {
 
     @Message(id = 126, value = "Attempted to do blocking IO from the IO thread. This is prohibited as it may result in deadlocks")
     IllegalStateException blockingIoFromIOThread();
+
+    @Message(id = 127, value = "Response has already been sent")
+    IllegalStateException responseComplete();
 }

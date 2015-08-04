@@ -117,6 +117,9 @@ public class AsyncSenderImpl implements Sender {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
+        if(exchange.isResponseComplete()) {
+            throw UndertowMessages.MESSAGES.responseComplete();
+        }
         if (this.buffer != null || this.fileChannel != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
@@ -168,6 +171,10 @@ public class AsyncSenderImpl implements Sender {
     public void send(final ByteBuffer[] buffer, final IoCallback callback) {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
+        }
+
+        if(exchange.isResponseComplete()) {
+            throw UndertowMessages.MESSAGES.responseComplete();
         }
         if (this.buffer != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
@@ -225,6 +232,10 @@ public class AsyncSenderImpl implements Sender {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
+
+        if(exchange.isResponseComplete()) {
+            throw UndertowMessages.MESSAGES.responseComplete();
+        }
         if (this.fileChannel != null || this.buffer != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
@@ -262,6 +273,10 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
+
+        if(exchange.isResponseComplete()) {
+            throw UndertowMessages.MESSAGES.responseComplete();
+        }
         ByteBuffer bytes = ByteBuffer.wrap(data.getBytes(charset));
         if (bytes.remaining() == 0) {
             callback.onComplete(exchange, this);
