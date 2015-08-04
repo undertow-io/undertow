@@ -18,7 +18,9 @@
 
 package io.undertow.attribute;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
@@ -32,16 +34,43 @@ public class DateTimeAttribute implements ExchangeAttribute {
 
     public static final String DATE_TIME_SHORT = "%t";
     public static final String DATE_TIME = "%{DATE_TIME}";
+    public static final String CUSTOM_TIME = "%{time,";
 
     public static final ExchangeAttribute INSTANCE = new DateTimeAttribute();
 
-    private DateTimeAttribute() {
+    private final String dateFormat;
+    private final ThreadLocal<SimpleDateFormat> cachedFormat;
 
+    private DateTimeAttribute() {
+        this.dateFormat = null;
+        this.cachedFormat = null;
     }
 
+    public DateTimeAttribute(final String dateFormat) {
+        this(dateFormat, null);
+    }
+
+    public DateTimeAttribute(final String dateFormat, final String timezone) {
+        this.dateFormat = dateFormat;
+        this.cachedFormat = new ThreadLocal<SimpleDateFormat>() {
+            @Override
+            protected SimpleDateFormat initialValue() {
+                final SimpleDateFormat format = new SimpleDateFormat(dateFormat);
+                if(timezone != null) {
+                    format.setTimeZone(TimeZone.getTimeZone(timezone));
+                }
+                return format;
+            }
+        };
+    }
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        return DateUtils.toCommonLogFormat(new Date());
+        if(dateFormat == null) {
+            return DateUtils.toCommonLogFormat(new Date());
+        } else {
+            final SimpleDateFormat dateFormat = this.cachedFormat.get();
+            return dateFormat.format(new Date());
+        }
     }
 
     @Override
@@ -60,6 +89,9 @@ public class DateTimeAttribute implements ExchangeAttribute {
         public ExchangeAttribute build(final String token) {
             if (token.equals(DATE_TIME) || token.equals(DATE_TIME_SHORT)) {
                 return DateTimeAttribute.INSTANCE;
+            }
+            if(token.startsWith(CUSTOM_TIME) && token.endsWith("}")) {
+                return new DateTimeAttribute(token.substring(CUSTOM_TIME.length(), token.length() - 1));
             }
             return null;
         }

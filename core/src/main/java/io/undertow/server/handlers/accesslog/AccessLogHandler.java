@@ -144,8 +144,6 @@ public class AccessLogHandler implements HttpHandler {
                 '}';
     }
 
-
-
     public static class Builder implements HandlerBuilder {
 
         @Override

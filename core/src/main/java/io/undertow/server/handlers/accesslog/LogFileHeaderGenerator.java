@@ -19,7 +19,8 @@
 package io.undertow.server.handlers.accesslog;
 
 /**
- * Interface that generates headers for the access log
+ * Interface that generates the header for an access log. This is called
+ * every time a new log file is started.
  *
  * @author Stuart Douglas
  */

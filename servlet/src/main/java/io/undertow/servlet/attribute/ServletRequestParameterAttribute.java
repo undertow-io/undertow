@@ -16,57 +16,56 @@
  *  limitations under the License.
  */
 
-package io.undertow.attribute;
+package io.undertow.servlet.attribute;
 
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributeBuilder;
+import io.undertow.attribute.ReadOnlyAttributeException;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
- * The bytes sent
+ * An attribute in the servlet request
  *
- * @author Filipe Ferraz
+ * @author Stuart Douglas
  */
-public class BytesSentAttribute implements ExchangeAttribute {
+public class ServletRequestParameterAttribute implements ExchangeAttribute {
 
-    public static final String BYTES_SENT_SHORT_UPPER = "%B";
-    public static final String BYTES_SENT_SHORT_LOWER = "%b";
-    public static final String BYTES_SENT = "%{BYTES_SENT}";
+    private final String attributeName;
 
-    private final boolean dashIfZero;
-
-    public BytesSentAttribute(boolean dashIfZero) {
-        this.dashIfZero = dashIfZero;
+    public ServletRequestParameterAttribute(final String attributeName) {
+        this.attributeName = attributeName;
     }
-
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        if (dashIfZero )  {
-            long bytesSent = exchange.getResponseBytesSent();
-            return bytesSent == 0 ? "-" : Long.toString(bytesSent);
-        } else {
-            return Long.toString(exchange.getResponseBytesSent());
+        ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if (context != null) {
+            Object result = context.getServletRequest().getParameter(attributeName);
+            if (result != null) {
+                return result.toString();
+            }
         }
+        return null;
     }
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        throw new ReadOnlyAttributeException("Bytes sent", newValue);
+        throw new ReadOnlyAttributeException();
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override
         public String name() {
-            return "Bytes Sent";
+            return "Servlet request parameter";
         }
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if(token.equals(BYTES_SENT_SHORT_LOWER)) {
-                return new BytesSentAttribute(true);
-            }
-            if (token.equals(BYTES_SENT) || token.equals(BYTES_SENT_SHORT_UPPER)) {
-                return new BytesSentAttribute(false);
+            if (token.startsWith("%{rp,") && token.endsWith("}")) {
+                final String attributeName = token.substring(5, token.length() - 1);
+                return new ServletRequestParameterAttribute(attributeName);
             }
             return null;
         }

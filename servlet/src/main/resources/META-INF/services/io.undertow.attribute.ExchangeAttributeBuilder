@@ -4,3 +4,10 @@ io.undertow.servlet.attribute.ServletSessionIdAttribute$Builder
 io.undertow.servlet.attribute.ServletRequestURLAttribute$Builder
 io.undertow.servlet.attribute.ServletRequestLineAttribute$Builder
 io.undertow.servlet.attribute.ServletRelativePathAttribute$Builder
+io.undertow.servlet.attribute.ServletRequestedSessionIdAttribute$Builder
+io.undertow.servlet.attribute.ServletRequestedSessionIdFromCookieAttribute$Builder
+io.undertow.servlet.attribute.ServletRequestedSessionIdValidAttribute$Builder
+io.undertow.servlet.attribute.ServletRequestLocaleAttribute$Builder
+io.undertow.servlet.attribute.ServletRequestCharacterEncodingAttribute$Builder
+io.undertow.servlet.attribute.ServletContextAttribute$Builder
+io.undertow.servlet.attribute.ServletRequestParameterAttribute$Builder

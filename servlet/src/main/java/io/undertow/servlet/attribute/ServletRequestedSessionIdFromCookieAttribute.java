@@ -16,57 +16,56 @@
  *  limitations under the License.
  */
 
-package io.undertow.attribute;
+package io.undertow.servlet.attribute;
 
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributeBuilder;
+import io.undertow.attribute.ReadOnlyAttributeException;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.handlers.ServletRequestContext;
+
+import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 /**
- * The bytes sent
+ * The request session ID
  *
- * @author Filipe Ferraz
+ * @author Stuart Douglas
  */
-public class BytesSentAttribute implements ExchangeAttribute {
+public class ServletRequestedSessionIdFromCookieAttribute implements ExchangeAttribute {
 
-    public static final String BYTES_SENT_SHORT_UPPER = "%B";
-    public static final String BYTES_SENT_SHORT_LOWER = "%b";
-    public static final String BYTES_SENT = "%{BYTES_SENT}";
+    public static final String REQUESTED_SESSION_ID_FROM_COOKIE = "%{REQUESTED_SESSION_ID_FROM_COOKIE}";
 
-    private final boolean dashIfZero;
-
-    public BytesSentAttribute(boolean dashIfZero) {
-        this.dashIfZero = dashIfZero;
-    }
-
+    public static final ServletRequestedSessionIdFromCookieAttribute INSTANCE = new ServletRequestedSessionIdFromCookieAttribute();
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        if (dashIfZero )  {
-            long bytesSent = exchange.getResponseBytesSent();
-            return bytesSent == 0 ? "-" : Long.toString(bytesSent);
-        } else {
-            return Long.toString(exchange.getResponseBytesSent());
+        ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if (context != null) {
+            ServletRequest req = context.getServletRequest();
+            if (req instanceof HttpServletRequest) {
+                return Boolean.toString(((HttpServletRequest) req).isRequestedSessionIdFromCookie());
+            }
         }
+        return null;
     }
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        throw new ReadOnlyAttributeException("Bytes sent", newValue);
+        throw new ReadOnlyAttributeException("Requested session ID from cookie", newValue);
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override
         public String name() {
-            return "Bytes Sent";
+            return "Requested Session ID from cookie attribute";
         }
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if(token.equals(BYTES_SENT_SHORT_LOWER)) {
-                return new BytesSentAttribute(true);
-            }
-            if (token.equals(BYTES_SENT) || token.equals(BYTES_SENT_SHORT_UPPER)) {
-                return new BytesSentAttribute(false);
+            if (token.equals(REQUESTED_SESSION_ID_FROM_COOKIE)) {
+                return INSTANCE;
             }
             return null;
         }

@@ -39,6 +39,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import static org.jboss.logging.Logger.Level.DEBUG;
+import static org.jboss.logging.Logger.Level.ERROR;
 import static org.jboss.logging.Logger.Level.INFO;
 import static org.jboss.logging.Logger.Level.WARN;
 
@@ -296,4 +297,33 @@ public interface UndertowLogger extends BasicLogger {
 
     @Message(id=5061, value = "More than %s restarts detected, breaking assumed infinite loop")
     IllegalStateException maxRestartsExceeded(int maxRestarts);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5062, value = "Pattern parse error")
+    void extendedAccessLogPatternParseError(@Cause Throwable t);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5063, value = "Unable to decode with rest of chars starting: %s")
+    void extendedAccessLogUnknownToken(String token);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5064, value = "No closing ) found for in decode")
+    void extendedAccessLogMissingClosing();
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5065, value = "The next characters couldn't be decoded: %s")
+    void extendedAccessLogCannotDecode(String chars);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5066, value = "X param for servlet request, couldn't decode value: %s")
+    void extendedAccessLogCannotDecodeXParamValue(String value);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5067, value = "X param in wrong format. Needs to be 'x-#(...)'")
+    void extendedAccessLogBadXParam();
+
+    @LogMessage(level = INFO)
+    @Message(id = 5068, value = "Pattern was just empty or whitespace")
+    void extendedAccessLogEmptyPattern();
+
 }

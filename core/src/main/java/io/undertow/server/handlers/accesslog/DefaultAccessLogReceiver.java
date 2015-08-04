@@ -221,7 +221,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             if (writer == null) {
                 boolean created = !Files.exists(defaultLogFile);
                 writer = Files.newBufferedWriter(defaultLogFile, StandardCharsets.UTF_8, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-                if(created && fileHeaderGenerator != null) {
+                if(Files.size(defaultLogFile) == 0 && fileHeaderGenerator != null) {
                     String header = fileHeaderGenerator.generateHeader();
                     if(header != null) {
                         writer.write(header);
