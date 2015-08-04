@@ -22,11 +22,13 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.PathTemplateMatch;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.channels.StreamSinkChannel;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -74,6 +76,12 @@ public class ServerSentEventHandler implements HttpHandler {
 
     private void handleConnect(StreamSinkChannel channel, HttpServerExchange exchange) {
         final ServerSentEventConnection connection = new ServerSentEventConnection(exchange, channel);
+        PathTemplateMatch pt = exchange.getAttachment(PathTemplateMatch.ATTACHMENT_KEY);
+        if(pt != null) {
+            for(Map.Entry<String, String> p : pt.getParameters().entrySet()) {
+                connection.setParameter(p.getKey(), p.getValue());
+            }
+        }
         connections.add(connection);
         connection.addCloseTask(new ChannelListener<ServerSentEventConnection>() {
             @Override

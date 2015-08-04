@@ -39,8 +39,10 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -65,6 +67,8 @@ public class ServerSentEventConnection implements Channel, Attachable {
     private final Queue<SSEData> queue = new ConcurrentLinkedDeque<>();
     private final List<SSEData> buffered = new ArrayList<>();
     private final List<ChannelListener<ServerSentEventConnection>> closeTasks = new CopyOnWriteArrayList<>();
+    private Map<String, String> parameters;
+    private Map<String, Object> properties = new HashMap<>();
 
     private static final AtomicIntegerFieldUpdater<ServerSentEventConnection> openUpdater = AtomicIntegerFieldUpdater.newUpdater(ServerSentEventConnection.class, "open");
     private volatile int open = 1;
@@ -191,6 +195,24 @@ public class ServerSentEventConnection implements Channel, Attachable {
                 }
             }
         });
+    }
+
+    public String getParameter(String name) {
+        if(parameters == null) {
+            return null;
+        }
+        return parameters.get(name);
+    }
+
+    public void setParameter(String name, String value) {
+        if(parameters == null) {
+            parameters = new HashMap<>();
+        }
+        parameters.put(name, value);
+    }
+
+    public Map<String, Object> getProperties() {
+        return properties;
     }
 
     /**

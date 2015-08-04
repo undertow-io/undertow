@@ -19,7 +19,7 @@
 package io.undertow.server.handlers.sse;
 
 /**
- * Callback handler that is invoked when a client connects to a
+ * Callback handler that is invoked when a client connects to a SSE endpoint
  *
  * @author Stuart Douglas
  */

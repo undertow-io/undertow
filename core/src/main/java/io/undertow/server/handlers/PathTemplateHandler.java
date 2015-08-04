@@ -35,6 +35,8 @@ public class PathTemplateHandler implements HttpHandler {
 
     private final boolean rewriteQueryParameters;
 
+    private final HttpHandler next;
+
     /**
      * @see io.undertow.util.PathTemplateMatch#ATTACHMENT_KEY
      */
@@ -43,19 +45,29 @@ public class PathTemplateHandler implements HttpHandler {
 
     private final PathTemplateMatcher<HttpHandler> pathTemplateMatcher = new PathTemplateMatcher<>();
 
-    public PathTemplateHandler(boolean rewriteQueryParameters) {
-        this.rewriteQueryParameters = rewriteQueryParameters;
-    }
-
     public PathTemplateHandler() {
         this(true);
     }
+
+    public PathTemplateHandler(boolean rewriteQueryParameters) {
+        this(ResponseCodeHandler.HANDLE_404, rewriteQueryParameters);
+    }
+
+    public PathTemplateHandler(HttpHandler next) {
+        this(next, true);
+    }
+
+    public PathTemplateHandler(HttpHandler next, boolean rewriteQueryParameters) {
+        this.rewriteQueryParameters = rewriteQueryParameters;
+        this.next = next;
+    }
+
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         PathTemplateMatcher.PathMatchResult<HttpHandler> match = pathTemplateMatcher.match(exchange.getRelativePath());
         if (match == null) {
-            ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
+            next.handleRequest(exchange);
             return;
         }
         exchange.putAttachment(PATH_TEMPLATE_MATCH, new PathTemplateMatch(match.getMatchedTemplate(), match.getParameters()));
