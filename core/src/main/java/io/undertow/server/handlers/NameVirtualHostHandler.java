@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Locale;
 import java.util.Map;
 
 import io.undertow.Handlers;
@@ -37,7 +38,6 @@ public class NameVirtualHostHandler implements HttpHandler {
     private volatile HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
     private final Map<String, HttpHandler> hosts = new CopyOnWriteMap<>();
 
-
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String hostHeader = exchange.getRequestHeaders().getFirst(Headers.HOST);
@@ -48,7 +48,14 @@ public class NameVirtualHostHandler implements HttpHandler {
             } else {
                 host = hostHeader;
             }
-            final HttpHandler handler = hosts.get(host);
+            //most hosts will be lowercase, so we do the host
+            HttpHandler handler = hosts.get(host);
+            if (handler != null) {
+                handler.handleRequest(exchange);
+                return;
+            }
+            //do a cache insensitive match
+            handler = hosts.get(host.toLowerCase(Locale.ENGLISH));
             if (handler != null) {
                 handler.handleRequest(exchange);
                 return;
@@ -73,12 +80,12 @@ public class NameVirtualHostHandler implements HttpHandler {
 
     public synchronized NameVirtualHostHandler addHost(final String host, final HttpHandler handler) {
         Handlers.handlerNotNull(handler);
-        hosts.put(host, handler);
+        hosts.put(host.toLowerCase(Locale.ENGLISH), handler);
         return this;
     }
 
     public synchronized NameVirtualHostHandler removeHost(final String host) {
-        hosts.remove(host);
+        hosts.remove(host.toLowerCase(Locale.ENGLISH));
         return this;
     }
 }
