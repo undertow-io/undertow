@@ -56,7 +56,7 @@ public class ServletInputStreamEarlyCloseClientSideTestCase {
     @Test
     public void testServletInputStreamEarlyClose() throws Exception {
         TestHttpClient client = new TestHttpClient();
-
+        EarlyCloseClientServlet.reset();
         try (Socket socket = new Socket()) {
             socket.connect(DefaultServer.getDefaultServerAddress());
             try {
