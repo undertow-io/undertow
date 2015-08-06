@@ -410,4 +410,7 @@ public interface UndertowMessages {
 
     @Message(id = 127, value = "Response has already been sent")
     IllegalStateException responseComplete();
+
+    @Message(id = 128, value = "Remote peer closed connection before all data could be read")
+    IOException couldNotReadContentLengthData();
 }
