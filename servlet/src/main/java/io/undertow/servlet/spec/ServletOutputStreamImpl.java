@@ -745,7 +745,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (listener != null) {
             throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
         }
-        final ServletRequest servletRequest = servletRequestContext.getServletRequest();
+        final ServletRequest servletRequest = servletRequestContext.getOriginalRequest();
         if (!servletRequest.isAsyncStarted()) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
