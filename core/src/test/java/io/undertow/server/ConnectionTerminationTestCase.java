@@ -80,7 +80,7 @@ public class ConnectionTerminationTestCase {
                 sb.append("hello world\r\n");
             }
             //send a large request that is too small, then kill the socket
-            String request = "GET / HTTP/1.1\r\nHost:localhost\r\nContent-Length:" + sb.length() + 100 + "\r\n\r\n" + sb.toString();
+            String request = "POST / HTTP/1.1\r\nHost:localhost\r\nContent-Length:" + sb.length() + 100 + "\r\n\r\n" + sb.toString();
             OutputStream outputStream = socket.getOutputStream();
 
             outputStream.write(request.getBytes("US-ASCII"));
