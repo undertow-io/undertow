@@ -398,4 +398,7 @@ public interface UndertowMessages {
 
     @Message(id = 123, value = "MCMP message %s rejected due to suspicious characters")
     RuntimeException mcmpMessageRejectedDueToSuspiciousCharacters(String data);
+
+    @Message(id = 128, value = "Remote peer closed connection before all data could be read")
+    IOException couldNotReadContentLengthData();
 }
