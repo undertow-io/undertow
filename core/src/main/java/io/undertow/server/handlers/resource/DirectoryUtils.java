@@ -26,6 +26,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
@@ -123,7 +124,7 @@ public class DirectoryUtils {
         }
 
 
-        SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss");
+        SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.US);
         int i = 0;
         if (parent != null) {
             i++;
