@@ -28,6 +28,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
@@ -41,7 +42,7 @@ import org.xnio.channels.MulticastMessageChannel;
 class MCMPAdvertiseTask implements Runnable {
 
     public static final String RFC_822_FMT = "EEE, d MMM yyyy HH:mm:ss Z";
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(RFC_822_FMT);
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(RFC_822_FMT, Locale.US);
     private static final boolean linuxLike;
     private static final boolean windows;
 
