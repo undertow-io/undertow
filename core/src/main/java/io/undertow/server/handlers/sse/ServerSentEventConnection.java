@@ -40,6 +40,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -149,6 +150,22 @@ public class ServerSentEventConnection implements Channel, Attachable {
      */
     public String getRequestURI() {
         return exchange.getRequestURI();
+    }
+
+    /**
+     *
+     * @return the query parameters
+     */
+    public Map<String, Deque<String>> getQueryParameters() {
+        return exchange.getQueryParameters();
+    }
+
+    /**
+     *
+     * @return the query string
+     */
+    public String getQueryString() {
+        return exchange.getQueryString();
     }
 
     /**
