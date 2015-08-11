@@ -198,7 +198,7 @@ public class ModCluster {
 
         private int maxRequestTime = -1;
         private long ttl;
-        private boolean useAlias = true;
+        private boolean useAlias = false;
 
         private NodeHealthChecker healthChecker = NodeHealthChecker.NO_CHECK;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
