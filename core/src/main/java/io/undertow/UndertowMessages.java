@@ -242,7 +242,7 @@ public interface UndertowMessages {
     IllegalStateException matcherAlreadyContainsTemplate(String templateString, String templateString1);
 
     @Message(id = 72, value = "Failed to decode url %s to charset %s")
-    IllegalArgumentException failedToDecodeURL(String s, String enc);
+    IllegalArgumentException failedToDecodeURL(String s, String enc, @Cause Exception e);
 
 
     @Message(id = 73, value = "Resource change listeners are not supported")
@@ -414,6 +414,4 @@ public interface UndertowMessages {
     @Message(id = 128, value = "Remote peer closed connection before all data could be read")
     IOException couldNotReadContentLengthData();
 
-    @Message(id = 129, value = "Failed to decode url %s to charset %s")
-    IllegalArgumentException failedToDecodeURL(String s, String enc, @Cause Exception e);
 }
