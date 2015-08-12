@@ -110,17 +110,17 @@ public class URLUtils {
                             } else if (p1 >= 'a' && p1 <= 'f') {
                                 v = (p1 - 'a' + 10) << 4;
                             } else {
-                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc);
+                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
                             }
                             if (p2 >= '0' && p2 <= '9') {
                                 v += (p2 - '0');
                             } else if (p2 >= 'a' && p2 <= 'f') {
                                 v += (p2 - 'a' + 10);
                             } else {
-                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc);
+                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
                             }
                             if (v < 0) {
-                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc);
+                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
                             }
                             if(v == '/' || v== '\\') {
                                 mightRequireSlashEscape = true;
@@ -137,7 +137,7 @@ public class URLUtils {
                         // "%x" will cause an exception to be thrown
 
                         if ((i < numChars) && (c == '%')) {
-                            throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc);
+                            throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
                         }
 
                         String decoded = new String(bytes, 0, pos, enc);
@@ -163,9 +163,9 @@ public class URLUtils {
                         }
                         mightRequireSlashEscape = false;
                     } catch (NumberFormatException e) {
-                        throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc);
+                        throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, e);
                     } catch (UnsupportedEncodingException e) {
-                        throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc);
+                        throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, e);
                     }
                     needToChange = true;
                     break;
@@ -184,7 +184,7 @@ public class URLUtils {
                             }
                             return new String(buf, enc);
                         } catch (UnsupportedEncodingException e) {
-                            throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc);
+                            throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, e);
                         }
                     }
                     break;
