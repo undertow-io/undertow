@@ -52,6 +52,7 @@ import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.util.TreeMap;
 
+import io.undertow.UndertowMessages;
 import io.undertow.security.impl.ExternalAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -420,7 +421,11 @@ public class AjpRequestParser {
 
     private String decode(String url, final boolean containsUrlCharacters) throws UnsupportedEncodingException {
         if (doDecode && containsUrlCharacters) {
-            return URLDecoder.decode(url, encoding);
+            try {
+                return URLDecoder.decode(url, encoding);
+            } catch (Exception e) {
+                throw UndertowMessages.MESSAGES.failedToDecodeURL(url, encoding, e);
+            }
         }
         return url;
     }
