@@ -461,7 +461,11 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     @Override
     public void truncateWrites() throws IOException {
-        notifyWriteClosed();
+        try {
+            notifyWriteClosed();
+        } finally {
+            delegate.getSinkChannel().close();
+        }
     }
 
     @Override
