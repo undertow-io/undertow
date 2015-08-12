@@ -413,4 +413,7 @@ public interface UndertowMessages {
 
     @Message(id = 128, value = "Remote peer closed connection before all data could be read")
     IOException couldNotReadContentLengthData();
+
+    @Message(id = 129, value = "Failed to decode url %s to charset %s")
+    IllegalArgumentException failedToDecodeURL(String s, String enc, @Cause Exception e);
 }
