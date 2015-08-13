@@ -22,13 +22,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.List;
 
 import io.undertow.websockets.core.function.ChannelFunction;
 import io.undertow.websockets.core.function.ChannelFunctionFileChannel;
 import io.undertow.websockets.core.protocol.version07.Masker;
 import io.undertow.websockets.core.protocol.version07.UTF8Checker;
-import io.undertow.websockets.extensions.ExtensionByteBuffer;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
@@ -48,8 +46,7 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
     private boolean finalFragment;
     private final int rsv;
     private final ChannelFunction[] functions;
-    private final List<ExtensionFunction> extensions;
-    private ExtensionByteBuffer extensionResult;
+    private final ExtensionFunction extensionFunction;
     private Masker masker;
     private UTF8Checker checker;
 
@@ -71,15 +68,8 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
                 checker = (UTF8Checker) func;
             }
         }
-        if (wsChannel.areExtensionsSupported() && wsChannel.getExtensions() != null && !wsChannel.getExtensions().isEmpty()) {
-            extensions = wsChannel.getExtensions();
-        } else {
-            extensions = null;
-        }
-        this.extensionResult = null;
+        this.extensionFunction = wsChannel.getExtensionFunction();
     }
-
-
 
     /**
      * Return the {@link WebSocketFrameType} or {@code null} if its not known at the calling time.
@@ -158,30 +148,14 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
-        int r;
         int position = dst.position();
-        if (extensionResult == null) {
-            r = super.read(dst);
-            if (getRsv() > 0) {
-                extensionResult = applyExtensions(dst, position, r);
-            }
-            if (r > 0) {
-                checker(dst, position, dst.position() - position, false);
-            } else if(r == -1) {
-                checkComplete();
-            }
-            return r;
-        } else {
-            r = extensionResult.flushExtra(dst);
-            if (!extensionResult.hasExtra()) {
-                extensionResult.free();
-                extensionResult = null;
-            }
-            if (r > 0) {
-                checker(dst, position, dst.position() - position, isComplete() && extensionResult == null);
-            }
-            return r;
+        int r = super.read(dst);
+        if (r > 0) {
+            checker(dst, position, dst.position() - position, false);
+        } else if(r == -1) {
+            checkComplete();
         }
+        return r;
     }
 
     @Override
@@ -263,45 +237,11 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
     }
 
     @Override
-    protected long handleFrameData(Pooled<ByteBuffer> frameData, long frameDataRemaining) {
+    protected Pooled<ByteBuffer> processFrameData(Pooled<ByteBuffer> frameData, boolean lastFragmentOfFrame) throws IOException {
         if(masker != null) {
             masker.afterRead(frameData.getResource(), frameData.getResource().position(), frameData.getResource().remaining());
         }
-        return frameDataRemaining;
-    }
-
-    /**
-     * Process Extensions chain after a read operation.
-     * <p>
-     * An extension can modify original content beyond {@code ByteBuffer} capacity,then original buffer is wrapped with
-     * {@link ExtensionByteBuffer} class. {@code ExtensionByteBuffer} stores extra buffer to manage overflow of original
-     * {@code ByteBuffer} .
-     *
-     * @param buffer    the buffer to operate on
-     * @param position  the index in the buffer to start from
-     * @param length    the number of bytes to operate on
-     * @return          a {@link ExtensionByteBuffer} instance as a wrapper of original buffer with extra buffers;
-     *                  {@code null} if no extra buffers needed
-     * @throws IOException
-     */
-    protected ExtensionByteBuffer applyExtensions(final ByteBuffer buffer, final int position, final int length) throws IOException {
-        ExtensionByteBuffer extBuffer = new ExtensionByteBuffer(getWebSocketChannel(), buffer, position);
-        int newLength = length;
-        if (extensions != null) {
-            for (ExtensionFunction ext : extensions) {
-                ext.afterRead(this, extBuffer, position, newLength);
-                if (extBuffer.getFilled() == 0) {
-                    buffer.position(position);
-                    newLength = 0;
-                } else if (extBuffer.getFilled() != newLength) {
-                    newLength = extBuffer.getFilled();
-                }
-            }
-        }
-        if (!extBuffer.hasExtra()) {
-            return null;
-        }
-        return extBuffer;
+        return extensionFunction.transformForRead(frameData, getWebSocketChannel(), lastFragmentOfFrame);
     }
 
     private static class Bounds {

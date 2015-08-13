@@ -166,6 +166,6 @@ public class PerMessageDeflateHandshake implements ExtensionHandshake {
 
     @Override
     public ExtensionFunction create() {
-        return new PerMessageDeflateFunction(client, deflaterLevel, compressContextTakeover, decompressContextTakeover);
+        return new PerMessageDeflateFunction(deflaterLevel, compressContextTakeover, decompressContextTakeover);
     }
 }

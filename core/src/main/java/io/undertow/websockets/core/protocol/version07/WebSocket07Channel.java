@@ -28,7 +28,6 @@ import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.core.function.ChannelFunction;
 
 import io.undertow.websockets.extensions.ExtensionFunction;
 import org.xnio.IoUtils;
@@ -38,7 +37,6 @@ import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Set;
 
 
@@ -79,8 +77,6 @@ public class WebSocket07Channel extends WebSocketChannel {
     protected static final byte OPCODE_PING = 0x9;
     protected static final byte OPCODE_PONG = 0xA;
 
-    private static final ChannelFunction[] EMPTY_FUNCTIONS = new ChannelFunction[0];
-
     /**
      * Create a new {@link WebSocket07Channel}
      *
@@ -90,8 +86,8 @@ public class WebSocket07Channel extends WebSocketChannel {
      * @param wsUrl      The url for which the {@link WebSocket07Channel} was created.
      */
     public WebSocket07Channel(StreamConnection channel, Pool<ByteBuffer> bufferPool,
-                              String wsUrl, String subProtocol, final boolean client, boolean allowExtensions, final List<ExtensionFunction> extensions, Set<WebSocketChannel> openConnections, OptionMap options) {
-        super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocol, client, allowExtensions, extensions, openConnections, options);
+                              String wsUrl, String subProtocol, final boolean client, boolean allowExtensions, final ExtensionFunction extensionFunction, Set<WebSocketChannel> openConnections, OptionMap options) {
+        super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocol, client, allowExtensions, extensionFunction, openConnections, options);
     }
 
     @Override
@@ -256,8 +252,6 @@ public class WebSocket07Channel extends WebSocketChannel {
 
                         if (frameRsv != 0) {
                             if (!areExtensionsSupported()) {
-                                throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
-                            } else if (getExtensions() == null || getExtensions().isEmpty()) {
                                 throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
                             }
                         }

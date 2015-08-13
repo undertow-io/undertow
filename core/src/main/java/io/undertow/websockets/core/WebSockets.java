@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.core;
 
+import io.undertow.util.ImmediatePooled;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -45,7 +46,7 @@ public class WebSockets {
      */
     public static void sendText(final String message, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
         final ByteBuffer data = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel, callback, -1);
+        sendInternal(data, WebSocketFrameType.TEXT, wsChannel, callback, -1);
     }
 
     /**
@@ -58,7 +59,7 @@ public class WebSockets {
      */
     public static void sendText(final String message, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
         final ByteBuffer data = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel, callback, timeoutmillis);
+        sendInternal(data, WebSocketFrameType.TEXT, wsChannel, callback, timeoutmillis);
     }
 
     /**
@@ -69,7 +70,7 @@ public class WebSockets {
      * @param callback
      */
     public static void sendText(final ByteBuffer message, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        sendInternal(new ByteBuffer[]{message}, WebSocketFrameType.TEXT, wsChannel, callback, -1);
+        sendInternal(message, WebSocketFrameType.TEXT, wsChannel, callback, -1);
     }
 
     /**
@@ -80,7 +81,7 @@ public class WebSockets {
      * @param callback
      */
     public static void sendText(final ByteBuffer message, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
-        sendInternal(new ByteBuffer[]{message}, WebSocketFrameType.TEXT, wsChannel, callback, timeoutmillis);
+        sendInternal(message, WebSocketFrameType.TEXT, wsChannel, callback, timeoutmillis);
     }
 
 
@@ -92,7 +93,7 @@ public class WebSockets {
      */
     public static void sendTextBlocking(final String message, final WebSocketChannel wsChannel) throws IOException {
         final ByteBuffer data = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
-        sendBlockingInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel);
+        sendBlockingInternal(data, WebSocketFrameType.TEXT, wsChannel);
     }
 
     /**
@@ -102,7 +103,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendTextBlocking(final ByteBuffer message, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(new ByteBuffer[]{message}, WebSocketFrameType.TEXT, wsChannel);
+        sendBlockingInternal(message, WebSocketFrameType.TEXT, wsChannel);
     }
 
     /**
@@ -113,28 +114,6 @@ public class WebSockets {
      * @param callback
      */
     public static void sendPing(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.PING, wsChannel, callback, -1);
-    }
-
-    /**
-     * Sends a complete ping message, invoking the callback when complete
-     *
-     * @param data
-     * @param wsChannel
-     * @param callback
-     */
-    public static void sendPing(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.PING, wsChannel, callback, timeoutmillis);
-    }
-
-    /**
-     * Sends a complete ping message, invoking the callback when complete
-     *
-     * @param data
-     * @param wsChannel
-     * @param callback
-     */
-    public static void sendPing(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
         sendInternal(data, WebSocketFrameType.PING, wsChannel, callback, -1);
     }
 
@@ -145,8 +124,30 @@ public class WebSockets {
      * @param wsChannel
      * @param callback
      */
-    public static void sendPing(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
+    public static void sendPing(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
         sendInternal(data, WebSocketFrameType.PING, wsChannel, callback, timeoutmillis);
+    }
+
+    /**
+     * Sends a complete ping message, invoking the callback when complete
+     *
+     * @param data
+     * @param wsChannel
+     * @param callback
+     */
+    public static void sendPing(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
+        sendInternal(mergeBuffers(data), WebSocketFrameType.PING, wsChannel, callback, -1);
+    }
+
+    /**
+     * Sends a complete ping message, invoking the callback when complete
+     *
+     * @param data
+     * @param wsChannel
+     * @param callback
+     */
+    public static void sendPing(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
+        sendInternal(mergeBuffers(data), WebSocketFrameType.PING, wsChannel, callback, timeoutmillis);
     }
 
     /**
@@ -156,7 +157,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendPingBlocking(final ByteBuffer data, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(new ByteBuffer[]{data}, WebSocketFrameType.PING, wsChannel);
+        sendBlockingInternal(data, WebSocketFrameType.PING, wsChannel);
     }
 
     /**
@@ -166,7 +167,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendPingBlocking(final ByteBuffer[] data, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(data, WebSocketFrameType.PING, wsChannel);
+        sendBlockingInternal(mergeBuffers(data), WebSocketFrameType.PING, wsChannel);
     }
 
     /**
@@ -177,7 +178,7 @@ public class WebSockets {
      * @param callback
      */
     public static void sendPong(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.PONG, wsChannel, callback, -1);
+        sendInternal(data, WebSocketFrameType.PONG, wsChannel, callback, -1);
     }
 
     /**
@@ -188,7 +189,7 @@ public class WebSockets {
      * @param callback
      */
     public static void sendPong(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.PONG, wsChannel, callback, timeoutmillis);
+        sendInternal(data, WebSocketFrameType.PONG, wsChannel, callback, timeoutmillis);
     }
 
 
@@ -200,7 +201,7 @@ public class WebSockets {
      * @param callback
      */
     public static void sendPong(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        sendInternal(data, WebSocketFrameType.PONG, wsChannel, callback, -1);
+        sendInternal(mergeBuffers(data), WebSocketFrameType.PONG, wsChannel, callback, -1);
     }
 
     /**
@@ -211,7 +212,7 @@ public class WebSockets {
      * @param callback
      */
     public static void sendPong(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
-        sendInternal(data, WebSocketFrameType.PONG, wsChannel, callback, timeoutmillis);
+        sendInternal(mergeBuffers(data), WebSocketFrameType.PONG, wsChannel, callback, timeoutmillis);
     }
     /**
      * Sends a complete pong message using blocking IO
@@ -220,7 +221,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendPongBlocking(final ByteBuffer data, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(new ByteBuffer[]{data}, WebSocketFrameType.PONG, wsChannel);
+        sendBlockingInternal(data, WebSocketFrameType.PONG, wsChannel);
     }
 
     /**
@@ -230,7 +231,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendPongBlocking(final ByteBuffer[] data, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(data, WebSocketFrameType.PONG, wsChannel);
+        sendBlockingInternal(mergeBuffers(data), WebSocketFrameType.PONG, wsChannel);
     }
 
     /**
@@ -241,28 +242,6 @@ public class WebSockets {
      * @param callback
      */
     public static void sendBinary(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.BINARY, wsChannel, callback, -1);
-    }
-
-    /**
-     * Sends a complete text message, invoking the callback when complete
-     *
-     * @param data
-     * @param wsChannel
-     * @param callback
-     */
-    public static void sendBinary(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
-        sendInternal(new ByteBuffer[]{data}, WebSocketFrameType.BINARY, wsChannel, callback, timeoutmillis);
-    }
-
-    /**
-     * Sends a complete text message, invoking the callback when complete
-     *
-     * @param data
-     * @param wsChannel
-     * @param callback
-     */
-    public static void sendBinary(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
         sendInternal(data, WebSocketFrameType.BINARY, wsChannel, callback, -1);
     }
 
@@ -273,8 +252,30 @@ public class WebSockets {
      * @param wsChannel
      * @param callback
      */
-    public static void sendBinary(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
+    public static void sendBinary(final ByteBuffer data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
         sendInternal(data, WebSocketFrameType.BINARY, wsChannel, callback, timeoutmillis);
+    }
+
+    /**
+     * Sends a complete text message, invoking the callback when complete
+     *
+     * @param data
+     * @param wsChannel
+     * @param callback
+     */
+    public static void sendBinary(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
+        sendInternal(mergeBuffers(data), WebSocketFrameType.BINARY, wsChannel, callback, -1);
+    }
+
+    /**
+     * Sends a complete text message, invoking the callback when complete
+     *
+     * @param data
+     * @param wsChannel
+     * @param callback
+     */
+    public static void sendBinary(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
+        sendInternal(mergeBuffers(data), WebSocketFrameType.BINARY, wsChannel, callback, timeoutmillis);
     }
 
     /**
@@ -284,7 +285,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendBinaryBlocking(final ByteBuffer data, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(new ByteBuffer[]{data}, WebSocketFrameType.BINARY, wsChannel);
+        sendBlockingInternal(data, WebSocketFrameType.BINARY, wsChannel);
     }
 
     /**
@@ -294,7 +295,7 @@ public class WebSockets {
      * @param wsChannel
      */
     public static void sendBinaryBlocking(final ByteBuffer[] data, final WebSocketChannel wsChannel) throws IOException {
-        sendBlockingInternal(data, WebSocketFrameType.BINARY, wsChannel);
+        sendBlockingInternal(mergeBuffers(data), WebSocketFrameType.BINARY, wsChannel);
     }
 
     /**
@@ -343,7 +344,7 @@ public class WebSockets {
     public static void sendClose(final CloseMessage closeMessage, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback) {
         wsChannel.setCloseCode(closeMessage.getCode());
         wsChannel.setCloseReason(closeMessage.getReason());
-        sendInternal(new ByteBuffer[]{closeMessage.toByteBuffer()}, WebSocketFrameType.CLOSE, wsChannel, callback, -1);
+        sendInternal(closeMessage.toByteBuffer(), WebSocketFrameType.CLOSE, wsChannel, callback, -1);
     }
 
     /**
@@ -355,7 +356,7 @@ public class WebSockets {
     public static void sendCloseBlocking(final CloseMessage closeMessage, final WebSocketChannel wsChannel) throws IOException {
         wsChannel.setCloseReason(closeMessage.getReason());
         wsChannel.setCloseCode(closeMessage.getCode());
-        sendBlockingInternal(new ByteBuffer[]{closeMessage.toByteBuffer()}, WebSocketFrameType.CLOSE, wsChannel);
+        sendBlockingInternal(closeMessage.toByteBuffer(), WebSocketFrameType.CLOSE, wsChannel);
     }
     /**
      * Sends a complete close message, invoking the callback when complete
@@ -386,11 +387,14 @@ public class WebSockets {
         sendCloseBlocking(new CloseMessage(data), wsChannel);
     }
 
-    private static void sendInternal(final ByteBuffer[] data, WebSocketFrameType type, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
+    private static void sendInternal(final ByteBuffer data, WebSocketFrameType type, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
         try {
-            long totalData = Buffers.remaining(data);
-            StreamSinkFrameChannel channel = wsChannel.send(type, totalData);
-            sendData(data, wsChannel, callback, channel, null, timeoutmillis);
+            StreamSinkFrameChannel channel = wsChannel.send(type, data.remaining());
+            // TODO chunk data into some MTU-like thing to control packet size
+            if(!channel.send(new ImmediatePooled<>(data))) {
+                throw WebSocketMessages.MESSAGES.unableToSendOnNewChannel();
+            }
+            flushChannelAsync(wsChannel, callback, channel, null, timeoutmillis);
         } catch (IOException e) {
             if (callback != null) {
                 callback.onError(wsChannel, null, e);
@@ -398,52 +402,6 @@ public class WebSockets {
                 IoUtils.safeClose(wsChannel);
             }
         }
-    }
-
-    private static <T> void sendData(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<T> callback, StreamSinkFrameChannel channel, final T context, long timeoutmillis) throws IOException {
-        boolean hasRemaining = true;
-        while (hasRemaining) {
-            long res = channel.write(data);
-            hasRemaining = Buffers.hasRemaining(data);
-            if (res == 0 && hasRemaining) {
-                channel.getWriteSetter().set(new ChannelListener<StreamSinkFrameChannel>() {
-                    @Override
-                    public void handleEvent(StreamSinkFrameChannel channel) {
-                        do {
-                            try {
-                                long res = channel.write(data);
-                                if (res == 0) {
-                                    return;
-                                }
-                            } catch (IOException e) {
-                                handleIoException(channel, e, callback, context, wsChannel);
-                                return;
-                            }
-                        } while (Buffers.hasRemaining(data));
-                        channel.suspendWrites();
-                        try {
-                            flushChannelAsync(wsChannel, callback, channel, context, -1);//timeout has already been setup
-                        } catch (IOException e) {
-                            handleIoException(channel, e, callback, context, wsChannel);
-                        }
-                    }
-                });
-                channel.resumeWrites();
-                if(timeoutmillis > 0) {
-                    setupTimeout(channel, timeoutmillis);
-                }
-                return;
-            }
-        }
-        flushChannelAsync(wsChannel, callback, channel, context, timeoutmillis);
-    }
-
-    private static <T> void handleIoException(StreamSinkFrameChannel channel, IOException e, WebSocketCallback<T> callback, T context, WebSocketChannel wsChannel) {
-        if (callback != null) {
-            callback.onError(channel.getWebSocketChannel(), context, e);
-        }
-        IoUtils.safeClose(wsChannel);
-        channel.suspendWrites();
     }
 
     private static <T> void flushChannelAsync(final WebSocketChannel wsChannel, final WebSocketCallback<T> callback, StreamSinkFrameChannel channel, final T context, long timeoutmillis) throws IOException {
@@ -504,16 +462,11 @@ public class WebSockets {
         });
     }
 
-    private static void sendBlockingInternal(final ByteBuffer[] data, WebSocketFrameType type, final WebSocketChannel wsChannel) throws IOException {
-        long totalData = Buffers.remaining(data);
-        StreamSinkFrameChannel channel = wsChannel.send(type, totalData);
-        for (ByteBuffer buf : data) {
-            while (buf.hasRemaining()) {
-                int res = channel.write(buf);
-                if (res == 0) {
-                    channel.awaitWritable();
-                }
-            }
+    private static void sendBlockingInternal(final ByteBuffer data, WebSocketFrameType type, final WebSocketChannel wsChannel) throws IOException {
+        StreamSinkFrameChannel channel = wsChannel.send(type, data.remaining());
+        // TODO chunk data into some MTU-like thing to control packet size
+        if(!channel.send(new ImmediatePooled<>(data))) {
+            throw WebSocketMessages.MESSAGES.unableToSendOnNewChannel();
         }
         channel.shutdownWrites();
         while (!channel.flush()) {

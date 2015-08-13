@@ -414,4 +414,7 @@ public interface UndertowMessages {
     @Message(id = 128, value = "Remote peer closed connection before all data could be read")
     IOException couldNotReadContentLengthData();
 
+    @Message(id = 129, value = "Failed to send after being safe to send")
+    IllegalStateException failedToSendAfterBeingSafe();
+
 }

@@ -25,8 +25,10 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
+import io.undertow.websockets.extensions.CompositeExtensionFunction;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.ExtensionHandshake;
+import io.undertow.websockets.extensions.NoopExtensionFunction;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
@@ -74,7 +76,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
         if (negotiation != null && negotiation.getSelectedExtensions() != null && !negotiation.getSelectedExtensions().isEmpty()) {
 
             List<WebSocketExtension> selected = negotiation.getSelectedExtensions();
-            List<ExtensionFunction> negotiated = new ArrayList();
+            List<ExtensionFunction> negotiated = new ArrayList<>();
             if (selected != null && !selected.isEmpty()) {
                 for (WebSocketExtension ext : selected) {
                     for (ExtensionHandshake extHandshake : extensions) {
@@ -84,9 +86,9 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                     }
                 }
             }
-            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation.getSelectedSubProtocol(), true, !negotiated.isEmpty(), negotiated, new HashSet<WebSocketChannel>(), options);
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation.getSelectedSubProtocol(), true, !negotiated.isEmpty(), CompositeExtensionFunction.compose(negotiated), new HashSet<WebSocketChannel>(), options);
         } else {
-            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, null, new HashSet<WebSocketChannel>(), options);
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, NoopExtensionFunction.instance, new HashSet<WebSocketChannel>(), options);
         }
     }
 

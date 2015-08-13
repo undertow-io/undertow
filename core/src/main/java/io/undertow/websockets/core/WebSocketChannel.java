@@ -37,7 +37,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -64,7 +63,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     private volatile String closeReason;
     private final String subProtocol;
     protected final boolean extensionsSupported;
-    protected final List<ExtensionFunction> extensions;
+    protected final ExtensionFunction extensionFunction;
     protected final boolean hasReservedOpCode;
 
     /**
@@ -93,30 +92,20 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * @param client
      * @param peerConnections        The concurrent set that is used to track open connections associtated with an endpoint
      */
-    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final List<ExtensionFunction> extensions, Set<WebSocketChannel> peerConnections, OptionMap options) {
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final ExtensionFunction extensionFunction, Set<WebSocketChannel> peerConnections, OptionMap options) {
         super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null, options);
         this.client = client;
         this.version = version;
         this.wsUrl = wsUrl;
         this.extensionsSupported = extensionsSupported;
-        this.extensions = extensions;
-        if (this.extensions != null && !this.extensions.isEmpty()) {
-            boolean extOpCode = false;
-            for (ExtensionFunction ext : this.extensions) {
-                if (ext.hasExtensionOpCode()) {
-                    extOpCode = true;
-                    break;
-                }
-            }
-            this.hasReservedOpCode = extOpCode;
-        } else {
-            this.hasReservedOpCode = false;
-        }
+        this.extensionFunction = extensionFunction;
+        this.hasReservedOpCode = extensionFunction.hasExtensionOpCode();
         this.subProtocol = subProtocol;
         this.peerConnections = peerConnections;
         addCloseTask(new ChannelListener<WebSocketChannel>() {
             @Override
             public void handleEvent(WebSocketChannel channel) {
+                extensionFunction.dispose();
                 WebSocketChannel.this.peerConnections.remove(WebSocketChannel.this);
             }
         });
@@ -478,10 +467,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         this.closeCode = closeCode;
     }
 
-    public List<ExtensionFunction> getExtensions() {
-        if (extensions == null) {
-            return null;
-        }
-        return Collections.unmodifiableList(extensions);
+    public ExtensionFunction getExtensionFunction() {
+        return extensionFunction;
     }
 }
