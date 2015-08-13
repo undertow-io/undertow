@@ -223,8 +223,8 @@ public interface UndertowMessages {
     @Message(id = 65, value = "SSL must be specified to connect to a https URL")
     IOException sslWasNull();
 
-    @Message(id = 66, value = "Incorrect magic number for AJP packet header")
-    IOException wrongMagicNumber();
+    @Message(id = 66, value = "Incorrect magic number %s for AJP packet header")
+    IOException wrongMagicNumber(int number);
 
     @Message(id = 67, value = "No client cert was provided")
     SSLPeerUnverifiedException peerUnverified();
