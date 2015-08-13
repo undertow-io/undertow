@@ -186,7 +186,7 @@ public class AjpRequestParser {
                     return;
                 } else {
                     if (result.value != 0x1234) {
-                        throw new IllegalStateException("Wrong magic number");
+                        throw UndertowMessages.MESSAGES.wrongMagicNumber(result.value);
                     }
                 }
             }
