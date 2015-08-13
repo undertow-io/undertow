@@ -296,6 +296,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             //we have received the last frame, we just shut down and return
             //it would probably make more sense to have the last channel responsible for this
             //however it is much simpler just to have it here
+            if(readData != null) {
+                readData.free();
+                readData = null;
+            }
             channel.getSourceChannel().suspendReads();
             channel.getSourceChannel().shutdownReads();
             return null;
@@ -899,6 +903,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                             while (readData != null && !readData.isFreed()) {
                                 int rem = readData.getResource().remaining();
                                 ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, (ChannelListener) receiveSetter.get());
+                                if(!AbstractFramedChannel.this.isOpen()) {
+                                    break;
+                                }
                                 if (readData != null && rem == readData.getResource().remaining()) {
                                     break;//make sure we are making progress
                                 }

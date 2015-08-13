@@ -166,8 +166,9 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
                 extensionResult = applyExtensions(dst, position, r);
             }
             if (r > 0) {
-                boolean complete = isComplete() && extensionResult == null;
-                checker(dst, position, dst.position() - position, complete);
+                checker(dst, position, dst.position() - position, false);
+            } else if(r == -1) {
+                checkComplete();
             }
             return r;
         } else {
@@ -202,8 +203,21 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
                 int oldPos = old[i - offset].position;
                 afterRead(dst, oldPos, dst.position() - oldPos);
             }
+        } else if(b == -1){
+            checkComplete();
         }
         return b;
+    }
+
+    private void checkComplete() throws IOException {
+        try {
+            for (ChannelFunction func : functions) {
+                func.complete();
+            }
+        } catch (UnsupportedEncodingException e) {
+            getFramedChannel().markReadsBroken(e);
+            throw e;
+        }
     }
 
     /**
@@ -220,14 +234,7 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
                 func.afterRead(buffer, position, length);
             }
             if (isComplete()) {
-                try {
-                    for (ChannelFunction func : functions) {
-                        func.complete();
-                    }
-                } catch (UnsupportedEncodingException e) {
-                    getFramedChannel().markReadsBroken(e);
-                    throw e;
-                }
+                checkComplete();
             }
         } catch (UnsupportedEncodingException e) {
             getFramedChannel().markReadsBroken(e);

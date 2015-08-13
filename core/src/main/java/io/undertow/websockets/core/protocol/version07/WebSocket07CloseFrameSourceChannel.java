@@ -64,7 +64,7 @@ class WebSocket07CloseFrameSourceChannel extends StreamSourceFrameChannel {
                 if(statusBytesRead == 2) {
                     // Must have 2 byte integer within the valid range
                     if (status >= 0 && status <= 999 || status >= 1004 && status <= 1006
-                            || status >= 1012 && status <= 2999) {
+                            || status >= 1012 && status <= 2999 || status >= 5000) {
                         IOException exception =  WebSocketMessages.MESSAGES.invalidCloseFrameStatusCode(status);
                         wsChannel.markReadsBroken(exception);
                         throw exception;
