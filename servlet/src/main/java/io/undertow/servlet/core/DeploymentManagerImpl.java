@@ -298,7 +298,15 @@ public class DeploymentManagerImpl implements DeploymentManager {
             current = Handlers.predicate(Predicates.authRequired(), Handlers.disableCache(current), current);
         }
         if (!securityPathMatches.isEmpty()) {
-            current = new ServletAuthenticationConstraintHandler(current);
+            boolean formAuth = false;
+            if(loginConfig != null) {
+                for(AuthMethodConfig c : loginConfig.getAuthMethods()) {
+                    if(c.getName().equals("FORM")) {
+                        formAuth = true;
+                    }
+                }
+            }
+            current = new ServletAuthenticationConstraintHandler(current, formAuth);
         }
         current = new ServletConfidentialityConstraintHandler(deploymentInfo.getConfidentialPortManager(), current);
         if (!securityPathMatches.isEmpty()) {

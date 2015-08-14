@@ -25,6 +25,7 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
+import io.undertow.security.api.AuthenticationMode;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -102,6 +103,7 @@ public class ServletFormAuthTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
+                .setAuthenticationMode(AuthenticationMode.CONSTRAINT_DRIVEN)
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
                 .addServlets(s, s1, echo,echoParam);
