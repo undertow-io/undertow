@@ -83,6 +83,11 @@ class FrameHandler extends AbstractReceiveListener {
 
     @Override
     protected void onFullCloseMessage(final WebSocketChannel channel, final BufferedBinaryMessage message) {
+        if(session.isSessionClosed()) {
+            //we have already handled this when we sent the close frame
+            message.getData().free();
+            return;
+        }
         final Pooled<ByteBuffer[]> pooled = message.getData();
         final ByteBuffer singleBuffer = toBuffer(pooled.getResource());
         final ByteBuffer toSend = singleBuffer.duplicate();

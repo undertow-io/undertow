@@ -47,10 +47,10 @@ public class SessionContainer {
             openSessions.remove(session);
             if (waiterCount > 0 && openSessions.isEmpty()) {
                 notifyAll();
-                if(doneTask != null) {
-                    doneTask.run();
-                    doneTask = null;
-                }
+            }
+            if(doneTask != null) {
+                doneTask.run();
+                doneTask = null;
             }
         }
     }

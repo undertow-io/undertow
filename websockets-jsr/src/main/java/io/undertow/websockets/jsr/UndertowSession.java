@@ -407,4 +407,8 @@ public final class UndertowSession implements Session {
     public Executor getExecutor() {
         return frameHandler.getExecutor();
     }
+
+    boolean isSessionClosed() {
+        return closed.get();
+    }
 }
