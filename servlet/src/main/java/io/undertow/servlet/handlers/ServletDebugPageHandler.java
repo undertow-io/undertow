@@ -109,7 +109,6 @@ public class ServletDebugPageHandler {
         } catch (IllegalStateException e) {
             servletRequestContext.getOriginalResponse().getWriter().write(sb.toString());
         }
-        exchange.getResponseSender().send(sb.toString());
     }
 
     private static void writeLabel(StringBuilder sb, String label, String value) {
