@@ -19,6 +19,10 @@
 package io.undertow.server.protocol.http2;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
@@ -42,14 +46,22 @@ public class Http2UpgradeHandler implements HttpHandler {
 
     private final HttpHandler next;
 
+    private final Set<String> upgradeStrings;
+
     public Http2UpgradeHandler(HttpHandler next) {
         this.next = next;
+        this.upgradeStrings = Collections.singleton(Http2Channel.CLEARTEXT_UPGRADE_STRING);
+    }
+
+    public Http2UpgradeHandler(HttpHandler next, String... upgradeStrings) {
+        this.next = next;
+        this.upgradeStrings = new HashSet<>(Arrays.asList(upgradeStrings));
     }
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         final String upgrade = exchange.getRequestHeaders().getFirst(Headers.UPGRADE);
-        if(upgrade != null && upgrade.equals(Http2Channel.CLEARTEXT_UPGRADE_STRING)) {
+        if(upgrade != null && upgradeStrings.contains(upgrade)) {
             String settings = exchange.getRequestHeaders().getFirst("HTTP2-Settings");
             if(settings != null) {
                 //required by spec
