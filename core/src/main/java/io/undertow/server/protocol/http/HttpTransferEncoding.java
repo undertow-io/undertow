@@ -243,7 +243,7 @@ class HttpTransferEncoding {
                 }
             }
         }
-        return handleResponseConduit(exchange, headRequest, channel, responseHeaders, terminateResponseListener(exchange), transferEncodingHeader);
+        return handleResponseConduit(exchange, headRequest, channel, responseHeaders, terminateResponseListener(exchange), transferEncodingHeader, serverConnection);
     }
 
     private static StreamSinkConduit handleFixedLength(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, String contentLengthHeader, HttpServerConnection connection) {
@@ -263,10 +263,17 @@ class HttpTransferEncoding {
         return null;
     }
 
-    private static StreamSinkConduit handleResponseConduit(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, ConduitListener<StreamSinkConduit> finishListener, String transferEncodingHeader) {
+    private static StreamSinkConduit handleResponseConduit(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, ConduitListener<StreamSinkConduit> finishListener, String transferEncodingHeader, HttpServerConnection connection) {
 
         if (transferEncodingHeader == null) {
-            if (exchange.isHttp11()) {
+            if(!Connectors.isEntityBodyAllowed(exchange)) {
+                if (headRequest) {
+                    return channel;
+                }
+                ServerFixedLengthStreamSinkConduit fixed = connection.getFixedLengthStreamSinkConduit();
+                fixed.reset(0, exchange);
+                return fixed;
+            } else  if (exchange.isHttp11()) {
                 if (exchange.isPersistent()) {
                     responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
 
