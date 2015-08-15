@@ -178,17 +178,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
         this.protocol = protocol == null ? Http2OpenListener.HTTP2 : protocol;
-        if (initialOtherSideSettings != null) {
-            Http2SettingsParser parser = new Http2SettingsParser(initialOtherSideSettings.remaining());
-            try {
-                parser.parse(initialOtherSideSettings, new Http2FrameHeaderParser(this, null));
-                updateSettings(parser.getSettings());
-            } catch (IOException e) {
-                IoUtils.safeClose(connectedStreamChannel);
-                //should never happen
-                throw new RuntimeException(e);
-            }
-        }
+
         encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
         receiveMaxFrameSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_FRAME_SIZE, DEFAULT_MAX_FRAME_SIZE);
 
@@ -208,6 +198,19 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             initialSettingsSent = true;
         }
         priorityTree = clientSide ? null : new Http2PriorityTree();
+        if (initialOtherSideSettings != null) {
+            Http2SettingsParser parser = new Http2SettingsParser(initialOtherSideSettings.remaining());
+            try {
+                final Http2FrameHeaderParser headerParser = new Http2FrameHeaderParser(this, null);
+                headerParser.length = initialOtherSideSettings.remaining();
+                parser.parse(initialOtherSideSettings, headerParser);
+                updateSettings(parser.getSettings());
+            } catch (IOException e) {
+                IoUtils.safeClose(connectedStreamChannel);
+                //should never happen
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private void sendSettings() {
