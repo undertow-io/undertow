@@ -106,17 +106,21 @@ public class ReceiverTestCase {
 
                     @Override
                     public void onComplete(HttpServerExchange exchange, Sender sender) {
+                        System.out.println("onComplete");
                         receiver.resume();
                     }
 
                     @Override
                     public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
+                        System.out.println("onException");
+                        exception.printStackTrace();
                         exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.endExchange();
                     }
 
                     @Override
                     public void handle(HttpServerExchange exchange, byte[] message, boolean last) {
+                        System.out.println("handle " + message.length + " last: " + last);
                         receiver.pause();
                         sender.send(ByteBuffer.wrap(message), last ? IoCallback.END_EXCHANGE : this);
                     }
