@@ -89,6 +89,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.twitter</groupId>
+            <artifactId>hpack</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
@@ -129,7 +135,6 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
 

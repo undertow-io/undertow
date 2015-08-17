@@ -98,6 +98,7 @@
         <alpn-boot-string></alpn-boot-string>
 
         <jdk.min.version>1.7</jdk.min.version>
+        <version.com.twitter.hpack>0.10.1</version.com.twitter.hpack>
     </properties>
 
     <modules>
@@ -289,6 +290,13 @@
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
                 <version>${version.netty}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.twitter</groupId>
+                <artifactId>hpack</artifactId>
+                <version>${version.com.twitter.hpack}</version>
                 <scope>test</scope>
             </dependency>
 
