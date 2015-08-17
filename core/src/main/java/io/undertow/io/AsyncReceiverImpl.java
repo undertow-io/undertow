@@ -618,6 +618,6 @@ public class AsyncReceiverImpl implements Receiver {
     @Override
     public void resume() {
         this.paused = false;
-        channel.resumeReads();
+        channel.wakeupReads();
     }
 }
