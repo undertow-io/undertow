@@ -81,7 +81,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
 
     @Override
     public boolean authenticate() {
-        if(authenticationState == AuthenticationState.ATTEMPTED) {
+        if(authenticationState == AuthenticationState.ATTEMPTED || (authenticationState == AuthenticationState.CHALLENGE_SENT && !exchange.isResponseStarted())) {
             //we are re-attempted, so we just reset the state
             //see UNDERTOW-263
             authenticationState = AuthenticationState.NOT_ATTEMPTED;
