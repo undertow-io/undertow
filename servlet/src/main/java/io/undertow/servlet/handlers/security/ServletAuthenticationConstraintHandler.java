@@ -35,19 +35,15 @@ import io.undertow.servlet.handlers.ServletRequestContext;
  */
 public class ServletAuthenticationConstraintHandler extends AuthenticationConstraintHandler {
 
-    private final boolean formAuth;
-
-    public ServletAuthenticationConstraintHandler(final HttpHandler next, boolean formAuth) {
+    public ServletAuthenticationConstraintHandler(final HttpHandler next) {
         super(next);
-        this.formAuth = formAuth;
     }
 
     @Override
     protected boolean isAuthenticationRequired(final HttpServerExchange exchange) {
-        if(formAuth) {
-            if (exchange.getRelativePath().endsWith(ServletFormAuthenticationMechanism.DEFAULT_POST_LOCATION)) {
-                return true;
-            }
+        //j_security_check always requires auth
+        if (exchange.getRelativePath().endsWith(ServletFormAuthenticationMechanism.DEFAULT_POST_LOCATION)) {
+            return true;
         }
         List<SingleConstraintMatch> constraints = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getRequiredConstrains();
 
