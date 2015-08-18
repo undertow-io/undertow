@@ -167,11 +167,10 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
     }
 
     protected void onFullTextMessage(final WebSocketChannel channel, BufferedTextMessage message) throws IOException {
-
     }
 
     protected void onFullBinaryMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
-
+        message.getData().free();
     }
 
     protected void onFullPingMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
@@ -180,6 +179,7 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
     }
 
     protected void onFullPongMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+        message.getData().free();
     }
 
     protected void onFullCloseMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
@@ -196,7 +196,6 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
     }
 
     protected void onCloseMessage(CloseMessage cm, WebSocketChannel channel) {
-
     }
 
     private static class FreeDataCallback implements WebSocketCallback<Void> {
