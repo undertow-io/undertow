@@ -205,8 +205,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
         next.terminateWrites();
     }
 
-    @Override
-    public boolean flush() throws IOException {
+    protected boolean flushQueuedData() throws IOException {
         if (queuedData > 0) {
             doWrite(null, 0, 0);
         }
@@ -229,6 +228,10 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
                 cb.failed(UndertowMessages.MESSAGES.channelIsClosed());
             }
         }
+    }
+
+    protected boolean isWritesTerminated() {
+        return anyAreSet(state, FLAG_WRITES_TERMINATED);
     }
 
     protected void queueCloseFrames() {

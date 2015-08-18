@@ -63,6 +63,8 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
 
     private static final Map<HttpString, Integer> HEADER_MAP;
 
+    private static final ByteBuffer FLUSH_PACKET = ByteBuffer.allocateDirect(8);
+
     static {
         final Map<HttpString, Integer> headers = new HashMap<>();
         headers.put(Headers.CONTENT_TYPE, 0xA001);
@@ -77,6 +79,16 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         headers.put(Headers.STATUS, 0xA00A);
         headers.put(Headers.WWW_AUTHENTICATE, 0xA00B);
         HEADER_MAP = Collections.unmodifiableMap(headers);
+
+        FLUSH_PACKET.put((byte) 'A');
+        FLUSH_PACKET.put((byte) 'B');
+        FLUSH_PACKET.put((byte) 0);
+        FLUSH_PACKET.put((byte) 4);
+        FLUSH_PACKET.put((byte) 3);
+        FLUSH_PACKET.put((byte) 0);
+        FLUSH_PACKET.put((byte) 0);
+        FLUSH_PACKET.put((byte) 0);
+        FLUSH_PACKET.flip();
     }
 
     private static final int FLAG_START = 1; //indicates that the header has not been generated yet.
@@ -84,6 +96,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
     private static final int FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER = 1 << 3;
     private static final int FLAG_WRITE_SHUTDOWN = 1 << 4;
     private static final int FLAG_READS_DONE = 1 << 5;
+    private static final int FLAG_FLUSH_QUEUED = 1 << 6;
 
     private static final ByteBuffer CLOSE_FRAME_PERSISTENT;
     private static final ByteBuffer CLOSE_FRAME_NON_PERSISTENT;
@@ -243,7 +256,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         if(queuedDataLength() > 0) {
             //if there is data in the queue we flush and return
             //otherwise the queue can grow indefinitely
-            if(!flush()) {
+            if(!flushQueuedData()) {
                 return 0;
             }
         }
@@ -370,6 +383,24 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         next.resumeWrites();
     }
 
+    public boolean flush() throws IOException {
+        processAJPHeader();
+        if(allAreClear(state, FLAG_FLUSH_QUEUED) && !isWritesTerminated()) {
+            queueFrame(new FrameCallBack() {
+                @Override
+                public void done() {
+                    state &= ~FLAG_FLUSH_QUEUED;
+                }
+
+                @Override
+                public void failed(IOException e) {
+
+                }
+            }, FLUSH_PACKET.duplicate());
+            state |= FLAG_FLUSH_QUEUED;
+        }
+        return flushQueuedData();
+    }
     public boolean isWriteResumed() {
         return anyAreSet(state, FLAG_WRITE_RESUMED);
     }
@@ -441,7 +472,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         public void writeReady() {
             if (anyAreSet(state, FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER)) {
                 try {
-                    flush();
+                    flushQueuedData();
                 } catch (IOException e) {
                     log.debug("Error flushing when doing async READ_BODY_CHUNK flush", e);
                 }
