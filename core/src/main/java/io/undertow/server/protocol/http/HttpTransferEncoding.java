@@ -218,6 +218,7 @@ class HttpTransferEncoding {
             exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
             exchange.getResponseHeaders().remove(Headers.TRANSFER_ENCODING);
             channel = new HeadStreamSinkConduit(channel, terminateResponseListener(exchange));
+            return channel;
         }
 
         final HeaderMap responseHeaders = exchange.getResponseHeaders();
@@ -266,14 +267,7 @@ class HttpTransferEncoding {
     private static StreamSinkConduit handleResponseConduit(HttpServerExchange exchange, boolean headRequest, StreamSinkConduit channel, HeaderMap responseHeaders, ConduitListener<StreamSinkConduit> finishListener, String transferEncodingHeader, HttpServerConnection connection) {
 
         if (transferEncodingHeader == null) {
-            if(!Connectors.isEntityBodyAllowed(exchange)) {
-                if (headRequest) {
-                    return channel;
-                }
-                ServerFixedLengthStreamSinkConduit fixed = connection.getFixedLengthStreamSinkConduit();
-                fixed.reset(0, exchange);
-                return fixed;
-            } else  if (exchange.isHttp11()) {
+            if (exchange.isHttp11()) {
                 if (exchange.isPersistent()) {
                     responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
 
