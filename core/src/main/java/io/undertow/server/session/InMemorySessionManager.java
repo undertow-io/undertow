@@ -368,6 +368,12 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                     //instead when it expires we check if the timeout has been bumped, and if so we re-schedule
                     timerCancelKey = executor.executeAfter(cancelTask, (maxInactiveInterval * 1000L) + 1, TimeUnit.MILLISECONDS);
                 }
+            } else {
+                expireTime = -1;
+                if(timerCancelKey != null) {
+                    timerCancelKey.remove();
+                    timerCancelKey = null;
+                }
             }
             if (evictionToken != null) {
                 Object token = evictionToken;
