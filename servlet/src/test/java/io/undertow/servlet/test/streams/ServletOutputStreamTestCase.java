@@ -50,6 +50,7 @@ public class ServletOutputStreamTestCase {
     public static final String BLOCKING_SERVLET = "blockingOutput";
     public static final String ASYNC_SERVLET = "asyncOutput";
     public static final String CONTENT_LENGTH_SERVLET = "contentLength";
+    public static final String RESET = "reset";
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -65,7 +66,8 @@ public class ServletOutputStreamTestCase {
                         .addMapping("/" + ASYNC_SERVLET)
                         .setAsyncSupported(true),
                 new ServletInfo(CONTENT_LENGTH_SERVLET, ContentLengthCloseFlushServlet.class)
-                        .addMapping("/" + CONTENT_LENGTH_SERVLET));
+                        .addMapping("/" + CONTENT_LENGTH_SERVLET),
+                new ServletInfo(RESET, ResetBufferServlet.class).addMapping("/" + RESET));
     }
 
 
@@ -86,6 +88,25 @@ public class ServletOutputStreamTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("OK", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+
+    @Test
+    public void testResetBuffer() throws Exception {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + RESET;
+
+            HttpGet get = new HttpGet(uri);
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("hello world", response);
+
         } finally {
             client.getConnectionManager().shutdown();
         }
