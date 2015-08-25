@@ -414,4 +414,6 @@ public interface UndertowMessages {
     @Message(id = 128, value = "Remote peer closed connection before all data could be read")
     IOException couldNotReadContentLengthData();
 
+    @Message(id = 129, value = "HTTP reason phrase was too large for the buffer. Either provide a smaller message or a bigger buffer. Phrase: %s")
+    IllegalStateException reasonPhraseToLargeForBuffer(String phrase);
 }

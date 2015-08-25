@@ -99,6 +99,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final String ISO_8859_1 = "ISO-8859-1";
 
     /**
+     * The HTTP reason phrase to send. This is an attachment rather than a field as it is rarely used. If this is not set
+     * a generic description from the RFC is used instead.
+     */
+    private static final AttachmentKey<String> REASON_PHRASE = AttachmentKey.create(String.class);
+
+    /**
      * The attachment key that buffered request data is attached under.
      */
     static final AttachmentKey<Pooled<ByteBuffer>[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(Pooled[].class);
@@ -1324,6 +1330,28 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         this.state = oldVal & ~MASK_RESPONSE_CODE | statusCode & MASK_RESPONSE_CODE;
         return this;
+    }
+
+    /**
+     * Sets the HTTP reason phrase. Depending on the protocol this may or may not be honoured. In particular HTTP2
+     * has removed support for the reason phrase.
+     *
+     * This method should only be used to interact with legacy frameworks that give special meaning to the reason phrase.
+     *
+     * @param message The status message
+     * @return this exchange
+     */
+    public HttpServerExchange getReasonPhrase(String message) {
+        putAttachment(REASON_PHRASE, message);
+        return this;
+    }
+
+    /**
+     *
+     * @return The current reason phrase
+     */
+    public String getReasonPhrase() {
+        return getAttachment(REASON_PHRASE);
     }
 
     /**
