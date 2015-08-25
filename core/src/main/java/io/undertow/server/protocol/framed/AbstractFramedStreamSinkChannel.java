@@ -463,7 +463,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     private void sendWriteBuffer() throws IOException {
         writeBuffer.getResource().flip();
-        send(writeBuffer);
+        if(!send(writeBuffer)) {
+            throw UndertowMessages.MESSAGES.failedToSendAfterBeingSafe();
+        }
         writeBuffer = null;
     }
 

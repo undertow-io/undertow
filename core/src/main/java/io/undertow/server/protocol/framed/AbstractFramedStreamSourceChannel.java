@@ -76,7 +76,6 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     /**
      * The amount of data left in the frame. If this is larger than the data in the backing buffer then
-     * TODO need to remove this, as the size won't be valid if we expand the frames
      */
     private long frameDataRemaining;
 
@@ -523,7 +522,6 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                     boolean hasData = true;
                     if(frameData.getResource().hasRemaining()) {
                         this.data = frameData;
-                        this.currentDataOriginalSize = frameData.getResource().remaining();
                     } else {
                         frameData.free();
                         hasData = false;
@@ -534,6 +532,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                     }
                     if(hasData) {
                         this.frameDataRemaining = updateFrameDataRemaining(frameData, frameDataRemaining);
+                        this.currentDataOriginalSize = frameData.getResource().remaining();
                         this.data = processFrameData(frameData, frameDataRemaining - currentDataOriginalSize == 0);
                     }
                 }
