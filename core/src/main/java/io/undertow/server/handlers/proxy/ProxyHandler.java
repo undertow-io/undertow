@@ -300,7 +300,7 @@ public final class ProxyHandler implements HttpHandler {
             if (exchange.isResponseStarted()) {
                 IoUtils.safeClose(exchange.getConnection());
             } else {
-                exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
+                exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
                 exchange.endExchange();
             }
         }
@@ -317,7 +317,7 @@ public final class ProxyHandler implements HttpHandler {
             if (exchange.isResponseStarted()) {
                 IoUtils.safeClose(exchange.getConnection());
             } else {
-                exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
+                exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
                 exchange.endExchange();
             }
         }
@@ -381,7 +381,7 @@ public final class ProxyHandler implements HttpHandler {
                 }
             } catch (UnsupportedEncodingException e) {
                 //impossible
-                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 exchange.endExchange();
                 return;
             }
@@ -587,7 +587,7 @@ public final class ProxyHandler implements HttpHandler {
                 public void failed(IOException e) {
                     UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
                     if (!exchange.isResponseStarted()) {
-                        exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
+                        exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
                         exchange.endExchange();
                     } else {
                         IoUtils.safeClose(exchange.getConnection());
@@ -617,7 +617,7 @@ public final class ProxyHandler implements HttpHandler {
             }
             final HeaderMap inboundResponseHeaders = response.getResponseHeaders();
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
-            exchange.setResponseCode(response.getResponseCode());
+            exchange.setStatusCode(response.getResponseCode());
             copyHeaders(outboundResponseHeaders, inboundResponseHeaders);
 
             if (exchange.isUpgrade()) {
@@ -651,7 +651,7 @@ public final class ProxyHandler implements HttpHandler {
         public void failed(IOException e) {
             UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
             if (!exchange.isResponseStarted()) {
-                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 exchange.endExchange();
             } else {
                 IoUtils.safeClose(exchange.getConnection());
@@ -715,13 +715,13 @@ public final class ProxyHandler implements HttpHandler {
             if (exchange.isResponseStarted()) {
                 UndertowLogger.REQUEST_IO_LOGGER.debug("Exception reading from target server", exception);
                 if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     exchange.endExchange();
                 } else {
                     IoUtils.safeClose(exchange.getConnection());
                 }
             } else {
-                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 exchange.endExchange();
             }
         }

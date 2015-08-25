@@ -48,11 +48,11 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
             try {
                 URI redirectUri = getRedirectURI(exchange);
 
-                exchange.setResponseCode(StatusCodes.FOUND);
+                exchange.setStatusCode(StatusCodes.FOUND);
                 exchange.getResponseHeaders().put(Headers.LOCATION, redirectUri.toString());
             } catch (Exception e) {
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }
             exchange.endExchange();
         }

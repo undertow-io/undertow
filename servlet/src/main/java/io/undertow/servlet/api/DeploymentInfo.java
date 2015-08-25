@@ -101,6 +101,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean eagerFilterInit = false;
     private boolean disableCachingForSecuredPages = true;
     private boolean escapeErrorMessage = true;
+    private boolean sendCustomReasonPhraseOnError = false;
     private AuthenticationMode authenticationMode = AuthenticationMode.PRO_ACTIVE;
     private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
@@ -1138,6 +1139,24 @@ public class DeploymentInfo implements Cloneable {
         this.sessionIdGenerator = sessionIdGenerator;
     }
 
+
+    public boolean isSendCustomReasonPhraseOnError() {
+        return sendCustomReasonPhraseOnError;
+    }
+
+    /**
+     * If this is true then the message parameter of {@link javax.servlet.http.HttpServletResponse#sendError(int, String)} and
+     * {@link javax.servlet.http.HttpServletResponse#setStatus(int, String)} will be used as the HTTP reason phrase in
+     * the response.
+     *
+     * @param sendCustomReasonPhraseOnError If the parameter to sendError should be used as a HTTP reason phrase
+     * @return this
+     */
+    public DeploymentInfo setSendCustomReasonPhraseOnError(boolean sendCustomReasonPhraseOnError) {
+        this.sendCustomReasonPhraseOnError = sendCustomReasonPhraseOnError;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1217,6 +1236,7 @@ public class DeploymentInfo implements Cloneable {
         info.defaultMultipartConfig = defaultMultipartConfig;
         info.contentTypeCacheSize = contentTypeCacheSize;
         info.sessionIdGenerator = sessionIdGenerator;
+        info.sendCustomReasonPhraseOnError = sendCustomReasonPhraseOnError;
         return info;
     }
 

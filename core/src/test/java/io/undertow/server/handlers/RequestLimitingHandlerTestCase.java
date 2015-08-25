@@ -63,7 +63,7 @@ public class RequestLimitingHandlerTestCase {
                 int res = count.incrementAndGet();
                 try {
                     if (!latch.await(20, TimeUnit.SECONDS)) {
-                        exchange.setResponseCode(500);
+                        exchange.setStatusCode(500);
                     } else {
                         exchange.getOutputStream().write(("" + res).getBytes("US-ASCII"));
                     }

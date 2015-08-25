@@ -417,4 +417,6 @@ public interface UndertowMessages {
     @Message(id = 129, value = "Failed to send after being safe to send")
     IllegalStateException failedToSendAfterBeingSafe();
 
+    @Message(id = 130, value = "HTTP reason phrase was too large for the buffer. Either provide a smaller message or a bigger buffer. Phrase: %s")
+    IllegalStateException reasonPhraseToLargeForBuffer(String phrase);
 }

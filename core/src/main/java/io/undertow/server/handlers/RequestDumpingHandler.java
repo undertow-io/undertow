@@ -136,7 +136,7 @@ public class RequestDumpingHandler implements HttpHandler {
                         sb.append("            header=" + header.getHeaderName() + "=" + value + "\n");
                     }
                 }
-                sb.append("            status=" + exchange.getResponseCode() + "\n");
+                sb.append("            status=" + exchange.getStatusCode() + "\n");
                 sb.append("==============================================================");
 
                 nextListener.proceed();

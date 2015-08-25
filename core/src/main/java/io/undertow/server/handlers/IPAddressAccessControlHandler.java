@@ -103,7 +103,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         if (isAllowed(peer.getAddress())) {
             next.handleRequest(exchange);
         } else {
-            exchange.setResponseCode(denyResponseCode);
+            exchange.setStatusCode(denyResponseCode);
             exchange.endExchange();
         }
     }

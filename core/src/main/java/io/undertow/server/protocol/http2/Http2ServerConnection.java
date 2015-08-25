@@ -165,7 +165,7 @@ public class Http2ServerConnection extends ServerConnection {
 
                 HeaderMap headers = newExchange.getResponseHeaders();
                 DateUtils.addDateHeaderIfRequired(exchange);
-                headers.add(STATUS, exchange.getResponseCode());
+                headers.add(STATUS, exchange.getStatusCode());
                 Connectors.flattenCookies(exchange);
                 Http2HeadersStreamSinkChannel sink = new Http2HeadersStreamSinkChannel(channel, requestChannel.getStreamId(), headers);
                 return new StreamSinkChannelWrappingConduit(sink);
@@ -300,7 +300,7 @@ public class Http2ServerConnection extends ServerConnection {
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
         HeaderMap headers = responseChannel.getHeaders();
         DateUtils.addDateHeaderIfRequired(exchange);
-        headers.add(STATUS, exchange.getResponseCode());
+        headers.add(STATUS, exchange.getStatusCode());
         Connectors.flattenCookies(exchange);
         return originalSinkConduit;
     }

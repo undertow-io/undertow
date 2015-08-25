@@ -88,7 +88,7 @@ public class WebSocketClient13TestCase {
         final ConnectHandler handler = new ConnectHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.setResponseCode(500);
+                exchange.setStatusCode(500);
             }
         });
 

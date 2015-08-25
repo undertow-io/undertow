@@ -77,7 +77,7 @@ public class SessionServer {
                 Deque<String> dequeVal = reqParams.get("value");
                 session.setAttribute(deque.getLast(), dequeVal.getLast());
 
-                exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
+                exchange.setStatusCode(StatusCodes.TEMPORARY_REDIRECT);
                 exchange.getResponseHeaders().put(Headers.LOCATION, "/");
                 exchange.getResponseSender().close();
             }
@@ -94,7 +94,7 @@ public class SessionServer {
                     session = sm.createSession(exchange, sessionConfig);
                 session.invalidate(exchange);
 
-                exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
+                exchange.setStatusCode(StatusCodes.TEMPORARY_REDIRECT);
                 exchange.getResponseHeaders().put(Headers.LOCATION, "/");
                 exchange.getResponseSender().close();
             }

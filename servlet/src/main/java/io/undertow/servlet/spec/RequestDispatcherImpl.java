@@ -391,7 +391,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             //we have already dispatched once with an error
             //if we dispatch again we run the risk of a stack overflow
             //so we just kill it, the user will just get the basic error page
-            UndertowServletLogger.REQUEST_LOGGER.errorGeneratingErrorPage(servletRequestContext.getExchange().getRequestPath(), request.getAttribute(ERROR_EXCEPTION), servletRequestContext.getExchange().getResponseCode(), exception);
+            UndertowServletLogger.REQUEST_LOGGER.errorGeneratingErrorPage(servletRequestContext.getExchange().getRequestPath(), request.getAttribute(ERROR_EXCEPTION), servletRequestContext.getExchange().getStatusCode(), exception);
             servletRequestContext.getExchange().endExchange();
             return;
         }

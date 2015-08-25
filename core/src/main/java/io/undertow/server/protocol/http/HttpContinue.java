@@ -130,7 +130,7 @@ public class HttpContinue {
 
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         exchange.putAttachment(ALREADY_SENT, true);
-        newExchange.setResponseCode(StatusCodes.CONTINUE);
+        newExchange.setStatusCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
         return new ContinueResponseSender() {
@@ -171,7 +171,7 @@ public class HttpContinue {
         }
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         exchange.putAttachment(ALREADY_SENT, true);
-        newExchange.setResponseCode(StatusCodes.CONTINUE);
+        newExchange.setStatusCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         newExchange.startBlocking();
         newExchange.getOutputStream().close();
@@ -184,7 +184,7 @@ public class HttpContinue {
      * @param exchange The exchange to reject
      */
     public static void rejectExchange(final HttpServerExchange exchange) {
-        exchange.setResponseCode(StatusCodes.EXPECTATION_FAILED);
+        exchange.setStatusCode(StatusCodes.EXPECTATION_FAILED);
         exchange.setPersistent(false);
         exchange.endExchange();
     }
@@ -197,7 +197,7 @@ public class HttpContinue {
         }
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         exchange.putAttachment(ALREADY_SENT, true);
-        newExchange.setResponseCode(StatusCodes.CONTINUE);
+        newExchange.setStatusCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
         try {

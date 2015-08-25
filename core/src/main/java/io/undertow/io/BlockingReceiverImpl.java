@@ -41,7 +41,7 @@ public class BlockingReceiverImpl implements Receiver {
         @Override
         public void error(HttpServerExchange exchange, IOException e) {
             if(!exchange.isResponseStarted()) {
-                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }
             exchange.setPersistent(false);
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);

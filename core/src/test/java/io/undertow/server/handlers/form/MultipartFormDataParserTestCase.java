@@ -56,13 +56,13 @@ public class MultipartFormDataParserTestCase {
                 try {
                     FormData data = parser.parseBlocking();
                     System.out.println("done parsing");
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     if (data.getFirst("formValue").getValue().equals("myValue")) {
                         FormData.FormValue file = data.getFirst("file");
                         if (file.isFile()) {
                             if (file.getPath() != null) {
                                 if (new String(Files.readAllBytes(file.getPath())).startsWith("file contents")) {
-                                    exchange.setResponseCode(StatusCodes.OK);
+                                    exchange.setStatusCode(StatusCodes.OK);
                                 }
                             }
                         }
@@ -70,7 +70,7 @@ public class MultipartFormDataParserTestCase {
                     exchange.endExchange();
                 } catch (Throwable e) {
                     e.printStackTrace();
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     exchange.endExchange();
                 } finally {
                     IoUtils.safeClose(parser);

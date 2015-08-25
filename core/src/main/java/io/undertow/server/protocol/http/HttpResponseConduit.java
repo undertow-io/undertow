@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.http;
 
+import io.undertow.UndertowMessages;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -164,13 +165,23 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             assert buffer.remaining() >= 50;
             exchange.getProtocol().appendTo(buffer);
             buffer.put((byte) ' ');
-            int code = exchange.getResponseCode();
+            int code = exchange.getStatusCode();
             assert 999 >= code && code >= 100;
             buffer.put((byte) (code / 100 + '0'));
             buffer.put((byte) (code / 10 % 10 + '0'));
             buffer.put((byte) (code % 10 + '0'));
             buffer.put((byte) ' ');
-            String string = StatusCodes.getReason(code);
+
+            String string = exchange.getReasonPhrase();
+            if(string == null) {
+                string = StatusCodes.getReason(code);
+            }
+            if(string.length() > buffer.remaining()) {
+                pooledBuffer.free();
+                pooledBuffer = null;
+                truncateWrites();
+                throw UndertowMessages.MESSAGES.reasonPhraseToLargeForBuffer(string);
+            }
             writeString(buffer, string);
             buffer.put((byte) '\r').put((byte) '\n');
 

@@ -149,7 +149,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                     @Override
                     public boolean handleDefaultResponse(final HttpServerExchange exchange) {
                         FormAuthenticationMechanism.sendRedirect(exchange, location);
-                        exchange.setResponseCode(StatusCodes.FOUND);
+                        exchange.setStatusCode(StatusCodes.FOUND);
                         exchange.endExchange();
                         return true;
                     }

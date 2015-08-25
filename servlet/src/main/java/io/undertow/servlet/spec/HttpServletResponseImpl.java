@@ -123,9 +123,12 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (responseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
+        if(servletContext.getDeployment().getDeploymentInfo().isSendCustomReasonPhraseOnError()) {
+            exchange.setReasonPhrase(msg);
+        }
         writer = null;
         responseState = ResponseState.NONE;
-        exchange.setResponseCode(sc);
+        exchange.setStatusCode(sc);
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         if(src.isRunningInsideHandler()) {
             //all we do is set the error on the context, we handle it when the request is returned
@@ -267,17 +270,20 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (responseStarted()) {
             return;
         }
-        exchange.setResponseCode(sc);
+        exchange.setStatusCode(sc);
     }
 
     @Override
     public void setStatus(final int sc, final String sm) {
         setStatus(sc);
+        if(!insideInclude && servletContext.getDeployment().getDeploymentInfo().isSendCustomReasonPhraseOnError()) {
+            exchange.setReasonPhrase(sm);
+        }
     }
 
     @Override
     public int getStatus() {
-        return exchange.getResponseCode();
+        return exchange.getStatusCode();
     }
 
     @Override
@@ -500,7 +506,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         writer = null;
         responseState = ResponseState.NONE;
         exchange.getResponseHeaders().clear();
-        exchange.setResponseCode(StatusCodes.OK);
+        exchange.setStatusCode(StatusCodes.OK);
         treatAsCommitted = false;
     }
 

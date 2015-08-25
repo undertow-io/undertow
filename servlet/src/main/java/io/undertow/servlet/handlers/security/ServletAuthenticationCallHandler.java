@@ -57,9 +57,9 @@ public class ServletAuthenticationCallHandler implements HttpHandler {
                next.handleRequest(exchange);
             }
         } else {
-            if(exchange.getResponseCode() >= StatusCodes.BAD_REQUEST && !exchange.isComplete()) {
+            if(exchange.getStatusCode() >= StatusCodes.BAD_REQUEST && !exchange.isComplete()) {
                 ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-                src.getOriginalResponse().sendError(exchange.getResponseCode());
+                src.getOriginalResponse().sendError(exchange.getStatusCode());
             } else {
                 exchange.endExchange();
             }

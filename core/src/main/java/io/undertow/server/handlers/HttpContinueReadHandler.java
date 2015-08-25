@@ -79,7 +79,7 @@ public class HttpContinueReadHandler implements HttpHandler {
 
         @Override
         public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
-            if (exchange.getResponseCode() == StatusCodes.EXPECTATION_FAILED) {
+            if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
                 return -1;
             }
@@ -98,7 +98,7 @@ public class HttpContinueReadHandler implements HttpHandler {
 
         @Override
         public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
-            if (exchange.getResponseCode() == StatusCodes.EXPECTATION_FAILED) {
+            if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
                 return -1;
             }
@@ -117,7 +117,7 @@ public class HttpContinueReadHandler implements HttpHandler {
 
         @Override
         public int read(final ByteBuffer dst) throws IOException {
-            if (exchange.getResponseCode() == StatusCodes.EXPECTATION_FAILED) {
+            if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
                 return -1;
             }
@@ -136,7 +136,7 @@ public class HttpContinueReadHandler implements HttpHandler {
 
         @Override
         public long read(final ByteBuffer[] dsts, final int offs, final int len) throws IOException {
-            if (exchange.getResponseCode() == StatusCodes.EXPECTATION_FAILED) {
+            if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
                 return -1;
             }
@@ -155,7 +155,7 @@ public class HttpContinueReadHandler implements HttpHandler {
 
         @Override
         public void awaitReadable(final long time, final TimeUnit timeUnit) throws IOException {
-            if (exchange.getResponseCode() == StatusCodes.EXPECTATION_FAILED) {
+            if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
                 return;
             }
@@ -181,7 +181,7 @@ public class HttpContinueReadHandler implements HttpHandler {
 
         @Override
         public void awaitReadable() throws IOException {
-            if (exchange.getResponseCode() == StatusCodes.EXPECTATION_FAILED) {
+            if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
                 return;
             }

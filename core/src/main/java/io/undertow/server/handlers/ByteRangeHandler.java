@@ -90,7 +90,7 @@ public class ByteRangeHandler implements HttpHandler {
             exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
                 @Override
                 public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-                    if(exchange.getResponseCode() != StatusCodes.OK ) {
+                    if(exchange.getStatusCode() != StatusCodes.OK ) {
                         return factory.create();
                     }
                     String length = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
@@ -125,7 +125,7 @@ public class ByteRangeHandler implements HttpHandler {
                         long toWrite = end - start + 1;
                         exchange.setResponseContentLength(toWrite);
                     }
-                    exchange.setResponseCode(StatusCodes.PARTIAL_CONTENT);
+                    exchange.setStatusCode(StatusCodes.PARTIAL_CONTENT);
                     exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, start + "-" + end + "/" + responseLength);
                     return new RangeStreamSinkConduit(factory.create(), start, end, responseLength);
                 }

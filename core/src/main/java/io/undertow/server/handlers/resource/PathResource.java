@@ -122,11 +122,11 @@ public class PathResource implements RangeAwareResource {
                         fileChannel.position(start);
                     }
                 } catch (NoSuchFileException e) {
-                    exchange.setResponseCode(StatusCodes.NOT_FOUND);
+                    exchange.setStatusCode(StatusCodes.NOT_FOUND);
                     callback.onException(exchange, sender, e);
                     return false;
                 } catch (IOException e) {
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     callback.onException(exchange, sender, e);
                     return false;
                 }
@@ -201,7 +201,7 @@ public class PathResource implements RangeAwareResource {
                 }
                 IoUtils.safeClose(fileChannel);
                 if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 }
                 callback.onException(exchange, sender, exception);
             }

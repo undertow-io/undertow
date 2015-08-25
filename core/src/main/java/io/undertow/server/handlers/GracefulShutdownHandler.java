@@ -61,7 +61,7 @@ public class GracefulShutdownHandler implements HttpHandler {
         activeRequestsUpdater.incrementAndGet(this);
         if (shutdown) {
             decrementRequests();
-            exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
+            exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
             exchange.endExchange();
             return;
         }

@@ -306,11 +306,11 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
                     // Iterated all mechanisms, now need to select a suitable status code.
                     if (atLeastOneChallenge) {
                         if (chosenStatusCode != null) {
-                            exchange.setResponseCode(chosenStatusCode);
+                            exchange.setStatusCode(chosenStatusCode);
                         }
                     } else {
                         // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
-                        exchange.setResponseCode(StatusCodes.FORBIDDEN);
+                        exchange.setStatusCode(StatusCodes.FORBIDDEN);
                     }
                 }
                 return AuthenticationState.CHALLENGE_SENT;

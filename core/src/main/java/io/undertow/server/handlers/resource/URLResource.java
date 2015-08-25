@@ -157,7 +157,7 @@ public class URLResource implements Resource, RangeAwareResource {
                     try {
                         inputStream = url.openStream();
                     } catch (IOException e) {
-                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         return;
                     }
                     buffer = new byte[1024];//TODO: we should be pooling these
@@ -213,7 +213,7 @@ public class URLResource implements Resource, RangeAwareResource {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 IoUtils.safeClose(inputStream);
                 if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 }
                 completionCallback.onException(exchange, sender, exception);
             }

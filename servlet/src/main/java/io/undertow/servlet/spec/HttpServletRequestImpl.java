@@ -417,7 +417,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 throw UndertowServletMessages.MESSAGES.authenticationFailed();
             }
         } else {
-            if(!exchange.isResponseStarted() && exchange.getResponseCode() == 200) {
+            if(!exchange.isResponseStarted() && exchange.getStatusCode() == 200) {
                 throw UndertowServletMessages.MESSAGES.authenticationFailed();
             } else {
                 return false;

@@ -130,7 +130,7 @@ public class ResponseCache {
         }
         //we do send a 304 if the if-none-match header matches
         if (!ETagUtils.handleIfNoneMatch(exchange, etag, true)) {
-            exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
+            exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
             exchange.endExchange();
             return true;
         }
@@ -139,7 +139,7 @@ public class ResponseCache {
             return false;
         }
         if (!DateUtils.handleIfModifiedSince(exchange, existingKey.getLastModified())) {
-            exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
+            exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
             exchange.endExchange();
             return true;
         }

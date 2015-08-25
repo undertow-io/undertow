@@ -60,7 +60,7 @@ public class ServletHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws IOException, ServletException {
         if (managedServlet.isPermanentlyUnavailable()) {
             UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 404 for servlet %s due to permanent unavailability", managedServlet.getServletInfo().getName());
-            exchange.setResponseCode(StatusCodes.NOT_FOUND);
+            exchange.setStatusCode(StatusCodes.NOT_FOUND);
             return;
         }
 
@@ -68,7 +68,7 @@ public class ServletHandler implements HttpHandler {
         if (until != 0) {
             UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 503 for servlet %s due to temporary unavailability", managedServlet.getServletInfo().getName());
             if (System.currentTimeMillis() < until) {
-                exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
+                exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
                 return;
             } else {
                 unavailableUntilUpdater.compareAndSet(this, until, 0);
@@ -100,11 +100,11 @@ public class ServletHandler implements HttpHandler {
                 UndertowServletLogger.REQUEST_LOGGER.stoppingServletDueToPermanentUnavailability(managedServlet.getServletInfo().getName(), e);
                 managedServlet.stop();
                 managedServlet.setPermanentlyUnavailable(true);
-                exchange.setResponseCode(StatusCodes.NOT_FOUND);
+                exchange.setStatusCode(StatusCodes.NOT_FOUND);
             } else {
                 unavailableUntilUpdater.set(this, System.currentTimeMillis() + e.getUnavailableSeconds() * 1000);
                 UndertowServletLogger.REQUEST_LOGGER.stoppingServletUntilDueToTemporaryUnavailability(managedServlet.getServletInfo().getName(), new Date(until), e);
-                exchange.setResponseCode(StatusCodes.SERVICE_UNAVAILABLE);
+                exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
             }
         } finally {
             if(servlet != null) {

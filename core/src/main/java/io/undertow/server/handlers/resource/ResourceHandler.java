@@ -121,7 +121,7 @@ public class ResourceHandler implements HttpHandler {
         } else if (exchange.getRequestMethod().equals(Methods.HEAD)) {
             serveResource(exchange, false);
         } else {
-            exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED);
+            exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
             exchange.endExchange();
         }
     }
@@ -133,7 +133,7 @@ public class ResourceHandler implements HttpHandler {
         }
 
         if (!allowed.resolve(exchange)) {
-            exchange.setResponseCode(StatusCodes.FORBIDDEN);
+            exchange.setStatusCode(StatusCodes.FORBIDDEN);
             exchange.endExchange();
             return;
         }
@@ -169,7 +169,7 @@ public class ResourceHandler implements HttpHandler {
                     }
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     exchange.endExchange();
                     return;
                 }
@@ -185,7 +185,7 @@ public class ResourceHandler implements HttpHandler {
                         indexResource = getIndexFiles(resourceManager, resource.getPath(), welcomeFiles);
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.endExchange();
                         return;
                     }
@@ -194,12 +194,12 @@ public class ResourceHandler implements HttpHandler {
                             DirectoryUtils.renderDirectoryListing(exchange, resource);
                             return;
                         } else {
-                            exchange.setResponseCode(StatusCodes.FORBIDDEN);
+                            exchange.setStatusCode(StatusCodes.FORBIDDEN);
                             exchange.endExchange();
                             return;
                         }
                     } else if (!exchange.getRequestPath().endsWith("/")) {
-                        exchange.setResponseCode(StatusCodes.FOUND);
+                        exchange.setStatusCode(StatusCodes.FOUND);
                         exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
                         exchange.endExchange();
                         return;
@@ -207,7 +207,7 @@ public class ResourceHandler implements HttpHandler {
                     resource = indexResource;
                 } else if(exchange.getRelativePath().endsWith("/")) {
                     //UNDERTOW-432
-                    exchange.setResponseCode(StatusCodes.NOT_FOUND);
+                    exchange.setStatusCode(StatusCodes.NOT_FOUND);
                     exchange.endExchange();
                     return;
                 }
@@ -216,13 +216,13 @@ public class ResourceHandler implements HttpHandler {
                 final Date lastModified = resource.getLastModified();
                 if (!ETagUtils.handleIfMatch(exchange, etag, false) ||
                         !DateUtils.handleIfUnmodifiedSince(exchange, lastModified)) {
-                    exchange.setResponseCode(StatusCodes.PRECONDITION_FAILED);
+                    exchange.setStatusCode(StatusCodes.PRECONDITION_FAILED);
                     exchange.endExchange();
                     return;
                 }
                 if (!ETagUtils.handleIfNoneMatch(exchange, etag, true) ||
                         !DateUtils.handleIfModifiedSince(exchange, lastModified)) {
-                    exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
+                    exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
                     exchange.endExchange();
                     return;
                 }
@@ -266,7 +266,7 @@ public class ResourceHandler implements HttpHandler {
                             exchange.setResponseContentLength(toWrite);
                         }
                         if(range != null) {
-                            exchange.setResponseCode(StatusCodes.PARTIAL_CONTENT);
+                            exchange.setStatusCode(StatusCodes.PARTIAL_CONTENT);
                             exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, start + "-" + end + "/" + contentLength);
                         }
                     }
@@ -301,7 +301,7 @@ public class ResourceHandler implements HttpHandler {
                     } catch (IOException e) {
                         //TODO: should this be fatal
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.endExchange();
                         return;
                     }

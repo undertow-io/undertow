@@ -59,7 +59,7 @@ public class AccessControlListHandler implements HttpHandler {
         if (isAllowed(attribute)) {
             next.handleRequest(exchange);
         } else {
-            exchange.setResponseCode(StatusCodes.FORBIDDEN);
+            exchange.setStatusCode(StatusCodes.FORBIDDEN);
             exchange.endExchange();
         }
     }
