@@ -38,12 +38,12 @@ public class ResponseCodeAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        return Integer.toString(exchange.getResponseCode());
+        return Integer.toString(exchange.getStatusCode());
     }
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        exchange.setResponseCode(Integer.parseInt(newValue));
+        exchange.setStatusCode(Integer.parseInt(newValue));
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {

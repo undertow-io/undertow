@@ -57,7 +57,7 @@ public class ContentOverrunTestCase {
         HttpHandler responseNotAllowed = new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.setResponseCode(204);
+                exchange.setStatusCode(204);
                 exchange.getOutputStream().write("Overly long content".getBytes(StandardCharsets.UTF_8));
             }
         };

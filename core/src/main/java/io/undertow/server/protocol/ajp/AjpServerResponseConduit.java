@@ -183,8 +183,8 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
             buffer.put((byte) 0); //we fill the size in later
             buffer.put((byte) 0);
             buffer.put((byte) 4);
-            putInt(buffer, exchange.getResponseCode());
-            putString(buffer, StatusCodes.getReason(exchange.getResponseCode()));
+            putInt(buffer, exchange.getStatusCode());
+            putString(buffer, StatusCodes.getReason(exchange.getStatusCode()));
 
             int headers = 0;
             //we need to count the headers

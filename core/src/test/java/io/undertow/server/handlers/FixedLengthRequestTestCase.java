@@ -65,7 +65,7 @@ public class FixedLengthRequestTestCase {
                     if (connection == null) {
                         connection = exchange.getConnection();
                     } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();
@@ -79,7 +79,7 @@ public class FixedLengthRequestTestCase {
                     outputStream.close();
                 } catch (IOException e) {
                     exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     throw new RuntimeException(e);
                 }
             }

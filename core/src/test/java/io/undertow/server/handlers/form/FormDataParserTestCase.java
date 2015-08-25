@@ -104,7 +104,7 @@ public class FormDataParserTestCase {
                         }
                     }
                 } catch (IOException e) {
-                    exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 }
             }
         });

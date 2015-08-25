@@ -88,8 +88,8 @@ public class AllowedContentEncodings implements ConduitWrapper<StreamSinkConduit
         }
         //if this is a zero length response we don't want to encode
         if (exchange.getResponseContentLength() != 0
-                && exchange.getResponseCode() != StatusCodes.NO_CONTENT
-                && exchange.getResponseCode() != StatusCodes.NOT_MODIFIED) {
+                && exchange.getStatusCode() != StatusCodes.NO_CONTENT
+                && exchange.getStatusCode() != StatusCodes.NOT_MODIFIED) {
             EncodingMapping encoding = getEncoding();
             if (encoding != null) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, encoding.getName());

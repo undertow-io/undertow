@@ -112,7 +112,7 @@ public class ReceiverTestCase {
                     @Override
                     public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
                         exception.printStackTrace();
-                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.endExchange();
                     }
 

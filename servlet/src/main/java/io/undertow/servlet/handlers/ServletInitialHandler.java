@@ -119,7 +119,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         if(isForbiddenPath(path)) {
-            exchange.setResponseCode(StatusCodes.NOT_FOUND);
+            exchange.setStatusCode(StatusCodes.NOT_FOUND);
             return;
         }
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
@@ -134,9 +134,9 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
             if(exchange.getRequestMethod().equals(Methods.GET) || exchange.getRequestMethod().equals(Methods.HEAD)) {
-                exchange.setResponseCode(StatusCodes.FOUND);
+                exchange.setStatusCode(StatusCodes.FOUND);
             } else {
-                exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
+                exchange.setStatusCode(StatusCodes.TEMPORARY_REDIRECT);
             }
             exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             return;
@@ -297,7 +297,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 } else {
                     if (!exchange.isResponseStarted()) {
                         response.reset();                       //reset the response
-                        exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.getResponseHeaders().clear();
                         String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
                         if (location == null) {

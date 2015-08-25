@@ -44,7 +44,7 @@ public class BadRequestTestCase {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
-                exchange.setResponseCode(StatusCodes.OK);
+                exchange.setStatusCode(StatusCodes.OK);
             }
         });
     }

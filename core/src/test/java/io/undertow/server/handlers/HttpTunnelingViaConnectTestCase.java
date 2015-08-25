@@ -61,7 +61,7 @@ public class HttpTunnelingViaConnectTestCase {
                 .setHandler(new ConnectHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.setResponseCode(500);
+                        exchange.setStatusCode(500);
                     }
                 }))
         .build();

@@ -149,7 +149,7 @@ class MCMPWebManager extends MCMPHandler {
             }
         }
 
-        exchange.setResponseCode(StatusCodes.OK);
+        exchange.setStatusCode(StatusCodes.OK);
         exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/html; charset=ISO-8859-1");
         final Sender resp = exchange.getResponseSender();
 

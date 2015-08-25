@@ -76,7 +76,7 @@ public final class ResponseCodeHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.setResponseCode(responseCode);
+        exchange.setStatusCode(responseCode);
         if(traceEnabled) {
             log.tracef("Setting response code %s for exchange %s", responseCode, exchange);
         }

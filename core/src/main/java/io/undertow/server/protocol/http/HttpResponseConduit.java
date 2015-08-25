@@ -164,7 +164,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             assert buffer.remaining() >= 50;
             exchange.getProtocol().appendTo(buffer);
             buffer.put((byte) ' ');
-            int code = exchange.getResponseCode();
+            int code = exchange.getStatusCode();
             assert 999 >= code && code >= 100;
             buffer.put((byte) (code / 100 + '0'));
             buffer.put((byte) (code / 10 % 10 + '0'));

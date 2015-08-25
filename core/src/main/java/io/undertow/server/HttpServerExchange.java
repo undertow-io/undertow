@@ -684,7 +684,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return True if this exchange represents an upgrade response
      */
     public boolean isUpgrade() {
-        return getResponseCode() == StatusCodes.SWITCHING_PROTOCOLS;
+        return getStatusCode() == StatusCodes.SWITCHING_PROTOCOLS;
     }
 
     /**
@@ -839,7 +839,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
         connection.setUpgradeListener(listener);
-        setResponseCode(StatusCodes.SWITCHING_PROTOCOLS);
+        setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
         return this;
     }
@@ -858,7 +858,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
         connection.setUpgradeListener(listener);
-        setResponseCode(StatusCodes.SWITCHING_PROTOCOLS);
+        setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
         final HeaderMap headers = getResponseHeaders();
         headers.put(Headers.UPGRADE, productName);
         headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
@@ -1273,22 +1273,56 @@ public final class HttpServerExchange extends AbstractAttachable {
         return responseChannel == null;
     }
 
+
     /**
-     * Change the response code for this response.  If not specified, the code will be a {@code 200}.  Setting
-     * the response code after the response headers have been transmitted has no effect.
+     * Get the status code.
      *
-     * @param responseCode the new code
+     * @see #getStatusCode()
+     * @return the status code
+     */
+    @Deprecated
+    public int getResponseCode() {
+        return state & MASK_RESPONSE_CODE;
+    }
+
+    /**
+     * Change the status code for this response.  If not specified, the code will be a {@code 200}.  Setting
+     * the status code after the response headers have been transmitted has no effect.
+     *
+     * @see #setStatusCode(int)
+     * @param statusCode the new code
      * @throws IllegalStateException if a response or upgrade was already sent
      */
-    public HttpServerExchange setResponseCode(final int responseCode) {
-        if (responseCode < 0 || responseCode > 999) {
+    @Deprecated
+    public HttpServerExchange setResponseCode(final int statusCode) {
+        return setStatusCode(statusCode);
+    }
+
+    /**
+     * Get the status code.
+     *
+     * @return the status code
+     */
+    public int getStatusCode() {
+        return state & MASK_RESPONSE_CODE;
+    }
+
+    /**
+     * Change the status code for this response.  If not specified, the code will be a {@code 200}.  Setting
+     * the status code after the response headers have been transmitted has no effect.
+     *
+     * @param statusCode the new code
+     * @throws IllegalStateException if a response or upgrade was already sent
+     */
+    public HttpServerExchange setStatusCode(final int statusCode) {
+        if (statusCode < 0 || statusCode > 999) {
             throw new IllegalArgumentException("Invalid response code");
         }
         int oldVal = state;
         if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
             throw UndertowMessages.MESSAGES.responseAlreadyStarted();
         }
-        this.state = oldVal & ~MASK_RESPONSE_CODE | responseCode & MASK_RESPONSE_CODE;
+        this.state = oldVal & ~MASK_RESPONSE_CODE | statusCode & MASK_RESPONSE_CODE;
         return this;
     }
 
@@ -1402,15 +1436,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the response code.
-     *
-     * @return the response code
-     */
-    public int getResponseCode() {
-        return state & MASK_RESPONSE_CODE;
-    }
-
-    /**
      * Force the codec to treat the response as fully written.  Should only be invoked by handlers which downgrade
      * the socket or implement a transfer coding.
      */
@@ -1511,7 +1536,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                         //so we attempt to drain, and if we have not drained anything then we
                         //assume the server has not sent any data
 
-                        if (getResponseCode() != StatusCodes.EXPECTATION_FAILED || totalRead > 0) {
+                        if (getStatusCode() != StatusCodes.EXPECTATION_FAILED || totalRead > 0) {
                             requestChannel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE,
                                     new ChannelListener<StreamSourceChannel>() {
                                         @Override

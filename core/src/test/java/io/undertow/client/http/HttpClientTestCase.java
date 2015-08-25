@@ -98,7 +98,7 @@ public class HttpClientTestCase {
     }
 
     static void sendMessage(final HttpServerExchange exchange) {
-        exchange.setResponseCode(StatusCodes.OK);
+        exchange.setStatusCode(StatusCodes.OK);
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
         final Sender sender = exchange.getResponseSender();
         sender.send(message);

@@ -71,7 +71,7 @@ public class DirectoryUtils {
         if (buffer != null) {
 
             if(!ETagUtils.handleIfNoneMatch(exchange, new ETag(false, etag), false)) {
-                exchange.setResponseCode(StatusCodes.NOT_MODIFIED);
+                exchange.setStatusCode(StatusCodes.NOT_MODIFIED);
                 return true;
             }
 
@@ -153,7 +153,7 @@ public class DirectoryUtils {
     public static void renderDirectoryListing(HttpServerExchange exchange, Resource resource) {
         String requestPath = exchange.getRequestPath();
         if (! requestPath.endsWith("/")) {
-            exchange.setResponseCode(StatusCodes.FOUND);
+            exchange.setStatusCode(StatusCodes.FOUND);
             exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             exchange.endExchange();
             return;
@@ -172,7 +172,7 @@ public class DirectoryUtils {
             throw new IllegalStateException(e);
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-            exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+            exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
         }
 
         exchange.endExchange();

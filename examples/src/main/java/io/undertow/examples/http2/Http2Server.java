@@ -84,7 +84,7 @@ public class Http2Server {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseHeaders().add(Headers.LOCATION, "https://" + exchange.getHostName() + ":" + (exchange.getHostPort() + 363) + exchange.getRelativePath());
-                        exchange.setResponseCode(StatusCodes.TEMPORARY_REDIRECT);
+                        exchange.setStatusCode(StatusCodes.TEMPORARY_REDIRECT);
                     }
                 }), "x-undertow-transport", ExchangeAttributes.transportProtocol())), new InMemorySessionManager("test"), new SessionCookieConfig())).build();
 

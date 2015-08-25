@@ -217,7 +217,7 @@ public class Connectors {
         } catch (Throwable t) {
             exchange.setInCall(false);
             if (!exchange.isResponseStarted()) {
-                exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }
             UndertowLogger.REQUEST_LOGGER.errorf(t, "Undertow request failed %s", exchange);
             exchange.endExchange();
@@ -302,7 +302,7 @@ public class Connectors {
     }
 
     public static boolean isEntityBodyAllowed(HttpServerExchange exchange){
-        int code = exchange.getResponseCode();
+        int code = exchange.getStatusCode();
         if(code >= 100 && code < 200) {
             return false;
         }

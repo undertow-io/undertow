@@ -69,12 +69,12 @@ public class ConnectHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if(exchange.getRequestMethod().equals(Methods.CONNECT)) {
             if(!allowed.resolve(exchange)) {
-                exchange.setResponseCode(StatusCodes.METHOD_NOT_ALLOWED);//not sure if this is the best response
+                exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);//not sure if this is the best response
                 return;
             }
             String[] parts = exchange.getRequestPath().split(":");
             if(parts.length != 2) {
-                exchange.setResponseCode(StatusCodes.BAD_REQUEST);//not sure if this is the best response
+                exchange.setStatusCode(StatusCodes.BAD_REQUEST);//not sure if this is the best response
                 return;
             }
             final String host = parts[0];
@@ -93,14 +93,14 @@ public class ConnectHandler implements HttpHandler {
                                     Transfer.initiateTransfer(streamConnection.getSourceChannel(), clientChannel.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), handler, handler, exchange.getConnection().getBufferPool());
                                 }
                             });
-                            exchange.setResponseCode(200);
+                            exchange.setStatusCode(200);
                             exchange.endExchange();
                         }
                     }, OptionMap.create(Options.TCP_NODELAY, true)).addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
                         @Override
                         public void notify(IoFuture<? extends StreamConnection> ioFuture, Object attachment) {
                             if(ioFuture.getStatus() == IoFuture.Status.FAILED) {
-                                exchange.setResponseCode(503);
+                                exchange.setStatusCode(503);
                                 exchange.endExchange();
                             }
                         }

@@ -105,7 +105,7 @@ public class FileErrorPageHandler implements HttpHandler {
             @Override
             public boolean handleDefaultResponse(final HttpServerExchange exchange) {
                 Set<Integer> codes = responseCodes;
-                if (!exchange.isResponseStarted() && codes.contains(exchange.getResponseCode())) {
+                if (!exchange.isResponseStarted() && codes.contains(exchange.getStatusCode())) {
                     serveFile(exchange);
                     return true;
                 }

@@ -46,7 +46,7 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
         @Override
         public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
             try {
-                if (exchange.getResponseCode() == StatusCodes.INTERNAL_SERVER_ERROR) {
+                if (exchange.getStatusCode() == StatusCodes.INTERNAL_SERVER_ERROR) {
                     errorCountUpdater.incrementAndGet(ConnectorStatisticsImpl.this);
 
                 }

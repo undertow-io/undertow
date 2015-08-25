@@ -149,7 +149,7 @@ public class LearningPushHandler implements HttpHandler {
 
         @Override
         public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-            if (exchange.getResponseCode() == 200 && referer != null) {
+            if (exchange.getStatusCode() == 200 && referer != null) {
                 //for now only cache 200 response codes
                 String lmString = exchange.getResponseHeaders().getFirst(Headers.LAST_MODIFIED);
                 String etag = exchange.getResponseHeaders().getFirst(Headers.ETAG);

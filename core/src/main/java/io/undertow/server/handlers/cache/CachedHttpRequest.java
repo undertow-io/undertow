@@ -61,7 +61,7 @@ public class CachedHttpRequest {
         } else {
             this.contentEncoding = exchange.getResponseHeaders().getFirst(Headers.CONTENT_ENCODING);
         }
-        this.responseCode = exchange.getResponseCode();
+        this.responseCode = exchange.getStatusCode();
     }
 
     public String getPath() {

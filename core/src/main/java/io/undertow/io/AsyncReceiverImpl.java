@@ -47,7 +47,7 @@ public class AsyncReceiverImpl implements Receiver {
         @Override
         public void error(HttpServerExchange exchange, IOException e) {
             e.printStackTrace();
-            exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
+            exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             exchange.endExchange();
         }

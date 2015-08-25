@@ -129,7 +129,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
         if (jdbcLogAttribute.bytes < 0)
             jdbcLogAttribute.bytes = 0;
 
-        jdbcLogAttribute.status = exchange.getResponseCode();
+        jdbcLogAttribute.status = exchange.getStatusCode();
 
         if (jdbcLogAttribute.pattern.equals("combined")) {
             jdbcLogAttribute.virtualHost = exchange.getRequestHeaders().getFirst(Headers.HOST);

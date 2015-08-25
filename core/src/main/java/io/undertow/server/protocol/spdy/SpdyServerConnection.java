@@ -251,7 +251,7 @@ public class SpdyServerConnection extends ServerConnection {
         }
         DateUtils.addDateHeaderIfRequired(exchange);
 
-        headers.put(STATUS, exchange.getResponseCode() + " " + StatusCodes.getReason(exchange.getResponseCode()));
+        headers.put(STATUS, exchange.getStatusCode() + " " + StatusCodes.getReason(exchange.getStatusCode()));
         headers.put(VERSION, exchange.getProtocol().toString());
 
         Connectors.flattenCookies(exchange);
