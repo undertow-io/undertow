@@ -533,8 +533,6 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                         handleHeaderData(pending.getFrameHeaderData());
                     }
                     if(hasData) {
-                        // TODO expand FrameData
-                        // TODO for websockets, need to unmask
                         this.frameDataRemaining = updateFrameDataRemaining(frameData, frameDataRemaining);
                         this.data = processFrameData(frameData, frameDataRemaining - currentDataOriginalSize == 0);
                     }
