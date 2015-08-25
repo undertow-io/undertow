@@ -28,6 +28,7 @@ import io.undertow.websockets.core.function.ChannelFunctionFileChannel;
 import io.undertow.websockets.core.protocol.version07.Masker;
 import io.undertow.websockets.core.protocol.version07.UTF8Checker;
 import io.undertow.websockets.extensions.ExtensionFunction;
+import io.undertow.websockets.extensions.NoopExtensionFunction;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -68,7 +69,11 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
                 checker = (UTF8Checker) func;
             }
         }
-        this.extensionFunction = wsChannel.getExtensionFunction();
+        if (rsv > 0) {
+            this.extensionFunction = wsChannel.getExtensionFunction();
+        } else {
+            this.extensionFunction = NoopExtensionFunction.instance;
+        }
     }
 
     /**
