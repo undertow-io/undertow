@@ -1341,7 +1341,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param message The status message
      * @return this exchange
      */
-    public HttpServerExchange getReasonPhrase(String message) {
+    public HttpServerExchange setReasonPhrase(String message) {
         putAttachment(REASON_PHRASE, message);
         return this;
     }

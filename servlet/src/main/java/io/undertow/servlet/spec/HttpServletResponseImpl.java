@@ -123,6 +123,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (responseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
+        if(servletContext.getDeployment().getDeploymentInfo().isSendCustomReasonPhraseOnError()) {
+            exchange.setReasonPhrase(msg);
+        }
         writer = null;
         responseState = ResponseState.NONE;
         exchange.setStatusCode(sc);
@@ -273,6 +276,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public void setStatus(final int sc, final String sm) {
         setStatus(sc);
+        if(!insideInclude && servletContext.getDeployment().getDeploymentInfo().isSendCustomReasonPhraseOnError()) {
+            exchange.setReasonPhrase(sm);
+        }
     }
 
     @Override
