@@ -606,8 +606,13 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                     body = null;
                 }
             } else if (body != null) {
+                // We still have a body, but since we just flushed, we transfer it to the write buffer.
+                // This works as long as you call write() again
                 body.getResource().compact();
+                writeBuffer = body;
+                body = null;
             }
+
             if (header.getByteBuffer() != null) {
                 header.getByteBuffer().free();
             }
