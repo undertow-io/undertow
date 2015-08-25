@@ -23,7 +23,7 @@ import io.undertow.websockets.core.WebSocketFrameType;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07PongFrameSinkChannel extends WebSocket07FrameSinkChannel {
-    WebSocket07PongFrameSinkChannel(WebSocket07Channel wsChannel, long payloadSize) {
-        super(wsChannel, WebSocketFrameType.PONG, payloadSize);
+    WebSocket07PongFrameSinkChannel(WebSocket07Channel wsChannel) {
+        super(wsChannel, WebSocketFrameType.PONG);
     }
 }

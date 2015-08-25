@@ -227,7 +227,7 @@ public class WebSocketExtensionBasicTestCase {
             longMsg.append(new Integer(i).toString().charAt(0));
         }
 
-        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT, LONG_MSG);
+        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener(longMsg.toString()).setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
@@ -322,7 +322,7 @@ public class WebSocketExtensionBasicTestCase {
         });
         clientChannel.resumeReceives();
 
-        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT, "Hello, World!".length());
+        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener("Hello, World!").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);

@@ -389,7 +389,7 @@ public class WebSockets {
 
     private static void sendInternal(final ByteBuffer data, WebSocketFrameType type, final WebSocketChannel wsChannel, final WebSocketCallback<Void> callback, long timeoutmillis) {
         try {
-            StreamSinkFrameChannel channel = wsChannel.send(type, data.remaining());
+            StreamSinkFrameChannel channel = wsChannel.send(type);
             // TODO chunk data into some MTU-like thing to control packet size
             if(!channel.send(new ImmediatePooled<>(data))) {
                 throw WebSocketMessages.MESSAGES.unableToSendOnNewChannel();
@@ -463,7 +463,7 @@ public class WebSockets {
     }
 
     private static void sendBlockingInternal(final ByteBuffer data, WebSocketFrameType type, final WebSocketChannel wsChannel) throws IOException {
-        StreamSinkFrameChannel channel = wsChannel.send(type, data.remaining());
+        StreamSinkFrameChannel channel = wsChannel.send(type);
         // TODO chunk data into some MTU-like thing to control packet size
         if(!channel.send(new ImmediatePooled<>(data))) {
             throw WebSocketMessages.MESSAGES.unableToSendOnNewChannel();

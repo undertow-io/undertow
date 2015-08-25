@@ -27,8 +27,8 @@ import io.undertow.websockets.core.WebSocketFrameType;
  */
 class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel {
 
-    WebSocket07TextFrameSinkChannel(WebSocket07Channel wsChannel, long payloadSize) {
-        super(wsChannel, WebSocketFrameType.TEXT, payloadSize);
+    WebSocket07TextFrameSinkChannel(WebSocket07Channel wsChannel) {
+        super(wsChannel, WebSocketFrameType.TEXT);
     }
 
     @Override

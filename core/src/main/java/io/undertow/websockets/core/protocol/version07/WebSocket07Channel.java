@@ -106,18 +106,18 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     @Override
-    protected StreamSinkFrameChannel createStreamSinkChannel(WebSocketFrameType type, long payloadSize) {
+    protected StreamSinkFrameChannel createStreamSinkChannel(WebSocketFrameType type) {
         switch (type) {
             case TEXT:
-                return new WebSocket07TextFrameSinkChannel(this, payloadSize);
+                return new WebSocket07TextFrameSinkChannel(this);
             case BINARY:
-                return new WebSocket07BinaryFrameSinkChannel(this, payloadSize);
+                return new WebSocket07BinaryFrameSinkChannel(this);
             case CLOSE:
-                return new WebSocket07CloseFrameSinkChannel(this, payloadSize);
+                return new WebSocket07CloseFrameSinkChannel(this);
             case PONG:
-                return new WebSocket07PongFrameSinkChannel(this, payloadSize);
+                return new WebSocket07PongFrameSinkChannel(this);
             case PING:
-                return new WebSocket07PingFrameSinkChannel(this, payloadSize);
+                return new WebSocket07PingFrameSinkChannel(this);
             default:
                 throw WebSocketMessages.MESSAGES.unsupportedFrameType(type);
         }

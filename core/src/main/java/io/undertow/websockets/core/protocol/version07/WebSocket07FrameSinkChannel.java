@@ -22,6 +22,7 @@ import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.extensions.ExtensionFunction;
+import io.undertow.websockets.extensions.NoopExtensionFunction;
 import org.xnio.Pooled;
 
 import java.io.IOException;
@@ -35,32 +36,27 @@ import java.util.Random;
  */
 public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel {
 
-    private int maskingKey;
     private final Masker masker;
-    private long payloadSize;
-    private boolean dataWritten = false;
-    long toWrite;
-    protected ExtensionFunction extensionFunction;
+    private volatile boolean dataWritten = false;
+    protected final ExtensionFunction extensionFunction;
 
-    protected WebSocket07FrameSinkChannel(WebSocket07Channel wsChannel, WebSocketFrameType type, long payloadSize) {
+    protected WebSocket07FrameSinkChannel(WebSocket07Channel wsChannel, WebSocketFrameType type) {
         super(wsChannel, type);
-        this.payloadSize = payloadSize;
-        this.toWrite = payloadSize;
+
         if(wsChannel.isClient()) {
-            maskingKey = new Random().nextInt();
-            masker = new Masker(maskingKey);
+            masker = new Masker(0);
         } else {
             masker = null;
-            maskingKey = 0;
         }
-        extensionFunction = wsChannel.getExtensionFunction();
+
         /*
             Checks if there are negotiated extensions that need to modify RSV bits
          */
-        if (wsChannel.areExtensionsSupported() && extensionFunction != null &&
-                (type == WebSocketFrameType.TEXT || type == WebSocketFrameType.BINARY)) {
+        if (wsChannel.areExtensionsSupported() && (type == WebSocketFrameType.TEXT || type == WebSocketFrameType.BINARY)) {
+            extensionFunction = wsChannel.getExtensionFunction();
             setRsv(extensionFunction.writeRsv(0));
         } else {
+            extensionFunction = NoopExtensionFunction.instance;
             setRsv(0);
         }
     }
@@ -68,9 +64,10 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     @Override
     protected void handleFlushComplete(boolean finalFrame) {
         dataWritten = true;
-        if(masker != null) {
-            masker.setMaskingKey(maskingKey);
-        }
+// TODO not sure we need to do this as the key was set when it was last used
+//        if(masker != null) {
+//            masker.setMaskingKey(maskingKey);
+//        }
     }
 
     private byte opCode() {
@@ -97,57 +94,36 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
 
     @Override
     protected SendFrameHeader createFrameHeader() {
-        if (getRsv() == 0) {
-            /*
-                Case:
-                - No extension scenario:
-                - For fixed length we do not need more that one header.
-             */
-            if(payloadSize >= 0 && dataWritten) {
-                if(masker != null) {
-                    //do any required masking
-                    //this is all one frame, so we don't call setMaskingKey
-                    ByteBuffer buf = getBuffer();
-                    masker.beforeWrite(buf, buf.position(), buf.remaining());
-                }
-                return null;
-            }
-        } else {
-            /*
-                Case:
-                - Extensions scenario.
-                - Extensions may require to include additional header with updated payloadSize. For example, several Type 0
-                  Continuation fragments after a Text/Binary fragment.
-             */
-            payloadSize = getBuffer().remaining();
-        }
-
         Pooled<ByteBuffer> start = getChannel().getBufferPool().allocate();
         byte b0 = 0;
+
         //if writes are shutdown this is the final fragment
-        if (isFinalFrameQueued() || (getRsv() == 0 && payloadSize >= 0)) {
-            b0 |= 1 << 7;
+        if (isFinalFrameQueued()) {
+            b0 |= 1 << 7; // set FIN
         }
+
         /*
             Known extensions (i.e. compression) should not modify RSV bit on continuation bit.
          */
-        int rsv = opCode() == WebSocket07Channel.OPCODE_CONT ? 0 : getRsv();
+        byte opCode = opCode();
+
+        int rsv = opCode == WebSocket07Channel.OPCODE_CONT ? 0 : getRsv();
         b0 |= (rsv & 7) << 4;
-        b0 |= opCode() & 0xf;
+        b0 |= opCode & 0xf;
 
         final ByteBuffer header = start.getResource();
-        //int maskLength = 0; // handle masking for clients but we are currently only
-        // support servers this is not a priority by now
+
         byte maskKey = 0;
         if(masker != null) {
             maskKey |= 1 << 7;
         }
-        long payloadSize;
-        if(this.payloadSize >= 0) {
-            payloadSize = this.payloadSize;
-        } else {
-            payloadSize = getBuffer().remaining();
+
+        long payloadSize = getBuffer().remaining();
+
+        if (payloadSize > 125 && opCode == WebSocket07Channel.OPCODE_PING) {
+            throw WebSocketMessages.MESSAGES.invalidPayloadLengthForPing(payloadSize);
         }
+
         if (payloadSize <= 125) {
             header.put(b0);
             header.put((byte)((payloadSize | maskKey) & 0xFF));
@@ -161,22 +137,20 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
             header.put((byte) ((127 | maskKey) & 0xFF));
             header.putLong(payloadSize);
         }
+
         if(masker != null) {
-            maskingKey = new Random().nextInt(); //generate a new key for this frame
+            int maskingKey = new Random().nextInt(); //generate a new key for this frame
             header.put((byte)((maskingKey >> 24) & 0xFF));
             header.put((byte)((maskingKey >> 16) & 0xFF));
             header.put((byte)((maskingKey >> 8) & 0xFF));
             header.put((byte)((maskingKey & 0xFF)));
-        }
-        header.flip();
-
-
-        if(masker != null) {
             masker.setMaskingKey(maskingKey);
             //do any required masking
             ByteBuffer buf = getBuffer();
             masker.beforeWrite(buf, buf.position(), buf.remaining());
         }
+
+        header.flip();
 
         return new SendFrameHeader(0, start);
     }
