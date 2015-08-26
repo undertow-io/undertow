@@ -324,7 +324,7 @@ public final class Headers {
             //no quotes
             for (end = start; end < header.length(); ++end) {
                 char c = header.charAt(end);
-                if (c == ' ' || c == '\t') {
+                if (c == ' ' || c == '\t' || c == ';') {
                     break;
                 }
             }

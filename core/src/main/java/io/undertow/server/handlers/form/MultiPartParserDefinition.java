@@ -195,7 +195,6 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 return existing;
             }
 
-            final MultipartParser.ParseState parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes(), exchange.getRequestCharset());
             InputStream inputStream = exchange.getInputStream();
             if (inputStream == null) {
                 throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
