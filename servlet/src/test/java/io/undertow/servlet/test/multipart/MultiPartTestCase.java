@@ -106,7 +106,8 @@ public class MultiPartTestCase {
         try {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext/1";
             HttpPost post = new HttpPost(uri);
-            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE, null, StandardCharsets.UTF_8);
 
             entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
