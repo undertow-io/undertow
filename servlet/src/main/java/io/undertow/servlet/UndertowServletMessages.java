@@ -209,4 +209,6 @@ public interface UndertowServletMessages {
     @Message(id = 10054, value = "Unable to create an instance factory for %s")
     RuntimeException couldNotCreateFactory(String className, @Cause Exception e);
 
+    @Message(id = 10055, value = "Listener is not started")
+    IllegalStateException listenerIsNotStarted();
 }
