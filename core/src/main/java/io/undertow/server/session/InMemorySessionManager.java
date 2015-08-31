@@ -21,7 +21,6 @@ package io.undertow.server.session;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcurrentDirectDeque;
 
 import java.math.BigDecimal;
@@ -47,8 +46,6 @@ import org.xnio.XnioWorker;
  * @author Stuart Douglas
  */
 public class InMemorySessionManager implements SessionManager, SessionManagerStatistics {
-
-    private final AttachmentKey<SessionImpl> NEW_SESSION = AttachmentKey.create(SessionImpl.class);
 
     private final SessionIdGenerator sessionIdGenerator;
 
@@ -181,16 +178,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         session.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
         sessionListeners.sessionCreated(session, serverExchange);
-        serverExchange.putAttachment(NEW_SESSION, session);
         return session;
     }
 
     @Override
     public Session getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
-        SessionImpl newSession = serverExchange.getAttachment(NEW_SESSION);
-        if(newSession != null) {
-            return newSession;
-        }
         String sessionId = config.findSessionId(serverExchange);
         return getSession(sessionId);
     }
@@ -503,9 +495,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public void invalidate(final HttpServerExchange exchange) {
             invalidate(exchange, SessionListener.SessionDestroyedReason.INVALIDATED);
-            if(exchange != null) {
-                exchange.removeAttachment(sessionManager.NEW_SESSION);
-            }
         }
 
         void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {

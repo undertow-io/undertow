@@ -67,11 +67,6 @@ public interface SessionManager {
      * <p>
      * This requirement exists to allow forwards across servlet contexts to work correctly.
      *
-     * The session manager is responsible for making sure that a newly created session is accessible to later calls to
-     * {@link #getSession(io.undertow.server.HttpServerExchange, SessionConfig)} from the same request. It is recommended
-     * that a non static attachment key be used to store the newly created session as an attachment. The attachment key
-     * must be static to prevent different session managers from interfering with each other.
-     *
      * @return The created session
      */
     Session createSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
