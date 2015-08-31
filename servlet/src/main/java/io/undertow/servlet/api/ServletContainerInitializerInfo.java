@@ -18,6 +18,10 @@
 
 package io.undertow.servlet.api;
 
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.util.ConstructorInstanceFactory;
+
+import java.lang.reflect.Constructor;
 import java.util.Set;
 
 import javax.servlet.ServletContainerInitializer;
@@ -35,6 +39,19 @@ public class ServletContainerInitializerInfo {
         this.servletContainerInitializerClass = servletContainerInitializerClass;
         this.instanceFactory = instanceFactory;
         this.handlesTypes = handlesTypes;
+    }
+
+    public ServletContainerInitializerInfo(final Class<? extends ServletContainerInitializer> servletContainerInitializerClass, final Set<Class<?>> handlesTypes) {
+        this.servletContainerInitializerClass = servletContainerInitializerClass;
+        this.handlesTypes = handlesTypes;
+
+        try {
+            final Constructor<ServletContainerInitializer> ctor = (Constructor<ServletContainerInitializer>) servletContainerInitializerClass.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            this.instanceFactory = new ConstructorInstanceFactory<>(ctor);
+        } catch (NoSuchMethodException e) {
+            throw UndertowServletMessages.MESSAGES.componentMustHaveDefaultConstructor("ServletContainerInitializer", servletContainerInitializerClass);
+        }
     }
 
     public Class<? extends ServletContainerInitializer> getServletContainerInitializerClass() {

@@ -144,6 +144,13 @@ public class ApplicationListeners implements Lifecycle {
             httpSessionIdListeners[old.length] = listener;
         }
         this.allListeners.add(listener);
+        if(started) {
+            try {
+                listener.start();
+            } catch (ServletException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public void start() throws ServletException {

@@ -19,6 +19,7 @@
 package io.undertow.servlet.test.listener.servletcontext;
 
 import java.io.IOException;
+import java.util.Collections;
 
 import javax.servlet.ServletException;
 
@@ -27,6 +28,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletContainerInitializerInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.test.SimpleServletTestCase;
@@ -57,6 +59,7 @@ public class ServletContextListenerTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
+                .addServletContainerInitalizer(new ServletContainerInitializerInfo(TestSci.class, Collections.<Class<?>>emptySet()))
                 .addServlet(
                         new ServletInfo("servlet", MessageServlet.class)
                                 .addMapping("/aa")
