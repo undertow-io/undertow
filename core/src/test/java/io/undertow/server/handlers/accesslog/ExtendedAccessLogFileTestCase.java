@@ -75,10 +75,10 @@ public class ExtendedAccessLogFileTestCase {
     @Test
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
         Path directory = logDirectory;
-        Path logFileName = directory.resolve("server1.log");
+        Path logFileName = directory.resolve("extended.log");
         DefaultAccessLogReceiver logReceiver = DefaultAccessLogReceiver.builder().setLogWriteExecutor(DefaultServer.getWorker())
                 .setOutputDirectory(directory)
-                .setLogBaseName("server1")
+                .setLogBaseName("extended")
                 .setLogFileHeaderGenerator(new ExtendedAccessLogParser.ExtendedAccessLogHeaderGenerator(PATTERN)).build();
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }
