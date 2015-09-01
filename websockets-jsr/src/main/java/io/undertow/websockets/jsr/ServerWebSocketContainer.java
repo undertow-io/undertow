@@ -484,16 +484,26 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 throw JsrWebSocketMessages.MESSAGES.multipleEndpointsWithOverlappingPaths(template, existing);
             }
             seenPaths.add(template);
+            Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
 
             EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, serverEndpoint.decoders(), serverEndpoint.encoders());
             AnnotatedEndpointFactory annotatedEndpointFactory = AnnotatedEndpointFactory.create(endpoint, encodingFactory, template.getParameterNames());
             InstanceFactory<?> instanceFactory = null;
             try {
                 instanceFactory = classIntrospecter.createInstanceFactory(endpoint);
-            } catch (NoSuchMethodException e) {
-                throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+            } catch (Exception e) {
+                //so it is possible that this is still valid if a custom configurator is in use
+                if(configuratorClass == ServerEndpointConfig.Configurator.class) {
+                    throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+                } else {
+                    instanceFactory = new InstanceFactory<Object>() {
+                        @Override
+                        public InstanceHandle<Object> createInstance() throws InstantiationException {
+                            throw JsrWebSocketMessages.MESSAGES.endpointDoesNotHaveAppropriateConstructor(endpoint);
+                        }
+                    };
+                }
             }
-            Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
             ServerEndpointConfig.Configurator configurator;
             if (configuratorClass != ServerEndpointConfig.Configurator.class) {
                 try {

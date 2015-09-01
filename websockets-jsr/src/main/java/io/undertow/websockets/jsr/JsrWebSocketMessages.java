@@ -154,4 +154,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3040, value = "Annotated endpoint instance %s was not of correct type %s")
     IllegalArgumentException endpointNotOfCorrectType(Object instance, Class expected);
+
+    @Message(id = 3041, value = "Annotated endpoint %s does not have a no arg constructor, but is using a custom configurator. The custom configurator must create the instance.")
+    InstantiationException endpointDoesNotHaveAppropriateConstructor(Class<?> endpoint);
 }

@@ -20,15 +20,27 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import javax.websocket.OnMessage;
 import javax.websocket.server.ServerEndpoint;
+import javax.websocket.server.ServerEndpointConfig;
 
 /**
  * @author Stuart Douglas
  */
-@ServerEndpoint(value = "/")
+@ServerEndpoint(value = "/", configurator = RootContextEndpoint.TestServerConfigurator.class)
 public class RootContextEndpoint {
+
+    public RootContextEndpoint(String ignored) {
+
+    }
 
     @OnMessage
     public String echo(String msg) {
         return msg;
+    }
+
+    public static class TestServerConfigurator extends ServerEndpointConfig.Configurator {
+        @Override
+        public <T> T getEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+            return (T) new RootContextEndpoint("");
+        }
     }
 }
