@@ -108,6 +108,20 @@ public class AccessLogHandler implements HttpHandler {
         this.tokens = ExchangeAttributes.parser(classLoader, new SubstituteEmptyWrapper("-")).parse(this.formatString);
     }
 
+    public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, String formatString, final ExchangeAttribute attribute) {
+        this(next, accessLogReceiver, formatString, attribute, Predicates.truePredicate());
+    }
+
+    public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, String formatString, final ExchangeAttribute attribute, Predicate predicate) {
+        this.next = next;
+        this.accessLogReceiver = accessLogReceiver;
+        this.predicate = predicate;
+        this.formatString = handleCommonNames(formatString);
+        this.tokens = attribute;
+    }
+
+
+
     private static String handleCommonNames(String formatString) {
         if(formatString.equals("common")) {
             return "%h %l %u %t \"%r\" %s %b";

@@ -329,7 +329,7 @@ public class ExtendedAccessLogParser {
                         public String readAttribute(HttpServerExchange exchange) {
                             String query = exchange.getQueryString();
 
-                            if (query == null) {
+                            if (query.isEmpty()) {
                                 return exchange.getRequestURI();
                             } else {
                                 StringBuilder buf = new StringBuilder();
