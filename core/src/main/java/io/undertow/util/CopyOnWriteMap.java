@@ -79,7 +79,7 @@ public class CopyOnWriteMap<K,V> implements ConcurrentMap<K, V> {
     }
 
     @Override
-    public V replace(K key, V value) {
+    public synchronized V replace(K key, V value) {
         final Map<K, V> delegate = this.delegate;
         V existing = delegate.get(key);
         if(existing != null) {
