@@ -21,6 +21,8 @@ package io.undertow.server.handlers;
 import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.cache.DirectBufferCache;
+import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
@@ -57,8 +59,10 @@ public class RangeRequestTestCase {
                 exchange.getResponseSender().send("0123456789");
             }
         }, true));
-        path.addPrefixPath("/resource",  new ResourceHandler(new PathResourceManager(rootPath, 10485760))
-                        .setDirectoryListingEnabled(true));
+        path.addPrefixPath("/resource",  new ResourceHandler( new PathResourceManager(rootPath, 10485760))
+                .setDirectoryListingEnabled(true));
+        path.addPrefixPath("/cachedresource",  new ResourceHandler(new CachingResourceManager(1000, 1000000, new DirectBufferCache(1000, 10, 10000), new PathResourceManager(rootPath, 10485760), -1))
+                .setDirectoryListingEnabled(true));
         DefaultServer.setRootHandler(path);
     }
 
@@ -69,6 +73,10 @@ public class RangeRequestTestCase {
     @Test
     public void testResourceHandler() throws IOException, InterruptedException {
         runTest("/resource/range.txt");
+    }
+    @Test
+    public void testCachedResourceHandler() throws IOException, InterruptedException {
+        runTest("/cachedresource/range.txt");
     }
 
     public void runTest(String path) throws IOException, InterruptedException {

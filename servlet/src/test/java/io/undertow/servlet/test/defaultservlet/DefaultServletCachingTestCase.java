@@ -192,4 +192,25 @@ public class DefaultServletCachingTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+
+    @Test
+    public void testRangeRequest() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String fileName = "range.html";
+            Path f = tmpDir.resolve(fileName);
+            Files.write(f, "hello".getBytes());
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/range.html");
+            get.addHeader("range", "bytes=2-3");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("ll", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 }

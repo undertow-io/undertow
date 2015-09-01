@@ -40,7 +40,7 @@ import io.undertow.util.MimeMappings;
 /**
  * @author Stuart Douglas
  */
-public class CachedResource implements Resource {
+public class CachedResource implements Resource, RangeAwareResource {
 
     private final CacheKey cacheKey;
     private final CachingResourceManager cachingResourceManager;
@@ -233,6 +233,75 @@ public class CachedResource implements Resource {
         return underlyingResource.getUrl();
     }
 
+    @Override
+    public void serveRange(Sender sender, HttpServerExchange exchange, long start, long end, IoCallback completionCallback) {
+        final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
+        if(dataCache == null) {
+            ((RangeAwareResource)underlyingResource).serveRange(sender, exchange, start, end, completionCallback);
+            return;
+        }
+
+        final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
+        final Long length = getContentLength();
+        //if it is not eligible to be served from the cache
+        if (length == null || length > cachingResourceManager.getMaxFileSize()) {
+            underlyingResource.serve(sender, exchange, completionCallback);
+            return;
+        }
+        //it is not cached yet, just serve it directly
+        if (existing == null || !existing.enabled() || !existing.reference()) {
+            //it is not cached yet, install a wrapper to grab the data
+            ((RangeAwareResource)underlyingResource).serveRange(sender, exchange, start, end, completionCallback);
+        } else {
+            //serve straight from the cache
+            ByteBuffer[] buffers;
+            boolean ok = false;
+            try {
+                LimitedBufferSlicePool.PooledByteBuffer[] pooled = existing.buffers();
+                buffers = new ByteBuffer[pooled.length];
+                for (int i = 0; i < buffers.length; i++) {
+                    // Keep position from mutating
+                    buffers[i] = pooled[i].getResource().duplicate();
+                }
+                ok = true;
+            } finally {
+                if (!ok) {
+                    existing.dereference();
+                }
+            }
+            if(start > 0) {
+                long startDec = start;
+                long endCount = 0;
+                //handle the start of the range
+                for(ByteBuffer b : buffers) {
+                    if(endCount == end) {
+                        b.limit(b.position());
+                        continue;
+                    } else if(endCount + b.remaining() < end) {
+                        endCount += b.remaining();
+                    } else {
+                        b.limit((int) (b.position() + (end - endCount)));
+                        endCount = end;
+                    }
+                    if(b.remaining() >= startDec) {
+                        startDec = 0;
+                        b.position((int) (b.position() + startDec));
+                    } else {
+                        startDec -= b.remaining();
+                        b.position(b.limit());
+                    }
+                }
+            }
+            sender.send(buffers, new DereferenceCallback(existing, completionCallback));
+        }
+    }
+
+    @Override
+    public boolean isRangeSupported() {
+        //we can only handle range requests if the underlying resource supports it
+        //even if we have the resource in the cache it may disappear before we try and serve it
+        return underlyingResource instanceof RangeAwareResource && ((RangeAwareResource) underlyingResource).isRangeSupported();
+    }
 
     private static class DereferenceCallback implements IoCallback {
 
