@@ -18,79 +18,54 @@
 
 package io.undertow.websockets.extensions;
 
+import io.undertow.util.ImmediatePooled;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketLogger;
+import io.undertow.websockets.core.WebSocketMessages;
+import org.xnio.Buffers;
+import org.xnio.Pooled;
+
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.WebSocketLogger;
-import io.undertow.websockets.core.WebSocketMessages;
-
 /**
  * Implementation of {@code permessage-deflate} WebSocket Extension.
- * <p>
+ * <p/>
  * This implementation supports parameters: {@code server_no_context_takeover, client_no_context_takeover} .
- * <p>
+ * <p/>
  * This implementation does not support parameters: {@code server_max_window_bits, client_max_window_bits} .
- * <p>
- * It uses the DEFLATE implementation algorithm packaged on {@link java.util.zip.Deflater} and {@link java.util.zip.Inflater} classes.
- *
- * @see <a href="http://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">Compression Extensions for WebSocket</a>
+ * <p/>
+ * It uses the DEFLATE implementation algorithm packaged on {@link Deflater} and {@link Inflater} classes.
  *
  * @author Lucas Ponce
+ * @see <a href="http://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">Compression Extensions for WebSocket</a>
  */
 public class PerMessageDeflateFunction implements ExtensionFunction {
 
-    private boolean compressContextTakeover;
-    private boolean decompressContextTakeover;
+    public static final byte[] TAIL = new byte[]{0x00, 0x00, (byte) 0xFF, (byte) 0xFF};
 
-    private final boolean client;
     private final int deflaterLevel;
-
-    private Inflater decompress;
-    private Deflater compress;
-
-    /**
-     * Pool for aux buffers used in compression/decompression tasks.
-     */
-    private static final ThreadLocal<byte[][]> pool = new ThreadLocal<byte[][]>() {
-        protected byte[][] initialValue() {
-            return new byte[2][];
-        }
-    };
-
-    private byte[] input;
-    private byte[] output;
-
-    private static final int OFFSET = 64;
-
-    public static final byte[] TAIL = new byte[]{0x00, 0x00, (byte)0xFF, (byte)0xFF};
-
+    private final boolean compressContextTakeover;
+    private final boolean decompressContextTakeover;
+    private final Inflater decompress;
+    private final Deflater compress;
 
     /**
      * Create a new {@code PerMessageDeflateExtension} instance.
      *
-     * @param client                    flag for client ({@code true }) context or server ({@code false }) context
      * @param deflaterLevel             the level of configuration of DEFLATE algorithm implementation
      * @param compressContextTakeover   flag for compressor context takeover or without compressor context
      * @param decompressContextTakeover flag for decompressor context takeover or without decompressor context
      */
-    public PerMessageDeflateFunction(final boolean client, final int deflaterLevel, boolean compressContextTakeover, boolean decompressContextTakeover) {
-        this.client = client;
+    public PerMessageDeflateFunction(final int deflaterLevel, boolean compressContextTakeover, boolean decompressContextTakeover) {
         this.deflaterLevel = deflaterLevel;
-        decompress = new Inflater(true);
-        compress = new Deflater(this.deflaterLevel, true);
+        this.decompress = new Inflater(true);
+        this.compress = new Deflater(this.deflaterLevel, true);
         this.compressContextTakeover = compressContextTakeover;
         this.decompressContextTakeover = decompressContextTakeover;
-        input = null;
-        output = null;
-    }
-
-    @Override
-    public boolean isClient() {
-        return client;
     }
 
     @Override
@@ -104,144 +79,141 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
     }
 
     @Override
-    public void beforeWrite(StreamSinkFrameChannel channel, ExtensionByteBuffer extBuf, int position, int length)  throws IOException {
-        if (extBuf == null || length == 0) return;
-
-        initBuffers(Math.max(extBuf.getInput().capacity(), length));
-
-        for (int i = 0; i < length; i++) {
-            input[i] = extBuf.get(position + i);
+    public synchronized Pooled<ByteBuffer> transformForWrite(Pooled<ByteBuffer> pooledBuffer, WebSocketChannel channel) throws IOException {
+        ByteBuffer buffer = pooledBuffer.getResource();
+        if (buffer.hasArray()) {
+            compress.setInput(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
+        } else {
+            compress.setInput(Buffers.take(buffer));
         }
-        compress.setInput(input, 0, length);
 
-        int n;
-        while (!compress.needsInput() && !compress.finished()) {
-            n = compress.deflate(output, 0, output.length, Deflater.SYNC_FLUSH);
-            if (n != 0) {
-                for (int i = 0; i < n; i++) {
-                    extBuf.put(output[i]);
+        Pooled<ByteBuffer> output = allocateBufferWithArray(channel, 0); // first pass
+        ByteBuffer outputBuffer = output.getResource();
+
+        try {
+            while (!compress.needsInput() && !compress.finished()) {
+                if (!outputBuffer.hasRemaining()) {
+                    output = largerBuffer(output, channel, outputBuffer.capacity() * 2);
+                    outputBuffer = output.getResource();
                 }
+
+                int n = compress.deflate(
+                        outputBuffer.array(),
+                        outputBuffer.arrayOffset() + outputBuffer.position(),
+                        outputBuffer.remaining(),
+                        Deflater.SYNC_FLUSH);
+                outputBuffer.position(outputBuffer.position() + n);
             }
+        } finally {
+            // Free the buffer AFTER compression so it doesn't get re-used out from under us
+            pooledBuffer.free();
         }
-    }
 
-    @Override
-    public void beforeFlush(StreamSinkFrameChannel channel, ExtensionByteBuffer extBuf, int position, int length) throws IOException {
-        /*
-            Add a padding DEFLATE block without TAIL at the end of the message.
+        if (!outputBuffer.hasRemaining()) {
+            output = largerBuffer(output, channel, outputBuffer.capacity() + 1);
+            outputBuffer = output.getResource();
+        }
 
-            From: http://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18#page-21
-
-           3.  Remove 4 octets (that are 0x00 0x00 0xff 0xff) from the tail end.
-               After this step, the last octet of the compressed data contains
-               (possibly part of) the DEFLATE header bits with the "BTYPE" bits
-               set to 00.
-
-            Padding DEFLATE block:                  (byte)0, (byte)0, (byte)0, (byte)0xFF, (byte)0xFF
-            Padding DEFLATE block witout TAIL:      (byte)0
-         */
-        extBuf.put((byte) 0);
+        outputBuffer.put((byte) 0);
+        outputBuffer.flip();
 
         if (!compressContextTakeover) {
             compress.reset();
         }
+
+        return output;
+    }
+
+    private Pooled<ByteBuffer> largerBuffer(Pooled<ByteBuffer> smaller, WebSocketChannel channel, int newSize) {
+        ByteBuffer smallerBuffer = smaller.getResource();
+
+        smallerBuffer.flip();
+
+        Pooled<ByteBuffer> larger = allocateBufferWithArray(channel, newSize);
+        larger.getResource().put(smallerBuffer);
+
+        smaller.free();
+        return larger;
+    }
+
+    private Pooled<ByteBuffer> allocateBufferWithArray(WebSocketChannel channel, int size) {
+        if (size > 0) {
+            // TODO use newer XNIO sized pool thingies smartly
+            return new ImmediatePooled<>(ByteBuffer.allocate(size));
+        }
+
+        Pooled<ByteBuffer> pooled = channel.getBufferPool().allocate();
+        if (pooled.getResource().hasArray()) {
+            return pooled;
+        } else {
+            int pooledSize = pooled.getResource().remaining();
+            pooled.free();
+            return allocateBufferWithArray(channel, pooledSize);
+        }
     }
 
     @Override
-    public void afterRead(final StreamSourceFrameChannel channel, final ExtensionByteBuffer extBuf, final int position, final int length) throws IOException {
-        if (extBuf == null) return;
+    public synchronized Pooled<ByteBuffer> transformForRead(Pooled<ByteBuffer> pooledBuffer, WebSocketChannel channel, boolean lastFragmentOfFrame) throws IOException {
+        ByteBuffer buffer = pooledBuffer.getResource();
 
-        initBuffers(Math.max(extBuf.getInput().capacity(), length));
-
-        if (length > 0) {
-            for (int i = 0; i < length; i++) {
-                input[i] = extBuf.get(position + i);
-            }
-            decompress.setInput(input, 0, length);
-
-            int n;
-            while (!decompress.needsInput() && !decompress.finished()) {
-                try {
-                    n = decompress.inflate(output, 0, output.length);
-                    if (n > 0) {
-                        for (int i = 0; i < n; i++) {
-                            extBuf.put(output[i]);
-                        }
-                    }
-                } catch (DataFormatException e) {
-                    WebSocketLogger.EXTENSION_LOGGER.debug(e.getMessage(), e);
-                    throw WebSocketMessages.MESSAGES.badCompressedPayload();
-                }
-            }
+        if (buffer.hasArray()) {
+            decompress.setInput(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
+        } else {
+            decompress.setInput(Buffers.take(buffer));
         }
 
-        if (length == -1) {
-            /*
-                Process TAIL bytes at the end of the message.
-             */
-            int n;
+        Pooled<ByteBuffer> output = allocateBufferWithArray(channel, 0); // first pass
 
+        try {
+            output = decompress(channel, output);
+        } finally {
+            // Free the buffer AFTER decompression so it doesn't get re-used out from under us
+            pooledBuffer.free();
+        }
+
+        if (lastFragmentOfFrame) {
             decompress.setInput(TAIL);
-            while (!decompress.needsInput() && !decompress.finished()) {
-                try {
-                    n = decompress.inflate(output, 0, output.length);
-                    if (n > 0) {
-                        for (int i = 0; i < n; i++) {
-                            extBuf.put(output[i]);
-                        }
-                    }
-                } catch (DataFormatException e) {
-                    WebSocketLogger.EXTENSION_LOGGER.debug(e.getMessage(), e);
-                    throw WebSocketMessages.MESSAGES.badCompressedPayload();
-                }
-
-            }
+            output = decompress(channel, output);
         }
 
-        if (length == -1 && !decompressContextTakeover) {
+        output.getResource().flip();
+
+        if (lastFragmentOfFrame && !decompressContextTakeover) {
             decompress.reset();
         }
+
+        return output;
     }
 
-    /**
-     * Initialize input/output buffers used for compression/decompression tasks.
-     *
-     * @param length max capacity of internal buffers
-     */
-    private void initBuffers(int length) {
-        if (input == null || output == null || input.length < length || output.length < (length + OFFSET)) {
-            if (pool.get()[0] == null || pool.get()[0].length < length) {
-                pool.get()[0] = new byte[length];
+    private Pooled<ByteBuffer> decompress(WebSocketChannel channel, Pooled<ByteBuffer> pooled) throws IOException {
+        ByteBuffer buffer = pooled.getResource();
+
+        while (!decompress.needsInput() && !decompress.finished()) {
+            if (!buffer.hasRemaining()) {
+                pooled = largerBuffer(pooled, channel, buffer.capacity() * 2);
+                buffer = pooled.getResource();
             }
-            if (pool.get()[1] == null || pool.get()[1].length < (length + OFFSET)) {
-                pool.get()[1] = new byte[length + OFFSET];
+
+            int n;
+
+            try {
+                n = decompress.inflate(buffer.array(),
+                        buffer.arrayOffset() + buffer.position(),
+                        buffer.remaining());
+            } catch (DataFormatException e) {
+                WebSocketLogger.EXTENSION_LOGGER.debug(e.getMessage(), e);
+                throw WebSocketMessages.MESSAGES.badCompressedPayload(e);
             }
-            input = pool.get()[0];
-            output = pool.get()[1];
+            buffer.position(buffer.position() + n);
         }
+
+        return pooled;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof PerMessageDeflateFunction)) return false;
-
-        PerMessageDeflateFunction that = (PerMessageDeflateFunction) o;
-
-        if (client != that.client) return false;
-        if (compressContextTakeover != that.compressContextTakeover) return false;
-        if (decompressContextTakeover != that.decompressContextTakeover) return false;
-        if (deflaterLevel != that.deflaterLevel) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = (compressContextTakeover ? 1 : 0);
-        result = 31 * result + (decompressContextTakeover ? 1 : 0);
-        result = 31 * result + (client ? 1 : 0);
-        result = 31 * result + deflaterLevel;
-        return result;
+    public void dispose() {
+        // Call end so that native zlib resources can be immediately released rather than relying on finalizer
+        compress.end();
+        decompress.end();
     }
 }

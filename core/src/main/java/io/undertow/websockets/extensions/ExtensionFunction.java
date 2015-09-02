@@ -18,53 +18,25 @@
 
 package io.undertow.websockets.extensions;
 
-import java.io.IOException;
+import io.undertow.websockets.core.WebSocketChannel;
+import org.xnio.Pooled;
 
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Base interface for WebSocket Extensions implementation.
- * <p>
+ * <p/>
  * It interacts at the connection phase. It is responsible to apply extension's logic before to write and after to read to/from
  * a WebSocket Endpoint.
- * <p>
+ * <p/>
  * Several extensions can be present in a WebSocket Endpoint being executed in a chain pattern.
- * <p>
+ * <p/>
  * Extension state is stored per WebSocket connection.
  *
  * @author Lucas Ponce
  */
 public interface ExtensionFunction {
-
-    /**
-     * Indicate if this extension is configured for client context.
-     * <p>
-     * Server/client contexts can affect in how parameters are negotiated.
-     *
-     * @return {@code true} if current extension is configured for client context;
-     *         {@code false} if current extension is configure for server context
-     */
-    boolean isClient();
-
-    /**
-     * Validate if current extension defines a new WebSocket Opcode.
-     *
-     * @see <a href="https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-13#section-5.2">WebSocket Base Framing Protocol Reference</a>
-     *
-     * @return {@code true} if current extension defines specific Opcode
-     *         {@code false} is current extension does not define specific Opcode
-     */
-    boolean hasExtensionOpCode();
-
-
-    /**
-     * Add RSV bits (RSV1, RSV2, RSV3) to the current rsv status.
-     *
-     * @param rsv current RSV bits status
-     * @return    rsv status
-     */
-    int writeRsv(int rsv);
 
     /**
      * Bitmask for RSV1 bit used in extensions.
@@ -75,67 +47,52 @@ public interface ExtensionFunction {
      * Bitmask for RSV2 bit used in extensions.
      */
     int RSV2 = 0x02;
-
     /**
      * Bitmask for RSV3 bit used in extensions.
      */
     int RSV3 = 0x01;
 
     /**
-     * Is called on the {@link ExtensionByteBuffer} before a write operation completes.
-     * <p>
-     * {@link ExtensionByteBuffer} is used as a wrapper of the original {@link java.nio.ByteBuffer} prepared for a write operation
-     * with a WebSocket Endpoint.
-     * <p>
-     * An extension can expand content beyond capacity of original {@code ByteBuffer}.
-     * <p>
-     * An extension will process an end of message on {@link ExtensionFunction#beforeFlush(StreamSinkFrameChannel, ExtensionByteBuffer, int, int)} invocation.
+     * Validate if current extension defines a new WebSocket Opcode.
      *
-     * @param channel       the {@link StreamSinkFrameChannel} used on this operation
-     * @param extBuf        the {@link ExtensionByteBuffer} to operate on
-     * @param position      the index in the {@link ExtensionByteBuffer} to start from
-     * @param length        the number of bytes to operate on
-     * @throws IOException  thrown if an error occurs
+     * @return {@code true} if current extension defines specific Opcode
+     * {@code false} is current extension does not define specific Opcode
+     * @see <a href="https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-13#section-5.2">WebSocket Base Framing Protocol Reference</a>
      */
-    void beforeWrite(final StreamSinkFrameChannel channel, final ExtensionByteBuffer extBuf, final int position, final int length) throws IOException;
+    boolean hasExtensionOpCode();
 
     /**
-     * Is called on the {@link ExtensionByteBuffer} before a flush() operation.
-     * <p>
-     * It processes an end of message for a write operation.
-     * <p>
-     * Extensions may write a final content as padding at the end of the message.
-     * <p>
-     * {@link ExtensionByteBuffer} is used as a wrapper of the original {@link java.nio.ByteBuffer} prepared for a write operation
-     * with a WebSocket Endpoint.
-     * <p>
-     * An extension can expand content beyond capacity of original {@code ByteBuffer}.
+     * Add RSV bits (RSV1, RSV2, RSV3) to the current rsv status.
      *
-     * @param channel       the {@link StreamSinkFrameChannel} used on this operation
-     * @param extBuf        the {@link ExtensionByteBuffer} to operate on
-     * @param position      the index in the {@link ExtensionByteBuffer} to start from
-     * @param length        the number of bytes to operate on
-     *
-     * @throws IOException  thrown if an error occurs
+     * @param rsv current RSV bits status
+     * @return rsv status
      */
-    void beforeFlush(final StreamSinkFrameChannel channel, final ExtensionByteBuffer extBuf, final int position, final int length) throws IOException;
+    int writeRsv(int rsv);
 
     /**
-     * Is called on the {@link ExtensionByteBuffer} after a read operation completes.
-     * <p>
-     * {@link ExtensionByteBuffer} is used as a wrapper of the original {@link java.nio.ByteBuffer} resulted of a read operation
-     * with a WebSocket Endpoint.
-     * <p>
-     * An extension can expand content beyond capacity of original {@code ByteBuffer}.
-     * <p>
-     * An extension will process an end of message when {@code length == -1 } .
+     * Transform the supplied buffer per this extension. The buffer can be modified in place, or a new pooled buffer
+     * can be returned (in which case be sure to free the original buffer
      *
-     * @param channel       the {@link StreamSourceFrameChannel} used on this operation
-     * @param extBuf        the {@link ExtensionByteBuffer} to operate on
-     * @param position      the index in the {@link ExtensionByteBuffer} to start from
-     * @param length        the number of bytes to operate on
-     *
-     * @throws IOException  thrown if an error occurs
+     * @param pooledBuffer Buffer to transform
+     * @param channel      working channel
+     * @return transformed buffer (may be the same one, just with modified contents)
+     * @throws IOException
      */
-    void afterRead(final StreamSourceFrameChannel channel, final ExtensionByteBuffer extBuf, final int position, final int length) throws IOException;
+    Pooled<ByteBuffer> transformForWrite(Pooled<ByteBuffer> pooledBuffer, WebSocketChannel channel) throws IOException;
+
+    /**
+     * Transform the supplied buffer per this extension. The buffer can be modified in place, or a new pooled buffer
+     * can be returned (in which case be sure to free the original buffer
+     *
+     * @param pooledBuffer Buffer to transform
+     * @param channel      working channel
+     * @return transformed buffer (may be the same one, just with modified contents)
+     * @throws IOException
+     */
+    Pooled<ByteBuffer> transformForRead(Pooled<ByteBuffer> pooledBuffer, WebSocketChannel channel, boolean lastFragmentOfFrame) throws IOException;
+
+    /**
+     * Dispose this function. Called upon connection closure
+     */
+    void dispose();
 }

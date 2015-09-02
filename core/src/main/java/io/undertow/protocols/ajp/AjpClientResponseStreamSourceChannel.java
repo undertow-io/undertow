@@ -66,7 +66,8 @@ public class AjpClientResponseStreamSourceChannel extends AbstractAjpClientStrea
             lastFrame();
         }
     }
-    protected long handleFrameData(Pooled<ByteBuffer> frameData, long frameDataRemaining) {
+    @Override
+    protected long updateFrameDataRemaining(Pooled<ByteBuffer> frameData, long frameDataRemaining) {
         if(frameDataRemaining > 0  && frameData.getResource().remaining() == frameDataRemaining) {
             //there is a null terminator on the end
             frameData.getResource().limit(frameData.getResource().limit() - 1);

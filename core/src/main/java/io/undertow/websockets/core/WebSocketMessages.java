@@ -20,6 +20,7 @@ package io.undertow.websockets.core;
 
 import io.undertow.websockets.WebSocketExtension;
 import org.jboss.logging.Messages;
+import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
@@ -27,6 +28,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.List;
+import java.util.zip.DataFormatException;
 
 /**
  * start at 20000
@@ -167,5 +169,8 @@ public interface WebSocketMessages {
     IllegalStateException badExtensionsConfiguredInClient();
 
     @Message(id = 2044, value = "Compressed message payload is corrupted")
-    IOException badCompressedPayload();
+    IOException badCompressedPayload(@Cause final DataFormatException cause);
+
+    @Message(id = 2045, value = "Unable to send on newly created channel!")
+    IllegalStateException unableToSendOnNewChannel();
 }

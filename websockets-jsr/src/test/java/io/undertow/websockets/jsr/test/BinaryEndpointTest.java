@@ -127,7 +127,10 @@ public class BinaryEndpointTest {
         @Override
         public void onOpen(Session session, EndpointConfig config) {
             this.session = session;
-            session.getAsyncRemote().sendBinary(ByteBuffer.wrap(bytes));
+            // Copy, because masking will modify this data
+            byte[] mutableBytes = new byte[bytes.length];
+            System.arraycopy(bytes,0,mutableBytes,0,bytes.length);
+            session.getAsyncRemote().sendBinary(ByteBuffer.wrap(mutableBytes));
             session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
 
                 @Override

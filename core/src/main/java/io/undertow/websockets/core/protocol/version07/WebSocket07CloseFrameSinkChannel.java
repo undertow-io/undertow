@@ -23,7 +23,7 @@ import io.undertow.websockets.core.WebSocketFrameType;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07CloseFrameSinkChannel extends WebSocket07FrameSinkChannel {
-    WebSocket07CloseFrameSinkChannel(WebSocket07Channel wsChannel, long payloadSize) {
-        super(wsChannel, WebSocketFrameType.CLOSE, payloadSize);
+    WebSocket07CloseFrameSinkChannel(WebSocket07Channel wsChannel) {
+        super(wsChannel, WebSocketFrameType.CLOSE);
     }
 }
