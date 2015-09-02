@@ -43,6 +43,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -147,13 +148,12 @@ public class WebSocketExtensionBasicTestCase {
         StringBuilder longMsg = new StringBuilder(LONG_MSG);
 
         for (int i = 0; i < LONG_MSG; i++) {
-            longMsg.append(new Integer(i).toString().charAt(0));
+            longMsg.append(Integer.toString(i).charAt(0));
         }
 
-        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT, LONG_MSG);
-        new StringWriteChannelListener(longMsg.toString()).setup(sendChannel);
+        WebSockets.sendTextBlocking(longMsg.toString(), clientChannel);
 
-        latch.await(10, TimeUnit.SECONDS);
+        latch.await(300, TimeUnit.SECONDS);
         Assert.assertEquals(longMsg.toString(), result.get());
         clientChannel.sendClose();
 
@@ -227,7 +227,7 @@ public class WebSocketExtensionBasicTestCase {
             longMsg.append(new Integer(i).toString().charAt(0));
         }
 
-        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT, LONG_MSG);
+        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener(longMsg.toString()).setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
@@ -322,7 +322,7 @@ public class WebSocketExtensionBasicTestCase {
         });
         clientChannel.resumeReceives();
 
-        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT, "Hello, World!".length());
+        StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener("Hello, World!").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);

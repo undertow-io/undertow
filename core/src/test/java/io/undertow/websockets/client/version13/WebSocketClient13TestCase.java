@@ -146,7 +146,7 @@ public class WebSocketClient13TestCase {
         webSocketChannel.resumeReceives();
 
 
-        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT, 11);
+        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener("Hello World").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
@@ -184,7 +184,7 @@ public class WebSocketClient13TestCase {
         webSocketChannel.resumeReceives();
 
 
-        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT, 11);
+        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener("Hello World").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
@@ -220,7 +220,7 @@ public class WebSocketClient13TestCase {
         webSocketChannel.resumeReceives();
 
 
-        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT, 11);
+        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener("Hello World").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
@@ -260,7 +260,7 @@ public class WebSocketClient13TestCase {
         webSocketChannel.resumeReceives();
 
 
-        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT, 11);
+        StreamSinkFrameChannel sendChannel = webSocketChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener("Hello World").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);

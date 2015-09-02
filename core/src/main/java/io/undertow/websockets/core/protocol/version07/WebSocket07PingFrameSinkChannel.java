@@ -18,16 +18,12 @@
 package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketMessages;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07PingFrameSinkChannel extends WebSocket07FrameSinkChannel {
-    WebSocket07PingFrameSinkChannel(WebSocket07Channel wsChannel, long payloadSize) {
-        super(wsChannel, WebSocketFrameType.PING, payloadSize);
-        if (payloadSize > 125) {
-            throw WebSocketMessages.MESSAGES.invalidPayloadLengthForPing(payloadSize);
-        }
+    WebSocket07PingFrameSinkChannel(WebSocket07Channel wsChannel) {
+        super(wsChannel, WebSocketFrameType.PING);
     }
 }

@@ -37,7 +37,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -64,7 +63,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     private volatile String closeReason;
     private final String subProtocol;
     protected final boolean extensionsSupported;
-    protected final List<ExtensionFunction> extensions;
+    protected final ExtensionFunction extensionFunction;
     protected final boolean hasReservedOpCode;
 
     /**
@@ -93,30 +92,20 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * @param client
      * @param peerConnections        The concurrent set that is used to track open connections associtated with an endpoint
      */
-    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final List<ExtensionFunction> extensions, Set<WebSocketChannel> peerConnections, OptionMap options) {
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final ExtensionFunction extensionFunction, Set<WebSocketChannel> peerConnections, OptionMap options) {
         super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null, options);
         this.client = client;
         this.version = version;
         this.wsUrl = wsUrl;
         this.extensionsSupported = extensionsSupported;
-        this.extensions = extensions;
-        if (this.extensions != null && !this.extensions.isEmpty()) {
-            boolean extOpCode = false;
-            for (ExtensionFunction ext : this.extensions) {
-                if (ext.hasExtensionOpCode()) {
-                    extOpCode = true;
-                    break;
-                }
-            }
-            this.hasReservedOpCode = extOpCode;
-        } else {
-            this.hasReservedOpCode = false;
-        }
+        this.extensionFunction = extensionFunction;
+        this.hasReservedOpCode = extensionFunction.hasExtensionOpCode();
         this.subProtocol = subProtocol;
         this.peerConnections = peerConnections;
         addCloseTask(new ChannelListener<WebSocketChannel>() {
             @Override
             public void handleEvent(WebSocketChannel channel) {
+                extensionFunction.dispose();
                 WebSocketChannel.this.peerConnections.remove(WebSocketChannel.this);
             }
         });
@@ -338,41 +327,17 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * were completely written.
      *
      * @param type        The {@link WebSocketFrameType} for which a {@link StreamSinkChannel} should be created
-     * @param payloadSize The size of the payload which will be included in the WebSocket Frame. This may be 0 if you want
-     *                    to transmit no payload at all.
      */
-    public final StreamSinkFrameChannel send(WebSocketFrameType type, long payloadSize) throws IOException {
+    public final StreamSinkFrameChannel send(WebSocketFrameType type) throws IOException {
         if(closeFrameSent || (closeFrameReceived && type != WebSocketFrameType.CLOSE)) {
             throw WebSocketMessages.MESSAGES.channelClosed();
         }
-        if (payloadSize < 0) {
-            throw WebSocketMessages.MESSAGES.negativePayloadLength();
-        }
         if (isWritesBroken()) {
             throw WebSocketMessages.MESSAGES.streamIsBroken();
         }
 
 
-        StreamSinkFrameChannel ch = createStreamSinkChannel(type, payloadSize);
-        getFramePriority().addToOrderQueue(ch);
-        if (type == WebSocketFrameType.CLOSE) {
-            closeFrameSent = true;
-        }
-        return ch;
-    }
-
-    /**
-     * Returns a new {@link StreamSinkFrameChannel} for sending the given {@link WebSocketFrameType} with the given payload.
-     * If this method is called multiple times, subsequent {@link StreamSinkFrameChannel}'s will not be writable until all previous frames
-     * were completely written.
-     *
-     * @param type The {@link WebSocketFrameType} for which a {@link StreamSinkChannel} should be created
-     */
-    public final StreamSinkFrameChannel send(WebSocketFrameType type) throws IOException {
-        if (isWritesBroken()) {
-            throw WebSocketMessages.MESSAGES.streamIsBroken();
-        }
-        StreamSinkFrameChannel ch = createStreamSinkChannel(type, -1);
+        StreamSinkFrameChannel ch = createStreamSinkChannel(type);
         getFramePriority().addToOrderQueue(ch);
         if (type == WebSocketFrameType.CLOSE) {
             closeFrameSent = true;
@@ -386,7 +351,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     public void sendClose() throws IOException {
         closeReason = "";
         closeCode = CloseMessage.NORMAL_CLOSURE;
-        StreamSinkFrameChannel closeChannel = send(WebSocketFrameType.CLOSE, 0);
+        StreamSinkFrameChannel closeChannel = send(WebSocketFrameType.CLOSE);
         closeChannel.shutdownWrites();
         if (!closeChannel.flush()) {
             closeChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
@@ -406,9 +371,8 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * Create a new StreamSinkFrameChannel which can be used to send a WebSocket Frame of the type {@link WebSocketFrameType}.
      *
      * @param type        The {@link WebSocketFrameType} of the WebSocketFrame which will be send over this {@link StreamSinkFrameChannel}
-     * @param payloadSize The size of the payload to transmit. May be 0 if non payload at all should be included, or -1 if unknown
      */
-    protected abstract StreamSinkFrameChannel createStreamSinkChannel(WebSocketFrameType type, long payloadSize);
+    protected abstract StreamSinkFrameChannel createStreamSinkChannel(WebSocketFrameType type);
 
 
     protected WebSocketFramePriority getFramePriority() {
@@ -478,10 +442,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         this.closeCode = closeCode;
     }
 
-    public List<ExtensionFunction> getExtensions() {
-        if (extensions == null) {
-            return null;
-        }
-        return Collections.unmodifiableList(extensions);
+    public ExtensionFunction getExtensionFunction() {
+        return extensionFunction;
     }
 }

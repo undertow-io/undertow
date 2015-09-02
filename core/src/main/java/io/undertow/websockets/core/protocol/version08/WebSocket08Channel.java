@@ -26,7 +26,6 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Set;
 
 
@@ -36,8 +35,8 @@ import java.util.Set;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket08Channel extends WebSocket07Channel {
-    public WebSocket08Channel(StreamConnection channel, Pool<ByteBuffer> bufferPool, String wsUrl, String subProtocols, final boolean client, boolean allowExtensions, final List<ExtensionFunction> extensions, Set<WebSocketChannel> openConnections, OptionMap options) {
-        super(channel, bufferPool, wsUrl, subProtocols, client, allowExtensions, extensions, openConnections, options);
+    public WebSocket08Channel(StreamConnection channel, Pool<ByteBuffer> bufferPool, String wsUrl, String subProtocols, final boolean client, boolean allowExtensions, final ExtensionFunction extensionFunction, Set<WebSocketChannel> openConnections, OptionMap options) {
+        super(channel, bufferPool, wsUrl, subProtocols, client, allowExtensions, extensionFunction, openConnections, options);
     }
 
     @Override
