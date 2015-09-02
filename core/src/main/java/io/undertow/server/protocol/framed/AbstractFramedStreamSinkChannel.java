@@ -415,11 +415,17 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      * @throws IOException if this channel is closed
      */
     public boolean send(Pooled<ByteBuffer> pooled) throws IOException {
+        if(isWritesShutdown()) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
+        return sendInternal(pooled);
+    }
+
+    protected boolean sendInternal(Pooled<ByteBuffer> pooled) throws IOException {
         if (safeToSend()) {
             this.body = pooled;
             return true;
         }
-
         return false;
     }
 
@@ -431,7 +437,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if( null != this.body) {
             return false; // already have a pooled buffer
         }
-        if (anyAreSet(state, STATE_CLOSED | STATE_WRITES_SHUTDOWN) || broken) {
+        if (anyAreSet(state, STATE_CLOSED) || broken) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         return true;
@@ -462,8 +468,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void sendWriteBuffer() throws IOException {
+        if(writeBuffer == null) {
+            writeBuffer = EMPTY_BYTE_BUFFER;
+        }
         writeBuffer.getResource().flip();
-        if(!send(writeBuffer)) {
+        if(!sendInternal(writeBuffer)) {
             throw UndertowMessages.MESSAGES.failedToSendAfterBeingSafe();
         }
         writeBuffer = null;

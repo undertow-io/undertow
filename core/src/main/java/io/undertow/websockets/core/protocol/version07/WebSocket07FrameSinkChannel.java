@@ -156,11 +156,11 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     }
 
     @Override
-    public boolean send(Pooled<ByteBuffer> pooled) throws IOException {
+    public boolean sendInternal(Pooled<ByteBuffer> pooled) throws IOException {
         // Check that the underlying write will succeed prior to applying the function
         // Could corrupt LZW stream if not
         if(safeToSend()) {
-            return super.send(extensionFunction.transformForWrite(pooled, getWebSocketChannel()));
+            return super.sendInternal(extensionFunction.transformForWrite(pooled, getWebSocketChannel()));
         }
 
         return false;
