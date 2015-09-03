@@ -21,7 +21,6 @@ import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import io.undertow.security.idm.DigestAlgorithm;
 import io.undertow.security.impl.DigestAuthorizationToken;
@@ -131,7 +130,7 @@ public class DigestAuthTestCase {
         Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
         assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
         assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
-        assertFalse(parsedHeader.containsKey(DigestWWWAuthenticateToken.MESSAGE_QOP));
+        assertTrue(parsedHeader.containsKey(DigestWWWAuthenticateToken.MESSAGE_QOP));
 
         String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
 
