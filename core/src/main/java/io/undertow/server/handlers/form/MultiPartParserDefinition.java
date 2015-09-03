@@ -43,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -311,6 +312,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                         if (Files.exists(file)) {
                             try {
                                 Files.delete(file);
+                            } catch (NoSuchFileException e) { // ignore
                             } catch (IOException e) {
                                 UndertowLogger.REQUEST_LOGGER.cannotRemoveUploadedFile(file);
                             }
