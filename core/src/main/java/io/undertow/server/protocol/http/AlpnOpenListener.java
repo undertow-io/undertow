@@ -83,6 +83,9 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         this(bufferPool, undertowOptions, "http/1.1", httpListener);
     }
 
+    public AlpnOpenListener(ByteBufferPool bufferPool) {
+        this(bufferPool, OptionMap.EMPTY, null, null);
+    }
     public AlpnOpenListener(ByteBufferPool bufferPool,  OptionMap undertowOptions) {
         this(bufferPool, undertowOptions, null, null);
     }
