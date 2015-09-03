@@ -304,7 +304,9 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     for (final File file : files) {
                         if (file.exists()) {
                             if (!file.delete()) {
-                                UndertowLogger.REQUEST_LOGGER.cannotRemoveUploadedFile(file);
+                                if(file.exists()) {
+                                    UndertowLogger.REQUEST_LOGGER.cannotRemoveUploadedFile(file);
+                                }
                             }
                         }
                     }
