@@ -18,10 +18,9 @@
 
 package io.undertow.protocols.http2;
 
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * A HTTP2 Settings frame
@@ -33,7 +32,7 @@ public class Http2SettingsStreamSourceChannel extends AbstractHttp2StreamSourceC
     private final List<Http2Setting> settings;
 
 
-    Http2SettingsStreamSourceChannel(Http2Channel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, List<Http2Setting> settings) {
+    Http2SettingsStreamSourceChannel(Http2Channel framedChannel, PooledByteBuffer data, long frameDataRemaining, List<Http2Setting> settings) {
         super(framedChannel, data, frameDataRemaining);
         this.settings = settings;
         lastFrame();

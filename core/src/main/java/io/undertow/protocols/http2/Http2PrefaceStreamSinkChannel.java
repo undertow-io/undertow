@@ -21,7 +21,7 @@ package io.undertow.protocols.http2;
 import java.nio.ByteBuffer;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * channel implementation that sends the initial HTTP2 preface
@@ -35,6 +35,6 @@ class Http2PrefaceStreamSinkChannel extends Http2StreamSinkChannel {
 
     @Override
     protected SendFrameHeader createFrameHeaderImpl() {
-        return new SendFrameHeader(new ImmediatePooled<>(ByteBuffer.wrap(Http2Channel.PREFACE_BYTES)));
+        return new SendFrameHeader(new ImmediatePooledByteBuffer(ByteBuffer.wrap(Http2Channel.PREFACE_BYTES)));
     }
 }

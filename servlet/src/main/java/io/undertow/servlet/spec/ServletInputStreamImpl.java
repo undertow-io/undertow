@@ -24,8 +24,8 @@ import io.undertow.servlet.core.CompositeThreadSetupAction;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -49,7 +49,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     private final HttpServletRequestImpl request;
     private final StreamSourceChannel channel;
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
 
     private volatile ReadListener listener;
     private volatile ServletInputStreamChannelListener internalListener;
@@ -64,7 +64,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     private int state;
     private AsyncContextImpl asyncContext;
-    private Pooled<ByteBuffer> pooled;
+    private PooledByteBuffer pooled;
 
     public ServletInputStreamImpl(final HttpServletRequestImpl request) {
         this.request = request;
@@ -73,7 +73,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         } else {
             this.channel = new EmptyStreamSourceChannel(request.getExchange().getIoThread());
         }
-        this.bufferPool = request.getExchange().getConnection().getBufferPool();
+        this.bufferPool = request.getExchange().getConnection().getByteBufferPool();
     }
 
 
@@ -151,10 +151,10 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (len == 0) {
             return 0;
         }
-        ByteBuffer buffer = pooled.getResource();
+        ByteBuffer buffer = pooled.getBuffer();
         int copied = Buffers.copy(ByteBuffer.wrap(b, off, len), buffer);
         if (!buffer.hasRemaining()) {
-            pooled.free();
+            pooled.close();
             pooled = null;
             if (listener != null) {
                 readIntoBufferNonBlocking();
@@ -167,11 +167,11 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
 
-            int res = Channels.readBlocking(channel, pooled.getResource());
-            pooled.getResource().flip();
+            int res = Channels.readBlocking(channel, pooled.getBuffer());
+            pooled.getBuffer().flip();
             if (res == -1) {
                 state |= FLAG_FINISHED;
-                pooled.free();
+                pooled.close();
                 pooled = null;
             }
         }
@@ -181,31 +181,31 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
             if (listener == null) {
-                int res = channel.read(pooled.getResource());
+                int res = channel.read(pooled.getBuffer());
                 if (res == 0) {
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                     return;
                 }
-                pooled.getResource().flip();
+                pooled.getBuffer().flip();
                 if (res == -1) {
                     state |= FLAG_FINISHED;
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                 }
             } else {
                 if (anyAreClear(state, FLAG_READY)) {
                     throw UndertowServletMessages.MESSAGES.streamNotReady();
                 }
-                int res = channel.read(pooled.getResource());
-                pooled.getResource().flip();
+                int res = channel.read(pooled.getBuffer());
+                pooled.getBuffer().flip();
                 if (res == -1) {
                     state |= FLAG_FINISHED;
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                 } else if (res == 0) {
                     state &= ~FLAG_READY;
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                     channel.getIoThread().execute(new Runnable() {
                         @Override
@@ -232,7 +232,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (pooled == null) {
             return 0;
         }
-        return pooled.getResource().remaining();
+        return pooled.getBuffer().remaining();
     }
 
     @Override
@@ -245,14 +245,14 @@ public class ServletInputStreamImpl extends ServletInputStream {
             while (allAreClear(state, FLAG_FINISHED)) {
                 readIntoBuffer();
                 if (pooled != null) {
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                 }
             }
         } finally {
             state |= FLAG_FINISHED;
             if (pooled != null) {
-                pooled.free();
+                pooled.close();
                 pooled = null;
             }
             channel.shutdownReads();

@@ -26,9 +26,10 @@ import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.PooledAdaptor;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
@@ -62,16 +63,16 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     private long remainingAllowed;
     private final ChunkReader chunkReader;
 
-    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamSourceConduit channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, Attachable attachable) {
+    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamSourceConduit channel, final ByteBufferPool pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, Attachable attachable) {
         this(next, new BufferWrapper() {
             @Override
-            public Pooled<ByteBuffer> allocate() {
+            public PooledByteBuffer allocate() {
                 return pool.allocate();
             }
 
             @Override
-            public void pushBack(Pooled<ByteBuffer> pooled) {
-                channel.pushBack(pooled);
+            public void pushBack(PooledByteBuffer pooled) {
+                channel.pushBack(new PooledAdaptor(pooled));
             }
         }, finishListener, attachable, null);
     }
@@ -79,12 +80,12 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     public ChunkedStreamSourceConduit(final StreamSourceConduit next, final HttpServerExchange exchange, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener) {
         this(next, new BufferWrapper() {
             @Override
-            public Pooled<ByteBuffer> allocate() {
-                return exchange.getConnection().getBufferPool().allocate();
+            public PooledByteBuffer allocate() {
+                return exchange.getConnection().getByteBufferPool().allocate();
             }
 
             @Override
-            public void pushBack(Pooled<ByteBuffer> pooled) {
+            public void pushBack(PooledByteBuffer pooled) {
                 ((HttpServerConnection) exchange.getConnection()).ungetRequestBytes(pooled);
             }
         }, finishListener, exchange, exchange);
@@ -168,8 +169,8 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             if (closed) {
                 throw new ClosedChannelException();
             }
-            Pooled<ByteBuffer> pooled = bufferWrapper.allocate();
-            ByteBuffer buf = pooled.getResource();
+            PooledByteBuffer pooled = bufferWrapper.allocate();
+            ByteBuffer buf = pooled.getBuffer();
             boolean free = true;
             try {
                 //we need to do our initial read into a
@@ -260,7 +261,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                 if (!free && buf.hasRemaining()) {
                     bufferWrapper.pushBack(pooled);
                 } else {
-                    pooled.free();
+                    pooled.close();
                 }
             }
         } catch (IOException | RuntimeException e) {
@@ -276,9 +277,9 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
     interface BufferWrapper {
 
-        Pooled<ByteBuffer> allocate();
+        PooledByteBuffer allocate();
 
-        void pushBack(Pooled<ByteBuffer> pooled);
+        void pushBack(PooledByteBuffer pooled);
 
     }
 }

@@ -20,11 +20,13 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
+import io.undertow.server.XnioBufferPoolAdaptor;
 import io.undertow.servlet.api.ExceptionHandler;
 import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.api.ServletDispatcher;
@@ -43,11 +45,10 @@ import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.OptionMap;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
@@ -216,7 +217,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void dispatchMockRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException {
 
-        final ByteBufferSlicePool bufferPool = new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024);
+        final DefaultByteBufferPool bufferPool = new DefaultByteBufferPool(false, 1024, 0, 0);
         MockServerConnection connection = new MockServerConnection(bufferPool);
         HttpServerExchange exchange = new HttpServerExchange(connection);
         exchange.setRequestScheme(request.getScheme());
@@ -346,15 +347,24 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     }
 
     private static class MockServerConnection extends ServerConnection {
-        private final Pool<ByteBuffer> bufferPool;
+        private final ByteBufferPool bufferPool;
         private SSLSessionInfo sslSessionInfo;
-
-        private MockServerConnection(Pool<ByteBuffer> bufferPool) {
+        private XnioBufferPoolAdaptor poolAdaptor;
+        private MockServerConnection(ByteBufferPool bufferPool) {
             this.bufferPool = bufferPool;
         }
 
         @Override
         public Pool<ByteBuffer> getBufferPool() {
+            if(poolAdaptor == null) {
+                poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
+            }
+            return poolAdaptor;
+        }
+
+
+        @Override
+        public ByteBufferPool getByteBufferPool() {
             return bufferPool;
         }
 

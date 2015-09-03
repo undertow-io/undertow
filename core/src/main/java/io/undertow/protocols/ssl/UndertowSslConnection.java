@@ -22,7 +22,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.Options;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.SslClientAuthMode;
 import org.xnio.StreamConnection;
 import org.xnio.ssl.SslConnection;
@@ -31,7 +31,6 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Set;
 
 /**
@@ -51,7 +50,7 @@ class UndertowSslConnection extends SslConnection {
      *
      * @param delegate the underlying connection
      */
-    UndertowSslConnection(StreamConnection delegate, SSLEngine engine, Pool<ByteBuffer> bufferPool) {
+    UndertowSslConnection(StreamConnection delegate, SSLEngine engine, ByteBufferPool bufferPool) {
         super(delegate.getIoThread());
         this.delegate = delegate;
         this.engine = engine;

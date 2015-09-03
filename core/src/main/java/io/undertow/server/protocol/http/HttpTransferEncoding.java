@@ -81,7 +81,7 @@ class HttpTransferEncoding {
                     && connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-                pipeliningBuffer = new PipeliningBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
+                pipeliningBuffer = new PipeliningBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getByteBufferPool());
                 connection.setPipelineBuffer(pipeliningBuffer);
                 pipeliningBuffer.setupPipelineBuffer(exchange);
             }
@@ -133,7 +133,7 @@ class HttpTransferEncoding {
             if (connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-                pipeliningBuffer = new PipeliningBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
+                pipeliningBuffer = new PipeliningBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getByteBufferPool());
                 connection.setPipelineBuffer(pipeliningBuffer);
                 pipeliningBuffer.setupPipelineBuffer(exchange);
             }
@@ -274,7 +274,7 @@ class HttpTransferEncoding {
                     if (headRequest) {
                         return channel;
                     }
-                    return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+                    return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getByteBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
                 } else {
                     if (headRequest) {
                         return channel;
@@ -306,7 +306,7 @@ class HttpTransferEncoding {
             if(preChunked != null && preChunked) {
                 return new PreChunkedStreamSinkConduit(channel, finishListener, exchange);
             } else {
-                return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+                return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getByteBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
             }
         } else {
 

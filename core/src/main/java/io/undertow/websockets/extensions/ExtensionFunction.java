@@ -18,11 +18,10 @@
 
 package io.undertow.websockets.extensions;
 
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.websockets.core.WebSocketChannel;
-import org.xnio.Pooled;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * Base interface for WebSocket Extensions implementation.
@@ -78,7 +77,7 @@ public interface ExtensionFunction {
      * @return transformed buffer (may be the same one, just with modified contents)
      * @throws IOException
      */
-    Pooled<ByteBuffer> transformForWrite(Pooled<ByteBuffer> pooledBuffer, WebSocketChannel channel) throws IOException;
+    PooledByteBuffer transformForWrite(PooledByteBuffer pooledBuffer, WebSocketChannel channel) throws IOException;
 
     /**
      * Transform the supplied buffer per this extension. The buffer can be modified in place, or a new pooled buffer
@@ -89,7 +88,7 @@ public interface ExtensionFunction {
      * @return transformed buffer (may be the same one, just with modified contents)
      * @throws IOException
      */
-    Pooled<ByteBuffer> transformForRead(Pooled<ByteBuffer> pooledBuffer, WebSocketChannel channel, boolean lastFragmentOfFrame) throws IOException;
+    PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, WebSocketChannel channel, boolean lastFragmentOfFrame) throws IOException;
 
     /**
      * Dispose this function. Called upon connection closure

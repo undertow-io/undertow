@@ -33,7 +33,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -106,10 +106,10 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             channel.suspendReads();
             return;
         }
-        Pooled<ByteBuffer> existing = connection.getExtraBytes();
+        PooledByteBuffer existing = connection.getExtraBytes();
 
-        final Pooled<ByteBuffer> pooled = existing == null ? connection.getBufferPool().allocate() : existing;
-        final ByteBuffer buffer = pooled.getResource();
+        final PooledByteBuffer pooled = existing == null ? connection.getByteBufferPool().allocate() : existing;
+        final ByteBuffer buffer = pooled.getBuffer();
         boolean free = true;
         boolean bytesRead = false;
         try {
@@ -200,7 +200,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             channel.suspendReads();
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
-            final AjpServerResponseConduit responseConduit = new AjpServerResponseConduit(connection.getChannel().getSinkChannel().getConduit(), connection.getBufferPool(), httpServerExchange, new ConduitListener<AjpServerResponseConduit>() {
+            final AjpServerResponseConduit responseConduit = new AjpServerResponseConduit(connection.getChannel().getSinkChannel().getConduit(), connection.getByteBufferPool(), httpServerExchange, new ConduitListener<AjpServerResponseConduit>() {
                 @Override
                 public void handleEvent(AjpServerResponseConduit channel) {
                     Connectors.terminateResponse(httpServerExchange);
@@ -243,7 +243,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
             safeClose(connection);
         } finally {
-            if (free) pooled.free();
+            if (free) pooled.close();
         }
     }
 

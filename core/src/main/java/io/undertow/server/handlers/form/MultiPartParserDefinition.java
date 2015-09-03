@@ -32,7 +32,7 @@ import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
@@ -166,7 +166,8 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     charset = value;
                 }
             }
-           this.parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes(), charset);
+           this.parser = MultipartParser.beginParse(exchange.getConnection().getByteBufferPool(), this, boundary.getBytes(), charset);
+
         }
 
 
@@ -197,7 +198,6 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             if (existing != null) {
                 return existing;
             }
-
             InputStream inputStream = exchange.getInputStream();
             if (inputStream == null) {
                 throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
@@ -346,10 +346,10 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                         exchange.dispatch(SameThreadExecutor.INSTANCE, handler);
                         return;
                     }
-                    Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
+                    PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
                     try {
                         while (true) {
-                            int c = requestChannel.read(pooled.getResource());
+                            int c = requestChannel.read(pooled.getBuffer());
                             if(c == 0) {
                                 requestChannel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                                     @Override
@@ -371,9 +371,9 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                                 }
                                 return;
                             } else {
-                                pooled.getResource().flip();
-                                parser.parse(pooled.getResource());
-                                pooled.getResource().compact();
+                                pooled.getBuffer().flip();
+                                parser.parse(pooled.getBuffer());
+                                pooled.getBuffer().compact();
                             }
                         }
                     } catch (MalformedMessageException e) {
@@ -381,7 +381,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                         exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         exchange.endExchange();
                     } finally {
-                        pooled.free();
+                        pooled.close();
                     }
 
                 } catch (Throwable e) {

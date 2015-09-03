@@ -29,7 +29,6 @@ import static org.xnio.IoUtils.safeClose;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -39,7 +38,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -85,7 +84,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private final OptionMap options;
     private final AjpClientChannel connection;
 
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
 
     private static final int UPGRADED = 1 << 28;
     private static final int UPGRADE_REQUESTED = 1 << 29;
@@ -97,7 +96,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private final ChannelListener.SimpleSetter<AjpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
     private final ClientStatistics clientStatistics;
 
-    AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final Pool<ByteBuffer> bufferPool, ClientStatistics clientStatistics) {
+    AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final ByteBufferPool bufferPool, ClientStatistics clientStatistics) {
         this.clientStatistics = clientStatistics;
         this.options = options;
         this.connection = connection;
@@ -114,7 +113,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     }
 
     @Override
-    public Pool<ByteBuffer> getBufferPool() {
+    public ByteBufferPool getBufferPool() {
         return bufferPool;
     }
 

@@ -45,7 +45,7 @@ public class ServerSentEventsServer {
         HttpHandler chatHandler = new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                new StringReadChannelListener(exchange.getConnection().getBufferPool()) {
+                new StringReadChannelListener(exchange.getConnection().getByteBufferPool()) {
 
                     @Override
                     protected void stringDone(String string) {

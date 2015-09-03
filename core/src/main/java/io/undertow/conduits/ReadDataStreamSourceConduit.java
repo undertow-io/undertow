@@ -21,7 +21,7 @@ package io.undertow.conduits;
 import io.undertow.server.AbstractServerConnection;
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
@@ -54,12 +54,12 @@ public class ReadDataStreamSourceConduit extends AbstractStreamSourceConduit<Str
 
     @Override
     public int read(final ByteBuffer dst) throws IOException {
-        Pooled<ByteBuffer> eb = connection.getExtraBytes();
+        PooledByteBuffer eb = connection.getExtraBytes();
         if (eb != null) {
-            final ByteBuffer buffer = eb.getResource();
+            final ByteBuffer buffer = eb.getBuffer();
             int result = Buffers.copy(dst, buffer);
             if (!buffer.hasRemaining()) {
-                eb.free();
+                eb.close();
                 connection.setExtraBytes(null);
             }
             return result;
@@ -70,12 +70,12 @@ public class ReadDataStreamSourceConduit extends AbstractStreamSourceConduit<Str
 
     @Override
     public long read(final ByteBuffer[] dsts, final int offs, final int len) throws IOException {
-        Pooled<ByteBuffer> eb = connection.getExtraBytes();
+        PooledByteBuffer eb = connection.getExtraBytes();
         if (eb != null) {
-            final ByteBuffer buffer = eb.getResource();
+            final ByteBuffer buffer = eb.getBuffer();
             int result = Buffers.copy(dsts, offs, len, buffer);
             if (!buffer.hasRemaining()) {
-                eb.free();
+                eb.close();
                 connection.setExtraBytes(null);
             }
             return result;

@@ -158,7 +158,7 @@ public final class LimitedBufferSlicePool {
             }
         }
 
-        public ByteBuffer getResource() {
+        public ByteBuffer getBuffer() {
             final ByteBuffer buffer = this.buffer;
             if (buffer == null) {
                 throw new IllegalStateException();

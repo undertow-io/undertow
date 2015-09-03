@@ -21,7 +21,7 @@ package io.undertow.protocols.http2;
 import java.nio.ByteBuffer;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * @author Stuart Douglas
@@ -46,7 +46,7 @@ class Http2RstStreamSinkChannel extends Http2NoDataStreamSinkChannel {
         Http2ProtocolUtils.putInt(buf, streamId);
         Http2ProtocolUtils.putInt(buf, errorCode);
         buf.flip();
-        return new SendFrameHeader(new ImmediatePooled<>(buf));
+        return new SendFrameHeader(new ImmediatePooledByteBuffer(buf));
     }
 
 }

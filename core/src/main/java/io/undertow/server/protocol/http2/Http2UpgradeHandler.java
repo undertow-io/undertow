@@ -71,7 +71,7 @@ public class Http2UpgradeHandler implements HttpHandler {
                     @Override
                     public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
                         OptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
-                        Http2Channel channel = new Http2Channel(streamConnection, upgrade, exchange.getConnection().getBufferPool(), null, false, true, true, settingsFrame, undertowOptions);
+                        Http2Channel channel = new Http2Channel(streamConnection, upgrade, exchange.getConnection().getByteBufferPool(), null, false, true, true, settingsFrame, undertowOptions);
                         Http2ReceiveListener receiveListener = new Http2ReceiveListener(new HttpHandler() {
                             @Override
                             public void handleRequest(HttpServerExchange exchange) throws Exception {

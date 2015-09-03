@@ -18,9 +18,8 @@
 
 package io.undertow.protocols.spdy;
 
-import java.nio.ByteBuffer;
 import org.xnio.Bits;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
@@ -36,7 +35,7 @@ public class SpdyStreamSourceChannel extends AbstractFramedStreamSourceChannel<S
         super(framedChannel);
     }
 
-    SpdyStreamSourceChannel(SpdyChannel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining) {
+    SpdyStreamSourceChannel(SpdyChannel framedChannel, PooledByteBuffer data, long frameDataRemaining) {
         super(framedChannel, data, frameDataRemaining);
     }
 

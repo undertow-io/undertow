@@ -142,7 +142,7 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
 
             @Override
             public void onError(WebSocketChannel channel, BufferedBinaryMessage context, Throwable throwable) {
-                context.getData().free();
+                context.getData().close();
                 AbstractReceiveListener.this.onError(channel, throwable);
             }
         });
@@ -191,7 +191,7 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
                 WebSockets.sendClose(cm, channel, null);
             }
         } finally {
-            data.free();
+            data.close();
         }
     }
 
@@ -207,12 +207,12 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
 
         @Override
         public void complete(WebSocketChannel channel, Void context) {
-            data.free();
+            data.close();
         }
 
         @Override
         public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
-            data.free();
+            data.close();
         }
     }
 }

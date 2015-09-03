@@ -21,7 +21,6 @@ package io.undertow.server.handlers.proxy.mod_cluster;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
 
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -34,7 +33,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ConnectionPoolManager;
 import io.undertow.server.handlers.proxy.ProxyConnectionPool;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.XnioIoThread;
 
 /**
@@ -55,7 +54,7 @@ class Node {
     private final List<Context> contexts = new CopyOnWriteArrayList<>();
 
     private final XnioIoThread ioThread;
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
 
     private volatile int state = ERROR; // This gets cleared with the first status report
 
@@ -68,7 +67,7 @@ class Node {
     private static final AtomicInteger idGen = new AtomicInteger();
     private static final AtomicIntegerFieldUpdater<Node> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(Node.class, "state");
 
-    protected Node(NodeConfig nodeConfig, Balancer balancerConfig, XnioIoThread ioThread, Pool<ByteBuffer> bufferPool, ModClusterContainer container) {
+    protected Node(NodeConfig nodeConfig, Balancer balancerConfig, XnioIoThread ioThread, ByteBufferPool bufferPool, ModClusterContainer container) {
         this.id = idGen.incrementAndGet();
         this.jvmRoute = nodeConfig.getJvmRoute();
         this.nodeConfig = nodeConfig;

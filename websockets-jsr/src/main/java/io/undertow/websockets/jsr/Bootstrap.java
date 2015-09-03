@@ -25,7 +25,7 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ContextClassLoaderSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.XnioWorker;
 
 import javax.servlet.DispatcherType;
@@ -38,7 +38,6 @@ import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -62,7 +61,7 @@ public class Bootstrap implements ServletExtension {
             JsrWebSocketLogger.ROOT_LOGGER.xnioWorkerWasNull();
             worker = ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).getXnioWorker();
         }
-        Pool<ByteBuffer> buffers = info.getBuffers();
+        ByteBufferPool buffers = info.getBuffers();
         if(buffers == null) {
             JsrWebSocketLogger.ROOT_LOGGER.bufferPoolWasNull();
             buffers = ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).getBufferPool();

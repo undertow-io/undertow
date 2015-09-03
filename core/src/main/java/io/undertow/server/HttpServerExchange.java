@@ -51,7 +51,7 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioIoThread;
 import org.xnio.channels.Channels;
 import org.xnio.channels.Configurable;
@@ -107,7 +107,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The attachment key that buffered request data is attached under.
      */
-    static final AttachmentKey<Pooled<ByteBuffer>[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(Pooled[].class);
+    static final AttachmentKey<PooledByteBuffer[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(PooledByteBuffer[].class);
 
     /**
      * Attachment key that can be used to hold additional request attributes
@@ -2051,7 +2051,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public long transferTo(long position, long count, FileChannel target) throws IOException {
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 return super.transferTo(position, count, target);
             }
@@ -2063,7 +2063,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             if(Thread.currentThread() == getIoThread()) {
                 throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
             }
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 super.awaitReadable();
             }
@@ -2077,7 +2077,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 return super.transferTo(count, throughBuffer, target);
             }
@@ -2086,14 +2086,14 @@ public final class HttpServerExchange extends AbstractAttachable {
             throughBuffer.limit(0);
             long copied = 0;
             for (int i = 0; i < buffered.length; ++i) {
-                Pooled<ByteBuffer> pooled = buffered[i];
+                PooledByteBuffer pooled = buffered[i];
                 if (pooled != null) {
-                    final ByteBuffer buf = pooled.getResource();
+                    final ByteBuffer buf = pooled.getBuffer();
                     if (buf.hasRemaining()) {
                         int res = target.write(buf);
 
                         if (!buf.hasRemaining()) {
-                            pooled.free();
+                            pooled.close();
                             buffered[i] = null;
                         }
                         if (res == 0) {
@@ -2102,7 +2102,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                             copied += res;
                         }
                     } else {
-                        pooled.free();
+                        pooled.close();
                         buffered[i] = null;
                     }
                 }
@@ -2120,7 +2120,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             if(Thread.currentThread() == getIoThread()) {
                 throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
             }
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 super.awaitReadable(time, timeUnit);
             }
@@ -2128,26 +2128,26 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 return super.read(dsts, offset, length);
             }
             long copied = 0;
             for (int i = 0; i < buffered.length; ++i) {
-                Pooled<ByteBuffer> pooled = buffered[i];
+                PooledByteBuffer pooled = buffered[i];
                 if (pooled != null) {
-                    final ByteBuffer buf = pooled.getResource();
+                    final ByteBuffer buf = pooled.getBuffer();
                     if (buf.hasRemaining()) {
                         copied += Buffers.copy(dsts, offset, length, buf);
                         if (!buf.hasRemaining()) {
-                            pooled.free();
+                            pooled.close();
                             buffered[i] = null;
                         }
                         if (!Buffers.hasRemaining(dsts, offset, length)) {
                             return copied;
                         }
                     } else {
-                        pooled.free();
+                        pooled.close();
                         buffered[i] = null;
                     }
                 }
@@ -2167,7 +2167,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public boolean isOpen() {
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered != null) {
                 return true;
             }
@@ -2176,11 +2176,11 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void close() throws IOException {
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered != null) {
-                for (Pooled<ByteBuffer> pooled : buffered) {
+                for (PooledByteBuffer pooled : buffered) {
                     if (pooled != null) {
-                        pooled.free();
+                        pooled.close();
                     }
                 }
             }
@@ -2190,7 +2190,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public boolean isReadResumed() {
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered != null) {
                 return readsResumed;
             }
@@ -2202,26 +2202,26 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public int read(ByteBuffer dst) throws IOException {
-            Pooled<ByteBuffer>[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
+            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
             if (buffered == null) {
                 return super.read(dst);
             }
             int copied = 0;
             for (int i = 0; i < buffered.length; ++i) {
-                Pooled<ByteBuffer> pooled = buffered[i];
+                PooledByteBuffer pooled = buffered[i];
                 if (pooled != null) {
-                    final ByteBuffer buf = pooled.getResource();
+                    final ByteBuffer buf = pooled.getBuffer();
                     if (buf.hasRemaining()) {
                         copied += Buffers.copy(dst, buf);
                         if (!buf.hasRemaining()) {
-                            pooled.free();
+                            pooled.close();
                             buffered[i] = null;
                         }
                         if (!dst.hasRemaining()) {
                             return copied;
                         }
                     } else {
-                        pooled.free();
+                        pooled.close();
                         buffered[i] = null;
                     }
                 }

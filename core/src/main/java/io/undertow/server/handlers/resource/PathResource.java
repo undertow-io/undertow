@@ -9,7 +9,7 @@ import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
 import io.undertow.util.StatusCodes;
 import org.xnio.IoUtils;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import java.io.File;
 import java.io.IOException;
@@ -136,7 +136,7 @@ public class PathResource implements RangeAwareResource {
 
         class ServerTask extends BaseFileTask implements IoCallback {
 
-            private Pooled<ByteBuffer> pooled;
+            private PooledByteBuffer pooled;
 
             long remaining = end - start + 1;
 
@@ -144,7 +144,7 @@ public class PathResource implements RangeAwareResource {
             public void run() {
                 if(range && remaining == 0) {
                     //we are done
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                     IoUtils.safeClose(fileChannel);
                     callback.onComplete(exchange, sender);
@@ -154,16 +154,16 @@ public class PathResource implements RangeAwareResource {
                     if (!openFile()) {
                         return;
                     }
-                    pooled = exchange.getConnection().getBufferPool().allocate();
+                    pooled = exchange.getConnection().getByteBufferPool().allocate();
                 }
                 if (pooled != null) {
-                    ByteBuffer buffer = pooled.getResource();
+                    ByteBuffer buffer = pooled.getBuffer();
                     try {
                         buffer.clear();
                         int res = fileChannel.read(buffer);
                         if (res == -1) {
                             //we are done
-                            pooled.free();
+                            pooled.close();
                             IoUtils.safeClose(fileChannel);
                             callback.onComplete(exchange, sender);
                             return;
@@ -196,7 +196,7 @@ public class PathResource implements RangeAwareResource {
             public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 if (pooled != null) {
-                    pooled.free();
+                    pooled.close();
                     pooled = null;
                 }
                 IoUtils.safeClose(fileChannel);

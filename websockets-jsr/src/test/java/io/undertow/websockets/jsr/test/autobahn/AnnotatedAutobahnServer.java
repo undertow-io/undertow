@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.jsr.test.autobahn;
 
+import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -24,12 +25,9 @@ import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.DebuggingSlicePool;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import org.jboss.logging.Logger;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.OptionMap;
@@ -79,7 +77,7 @@ public class AnnotatedAutobahnServer implements Runnable {
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
-            HttpOpenListener openListener = new HttpOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192)));
+            HttpOpenListener openListener = new HttpOpenListener(new DefaultByteBufferPool(true, 8024));
             ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
             AcceptingChannel<StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
@@ -87,7 +85,8 @@ public class AnnotatedAutobahnServer implements Runnable {
 
             final ServletContainer container = ServletContainer.Factory.newInstance();
 
-            ServerWebSocketContainer deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, worker, new DebuggingSlicePool(new ByteBufferSlicePool(100, 1000)), new CompositeThreadSetupAction(Collections.EMPTY_LIST), true, false);
+            ServerWebSocketContainer deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, worker, new DefaultByteBufferPool(true, 8024), new CompositeThreadSetupAction(Collections.EMPTY_LIST), true, false);
+
             DeploymentInfo builder = new DeploymentInfo()
                     .setClassLoader(AnnotatedAutobahnServer.class.getClassLoader())
                     .setContextPath("/")

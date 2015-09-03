@@ -50,7 +50,7 @@ public class ResponseCachingStreamSinkConduit extends AbstractStreamSinkConduit<
         this.cacheEntry = cacheEntry;
         this.length = length;
         for(LimitedBufferSlicePool.PooledByteBuffer buffer: cacheEntry.buffers()) {
-            buffer.getResource().clear();
+            buffer.getBuffer().clear();
         }
     }
 
@@ -72,7 +72,7 @@ public class ResponseCachingStreamSinkConduit extends AbstractStreamSinkConduit<
             LimitedBufferSlicePool.PooledByteBuffer[] pooled = cacheEntry.buffers();
             ByteBuffer[] buffers = new ByteBuffer[pooled.length];
             for (int i = 0; i < buffers.length; i++) {
-                buffers[i] = pooled[i].getResource();
+                buffers[i] = pooled[i].getBuffer();
             }
             origSrc.limit(origSrc.position() + totalWritten);
             written += Buffers.copy(buffers, 0, buffers.length, origSrc);
@@ -99,7 +99,7 @@ public class ResponseCachingStreamSinkConduit extends AbstractStreamSinkConduit<
             LimitedBufferSlicePool.PooledByteBuffer[] pooled = cacheEntry.buffers();
             ByteBuffer[] buffers = new ByteBuffer[pooled.length];
             for (int i = 0; i < buffers.length; i++) {
-                buffers[i] = pooled[i].getResource();
+                buffers[i] = pooled[i].getBuffer();
             }
             long leftToCopy = totalWritten;
             for(int i = 0; i < len; ++i) {

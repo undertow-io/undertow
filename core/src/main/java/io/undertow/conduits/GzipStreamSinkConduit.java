@@ -46,7 +46,7 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
     }
 
     private void writeHeader() {
-        currentBuffer.getResource().put(new byte[]{
+        currentBuffer.getBuffer().put(new byte[]{
                 (byte) GZIP_MAGIC,        // Magic number (short)
                 (byte) (GZIP_MAGIC >> 8),  // Magic number (short)
                 Deflater.DEFLATED,        // Compression method (CM)

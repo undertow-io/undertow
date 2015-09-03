@@ -21,6 +21,7 @@ package io.undertow.testutils;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
+import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
@@ -53,14 +54,12 @@ import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
@@ -77,7 +76,6 @@ import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -102,7 +100,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     public static final int APACHE_PORT = 9080;
     public static final int APACHE_SSL_PORT = 9443;
     public static final int BUFFER_SIZE = Integer.getInteger("test.bufferSize", 8192 * 3);
-    public static final DebuggingSlicePool SSL_BUFFER_POOL = new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 17 * 1024, 17 * 1024 * 128));
+    public static final DebuggingSlicePool SSL_BUFFER_POOL = new DebuggingSlicePool(new DefaultByteBufferPool(true, 17 * 1024));
 
     private static boolean first = true;
     private static OptionMap serverOptions;
@@ -139,7 +137,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final Logger log = Logger.getLogger(DefaultServer.class);
 
-    private static final DebuggingSlicePool pool = new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, 100 * BUFFER_SIZE));
+
+
+    private static final DebuggingSlicePool pool = new DebuggingSlicePool(new DefaultByteBufferPool(true, BUFFER_SIZE, 1000, 10, 100));
 
     private static KeyStore loadKeyStore(final String name) throws IOException {
         final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(name);
@@ -213,7 +213,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         proxyHandler.addRequestHeader(Headers.SSL_SESSION_ID, "%{SSL_SESSION_ID}", DefaultServer.class.getClassLoader());
     }
 
-    public static Pool<ByteBuffer> getBufferPool() {
+    public static ByteBufferPool getBufferPool() {
         return pool;
     }
 
@@ -297,7 +297,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                     }
                 } else if (spdy && isAlpnEnabled()) {
-                    openListener = new SpdyOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
+                    openListener = new SpdyOpenListener(pool, new DebuggingSlicePool(new DefaultByteBufferPool(false, 8192)), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(SpdyOpenListener.SPDY_3_1, (io.undertow.server.DelegateOpenListener) openListener, 5)));
 
                     SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
@@ -316,7 +316,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
 
                 } else if (h2 && isAlpnEnabled()) {
-                    openListener = new Http2OpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
+                    openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10)));
 
                     SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
@@ -348,7 +348,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
                 } else if (spdyPlain) {
-                    openListener = new SpdyPlainOpenListener(new DebuggingSlicePool(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 2* BUFFER_SIZE, 100 * BUFFER_SIZE)), new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, BUFFER_SIZE, BUFFER_SIZE), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
+                    openListener = new SpdyPlainOpenListener(pool, new DebuggingSlicePool(new DefaultByteBufferPool(false, 8192)), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     server = worker.createStreamConnectionServer(new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);

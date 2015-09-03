@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * @author Stuart Douglas
@@ -61,7 +61,7 @@ public class MultipartParser {
         void endPart();
     }
 
-    public static ParseState beginParse(final Pool<ByteBuffer> bufferPool, final PartHandler handler, final byte[] boundary, final String requestCharset) {
+    public static ParseState beginParse(final ByteBufferPool bufferPool, final PartHandler handler, final byte[] boundary, final String requestCharset) {
 
         // We prepend CR/LF to the boundary to chop trailing CR/LF from
         // body-data tokens.
@@ -72,7 +72,7 @@ public class MultipartParser {
     }
 
     public static class ParseState {
-        private final Pool<ByteBuffer> bufferPool;
+        private final ByteBufferPool bufferPool;
         private final PartHandler partHandler;
         private final String requestCharset;
         /**
@@ -89,7 +89,7 @@ public class MultipartParser {
         private volatile Encoding encodingHandler;
 
 
-        public ParseState(final Pool<ByteBuffer> bufferPool, final PartHandler partHandler, String requestCharset, final byte[] boundary) {
+        public ParseState(final ByteBufferPool bufferPool, final PartHandler partHandler, String requestCharset, final byte[] boundary) {
             this.bufferPool = bufferPool;
             this.partHandler = partHandler;
             this.requestCharset = requestCharset;
@@ -338,16 +338,16 @@ public class MultipartParser {
 
         private final FlexBase64.Decoder decoder = FlexBase64.createDecoder();
 
-        private final Pool<ByteBuffer> bufferPool;
+        private final ByteBufferPool bufferPool;
 
-        private Base64Encoding(final Pool<ByteBuffer> bufferPool) {
+        private Base64Encoding(final ByteBufferPool bufferPool) {
             this.bufferPool = bufferPool;
         }
 
         @Override
         public void handle(final PartHandler handler, final ByteBuffer rawData) throws IOException {
-            Pooled<ByteBuffer> resource = bufferPool.allocate();
-            ByteBuffer buf = resource.getResource();
+            PooledByteBuffer resource = bufferPool.allocate();
+            ByteBuffer buf = resource.getBuffer();
             try {
                 do {
                     buf.clear();
@@ -360,18 +360,18 @@ public class MultipartParser {
                     handler.data(buf);
                 } while (rawData.hasRemaining());
             } finally {
-                resource.free();
+                resource.close();
             }
         }
     }
 
     private static class QuotedPrintableEncoding implements Encoding {
 
-        private final Pool<ByteBuffer> bufferPool;
+        private final ByteBufferPool bufferPool;
         boolean equalsSeen;
         byte firstCharacter;
 
-        private QuotedPrintableEncoding(final Pool<ByteBuffer> bufferPool) {
+        private QuotedPrintableEncoding(final ByteBufferPool bufferPool) {
             this.bufferPool = bufferPool;
         }
 
@@ -380,8 +380,8 @@ public class MultipartParser {
         public void handle(final PartHandler handler, final ByteBuffer rawData) throws IOException {
             boolean equalsSeen = this.equalsSeen;
             byte firstCharacter = this.firstCharacter;
-            Pooled<ByteBuffer> resource = bufferPool.allocate();
-            ByteBuffer buf = resource.getResource();
+            PooledByteBuffer resource = bufferPool.allocate();
+            ByteBuffer buf = resource.getBuffer();
             try {
                 while (rawData.hasRemaining()) {
                     byte b = rawData.get();
@@ -416,7 +416,7 @@ public class MultipartParser {
                 buf.flip();
                 handler.data(buf);
             } finally {
-                resource.free();
+                resource.close();
                 this.equalsSeen = equalsSeen;
                 this.firstCharacter = firstCharacter;
             }

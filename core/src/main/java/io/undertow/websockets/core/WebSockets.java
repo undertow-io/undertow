@@ -18,7 +18,7 @@
 
 package io.undertow.websockets.core;
 
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -391,7 +391,7 @@ public class WebSockets {
         try {
             StreamSinkFrameChannel channel = wsChannel.send(type);
             // TODO chunk data into some MTU-like thing to control packet size
-            if(!channel.send(new ImmediatePooled<>(data))) {
+            if(!channel.send(new ImmediatePooledByteBuffer(data))) {
                 throw WebSocketMessages.MESSAGES.unableToSendOnNewChannel();
             }
             flushChannelAsync(wsChannel, callback, channel, null, timeoutmillis);
@@ -465,7 +465,7 @@ public class WebSockets {
     private static void sendBlockingInternal(final ByteBuffer data, WebSocketFrameType type, final WebSocketChannel wsChannel) throws IOException {
         StreamSinkFrameChannel channel = wsChannel.send(type);
         // TODO chunk data into some MTU-like thing to control packet size
-        if(!channel.send(new ImmediatePooled<>(data))) {
+        if(!channel.send(new ImmediatePooledByteBuffer(data))) {
             throw WebSocketMessages.MESSAGES.unableToSendOnNewChannel();
         }
         channel.shutdownWrites();

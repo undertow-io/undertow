@@ -1,0 +1,56 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2014 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package io.undertow.util;
+
+import io.undertow.connector.PooledByteBuffer;
+import org.xnio.Pooled;
+
+import java.nio.ByteBuffer;
+
+/**
+ * @author Stuart Douglas
+ */
+public class PooledAdaptor implements Pooled<ByteBuffer> {
+
+    private final PooledByteBuffer buffer;
+
+    public PooledAdaptor(PooledByteBuffer buffer) {
+        this.buffer = buffer;
+    }
+
+    @Override
+    public void discard() {
+        buffer.close();
+    }
+
+    @Override
+    public void free() {
+        buffer.close();
+    }
+
+    @Override
+    public ByteBuffer getResource() throws IllegalStateException {
+        return buffer.getBuffer();
+    }
+
+    @Override
+    public void close() {
+        buffer.close();
+    }
+}

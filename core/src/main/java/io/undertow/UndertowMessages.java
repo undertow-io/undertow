@@ -419,4 +419,7 @@ public interface UndertowMessages {
 
     @Message(id = 130, value = "HTTP reason phrase was too large for the buffer. Either provide a smaller message or a bigger buffer. Phrase: %s")
     IllegalStateException reasonPhraseToLargeForBuffer(String phrase);
+
+    @Message(id = 131, value = "Buffer pool is closed")
+    IllegalStateException poolIsClosed();
 }

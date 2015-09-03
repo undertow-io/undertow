@@ -20,7 +20,6 @@ package io.undertow.websockets.client.version13;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -38,12 +37,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Pool;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
@@ -119,12 +115,10 @@ public class WebSocketClient13TestCase {
         worker.shutdown();
     }
 
-    private final Pool<ByteBuffer> buffer = new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024);
-
     @Test
     public void testTextMessage() throws Exception {
 
-        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, buffer, new URI(DefaultServer.getDefaultServerURL())).connect().get();
+        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, DefaultServer.getBufferPool(), new URI(DefaultServer.getDefaultServerURL())).connect().get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();
@@ -158,7 +152,7 @@ public class WebSocketClient13TestCase {
     public void testTextMessageWss() throws Exception {
 
         UndertowXnioSsl ssl = new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, DefaultServer.getClientSSLContext());
-        final WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(worker, buffer, new URI("wss://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default")))
+        final WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(worker, DefaultServer.getBufferPool(), new URI("wss://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default")))
                 .setSsl(ssl);
         IoFuture<WebSocketChannel> future = connectionBuilder.connect();
         future.await(4, TimeUnit.SECONDS);
@@ -196,7 +190,7 @@ public class WebSocketClient13TestCase {
     @ProxyIgnore
     public void testMessageViaProxy() throws Exception {
 
-        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, buffer, new URI(DefaultServer.getDefaultServerURL()))
+        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, DefaultServer.getBufferPool(), new URI(DefaultServer.getDefaultServerURL()))
                 .setProxyUri(new URI("http", null, DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default")  + 10, "/proxy", null, null))
                 .connect().get();
 
@@ -235,7 +229,7 @@ public class WebSocketClient13TestCase {
     public void testMessageViaWssProxy() throws Exception {
 
 
-        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, buffer, new URI(DefaultServer.getDefaultServerSSLAddress()))
+        final WebSocketChannel webSocketChannel = WebSocketClient.connectionBuilder(worker, DefaultServer.getBufferPool(), new URI(DefaultServer.getDefaultServerSSLAddress()))
                 .setSsl(new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()))
                 .setProxyUri(new URI("http", null, DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default") + 10, "/proxy", null, null))
                 .connect().get();

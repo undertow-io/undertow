@@ -1,7 +1,7 @@
 package io.undertow.testutils;
 
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author Stuart Douglas
  */
-public class DebuggingSlicePool implements Pool<ByteBuffer>{
+public class DebuggingSlicePool implements ByteBufferPool{
 
     /**
      * context that can be added to allocations to give more information about buffer leaks, useful when debugging buffer leaks
@@ -22,9 +22,9 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
     static final Set<DebuggingBuffer> BUFFERS = Collections.newSetFromMap(new ConcurrentHashMap<DebuggingBuffer, Boolean>());
     static volatile String currentLabel;
 
-    private final Pool<ByteBuffer> delegate;
+    private final ByteBufferPool delegate;
 
-    public DebuggingSlicePool(Pool<ByteBuffer> delegate) {
+    public DebuggingSlicePool(ByteBufferPool delegate) {
         this.delegate = delegate;
     }
 
@@ -33,58 +33,63 @@ public class DebuggingSlicePool implements Pool<ByteBuffer>{
     }
 
     @Override
-    public Pooled<ByteBuffer> allocate() {
-        final Pooled<ByteBuffer> delegate = this.delegate.allocate();
+    public PooledByteBuffer allocate() {
+        final PooledByteBuffer delegate = this.delegate.allocate();
         return new DebuggingBuffer(delegate, currentLabel);
     }
 
-    static class DebuggingBuffer implements Pooled<ByteBuffer> {
+    @Override
+    public void close() {
+        delegate.close();
+    }
+
+    @Override
+    public int getBufferSize() {
+        return delegate.getBufferSize();
+    }
+
+    static class DebuggingBuffer implements PooledByteBuffer {
 
         private static final AtomicInteger allocationCount = new AtomicInteger();
         private final RuntimeException allocationPoint;
-        private final Pooled<ByteBuffer> delegate;
+        private final PooledByteBuffer delegate;
         private final String label;
         private final int no;
         private volatile boolean free = false;
         private RuntimeException freePoint;
 
-        public DebuggingBuffer(Pooled<ByteBuffer> delegate, String label) {
+        public DebuggingBuffer(PooledByteBuffer delegate, String label) {
             this.delegate = delegate;
             this.label = label;
             this.no = allocationCount.getAndIncrement();
             String ctx = ALLOCATION_CONTEXT.get();
             ALLOCATION_CONTEXT.remove();
-            allocationPoint = new RuntimeException(delegate.getResource()  + " NO: " + no + " " + (ctx == null ? "[NO_CONTEXT]" : ctx));
+            allocationPoint = new RuntimeException(delegate.getBuffer()  + " NO: " + no + " " + (ctx == null ? "[NO_CONTEXT]" : ctx));
             BUFFERS.add(this);
         }
 
         @Override
-        public void discard() {
-            BUFFERS.remove(this);
-            delegate.discard();
-        }
-
-        @Override
-        public void free() {
+        public void close() {
             if(free) {
                 return;
             }
             freePoint = new RuntimeException("FREE POINT");
             free = true;
             BUFFERS.remove(this);
-            delegate.free();
+            delegate.close();
         }
 
         @Override
-        public ByteBuffer getResource() throws IllegalStateException {
+        public boolean isOpen() {
+            return !free;
+        }
+
+        @Override
+        public ByteBuffer getBuffer() throws IllegalStateException {
             if(free) {
                 throw new IllegalStateException("Buffer already freed, free point: ", freePoint);
             }
-            return delegate.getResource();
-        }
-
-        @Override
-        public void close() {
+            return delegate.getBuffer();
         }
 
         RuntimeException getAllocationPoint() {

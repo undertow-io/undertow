@@ -18,9 +18,7 @@
 
 package io.undertow.server.protocol.framed;
 
-import org.xnio.Pooled;
-
-import java.nio.ByteBuffer;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * @author Stuart Douglas
@@ -28,22 +26,22 @@ import java.nio.ByteBuffer;
 public class SendFrameHeader {
 
     private final int reminingInBuffer;
-    private final Pooled<ByteBuffer> byteBuffer;
+    private final PooledByteBuffer byteBuffer;
     private final boolean anotherFrameRequired;
 
-    public SendFrameHeader(int reminingInBuffer, Pooled<ByteBuffer> byteBuffer, boolean anotherFrameRequired) {
+    public SendFrameHeader(int reminingInBuffer, PooledByteBuffer byteBuffer, boolean anotherFrameRequired) {
         this.byteBuffer = byteBuffer;
         this.reminingInBuffer = reminingInBuffer;
         this.anotherFrameRequired = anotherFrameRequired;
     }
 
-    public SendFrameHeader(int reminingInBuffer, Pooled<ByteBuffer> byteBuffer) {
+    public SendFrameHeader(int reminingInBuffer, PooledByteBuffer byteBuffer) {
         this.byteBuffer = byteBuffer;
         this.reminingInBuffer = reminingInBuffer;
         this.anotherFrameRequired = false;
     }
 
-    public SendFrameHeader(Pooled<ByteBuffer> byteBuffer) {
+    public SendFrameHeader(PooledByteBuffer byteBuffer) {
         this.byteBuffer = byteBuffer;
         this.reminingInBuffer = 0;
         this.anotherFrameRequired = false;
@@ -53,7 +51,7 @@ public class SendFrameHeader {
      *
      * @return The header byte buffer
      */
-    public Pooled<ByteBuffer> getByteBuffer() {
+    public PooledByteBuffer getByteBuffer() {
         return byteBuffer;
     }
 

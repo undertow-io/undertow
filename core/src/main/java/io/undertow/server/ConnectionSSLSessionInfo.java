@@ -24,7 +24,7 @@ import io.undertow.server.protocol.http.HttpServerConnection;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Options;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.SslClientAuthMode;
 import org.xnio.channels.Channels;
 import org.xnio.channels.SslChannel;
@@ -106,38 +106,38 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
             requestResetRequired = true;
         }
 
-        Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
+        PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
         boolean free = true; //if the pooled buffer should be freed
         int usedBuffers = 0;
-        Pooled<ByteBuffer>[] poolArray = null;
-        final int bufferSize = pooled.getResource().remaining();
+        PooledByteBuffer[] poolArray = null;
+        final int bufferSize = pooled.getBuffer().remaining();
         int allowedBuffers = ((maxSize + bufferSize - 1) / bufferSize);
-        poolArray = new Pooled[allowedBuffers];
+        poolArray = new PooledByteBuffer[allowedBuffers];
         poolArray[usedBuffers++] = pooled;
         try {
             int res;
             do {
-                final ByteBuffer buf = pooled.getResource();
+                final ByteBuffer buf = pooled.getBuffer();
                 res = Channels.readBlocking(requestChannel, buf);
                 if (!buf.hasRemaining()) {
                     if (usedBuffers == allowedBuffers) {
                         throw new SSLPeerUnverifiedException("");
                     } else {
                         buf.flip();
-                        pooled = exchange.getConnection().getBufferPool().allocate();
+                        pooled = exchange.getConnection().getByteBufferPool().allocate();
                         poolArray[usedBuffers++] = pooled;
                     }
                 }
             } while (res != -1);
             free = false;
-            pooled.getResource().flip();
+            pooled.getBuffer().flip();
             Connectors.ungetRequestBytes(exchange, poolArray);
             renegotiateNoRequest(exchange, newAuthMode);
         } finally {
             if (free) {
-                for(Pooled<ByteBuffer> buf : poolArray) {
+                for(PooledByteBuffer buf : poolArray) {
                     if(buf != null) {
-                        buf.free();
+                        buf.close();
                     }
                 }
             }

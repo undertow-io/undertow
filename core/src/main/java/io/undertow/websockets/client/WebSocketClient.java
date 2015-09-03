@@ -37,7 +37,7 @@ import org.xnio.ChannelListener;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioWorker;
 import org.xnio.http.HttpUpgrade;
@@ -47,7 +47,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -65,32 +64,32 @@ public class WebSocketClient {
 
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
         return connect(worker, bufferPool, optionMap, uri, version, null);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
         return connect(worker, ssl, bufferPool, optionMap, uri, version, null);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
         return connect(worker, null, bufferPool, optionMap, uri, version, clientNegotiation);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
         return connect(worker, ssl, bufferPool, optionMap, uri, version, clientNegotiation, null);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
         return connect(worker, ssl, bufferPool, optionMap, null, uri, version, clientNegotiation, clientExtensions);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, InetSocketAddress bindAddress, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap optionMap, InetSocketAddress bindAddress, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
         return connectionBuilder(worker, bufferPool, uri)
                 .setSsl(ssl)
                 .setOptionMap(optionMap)
@@ -103,7 +102,7 @@ public class WebSocketClient {
 
     public static class ConnectionBuilder {
         private final XnioWorker worker;
-        private final Pool<ByteBuffer> bufferPool;
+        private final ByteBufferPool bufferPool;
         private final URI uri;
 
         private XnioSsl ssl;
@@ -115,7 +114,7 @@ public class WebSocketClient {
         private URI proxyUri;
         private XnioSsl proxySsl;
 
-        public ConnectionBuilder(XnioWorker worker, Pool<ByteBuffer> bufferPool, URI uri) {
+        public ConnectionBuilder(XnioWorker worker, ByteBufferPool bufferPool, URI uri) {
             this.worker = worker;
             this.bufferPool = bufferPool;
             this.uri = uri;
@@ -138,7 +137,7 @@ public class WebSocketClient {
             return this;
         }
 
-        public Pool<ByteBuffer> getBufferPool() {
+        public ByteBufferPool getBufferPool() {
             return bufferPool;
         }
 
@@ -359,7 +358,7 @@ public class WebSocketClient {
      * @param uri The connection URI
      * @return The connection builder
      */
-    public static ConnectionBuilder connectionBuilder(XnioWorker worker, Pool<ByteBuffer> bufferPool, URI uri) {
+    public static ConnectionBuilder connectionBuilder(XnioWorker worker, ByteBufferPool bufferPool, URI uri) {
         return new ConnectionBuilder(worker, bufferPool, uri);
     }
 

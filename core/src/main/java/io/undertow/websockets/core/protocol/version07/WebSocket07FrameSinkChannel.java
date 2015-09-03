@@ -23,7 +23,7 @@ import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.NoopExtensionFunction;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -94,7 +94,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
 
     @Override
     protected SendFrameHeader createFrameHeader() {
-        Pooled<ByteBuffer> start = getChannel().getBufferPool().allocate();
+        PooledByteBuffer start = getChannel().getBufferPool().allocate();
         byte b0 = 0;
 
         //if writes are shutdown this is the final fragment
@@ -111,7 +111,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
         b0 |= (rsv & 7) << 4;
         b0 |= opCode & 0xf;
 
-        final ByteBuffer header = start.getResource();
+        final ByteBuffer header = start.getBuffer();
 
         byte maskKey = 0;
         if(masker != null) {
@@ -156,7 +156,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     }
 
     @Override
-    public boolean sendInternal(Pooled<ByteBuffer> pooled) throws IOException {
+    public boolean sendInternal(PooledByteBuffer pooled) throws IOException {
         // Check that the underlying write will succeed prior to applying the function
         // Could corrupt LZW stream if not
         if(safeToSend()) {

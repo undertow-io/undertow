@@ -26,8 +26,8 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -92,7 +92,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * @param client
      * @param peerConnections        The concurrent set that is used to track open connections associtated with an endpoint
      */
-    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final ExtensionFunction extensionFunction, Set<WebSocketChannel> peerConnections, OptionMap options) {
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final ExtensionFunction extensionFunction, Set<WebSocketChannel> peerConnections, OptionMap options) {
         super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null, options);
         this.client = client;
         this.version = version;
@@ -192,7 +192,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     protected abstract PartialFrame receiveFrame();
 
     @Override
-    protected StreamSourceFrameChannel createChannel(FrameHeaderData frameHeaderData, Pooled<ByteBuffer> frameData) {
+    protected StreamSourceFrameChannel createChannel(FrameHeaderData frameHeaderData, PooledByteBuffer frameData) {
         PartialFrame partialFrame = (PartialFrame) frameHeaderData;
         StreamSourceFrameChannel channel = partialFrame.getChannel(frameData);
         if (channel.getType() == WebSocketFrameType.CLOSE) {
@@ -405,7 +405,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         /**
          * @return The channel, or null if the channel is not available yet
          */
-        StreamSourceFrameChannel getChannel(final Pooled<ByteBuffer> data);
+        StreamSourceFrameChannel getChannel(final PooledByteBuffer data);
 
         /**
          * Handles the data, any remaining data will be pushed back

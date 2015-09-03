@@ -27,8 +27,8 @@ import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
@@ -49,7 +49,7 @@ import static org.xnio.Bits.allAreSet;
  */
 final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
-    private final Pool<ByteBuffer> pool;
+    private final ByteBufferPool pool;
 
     private int state = STATE_START;
 
@@ -58,7 +58,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     private HeaderValues headerValues;
     private int valueIdx;
     private int charIndex;
-    private Pooled<ByteBuffer> pooledBuffer;
+    private PooledByteBuffer pooledBuffer;
     private HttpServerExchange exchange;
 
     private ByteBuffer[] writevBuffer;
@@ -79,12 +79,12 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     private static final int MASK_STATE = 0x0000000F;
     private static final int FLAG_SHUTDOWN = 0x00000010;
 
-    HttpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool) {
+    HttpResponseConduit(final StreamSinkConduit next, final ByteBufferPool pool) {
         super(next);
         this.pool = pool;
     }
 
-    HttpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, HttpServerExchange exchange) {
+    HttpResponseConduit(final StreamSinkConduit next, final ByteBufferPool pool, HttpServerExchange exchange) {
         super(next);
         this.pool = pool;
         this.exchange = exchange;
@@ -120,7 +120,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         try {
             assert state != STATE_BODY;
             if (state == STATE_BUF_FLUSH) {
-                final ByteBuffer byteBuffer = pooledBuffer.getResource();
+                final ByteBuffer byteBuffer = pooledBuffer.getBuffer();
                 do {
                     long res = 0;
                     ByteBuffer[] data;
@@ -159,7 +159,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             if (pooledBuffer == null) {
                 pooledBuffer = pool.allocate();
             }
-            ByteBuffer buffer = pooledBuffer.getResource();
+            ByteBuffer buffer = pooledBuffer.getBuffer();
 
 
             assert buffer.remaining() >= 50;
@@ -177,7 +177,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 string = StatusCodes.getReason(code);
             }
             if(string.length() > buffer.remaining()) {
-                pooledBuffer.free();
+                pooledBuffer.close();
                 pooledBuffer = null;
                 truncateWrites();
                 throw UndertowMessages.MESSAGES.reasonPhraseToLargeForBuffer(string);
@@ -262,7 +262,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         } catch (IOException | RuntimeException e) {
             //WFLY-4696, just to be safe
             if (pooledBuffer != null) {
-                pooledBuffer.free();
+                pooledBuffer.close();
                 pooledBuffer = null;
             }
             throw e;
@@ -273,10 +273,10 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         HttpServerConnection connection = (HttpServerConnection)exchange.getConnection();
         if(connection.getExtraBytes() != null && connection.isOpen() && exchange.isRequestComplete()) {
             //if we are pipelining we hold onto the buffer
-            pooledBuffer.getResource().clear();
+            pooledBuffer.getBuffer().clear();
         } else {
 
-            pooledBuffer.free();
+            pooledBuffer.close();
             pooledBuffer = null;
         }
     }
@@ -293,7 +293,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
      * Handles writing out the header data in the case where is is too big to fit into a buffer. This is a much slower code path.
      */
     private int processStatefulWrite(int state, final Object userData, int pos, int len) throws IOException {
-        ByteBuffer buffer = pooledBuffer.getResource();
+        ByteBuffer buffer = pooledBuffer.getBuffer();
         long fiCookie = this.fiCookie;
         int valueIdx = this.valueIdx;
         int charIndex = this.charIndex;
@@ -641,8 +641,8 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
         try {
             if (state != 0) {
-                final Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-                ByteBuffer buffer = pooled.getResource();
+                final PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+                ByteBuffer buffer = pooled.getBuffer();
                 try {
                     int res = src.read(buffer);
                     if (res <= 0) {
@@ -651,7 +651,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     buffer.flip();
                     return write(buffer);
                 } finally {
-                    pooled.free();
+                    pooled.close();
                 }
             } else {
                 return next.transferFrom(src, position, count);

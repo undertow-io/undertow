@@ -41,7 +41,7 @@ import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -88,12 +88,12 @@ public class Http2ClientProvider implements ClientProvider {
 
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
         connect(listener, null, uri, worker, ssl, bufferPool, options);
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
         connect(listener, null, uri, ioThread, ssl, bufferPool, options);
     }
 
@@ -103,7 +103,7 @@ public class Http2ClientProvider implements ClientProvider {
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
         if(ALPN_PUT_METHOD == null) {
             listener.failed(UndertowMessages.MESSAGES.jettyNPNNotAvailable());
             return;
@@ -122,7 +122,7 @@ public class Http2ClientProvider implements ClientProvider {
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
         if(ALPN_PUT_METHOD == null) {
             listener.failed(UndertowMessages.MESSAGES.jettyNPNNotAvailable());
             return;
@@ -151,7 +151,7 @@ public class Http2ClientProvider implements ClientProvider {
         };
     }
 
-    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final Pool<ByteBuffer> bufferPool, final OptionMap options) {
+    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
         return new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
@@ -160,7 +160,7 @@ public class Http2ClientProvider implements ClientProvider {
         };
     }
 
-    private void handleConnected(StreamConnection connection, final ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {
+    private void handleConnected(StreamConnection connection, final ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         handlePotentialHttp2Connection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
             @Override
             public void handleEvent(SslConnection channel) {
@@ -176,7 +176,7 @@ public class Http2ClientProvider implements ClientProvider {
     /**
      * Not really part of the public API, but is used by the HTTP client to initiate a HTTP2 connection for HTTPS requests.
      */
-    public static void handlePotentialHttp2Connection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final Pool<ByteBuffer> bufferPool, final OptionMap options, final ChannelListener<SslConnection> http2FailedListener, final URI uri) {
+    public static void handlePotentialHttp2Connection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, final ChannelListener<SslConnection> http2FailedListener, final URI uri) {
 
         final SslConnection sslConnection = (SslConnection) connection;
         final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(sslConnection);
@@ -243,7 +243,7 @@ public class Http2ClientProvider implements ClientProvider {
 
     }
 
-    private static Http2ClientConnection createHttp2Channel(StreamConnection connection, Pool<ByteBuffer> bufferPool, OptionMap options, String defaultHost) {
+    private static Http2ClientConnection createHttp2Channel(StreamConnection connection, ByteBufferPool bufferPool, OptionMap options, String defaultHost) {
 
         final ClientStatisticsImpl clientStatistics;
         //first we set up statistics, if required
@@ -264,7 +264,6 @@ public class Http2ClientProvider implements ClientProvider {
         } else {
             clientStatistics = null;
         }
-
         Http2Channel http2Channel = new Http2Channel(connection, null, bufferPool, null, true, false, options);
         return new Http2ClientConnection(http2Channel, false, defaultHost, clientStatistics);
     }

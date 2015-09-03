@@ -65,12 +65,12 @@ public class WebSocket07ServerTest extends AbstractWebSocketServerTest {
                         WebSockets.sendPong(data.getResource(), channel, new WebSocketCallback<Void>() {
                             @Override
                             public void complete(WebSocketChannel channel, Void context) {
-                                data.free();
+                                data.close();
                             }
 
                             @Override
                             public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
-                                data.free();
+                                data.close();
                             }
                         });
                     }

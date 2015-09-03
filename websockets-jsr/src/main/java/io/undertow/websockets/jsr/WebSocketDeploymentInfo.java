@@ -19,11 +19,10 @@
 package io.undertow.websockets.jsr;
 
 import io.undertow.websockets.extensions.ExtensionHandshake;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.XnioWorker;
 
 import javax.websocket.server.ServerEndpointConfig;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,7 +36,7 @@ public class WebSocketDeploymentInfo {
     public static final String ATTRIBUTE_NAME = "io.undertow.websockets.jsr.WebSocketDeploymentInfo";
 
     private XnioWorker worker;
-    private Pool<ByteBuffer> buffers;
+    private ByteBufferPool buffers;
     private boolean dispatchToWorkerThread = false;
     private final List<Class<?>> annotatedEndpoints = new ArrayList<>();
     private final List<ServerEndpointConfig> programaticEndpoints = new ArrayList<>();
@@ -55,11 +54,11 @@ public class WebSocketDeploymentInfo {
         return this;
     }
 
-    public Pool<ByteBuffer> getBuffers() {
+    public ByteBufferPool getBuffers() {
         return buffers;
     }
 
-    public WebSocketDeploymentInfo setBuffers(Pool<ByteBuffer> buffers) {
+    public WebSocketDeploymentInfo setBuffers(ByteBufferPool buffers) {
         this.buffers = buffers;
         return this;
     }

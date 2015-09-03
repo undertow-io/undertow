@@ -20,7 +20,7 @@ package io.undertow.websockets.core.protocol.version07;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,12 +30,12 @@ import java.nio.ByteBuffer;
  */
 class WebSocket07CloseFrameSourceChannel extends StreamSourceFrameChannel {
 
-    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
+    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, Masker masker, PooledByteBuffer pooled, long frameLength) {
         // no fragmentation allowed per spec
         super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, masker, new CloseFrameValidatorChannelFunction(wsChannel));
     }
 
-    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
+    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, PooledByteBuffer pooled, long frameLength) {
         // no fragmentation allowed per spec
         super(wsChannel, WebSocketFrameType.CLOSE, rsv, true, pooled, frameLength, null, new CloseFrameValidatorChannelFunction(wsChannel));
     }

@@ -36,7 +36,7 @@ import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -129,15 +129,15 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
     public void handleEventWithNoRunningRequest(final ConduitStreamSourceChannel channel) {
-        Pooled<ByteBuffer> existing = connection.getExtraBytes();
+        PooledByteBuffer existing = connection.getExtraBytes();
         if ((existing == null && connection.getOriginalSourceConduit().isReadShutdown()) || connection.getOriginalSinkConduit().isWriteShutdown()) {
             IoUtils.safeClose(connection);
             channel.suspendReads();
             return;
         }
 
-        final Pooled<ByteBuffer> pooled = existing == null ? connection.getBufferPool().allocate() : existing;
-        final ByteBuffer buffer = pooled.getResource();
+        final PooledByteBuffer pooled = existing == null ? connection.getByteBufferPool().allocate() : existing;
+        final ByteBuffer buffer = pooled.getBuffer();
         boolean free = true;
 
         try {
@@ -229,11 +229,11 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             sendBadRequestAndClose(connection.getChannel(), e);
             return;
         } finally {
-            if (free) pooled.free();
+            if (free) pooled.close();
         }
     }
 
-    private boolean handleHttp2PriorKnowledge(Pooled<ByteBuffer> pooled, HttpServerExchange httpServerExchange) throws IOException {
+    private boolean handleHttp2PriorKnowledge(PooledByteBuffer pooled, HttpServerExchange httpServerExchange) throws IOException {
         if(httpServerExchange.getRequestMethod().equals(PRI) && connection.getUndertowOptions().get(UndertowOptions.ENABLE_HTTP2, false)) {
             handleHttp2PriorKnowledge(connection.getChannel(), connection, pooled);
             return false;
@@ -365,22 +365,22 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
 
-    private void handleHttp2PriorKnowledge(final StreamConnection connection, final HttpServerConnection serverConnection, Pooled<ByteBuffer> readData) throws IOException {
+    private void handleHttp2PriorKnowledge(final StreamConnection connection, final HttpServerConnection serverConnection, PooledByteBuffer readData) throws IOException {
 
         final ConduitStreamSourceChannel request = connection.getSourceChannel();
 
         byte[] data = new byte[PRI_EXPECTED.length];
         final ByteBuffer buffer = ByteBuffer.wrap(data);
-        if(readData.getResource().hasRemaining()) {
-            while (readData.getResource().hasRemaining() && buffer.hasRemaining()) {
-                buffer.put(readData.getResource().get());
+        if(readData.getBuffer().hasRemaining()) {
+            while (readData.getBuffer().hasRemaining() && buffer.hasRemaining()) {
+                buffer.put(readData.getBuffer().get());
             }
         }
-        final Pooled<ByteBuffer> extraData;
-        if(readData.getResource().hasRemaining()) {
+        final PooledByteBuffer extraData;
+        if(readData.getBuffer().hasRemaining()) {
             extraData = readData;
         } else {
-            readData.free();
+            readData.close();
             extraData = null;
         }
         if(!doHttp2PriRead(connection, buffer, serverConnection, extraData)) {
@@ -399,7 +399,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         }
     }
 
-    private boolean doHttp2PriRead(StreamConnection connection, ByteBuffer buffer, HttpServerConnection serverConnection, Pooled<ByteBuffer> extraData) throws IOException {
+    private boolean doHttp2PriRead(StreamConnection connection, ByteBuffer buffer, HttpServerConnection serverConnection, PooledByteBuffer extraData) throws IOException {
         if(buffer.hasRemaining()) {
             int res = connection.getSourceChannel().read(buffer);
             if (res == -1) {
@@ -416,7 +416,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             }
         }
 
-        Http2Channel channel = new Http2Channel(connection, null, serverConnection.getBufferPool(), extraData, false, false, false, serverConnection.getUndertowOptions());
+        Http2Channel channel = new Http2Channel(connection, null, serverConnection.getByteBufferPool(), extraData, false, false, false, serverConnection.getUndertowOptions());
         Http2ReceiveListener receiveListener = new Http2ReceiveListener(serverConnection.getRootHandler(), serverConnection.getUndertowOptions(), serverConnection.getBufferSize(), null);
         channel.getReceiveSetter().set(receiveListener);
         channel.resumeReceives();

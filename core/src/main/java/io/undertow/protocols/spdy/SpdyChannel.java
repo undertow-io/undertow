@@ -20,6 +20,7 @@ package io.undertow.protocols.spdy;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
@@ -34,8 +35,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.ssl.SslConnection;
 
@@ -107,7 +107,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
      */
     private volatile int sendWindowSize = initialWindowSize;
 
-    private final Pool<ByteBuffer> heapBufferPool;
+    private final ByteBufferPool heapBufferPool;
 
     private boolean thisGoneAway = false;
     private boolean peerGoneAway = false;
@@ -118,7 +118,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
-    public SpdyChannel(StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, Pool<ByteBuffer> heapBufferPool, boolean clientSide, OptionMap options) {
+    public SpdyChannel(StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, PooledByteBuffer data, ByteBufferPool heapBufferPool, boolean clientSide, OptionMap options) {
         super(connectedStreamChannel, bufferPool, SpdyFramePriority.INSTANCE, data, options);
         this.heapBufferPool = heapBufferPool;
         this.deflater.setDictionary(SpdyProtocolUtils.SPDY_DICT);
@@ -126,7 +126,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     }
 
     @Override
-    protected SpdyStreamSourceChannel createChannel(FrameHeaderData frameHeaderData, Pooled<ByteBuffer> frameData) throws IOException {
+    protected SpdyStreamSourceChannel createChannel(FrameHeaderData frameHeaderData, PooledByteBuffer frameData) throws IOException {
         SpdyFrameParser frameParser = (SpdyFrameParser) frameHeaderData;
         SpdyStreamSourceChannel channel;
         if(!frameParser.control) {
@@ -180,7 +180,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
             case WINDOW_UPDATE: {
                 SpdyWindowUpdateParser parser = (SpdyWindowUpdateParser) frameParser.parser;
                 handleWindowUpdate(parser.getStreamId(), parser.getDeltaWindowSize());
-                frameData.free();
+                frameData.close();
                 //we don't return window update notifications, they are handled internally
                 return null;
             }
@@ -296,7 +296,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
         return 3;
     }
 
-    Pool<ByteBuffer> getHeapBufferPool() {
+    ByteBufferPool getHeapBufferPool() {
         return heapBufferPool;
     }
 
@@ -559,7 +559,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                         break;
                     }
                     case RST_STREAM: {
-                        parser = new SpdyRstStreamParser(getBufferPool(), length);
+                        parser = new SpdyRstStreamParser(length);
                         break;
                     }
                     case HEADERS: {
@@ -571,12 +571,12 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                         break;
                     }
                     case GOAWAY: {
-                        parser = new SpdyGoAwayParser(getBufferPool(), length);
+                        parser = new SpdyGoAwayParser(length);
                         peerGoneAway = true;
                         break;
                     }
                     case PING: {
-                        parser = new SpdyPingParser(getBufferPool(), length);
+                        parser = new SpdyPingParser(length);
                         break;
                     }
                     case SETTINGS: {

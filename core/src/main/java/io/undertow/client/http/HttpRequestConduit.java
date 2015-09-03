@@ -23,8 +23,8 @@ import io.undertow.server.TruncatedResponseException;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import org.jboss.logging.Logger;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
@@ -48,7 +48,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     private static final Logger log = Logger.getLogger("io.undertow.client.request");
 
-    private final Pool<ByteBuffer> pool;
+    private final ByteBufferPool pool;
 
     private int state = STATE_START;
 
@@ -57,7 +57,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     private HttpString headerName;
     private Iterator<String> valueIterator;
     private int charIndex;
-    private Pooled<ByteBuffer> pooledBuffer;
+    private PooledByteBuffer pooledBuffer;
     private final ClientRequest request;
 
     private static final int STATE_BODY = 0; // Message body, normal pass-through operation
@@ -75,7 +75,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     private static final int MASK_STATE         = 0x0000000F;
     private static final int FLAG_SHUTDOWN      = 0x00000010;
 
-    HttpRequestConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final ClientRequest request) {
+    HttpRequestConduit(final StreamSinkConduit next, final ByteBufferPool pool, final ClientRequest request) {
         super(next);
         this.pool = pool;
         this.request = request;
@@ -98,7 +98,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             pooledBuffer = pool.allocate();
         }
         ClientRequest request = this.request;
-        ByteBuffer buffer = pooledBuffer.getResource();
+        ByteBuffer buffer = pooledBuffer.getBuffer();
         Iterator<HttpString> nameIterator = this.nameIterator;
         Iterator<String> valueIterator = this.valueIterator;
         int charIndex = this.charIndex;
@@ -151,7 +151,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                                 return STATE_BUF_FLUSH;
                             }
                         }
-                        pooledBuffer.free();
+                        pooledBuffer.close();
                         pooledBuffer = null;
                         log.trace("Body");
                         return STATE_BODY;
@@ -334,7 +334,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                                     }
                                 } while (buffer.hasRemaining());
                             }
-                            pooledBuffer.free();
+                            pooledBuffer.close();
                             pooledBuffer = null;
                             log.trace("Body");
                             return STATE_BODY;
@@ -437,7 +437,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                 }
                 case STATE_BUF_FLUSH: {
                     // buffer was successfully flushed above
-                    pooledBuffer.free();
+                    pooledBuffer.close();
                     pooledBuffer = null;
                     return STATE_BODY;
                 }
@@ -606,7 +606,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                 next.truncateWrites();
             } finally {
                 if (pooledBuffer != null) {
-                    pooledBuffer.free();
+                    pooledBuffer.close();
                     pooledBuffer = null;
                 }
             }

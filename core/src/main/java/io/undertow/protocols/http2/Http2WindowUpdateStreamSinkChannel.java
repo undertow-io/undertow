@@ -21,7 +21,7 @@ package io.undertow.protocols.http2;
 import java.nio.ByteBuffer;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * A window update frame.
@@ -49,7 +49,7 @@ class Http2WindowUpdateStreamSinkChannel extends Http2NoDataStreamSinkChannel {
         Http2ProtocolUtils.putInt(buf, streamId);
         Http2ProtocolUtils.putInt(buf, deltaWindowSize);
         buf.flip();
-        return new SendFrameHeader(new ImmediatePooled<>(buf));
+        return new SendFrameHeader(new ImmediatePooledByteBuffer(buf));
     }
 
 }

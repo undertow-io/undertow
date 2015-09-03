@@ -24,7 +24,7 @@ import java.nio.channels.FileChannel;
 import org.xnio.Bits;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.Pooled;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.server.protocol.framed.FrameHeaderData;
@@ -54,7 +54,7 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
      */
     private boolean ignoreForceClose = false;
 
-    Http2StreamSourceChannel(Http2Channel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, HeaderMap headers, int streamId) {
+    Http2StreamSourceChannel(Http2Channel framedChannel, PooledByteBuffer data, long frameDataRemaining, HeaderMap headers, int streamId) {
         super(framedChannel, data, frameDataRemaining);
         this.headers = headers;
         this.streamId = streamId;

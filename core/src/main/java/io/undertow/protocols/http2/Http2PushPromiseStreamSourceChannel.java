@@ -19,9 +19,7 @@
 package io.undertow.protocols.http2;
 
 import io.undertow.util.HeaderMap;
-import org.xnio.Pooled;
-
-import java.nio.ByteBuffer;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * A HTTP2 push promise frame
@@ -34,7 +32,7 @@ public class Http2PushPromiseStreamSourceChannel extends AbstractHttp2StreamSour
     private final int pushedStreamId;
     private final int associatedStreamId;
 
-    Http2PushPromiseStreamSourceChannel(Http2Channel framedChannel, Pooled<ByteBuffer> data, long frameDataRemaining, HeaderMap headers, int pushedStreamId, int associatedStreamId) {
+    Http2PushPromiseStreamSourceChannel(Http2Channel framedChannel, PooledByteBuffer data, long frameDataRemaining, HeaderMap headers, int pushedStreamId, int associatedStreamId) {
         super(framedChannel, data, frameDataRemaining);
         this.headers = headers;
         this.pushedStreamId = pushedStreamId;

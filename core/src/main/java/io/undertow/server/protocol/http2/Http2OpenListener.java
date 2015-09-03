@@ -30,11 +30,9 @@ import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
-
-import java.nio.ByteBuffer;
 
 
 /**
@@ -47,7 +45,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     @Deprecated
     public static final String HTTP2_14 = "h2-14";
 
-    private final Pool<ByteBuffer> bufferPool;
+    private final ByteBufferPool bufferPool;
     private final int bufferSize;
 
     private volatile HttpHandler rootHandler;
@@ -57,26 +55,26 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     private final ConnectorStatisticsImpl connectorStatistics;
     private final String protocol;
 
-    public Http2OpenListener(final Pool<ByteBuffer> pool) {
+    public Http2OpenListener(final ByteBufferPool pool) {
         this(pool, OptionMap.EMPTY);
     }
 
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+    public Http2OpenListener(final ByteBufferPool pool, final OptionMap undertowOptions) {
         this(pool, undertowOptions, HTTP2);
     }
 
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, String protocol) {
+    public Http2OpenListener(final ByteBufferPool pool, final OptionMap undertowOptions, String protocol) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
-        Pooled<ByteBuffer> buf = pool.allocate();
-        this.bufferSize = buf.getResource().remaining();
-        buf.free();
+        PooledByteBuffer buf = pool.allocate();
+        this.bufferSize = buf.getBuffer().remaining();
+        buf.close();
         connectorStatistics = new ConnectorStatisticsImpl();
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
         this.protocol = protocol;
     }
 
-    public void handleEvent(final StreamConnection channel, Pooled<ByteBuffer> buffer) {
+    public void handleEvent(final StreamConnection channel, PooledByteBuffer buffer) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened HTTP1 connection with %s", channel.getPeerAddress());
         }
@@ -128,7 +126,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     }
 
     @Override
-    public Pool<ByteBuffer> getBufferPool() {
+    public ByteBufferPool getBufferPool() {
         return bufferPool;
     }
 

@@ -20,13 +20,13 @@ package io.undertow.io;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
-import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
@@ -127,8 +127,8 @@ public class AsyncReceiverImpl implements Receiver {
                 return;
             }
         }
-        Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-        final ByteBuffer buffer = pooled.getResource();
+        PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+        final ByteBuffer buffer = pooled.getBuffer();
         try {
             int res;
             do {
@@ -146,8 +146,8 @@ public class AsyncReceiverImpl implements Receiver {
                                 if(done) {
                                     return;
                                 }
-                                Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-                                final ByteBuffer buffer = pooled.getResource();
+                                PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+                                final ByteBuffer buffer = pooled.getBuffer();
                                 try {
                                     int res;
                                     do {
@@ -192,7 +192,7 @@ public class AsyncReceiverImpl implements Receiver {
                                         }
                                     } while (true);
                                 } finally {
-                                    pooled.free();
+                                    pooled.close();
                                 }
                             }
                         });
@@ -214,7 +214,7 @@ public class AsyncReceiverImpl implements Receiver {
                 }
             } while (true);
         } finally {
-            pooled.free();
+            pooled.close();
         }
 
     }
@@ -255,16 +255,16 @@ public class AsyncReceiverImpl implements Receiver {
             }
         }
         final CharsetDecoder decoder = charset.newDecoder();
-        Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-        final ByteBuffer buffer = pooled.getResource();
+        PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+        final ByteBuffer buffer = pooled.getBuffer();
         channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
             @Override
             public void handleEvent(final StreamSourceChannel channel) {
                 if(done || paused) {
                     return;
                 }
-                Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-                final ByteBuffer buffer = pooled.getResource();
+                PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+                final ByteBuffer buffer = pooled.getBuffer();
                 try {
                     int res;
                     do {
@@ -311,7 +311,7 @@ public class AsyncReceiverImpl implements Receiver {
                         }
                     } while (true);
                 } finally {
-                    pooled.free();
+                    pooled.close();
                 }
             }
         });
@@ -342,7 +342,7 @@ public class AsyncReceiverImpl implements Receiver {
                 }
             } while (true);
         } finally {
-            pooled.free();
+            pooled.close();
         }
 
     }
@@ -386,8 +386,8 @@ public class AsyncReceiverImpl implements Receiver {
                 return;
             }
         }
-        Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-        final ByteBuffer buffer = pooled.getResource();
+        PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+        final ByteBuffer buffer = pooled.getBuffer();
         try {
             int res;
             do {
@@ -405,8 +405,8 @@ public class AsyncReceiverImpl implements Receiver {
                                 if(done) {
                                     return;
                                 }
-                                Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-                                final ByteBuffer buffer = pooled.getResource();
+                                PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+                                final ByteBuffer buffer = pooled.getBuffer();
                                 try {
                                     int res;
                                     do {
@@ -450,7 +450,7 @@ public class AsyncReceiverImpl implements Receiver {
                                         }
                                     } while (true);
                                 } finally {
-                                    pooled.free();
+                                    pooled.close();
                                 }
                             }
                         });
@@ -472,7 +472,7 @@ public class AsyncReceiverImpl implements Receiver {
                 }
             } while (true);
         } finally {
-            pooled.free();
+            pooled.close();
         }
     }
 
@@ -511,16 +511,16 @@ public class AsyncReceiverImpl implements Receiver {
                 return;
             }
         }
-        Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-        final ByteBuffer buffer = pooled.getResource();
+        PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+        final ByteBuffer buffer = pooled.getBuffer();
         channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
             @Override
             public void handleEvent(final StreamSourceChannel channel) {
                 if(done || paused) {
                     return;
                 }
-                Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-                final ByteBuffer buffer = pooled.getResource();
+                PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+                final ByteBuffer buffer = pooled.getBuffer();
                 try {
                     int res;
                     do {
@@ -567,7 +567,7 @@ public class AsyncReceiverImpl implements Receiver {
                         }
                     } while (true);
                 } finally {
-                    pooled.free();
+                    pooled.close();
                 }
             }
         });
@@ -600,7 +600,7 @@ public class AsyncReceiverImpl implements Receiver {
                 }
             } while (true);
         } finally {
-            pooled.free();
+            pooled.close();
         }
     }
 

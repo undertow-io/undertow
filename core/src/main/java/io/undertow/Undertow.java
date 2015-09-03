@@ -19,21 +19,20 @@
 package io.undertow;
 
 import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.server.protocol.spdy.SpdyOpenListener;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
@@ -46,7 +45,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -119,7 +117,7 @@ public final class Undertow {
                     .getMap();
 
 
-            Pool<ByteBuffer> buffers = new ByteBufferSlicePool(directBuffers ? BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR : BufferAllocator.BYTE_BUFFER_ALLOCATOR, bufferSize, bufferSize * buffersPerRegion);
+            ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, bufferSize, -1, 4);
 
             for (ListenerConfig listener : listeners) {
                 final HttpHandler rootHandler = listener.rootHandler != null ? listener.rootHandler : this.rootHandler;
@@ -150,7 +148,7 @@ public final class Undertow {
                         if(spdy || http2) {
                             AlpnOpenListener alpn = new AlpnOpenListener(buffers, undertowOptions, httpOpenListener);
                             if(spdy) {
-                                SpdyOpenListener spdyListener = new SpdyOpenListener(buffers, new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), undertowOptions);
+                                SpdyOpenListener spdyListener = new SpdyOpenListener(buffers, new DefaultByteBufferPool(false, 1024, -1, 2, 0), undertowOptions);
                                 spdyListener.setRootHandler(rootHandler);
                                 alpn.addProtocol(SpdyOpenListener.SPDY_3_1, spdyListener, 5);
                             }

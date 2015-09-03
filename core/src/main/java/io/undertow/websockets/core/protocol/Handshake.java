@@ -27,7 +27,7 @@ import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoFuture;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
@@ -113,7 +113,7 @@ public abstract class Handshake {
     /**
      * Create the {@link WebSocketChannel} from the {@link WebSocketHttpExchange}
      */
-    public abstract WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final Pool<ByteBuffer> pool);
+    public abstract WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final ByteBufferPool pool);
 
     /**
      * convenience method to perform the upgrade

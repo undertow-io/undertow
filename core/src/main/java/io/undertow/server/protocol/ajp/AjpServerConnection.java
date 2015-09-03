@@ -27,13 +27,11 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.util.DateUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
-
-import java.nio.ByteBuffer;
 
 /**
  * A server-side AJP connection.
@@ -46,7 +44,7 @@ public final class AjpServerConnection extends AbstractServerConnection {
     private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
     private AjpReadListener ajpReadListener;
 
-    public AjpServerConnection(StreamConnection channel, Pool<ByteBuffer> bufferPool, HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
+    public AjpServerConnection(StreamConnection channel, ByteBufferPool bufferPool, HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<>(channel.getSinkChannel());
     }

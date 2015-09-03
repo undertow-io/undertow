@@ -21,7 +21,7 @@ package io.undertow.protocols.spdy;
 import java.nio.ByteBuffer;
 
 import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * @author Stuart Douglas
@@ -47,7 +47,7 @@ class SpdyRstStreamSinkChannel extends SpdyControlFrameStreamSinkChannel {
         SpdyProtocolUtils.putInt(buf, streamId);
         SpdyProtocolUtils.putInt(buf, statusCode);
         buf.flip();
-        return new SendFrameHeader(new ImmediatePooled<>(buf));
+        return new SendFrameHeader(new ImmediatePooledByteBuffer(buf));
     }
 
 }
