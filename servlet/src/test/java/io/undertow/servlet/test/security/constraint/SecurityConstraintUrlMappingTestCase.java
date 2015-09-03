@@ -27,6 +27,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.LoginConfig;
 import io.undertow.servlet.api.SecurityConstraint;
+import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.WebResourceCollection;
@@ -72,7 +73,8 @@ public class SecurityConstraintUrlMappingTestCase {
                 .addMapping("/role2")
                 .addMapping("/secured/role2/*")
                 .addMapping("/secured/1/2/*")
-                .addMapping("/public/*");
+                .addMapping("/public/*")
+                .addMapping("/extension/*");
 
         ServletIdentityManager identityManager = new ServletIdentityManager();
         identityManager.addUser("user1", "password1", "role1");
@@ -115,6 +117,9 @@ public class SecurityConstraintUrlMappingTestCase {
                 .addRoleAllowed("role2"));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection()
+                        .addUrlPattern("/public/*")).setEmptyRoleSemantic(SecurityInfo.EmptyRoleSemantic.PERMIT));
+        builder.addSecurityConstraint(new SecurityConstraint()
+                .addWebResourceCollection(new WebResourceCollection()
                         .addUrlPattern("/public/postSecured/*")
                         .addHttpMethod("POST"))
                 .addRoleAllowed("role1"));
@@ -138,7 +143,18 @@ public class SecurityConstraintUrlMappingTestCase {
 
     @Test
     public void testExtensionMatch() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/public/a.html", "user1:password1", "user2:password2");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/extension/a.html", "user1:password1", "user2:password2");
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/public/a.html");
+            get.addHeader("ExpectedMechanism", "None");
+            get.addHeader("ExpectedUser", "None");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     @Test

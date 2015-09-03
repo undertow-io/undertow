@@ -69,6 +69,7 @@ public class SecurityPathMatches {
         RuntimeMatch currentMatch = new RuntimeMatch();
         handleMatch(method, defaultPathSecurityInformation, currentMatch);
         PathSecurityInformation match = exactPathRoleInformation.get(path);
+        PathSecurityInformation extensionMatch = null;
         if (match != null) {
             handleMatch(method, match, currentMatch);
             return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
@@ -111,13 +112,14 @@ public class SecurityPathMatches {
                     } else {
                         ext = path.substring(i + 1, qsPos);
                     }
-                    match = extensionRoleInformation.get(ext);
-                    if (match != null) {
-                        handleMatch(method, match, currentMatch);
-                        return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
-                    }
+                    extensionMatch = extensionRoleInformation.get(ext);
                 }
             }
+        }
+
+        if (extensionMatch != null) {
+            handleMatch(method, extensionMatch, currentMatch);
+            return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
         }
         return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
     }
