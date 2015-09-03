@@ -27,11 +27,15 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.XnioByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.Pool;
 import org.xnio.StreamConnection;
+
+import java.nio.ByteBuffer;
 
 
 /**
@@ -52,6 +56,16 @@ public final class SpdyOpenListener implements ChannelListener<StreamConnection>
     private volatile OptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
+
+    @Deprecated
+    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool) {
+        this(pool, heapBufferPool, OptionMap.EMPTY);
+    }
+
+    @Deprecated
+    public SpdyOpenListener(final Pool<ByteBuffer> pool, final Pool<ByteBuffer> heapBufferPool, final OptionMap undertowOptions) {
+        this(new XnioByteBufferPool(pool), new XnioByteBufferPool(heapBufferPool), undertowOptions);
+    }
 
     public SpdyOpenListener(final ByteBufferPool pool, final ByteBufferPool heapBufferPool) {
         this(pool, heapBufferPool, OptionMap.EMPTY);

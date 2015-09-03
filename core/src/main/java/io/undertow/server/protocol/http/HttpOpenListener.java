@@ -29,15 +29,18 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.XnioByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -60,13 +63,13 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     private final ConnectorStatisticsImpl connectorStatistics;
 
     @Deprecated
-    public HttpOpenListener(final ByteBufferPool pool, final int bufferSize) {
+    public HttpOpenListener(final Pool<ByteBuffer> pool) {
         this(pool, OptionMap.EMPTY);
     }
 
     @Deprecated
-    public HttpOpenListener(final ByteBufferPool pool, final OptionMap undertowOptions, final int bufferSize) {
-        this(pool, undertowOptions);
+    public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+        this(new XnioByteBufferPool(pool), undertowOptions);
     }
 
     public HttpOpenListener(final ByteBufferPool pool) {

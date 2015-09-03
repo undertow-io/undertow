@@ -28,11 +28,15 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.XnioByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.Pool;
 import org.xnio.StreamConnection;
+
+import java.nio.ByteBuffer;
 
 
 /**
@@ -54,6 +58,21 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
     private final String protocol;
+
+    @Deprecated
+    public Http2OpenListener(final Pool<ByteBuffer> pool) {
+        this(pool, OptionMap.EMPTY);
+    }
+
+    @Deprecated
+    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+        this(pool, undertowOptions, HTTP2);
+    }
+
+    @Deprecated
+    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, String protocol) {
+        this(new XnioByteBufferPool(pool), undertowOptions, protocol);
+    }
 
     public Http2OpenListener(final ByteBufferPool pool) {
         this(pool, OptionMap.EMPTY);

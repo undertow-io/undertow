@@ -98,7 +98,7 @@ public class AutobahnExtensionCustomReceiverServer {
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
-            openListener = new HttpOpenListener(new DefaultByteBufferPool(false, 8192), 8192);
+            openListener = new HttpOpenListener(new DefaultByteBufferPool(false, 8192));
             ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
             server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 

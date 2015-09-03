@@ -29,14 +29,17 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
+import io.undertow.server.XnioByteBufferPool;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 import static io.undertow.UndertowOptions.DECODE_URL;
@@ -61,15 +64,14 @@ public class AjpOpenListener implements OpenListener {
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
 
-    @Deprecated
-    public AjpOpenListener(final ByteBufferPool pool, final int bufferSize) {
+    public AjpOpenListener(final Pool<ByteBuffer> pool) {
         this(pool, OptionMap.EMPTY);
     }
 
-    @Deprecated
-    public AjpOpenListener(final ByteBufferPool pool, final OptionMap undertowOptions, final int bufferSize) {
-        this(pool, undertowOptions);
+    public AjpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+        this(new XnioByteBufferPool(pool), undertowOptions);
     }
+
     public AjpOpenListener(final ByteBufferPool pool) {
         this(pool, OptionMap.EMPTY);
     }
