@@ -28,6 +28,7 @@ import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.util.Date;
+import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -49,10 +50,12 @@ public class Connectors {
      * @param exchange The server exchange
      */
     public static void flattenCookies(final HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
+        Map<String, Deque<Cookie>> cookies = exchange.getResponseCookiesInternal();
         if (cookies != null) {
-            for (Map.Entry<String, Cookie> entry : cookies.entrySet()) {
-                exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(entry.getValue()));
+            for (Map.Entry<String, Deque<Cookie>> entry : cookies.entrySet()) {
+                for (Cookie cookie : entry.getValue()) {
+                    exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie));
+                }
             }
         }
     }
