@@ -294,6 +294,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         final SecurityPathMatches securityPathMatches = buildSecurityConstraints();
         current = new ServletAuthenticationCallHandler(current);
+
+        for(HandlerWrapper wrapper : deploymentInfo.getSecurityWrappers()) {
+            current = wrapper.wrap(current);
+        }
+
         if(deploymentInfo.isDisableCachingForSecuredPages()) {
             current = Handlers.predicate(Predicates.authRequired(), Handlers.disableCache(current), current);
         }

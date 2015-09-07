@@ -153,6 +153,12 @@ public class DeploymentInfo implements Cloneable {
     private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<>();
 
     /**
+     * Handler chain wrappers that are applied just before the authentication mechanism is called. Theses handlers are
+     * always called, even if authentication is not required
+     */
+    private final List<HandlerWrapper> securityWrappers = new ArrayList<>();
+
+    /**
      * Multipart config that will be applied to all servlets that do not have an explicit config
      */
     private MultipartConfigElement defaultMultipartConfig;
@@ -741,6 +747,21 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(initialHandlerChainWrappers);
     }
 
+    /**
+     * Adds a security handler. These are invoked before the authentication mechanism, and are always invoked
+     * even if authentication is not required.
+     * @param wrapper
+     * @return
+     */
+    public DeploymentInfo addSecurityWrapper(final HandlerWrapper wrapper) {
+        securityWrappers.add(wrapper);
+        return this;
+    }
+
+    public List<HandlerWrapper> getSecurityWrappers() {
+        return Collections.unmodifiableList(securityWrappers);
+    }
+
     public DeploymentInfo addNotificationReceiver(final NotificationReceiver notificationReceiver) {
         this.notificationReceivers.add(notificationReceiver);
         return this;
@@ -1203,6 +1224,7 @@ public class DeploymentInfo implements Cloneable {
         info.securityConstraints.addAll(securityConstraints);
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
         info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);
+        info.securityWrappers.addAll(securityWrappers);
         info.initialHandlerChainWrappers.addAll(initialHandlerChainWrappers);
         info.securityRoles.addAll(securityRoles);
         info.notificationReceivers.addAll(notificationReceivers);
