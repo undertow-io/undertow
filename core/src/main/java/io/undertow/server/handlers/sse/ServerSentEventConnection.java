@@ -25,6 +25,7 @@ import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.HeaderMap;
+import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -38,10 +39,8 @@ import java.nio.channels.Channel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Deque;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -66,7 +65,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
     private PooledByteBuffer pooled;
 
     private final Queue<SSEData> queue = new ConcurrentLinkedDeque<>();
-    private final List<SSEData> buffered = new ArrayList<>();
+    private final Queue<SSEData> buffered = new ConcurrentLinkedDeque<>();
     private final List<ChannelListener<ServerSentEventConnection>> closeTasks = new CopyOnWriteArrayList<>();
     private Map<String, String> parameters;
     private Map<String, Object> properties = new HashMap<>();
@@ -375,7 +374,15 @@ public class ServerSentEventConnection implements Channel, Attachable {
             }
             queue.clear();
             buffered.clear();
-            sink.close();
+            sink.shutdownWrites();
+            if(!sink.flush()) {
+                sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<StreamSinkChannel>() {
+                    @Override
+                    public void handleException(StreamSinkChannel channel, IOException exception) {
+                        IoUtils.safeClose(sink);
+                    }
+                }));
+            }
         }
     }
 
@@ -434,28 +441,36 @@ public class ServerSentEventConnection implements Channel, Attachable {
     private class SseWriteListener implements ChannelListener<StreamSinkChannel> {
         @Override
         public void handleEvent(StreamSinkChannel channel) {
-            if (pooled == null) {
-                channel.suspendWrites();
-                return;
-            }
+
             try {
+                if (pooled == null) {
+                    if(!channel.flush()) {
+                        return;
+                    }
+                    channel.suspendWrites();
+                    return;
+                }
                 ByteBuffer buffer = pooled.getBuffer();
                 int res;
                 do {
                     res = channel.write(buffer);
-                    Iterator<SSEData> itr = buffered.iterator();
-                    while (itr.hasNext()) {
+                    while (!buffered.isEmpty()) {
                         //figure out which messages are complete
-                        SSEData data = itr.next();
+                        SSEData data = buffered.peek();
                         if (data.endBufferPosition > 0 && buffer.position() >= data.endBufferPosition) {
                             if(data.callback != null) {
                                 data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
                             }
-                            itr.remove();
+                            buffered.poll();
                         } else {
                             break;
                         }
                     }
+                    if(!channel.flush()) {
+                        sink.resumeWrites();
+                        return;
+                    }
+
                     if (res == 0) {
                         sink.resumeWrites();
                         return;
