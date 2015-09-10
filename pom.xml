@@ -77,7 +77,7 @@
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.1.0.Final</version.org.jboss.spec.javax.websockets>
-        <version.xnio>3.3.1.Final</version.xnio>
+        <version.xnio>3.3.2.Final</version.xnio>
         
         <!-- jacoco -->
         <version.org.jacoco>0.7.1.201405082137</version.org.jacoco>
