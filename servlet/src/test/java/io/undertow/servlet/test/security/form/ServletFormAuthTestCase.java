@@ -138,7 +138,7 @@ public class ServletFormAuthTestCase {
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check;jsessionid=dsjahfklsahdfjklsa");
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
