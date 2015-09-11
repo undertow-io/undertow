@@ -92,7 +92,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     @Override
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
                                                        final SecurityContext securityContext) {
-        if (exchange.getRequestURI().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
+        if (exchange.getRequestPath().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
             return runFormAuth(exchange, securityContext);
         } else {
             return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
@@ -160,7 +160,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     public ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext) {
-        if (exchange.getRequestURI().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
+        if (exchange.getRequestPath().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
             // This method would no longer be called if authentication had already occurred.
             Integer code = servePage(exchange, errorPage);
             return new ChallengeResult(true, code);
