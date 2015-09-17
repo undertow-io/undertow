@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
@@ -114,6 +115,7 @@ public class PartImpl implements Part {
     public void delete() throws IOException {
         try {
             Files.delete(formValue.getPath());
+        } catch (NoSuchFileException e) { //already deleted
         } catch (IOException e) {
             throw UndertowServletMessages.MESSAGES.deleteFailed(formValue.getPath());
         }
