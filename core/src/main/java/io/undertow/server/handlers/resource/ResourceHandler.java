@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
@@ -76,7 +77,7 @@ public class ResourceHandler implements HttpHandler {
     private volatile Predicate allowed = Predicates.truePredicate();
     private volatile ResourceManager resourceManager;
     /**
-     * If this is set this will be the maximum time the client will cache the resource.
+     * If this is set this will be the maximum time (in seconds) the client will cache the resource.
      * <p/>
      * Note: Do not set this for private resources, as it will cause a Cache-Control: public
      * to be sent.
@@ -143,7 +144,7 @@ public class ResourceHandler implements HttpHandler {
         //we set caching headers before we try and serve from the cache
         if (cachable && cacheTime != null) {
             exchange.getResponseHeaders().put(Headers.CACHE_CONTROL, "public, max-age=" + cacheTime);
-            long date = System.currentTimeMillis() + cacheTime;
+            long date = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(cacheTime);
             String dateHeader = DateUtils.toDateString(new Date(date));
             exchange.getResponseHeaders().put(Headers.EXPIRES, dateHeader);
         }
