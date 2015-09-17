@@ -29,3 +29,4 @@ io.undertow.attribute.RequestSchemeAttribute$Builder
 io.undertow.attribute.HostAndPortAttribute$Builder
 io.undertow.attribute.AuthenticationTypeExchangeAttribute$Builder
 io.undertow.attribute.SecureExchangeAttribute$Builder
+io.undertow.attribute.RemoteHostAttribute$Builder

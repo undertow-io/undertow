@@ -18,30 +18,30 @@
 
 package io.undertow.attribute;
 
-import java.net.InetSocketAddress;
-
 import io.undertow.server.HttpServerExchange;
 
+import java.net.InetSocketAddress;
+
 /**
- * The remote IP address
+ * The remote Host address (if resolved)
  *
  * @author Stuart Douglas
  */
-public class RemoteIPAttribute implements ExchangeAttribute {
+public class RemoteHostAttribute implements ExchangeAttribute {
 
-    public static final String REMOTE_IP_SHORT = "%a";
-    public static final String REMOTE_IP = "%{REMOTE_IP}";
+    public static final String REMOTE_HOST_NAME_SHORT = "%h";
+    public static final String REMOTE_HOST = "%{REMOTE_HOST}";
 
-    public static final ExchangeAttribute INSTANCE = new RemoteIPAttribute();
+    public static final ExchangeAttribute INSTANCE = new RemoteHostAttribute();
 
-    private RemoteIPAttribute() {
+    private RemoteHostAttribute() {
 
     }
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         final InetSocketAddress peerAddress = (InetSocketAddress) exchange.getConnection().getPeerAddress();
-        return peerAddress.getAddress().getHostAddress();
+        return peerAddress.getHostString();
     }
 
     @Override
@@ -58,8 +58,8 @@ public class RemoteIPAttribute implements ExchangeAttribute {
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.equals(REMOTE_IP) || token.equals(REMOTE_IP_SHORT)) {
-                return RemoteIPAttribute.INSTANCE;
+            if (token.equals(REMOTE_HOST) || token.equals(REMOTE_HOST_NAME_SHORT)) {
+                return RemoteHostAttribute.INSTANCE;
             }
             return null;
         }
