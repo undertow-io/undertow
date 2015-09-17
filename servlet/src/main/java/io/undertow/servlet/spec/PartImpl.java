@@ -108,7 +108,9 @@ public class PartImpl implements Part {
     @Override
     public void delete() throws IOException {
         if (!formValue.getFile().delete()) {
-            throw UndertowServletMessages.MESSAGES.deleteFailed(formValue.getFile());
+            if(formValue.getFile().exists()) {
+                throw UndertowServletMessages.MESSAGES.deleteFailed(formValue.getFile());
+            }
         }
     }
 
