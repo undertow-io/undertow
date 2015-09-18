@@ -134,6 +134,9 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_PRIORITY: {
+                    if (streamId == 0) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(Http2Channel.FRAME_TYPE_PRIORITY));
+                    }
                     parser = new Http2PriorityParser(length);
                     break;
                 }
