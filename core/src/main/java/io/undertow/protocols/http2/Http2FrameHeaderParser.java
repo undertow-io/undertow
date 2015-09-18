@@ -69,10 +69,16 @@ class Http2FrameHeaderParser implements FrameHeaderData {
             }
             switch (type) {
                 case FRAME_TYPE_DATA: {
+                    if (streamId == 0) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(Http2Channel.FRAME_TYPE_DATA));
+                    }
                     parser = new Http2DataFrameParser(length);
                     break;
                 }
                 case FRAME_TYPE_HEADERS: {
+                    if (streamId == 0) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(Http2Channel.FRAME_TYPE_HEADERS));
+                    }
                     parser = new Http2HeadersParser(length, http2Channel.getDecoder());
                     if(allAreClear(flags, Http2Channel.HEADERS_FLAG_END_HEADERS)) {
                         continuationParser = (Http2HeadersParser) parser;
@@ -100,6 +106,9 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_GOAWAY: {
+                    if (streamId != 0) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustBeZeroForFrameType(Http2Channel.FRAME_TYPE_GOAWAY));
+                    }
                     parser = new Http2GoAwayParser(length);
                     break;
                 }
@@ -114,6 +123,9 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_SETTINGS: {
+                    if (streamId != 0) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustBeZeroForFrameType(Http2Channel.FRAME_TYPE_SETTINGS));
+                    }
                     parser = new Http2SettingsParser(length);
                     break;
                 }
