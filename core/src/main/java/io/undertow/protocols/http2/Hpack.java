@@ -151,6 +151,9 @@ final class Hpack {
         if (source.remaining() == 0) {
             return -1;
         }
+        if(n >= PREFIX_TABLE.length) {
+            throw UndertowMessages.MESSAGES.integerEncodedOverTooManyOctets(MAX_INTEGER_OCTETS);
+        }
         int count = 1;
         int sp = source.position();
         int mask = PREFIX_TABLE[n];
