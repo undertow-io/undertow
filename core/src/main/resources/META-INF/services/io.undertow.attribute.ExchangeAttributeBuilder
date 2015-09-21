@@ -30,3 +30,5 @@ io.undertow.attribute.HostAndPortAttribute$Builder
 io.undertow.attribute.AuthenticationTypeExchangeAttribute$Builder
 io.undertow.attribute.SecureExchangeAttribute$Builder
 io.undertow.attribute.RemoteHostAttribute$Builder
+io.undertow.attribute.RequestPathAttribute$Builder
+io.undertow.attribute.ResolvedPathAttribute$Builder
