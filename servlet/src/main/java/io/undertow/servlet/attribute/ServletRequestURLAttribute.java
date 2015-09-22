@@ -46,14 +46,18 @@ public class ServletRequestURLAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        if(src == null) {
+        if (src == null) {
             return RequestURLAttribute.INSTANCE.readAttribute(exchange);
         }
-        String uri = (String) src.getServletRequest().getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
-        if(uri == null) {
-            return RequestURLAttribute.INSTANCE.readAttribute(exchange);
+        String uri = (String) src.getServletRequest().getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
+        if (uri != null) {
+            return uri;
         }
-        return uri;
+        uri = (String) src.getServletRequest().getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
+        if (uri != null) {
+            return uri;
+        }
+        return RequestURLAttribute.INSTANCE.readAttribute(exchange);
     }
 
     @Override
