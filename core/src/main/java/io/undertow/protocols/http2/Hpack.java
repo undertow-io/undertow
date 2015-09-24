@@ -174,6 +174,10 @@ final class Hpack {
                     source.position(sp);
                     return -1;
                 }
+
+                if(m >= PREFIX_TABLE.length) {
+                    throw UndertowMessages.MESSAGES.integerEncodedOverTooManyOctets(MAX_INTEGER_OCTETS);
+                }
                 b = source.get();
                 i = i + (b & 127) * (PREFIX_TABLE[m] + 1);
                 m += 7;
