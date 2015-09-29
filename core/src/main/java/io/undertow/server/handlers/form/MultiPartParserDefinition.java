@@ -91,6 +91,10 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     nextListener.proceed();
                 }
             });
+            Long sizeLimit = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MULTIPART_MAX_ENTITY_SIZE);
+            if(sizeLimit != null) {
+                exchange.setMaxEntitySize(sizeLimit);
+            }
             return parser;
 
         }
