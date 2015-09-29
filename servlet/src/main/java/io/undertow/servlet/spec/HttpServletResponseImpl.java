@@ -372,7 +372,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude || responseStarted() || writer != null || isCommitted()) {
             return;
         }
-        charsetSet = true;
+        charsetSet = charset != null;
         this.charset = charset;
         if (contentType != null) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
