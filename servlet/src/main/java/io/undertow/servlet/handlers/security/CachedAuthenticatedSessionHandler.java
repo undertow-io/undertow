@@ -42,7 +42,7 @@ import javax.servlet.http.HttpSession;
  */
 public class CachedAuthenticatedSessionHandler implements HttpHandler {
 
-    private static final String ATTRIBUTE_NAME = CachedAuthenticatedSessionHandler.class.getName() + ".AuthenticatedSession";
+    public static final String ATTRIBUTE_NAME = CachedAuthenticatedSessionHandler.class.getName() + ".AuthenticatedSession";
 
     private final NotificationReceiver NOTIFICATION_RECEIVER = new SecurityNotificationReceiver();
     private final AuthenticatedSessionManager SESSION_MANAGER = new ServletAuthenticatedSessionManager();
