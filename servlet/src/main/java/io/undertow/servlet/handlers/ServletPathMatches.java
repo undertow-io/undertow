@@ -57,7 +57,7 @@ public class ServletPathMatches {
     public static final String DEFAULT_SERVLET_NAME = "default";
     private final Deployment deployment;
 
-    private final String[] welcomePages;
+    private volatile String[] welcomePages;
     private final ResourceManager resourceManager;
 
     private volatile ServletPathMatchesData data;
@@ -153,6 +153,10 @@ public class ServletPathMatches {
             }
         }
         return null;
+    }
+
+    public void setWelcomePages(List<String> welcomePages) {
+        this.welcomePages = welcomePages.toArray(new String[welcomePages.size()]);
     }
 
     /**
