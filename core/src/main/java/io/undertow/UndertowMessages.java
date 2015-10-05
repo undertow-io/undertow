@@ -422,4 +422,7 @@ public interface UndertowMessages {
 
     @Message(id = 131, value = "Buffer pool is closed")
     IllegalStateException poolIsClosed();
+
+    @Message(id = 132, value = "HPACK decode failed")
+    HpackException hpackFailed();
 }

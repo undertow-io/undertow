@@ -42,7 +42,7 @@ public class HpackSpecExamplesUnitTestCase {
         HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data), false);
         Assert.assertEquals(1, emitter.map.size());
         Assert.assertEquals("custom-header", emitter.map.getFirst(new HttpString("custom-key")));
         Assert.assertEquals(1, decoder.getFilledTableSlots());
@@ -57,7 +57,7 @@ public class HpackSpecExamplesUnitTestCase {
         HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data), false);
         Assert.assertEquals(1, emitter.map.size());
         Assert.assertEquals("/sample/path", emitter.map.getFirst(new HttpString(":path")));
         Assert.assertEquals(0, decoder.getFilledTableSlots());
@@ -71,7 +71,7 @@ public class HpackSpecExamplesUnitTestCase {
         HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data), false);
         Assert.assertEquals(1, emitter.map.size());
         Assert.assertEquals("secret", emitter.map.getFirst(new HttpString("password")));
         Assert.assertEquals(0, decoder.getFilledTableSlots());
@@ -85,7 +85,7 @@ public class HpackSpecExamplesUnitTestCase {
         HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data), false);
         Assert.assertEquals(1, emitter.map.size());
         Assert.assertEquals("GET", emitter.map.getFirst(new HttpString(":method")));
         Assert.assertEquals(0, decoder.getFilledTableSlots());
@@ -99,7 +99,7 @@ public class HpackSpecExamplesUnitTestCase {
         HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(4, emitter.map.size());
         Assert.assertEquals("GET", emitter.map.getFirst(new HttpString(":method")));
         Assert.assertEquals("http", emitter.map.getFirst(new HttpString(":scheme")));
@@ -113,7 +113,7 @@ public class HpackSpecExamplesUnitTestCase {
         data = new byte[]{(byte) 0x82, (byte) 0x86, (byte) 0x84, (byte) 0xbe, 0x58, 0x08, 0x6e, 0x6f, 0x2d, 0x63, 0x61, 0x63, 0x68, 0x65};
         emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(5, emitter.map.size());
         Assert.assertEquals("GET", emitter.map.getFirst(new HttpString(":method")));
         Assert.assertEquals("http", emitter.map.getFirst(new HttpString(":scheme")));
@@ -130,7 +130,7 @@ public class HpackSpecExamplesUnitTestCase {
                 0x74, 0x6f, 0x6d, 0x2d, 0x76, 0x61, 0x6c, 0x75, 0x65};
         emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(5, emitter.map.size());
         Assert.assertEquals("GET", emitter.map.getFirst(new HttpString(":method")));
         Assert.assertEquals("https", emitter.map.getFirst(new HttpString(":scheme")));
@@ -154,7 +154,7 @@ public class HpackSpecExamplesUnitTestCase {
         HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(4, emitter.map.size());
         Assert.assertEquals("GET", emitter.map.getFirst(new HttpString(":method")));
         Assert.assertEquals("http", emitter.map.getFirst(new HttpString(":scheme")));
@@ -169,7 +169,7 @@ public class HpackSpecExamplesUnitTestCase {
         data = new byte[]{(byte) 0x82, (byte) 0x86, (byte) 0x84, (byte) 0xbe, 0x58, (byte) 0x86, (byte) 0xa8, (byte) 0xeb, 0x10, 0x64, (byte) 0x9c, (byte) 0xbf};
         emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(5, emitter.map.size());
         Assert.assertEquals("GET", emitter.map.getFirst(new HttpString(":method")));
         Assert.assertEquals("http", emitter.map.getFirst(new HttpString(":scheme")));
@@ -186,7 +186,7 @@ public class HpackSpecExamplesUnitTestCase {
                 0x7f, (byte) 0x89, 0x25, (byte) 0xa8, 0x49, (byte) 0xe9, 0x5b, (byte) 0xb8, (byte) 0xe8, (byte) 0xb4, (byte) 0xbf};
         emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(5, emitter.map.size());
         Assert.assertEquals("GET", emitter.map.getFirst(new HttpString(":method")));
         Assert.assertEquals("https", emitter.map.getFirst(new HttpString(":scheme")));
@@ -212,7 +212,7 @@ public class HpackSpecExamplesUnitTestCase {
         //d 5.1
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(4, emitter.map.size());
         Assert.assertEquals("302", emitter.map.getFirst(new HttpString(":status")));
         Assert.assertEquals("private", emitter.map.getFirst(new HttpString("cache-control")));
@@ -229,7 +229,7 @@ public class HpackSpecExamplesUnitTestCase {
         data = new byte[]{(byte) 0x48, 0x03, 0x33, 0x30, 0x37, (byte) 0xc1, (byte) 0xc0, (byte) 0xbf};
         emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(4, emitter.map.size());
         Assert.assertEquals("307", emitter.map.getFirst(new HttpString(":status")));
         Assert.assertEquals("private", emitter.map.getFirst(new HttpString("cache-control")));
@@ -251,7 +251,7 @@ public class HpackSpecExamplesUnitTestCase {
                 , 0x3d, 0x31};
         emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(6, emitter.map.size());
         Assert.assertEquals("200", emitter.map.getFirst(new HttpString(":status")));
         Assert.assertEquals("private", emitter.map.getFirst(new HttpString("cache-control")));
@@ -279,7 +279,7 @@ public class HpackSpecExamplesUnitTestCase {
         //d 5.1
         HeaderMapEmitter emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(4, emitter.map.size());
         Assert.assertEquals("302", emitter.map.getFirst(new HttpString(":status")));
         Assert.assertEquals("private", emitter.map.getFirst(new HttpString("cache-control")));
@@ -296,7 +296,7 @@ public class HpackSpecExamplesUnitTestCase {
         data = new byte[]{(byte) 0x48, (byte) 0x83, 0x64, 0x0e, (byte) 0xff, (byte) 0xc1, (byte) 0xc0, (byte) 0xbf};
         emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(4, emitter.map.size());
         Assert.assertEquals("307", emitter.map.getFirst(new HttpString(":status")));
         Assert.assertEquals("private", emitter.map.getFirst(new HttpString("cache-control")));
@@ -317,7 +317,7 @@ public class HpackSpecExamplesUnitTestCase {
         };
         emitter = new HeaderMapEmitter();
         decoder.setHeaderEmitter(emitter);
-        decoder.decode(ByteBuffer.wrap(data));
+        decoder.decode(ByteBuffer.wrap(data) , false);
         Assert.assertEquals(6, emitter.map.size());
         Assert.assertEquals("200", emitter.map.getFirst(new HttpString(":status")));
         Assert.assertEquals("private", emitter.map.getFirst(new HttpString("cache-control")));
@@ -331,6 +331,60 @@ public class HpackSpecExamplesUnitTestCase {
         assertTableState(decoder, 2, "content-encoding", "gzip");
         assertTableState(decoder, 3, "date", "Mon, 21 Oct 2013 20:13:22 GMT");
     }
+
+    @Test
+    public void testExample_D_2_110() throws HpackException {
+        // my, wrong header field without indexing data test
+        byte[] data = { 0x00 };
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
+        HeaderMapEmitter emitter = new HeaderMapEmitter();
+        decoder.setHeaderEmitter(emitter);
+        try {
+            decoder.decode(ByteBuffer.wrap(data) , false);
+        } catch (HpackException e) {
+            // This exception is expected
+            return;
+        }
+        Assert.fail("Didn't get expected HPackException!");
+    }
+
+
+
+    @Test
+
+    public void testExample_D_2_111() throws HpackException {
+        // my, wrong header field with incremental indexing data test (last byte is not passed)
+        byte[] data = { 0x60, 0x01, 0x78, 0x01 }; // , 0x79};
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
+        HeaderMapEmitter emitter = new HeaderMapEmitter();
+        decoder.setHeaderEmitter(emitter);
+        try {
+            decoder.decode(ByteBuffer.wrap(data) , false);
+        } catch (HpackException e) {
+            // This exception is expected
+            return;
+        }
+        Assert.fail("Didn't get expected HPackException!");
+    }
+
+
+
+    @Test
+    public void testExample_D_2_112() throws HpackException {
+        // my, wrong header field with incremental indexing data test (last byte is not passed)
+        byte[] data = { 0x60, 0x02, 0x78 }; //, 0x79};
+        HpackDecoder decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
+        HeaderMapEmitter emitter = new HeaderMapEmitter();
+        decoder.setHeaderEmitter(emitter);
+        try {
+            decoder.decode(ByteBuffer.wrap(data) , false);
+        } catch (HpackException e) {
+            // This exception is expected
+            return;
+        }
+        Assert.fail("Didn't get expected HPackException!");
+    }
+
 
     private static void assertTableState(HpackDecoder decoder, int index, String name, String value) {
         int idx = decoder.getRealIndex(index);

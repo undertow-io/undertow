@@ -84,7 +84,7 @@ public class HpackDecoder {
      *
      * @param buffer The buffer
      */
-    public void decode(ByteBuffer buffer) throws HpackException {
+    public void decode(ByteBuffer buffer, boolean moreData) throws HpackException {
         while (buffer.hasRemaining()) {
             int originalPos = buffer.position();
             byte b = buffer.get();
@@ -93,6 +93,9 @@ public class HpackDecoder {
                 buffer.position(buffer.position() - 1); //unget the byte
                 int index = Hpack.decodeInteger(buffer, 7); //prefix is 7
                 if (index == -1) {
+                    if(!moreData) {
+                        throw UndertowMessages.MESSAGES.hpackFailed();
+                    }
                     buffer.position(originalPos);
                     return;
                 } else if(index == 0) {
@@ -103,11 +106,17 @@ public class HpackDecoder {
                 //Literal Header Field with Incremental Indexing
                 HttpString headerName = readHeaderName(buffer, 6);
                 if (headerName == null) {
+                    if(!moreData) {
+                        throw UndertowMessages.MESSAGES.hpackFailed();
+                    }
                     buffer.position(originalPos);
                     return;
                 }
                 String headerValue = readHpackString(buffer);
                 if (headerValue == null) {
+                    if(!moreData) {
+                        throw UndertowMessages.MESSAGES.hpackFailed();
+                    }
                     buffer.position(originalPos);
                     return;
                 }
@@ -117,11 +126,17 @@ public class HpackDecoder {
                 //Literal Header Field without Indexing
                 HttpString headerName = readHeaderName(buffer, 4);
                 if (headerName == null) {
+                    if(!moreData) {
+                        throw UndertowMessages.MESSAGES.hpackFailed();
+                    }
                     buffer.position(originalPos);
                     return;
                 }
                 String headerValue = readHpackString(buffer);
                 if (headerValue == null) {
+                    if(!moreData) {
+                        throw UndertowMessages.MESSAGES.hpackFailed();
+                    }
                     buffer.position(originalPos);
                     return;
                 }
@@ -135,6 +150,9 @@ public class HpackDecoder {
                 }
                 String headerValue = readHpackString(buffer);
                 if (headerValue == null) {
+                    if(!moreData) {
+                        throw UndertowMessages.MESSAGES.hpackFailed();
+                    }
                     buffer.position(originalPos);
                     return;
                 }

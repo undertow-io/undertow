@@ -63,7 +63,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
             beforeHeadersHandled = true;
             decoder.setHeaderEmitter(this);
             try {
-                decoder.decode(resource);
+                decoder.decode(resource, moreDataThisFrame);
             } catch (HpackException e) {
                 throw new ConnectionErrorException(Http2Channel.ERROR_COMPRESSION_ERROR, e);
             }
