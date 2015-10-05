@@ -64,7 +64,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
 
     private PooledByteBuffer pooled;
 
-    private final Queue<SSEData> queue = new ConcurrentLinkedDeque<>();
+    private final Deque<SSEData> queue = new ConcurrentLinkedDeque<>();
     private final Queue<SSEData> buffered = new ConcurrentLinkedDeque<>();
     private final List<ChannelListener<ServerSentEventConnection>> closeTasks = new CopyOnWriteArrayList<>();
     private Map<String, String> parameters;
@@ -315,6 +315,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
                     buffer.put(messageBytes);
                     data.endBufferPosition = buffer.position();
                 } else {
+                    queue.addFirst(data);
                     int rem = buffer.remaining();
                     buffer.put(messageBytes, 0, rem);
                     data.leftOverData = messageBytes;
@@ -323,6 +324,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
             } else {
                 int remainingData = data.leftOverData.length - data.leftOverDataOffset;
                 if (remainingData > buffer.remaining()) {
+                    queue.addFirst(data);
                     int toWrite = buffer.remaining();
                     buffer.put(data.leftOverData, data.leftOverDataOffset, toWrite);
                     data.leftOverDataOffset += toWrite;

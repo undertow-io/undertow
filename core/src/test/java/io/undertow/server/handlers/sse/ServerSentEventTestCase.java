@@ -83,4 +83,42 @@ public class ServerSentEventTestCase {
         }
     }
 
+    @Test
+    public void testLargeMessage() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        final StringBuilder sb = new StringBuilder();
+        for(int i =0; i < 10000; ++i) {
+            sb.append("hello world ");
+        }
+        try {
+            DefaultServer.setRootHandler(new ServerSentEventHandler(new ServerSentEventConnectionCallback() {
+                @Override
+                public void connected(ServerSentEventConnection connection, String lastEventId) {
+                    connection.send(sb.toString(), new ServerSentEventConnection.EventCallback() {
+                        @Override
+                        public void done(ServerSentEventConnection connection, String data, String event, String id) {
+                            IoUtils.safeClose(connection);
+                        }
+
+                        @Override
+                        public void failed(ServerSentEventConnection connection, String data, String event, String id, IOException e) {
+                            e.printStackTrace();
+                            IoUtils.safeClose(connection);
+                        }
+                    });
+                }
+            }));
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+
+            Assert.assertEquals("data:" + sb.toString() + "\n\n", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 }
