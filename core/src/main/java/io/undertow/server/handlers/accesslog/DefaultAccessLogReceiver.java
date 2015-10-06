@@ -255,11 +255,11 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             if (!Files.exists(defaultLogFile)) {
                 return;
             }
-            Path newFile = outputDirectory.resolve(logBaseName + "_" + currentDateString + logNameSuffix);
+            Path newFile = outputDirectory.resolve(logBaseName + currentDateString + logNameSuffix);
             int count = 0;
             while (Files.exists(newFile)) {
                 ++count;
-                newFile = outputDirectory.resolve(logBaseName + "_" + currentDateString + "-" + count + logNameSuffix);
+                newFile = outputDirectory.resolve(logBaseName + currentDateString + "-" + count + logNameSuffix);
             }
             Files.move(defaultLogFile, newFile);
         } catch (IOException e) {

@@ -50,9 +50,6 @@ public class ExtendedAccessLogFileTestCase {
 
     private static final Path logDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "logs");
 
-    private static final int NUM_THREADS = 10;
-    private static final int NUM_REQUESTS = 12;
-
     public static final String PATTERN = "cs-uri cs(test-header)";
 
     @Before
