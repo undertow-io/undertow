@@ -468,16 +468,17 @@ public class ServerSentEventConnection implements Channel, Attachable {
                             break;
                         }
                     }
-                    if(!channel.flush()) {
-                        sink.resumeWrites();
-                        return;
-                    }
 
                     if (res == 0) {
                         sink.resumeWrites();
                         return;
                     } else if (!buffer.hasRemaining()) {
                         fillBuffer();
+                    }
+
+                    if(!channel.flush()) {
+                        sink.resumeWrites();
+                        return;
                     }
                 } while (res > 0);
             } catch (IOException e) {
