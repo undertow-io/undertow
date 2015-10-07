@@ -82,7 +82,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         Cookie cookie = exchange.getRequestCookies().get(cookieName);
         if (cookie != null) {
             final String ssoId = cookie.getValue();
-            try (SingleSignOn sso = this.singleSignOnManager.findSingleSignOn(ssoId)) {
+            try (final SingleSignOn sso = this.singleSignOnManager.findSingleSignOn(ssoId)) {
                 if (sso != null) {
                     Account verified = getIdentityManager(securityContext).verify(sso.getAccount());
                     if (verified == null) {
@@ -96,7 +96,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                         @Override
                         public void handleNotification(SecurityNotification notification) {
                             if (notification.getEventType() == SecurityNotification.EventType.LOGGED_OUT) {
-                                singleSignOnManager.removeSingleSignOn(ssoId);
+                                singleSignOnManager.removeSingleSignOn(sso);
                             }
                         }
                     });
@@ -161,7 +161,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         public void sessionDestroyed(Session session, HttpServerExchange exchange, SessionDestroyedReason reason) {
             String ssoId = (String) session.getAttribute(SSO_SESSION_ATTRIBUTE);
             if (ssoId != null) {
-                try (SingleSignOn sso = singleSignOnManager.findSingleSignOn(ssoId)) {
+                try (final SingleSignOn sso = singleSignOnManager.findSingleSignOn(ssoId)) {
                     if (sso != null) {
                         sso.remove(session);
                         if (reason == SessionDestroyedReason.INVALIDATED) {
@@ -172,7 +172,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                         }
                         // If there are no more associated sessions, remove the SSO altogether
                         if (!sso.iterator().hasNext()) {
-                            singleSignOnManager.removeSingleSignOn(ssoId);
+                            singleSignOnManager.removeSingleSignOn(sso);
                         }
                     }
                 }

@@ -53,8 +53,8 @@ public class InMemorySingleSignOnManager implements SingleSignOnManager {
     }
 
     @Override
-    public void removeSingleSignOn(String ssoId) {
-        this.ssoEntries.remove(ssoId);
+    public void removeSingleSignOn(SingleSignOn sso) {
+        this.ssoEntries.remove(sso.getId());
     }
 
     private static class SimpleSingleSignOnEntry implements SingleSignOn {
