@@ -28,5 +28,5 @@ public interface SingleSignOnManager {
 
     SingleSignOn findSingleSignOn(String ssoId);
 
-    void removeSingleSignOn(String ssoId);
+    void removeSingleSignOn(SingleSignOn sso);
 }
