@@ -62,6 +62,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
+import io.undertow.util.StatusCodes;
 import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
 
@@ -412,6 +413,8 @@ public class AsyncContextImpl implements AsyncContext {
         dispatched = false; //we reset the dispatched state
         onAsyncError(error);
         if (!dispatched) {
+            exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+            exchange.getResponseHeaders().clear();
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
             try {
                 boolean errorPage = servletRequestContext.displayStackTraces();
