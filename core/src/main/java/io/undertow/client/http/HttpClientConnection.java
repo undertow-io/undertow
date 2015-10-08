@@ -34,6 +34,7 @@ import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
+import io.undertow.server.Connectors;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
@@ -551,7 +552,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 handleError(new IOException(e));
                 throw e;
             }
-        } else if (response.getProtocol().equals(Protocols.HTTP_1_1)) {
+        } else if (response.getProtocol().equals(Protocols.HTTP_1_1) && !Connectors.isEntityBodyAllowed(response.getResponseCode())) {
             connection.getSourceChannel().setConduit(new FixedLengthStreamSourceConduit(connection.getSourceChannel().getConduit(), 0, responseFinishedListener));
         } else {
             state |= CLOSE_REQ;

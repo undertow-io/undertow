@@ -302,6 +302,10 @@ public class Connectors {
 
     public static boolean isEntityBodyAllowed(HttpServerExchange exchange){
         int code = exchange.getStatusCode();
+        return isEntityBodyAllowed(code);
+    }
+
+    public static boolean isEntityBodyAllowed(int code) {
         if(code >= 100 && code < 200) {
             return false;
         }
