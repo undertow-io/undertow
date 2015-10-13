@@ -266,7 +266,7 @@ public class ManagedServlet implements Lifecycle {
 
                 @Override
                 public void release() {
-                    instance.destroy();
+
                 }
             };
         }
