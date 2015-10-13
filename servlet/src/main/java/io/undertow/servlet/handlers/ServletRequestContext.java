@@ -116,6 +116,7 @@ public class ServletRequestContext {
     private boolean runningInsideHandler = false;
     private int errorCode = -1;
     private String errorMessage;
+    private boolean asyncSupported = true;
 
     public ServletRequestContext(final Deployment deployment, final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse, final ServletPathMatch originalServletPathMatch) {
         this.deployment = deployment;
@@ -261,5 +262,13 @@ public class ServletRequestContext {
 
     public void setRunningInsideHandler(boolean runningInsideHandler) {
         this.runningInsideHandler = runningInsideHandler;
+    }
+
+    public boolean isAsyncSupported() {
+        return asyncSupported;
+    }
+
+    public void setAsyncSupported(boolean asyncSupported) {
+        this.asyncSupported = asyncSupported;
     }
 }

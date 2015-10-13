@@ -35,7 +35,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.ManagedFilter;
-import io.undertow.servlet.spec.AsyncContextImpl;
 
 /**
  * @author Stuart Douglas
@@ -74,7 +73,7 @@ public class FilterHandler implements HttpHandler {
         DispatcherType dispatcher = servletRequestContext.getDispatcherType();
         Boolean supported = asyncSupported.get(dispatcher);
         if(supported != null && ! supported) {
-            exchange.putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false    );
+            servletRequestContext.setAsyncSupported(false);
         }
 
         final List<ManagedFilter> filters = this.filters.get(dispatcher);

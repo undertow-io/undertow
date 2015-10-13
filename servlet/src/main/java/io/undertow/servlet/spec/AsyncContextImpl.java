@@ -58,7 +58,6 @@ import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.handlers.ServletDebugPageHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
@@ -70,8 +69,6 @@ import org.xnio.XnioExecutor;
  * @author Stuart Douglas
  */
 public class AsyncContextImpl implements AsyncContext {
-
-    public static final AttachmentKey<Boolean> ASYNC_SUPPORTED = AttachmentKey.create(Boolean.class);
 
     private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<>();
 

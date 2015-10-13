@@ -979,8 +979,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isAsyncSupported() {
-        Boolean supported = exchange.getAttachment(AsyncContextImpl.ASYNC_SUPPORTED);
-        return supported == null || supported;
+        return exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).isAsyncSupported();
     }
 
     @Override

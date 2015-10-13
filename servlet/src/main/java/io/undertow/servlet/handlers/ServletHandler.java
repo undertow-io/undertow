@@ -33,7 +33,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.core.ManagedServlet;
-import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -74,10 +73,10 @@ public class ServletHandler implements HttpHandler {
                 unavailableUntilUpdater.compareAndSet(this, until, 0);
             }
         }
-        if(!managedServlet.getServletInfo().isAsyncSupported()) {
-            exchange.putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false);
-        }
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if(!managedServlet.getServletInfo().isAsyncSupported()) {
+            servletRequestContext.setAsyncSupported(false);
+        }
         ServletRequest request = servletRequestContext.getServletRequest();
         ServletResponse response = servletRequestContext.getServletResponse();
         InstanceHandle<? extends Servlet> servlet = null;
