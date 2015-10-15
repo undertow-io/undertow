@@ -56,7 +56,7 @@ public class PathHandler implements HttpHandler {
 
     public PathHandler(int cacheSize) {
         if(cacheSize > 0) {
-            cache = new LRUCache<>(cacheSize, -1);
+            cache = new LRUCache<>(cacheSize, -1, true);
         } else {
             cache = null;
         }
