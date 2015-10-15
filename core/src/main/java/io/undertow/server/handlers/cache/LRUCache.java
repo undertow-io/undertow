@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * entries are removed first) when the cache is out of capacity.</p>
  * <p>
  *
+ * This cache can also be configured to run in FIFO mode, rather than LRU.
+ *
  * @author Jason T. Greene
  * @author Stuart Douglas
  */
@@ -50,12 +52,21 @@ public class LRUCache<K, V> {
      * How long an item can stay in the cache in milliseconds
      */
     private final int maxAge;
+    private final boolean fifo;
 
     public LRUCache(int maxEntries, final int maxAge) {
         this.maxAge = maxAge;
         this.cache = new ConcurrentHashMap<>(16);
         this.accessQueue = ConcurrentDirectDeque.newInstance();
         this.maxEntries = maxEntries;
+        this.fifo = false;
+    }
+    public LRUCache(int maxEntries, final int maxAge, boolean fifo) {
+        this.maxAge = maxAge;
+        this.cache = new ConcurrentHashMap<>(16);
+        this.accessQueue = ConcurrentDirectDeque.newInstance();
+        this.maxEntries = maxEntries;
+        this.fifo = fifo;
     }
 
     public void add(K key, V newValue) {
@@ -97,8 +108,10 @@ public class LRUCache<K, V> {
             }
         }
 
-        if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
-            bumpAccess(cacheEntry);
+        if(!fifo) {
+            if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
+                bumpAccess(cacheEntry);
+            }
         }
 
         return cacheEntry.getValue();

@@ -63,7 +63,7 @@ public class ServletPathMatches {
 
     private volatile ServletPathMatchesData data;
 
-    private final LRUCache<String, ServletPathMatch> pathMatchCache = new LRUCache<>(1000, -1); //TODO: configurable
+    private final LRUCache<String, ServletPathMatch> pathMatchCache = new LRUCache<>(1000, -1, true); //TODO: configurable
 
     public ServletPathMatches(final Deployment deployment) {
         this.deployment = deployment;
