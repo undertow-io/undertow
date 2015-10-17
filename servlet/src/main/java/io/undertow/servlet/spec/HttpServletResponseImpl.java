@@ -425,9 +425,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(useCharset || !charsetSet) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader());
         } else if(ct.getCharset() == null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader() + ";charset=" + charset);
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader() + "; charset=" + charset);
         }else {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getContentType() + ";charset=" + charset);
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getContentType() + "; charset=" + charset);
         }
     }
 
