@@ -218,7 +218,7 @@ public class Connectors {
             if (!exchange.isResponseStarted()) {
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }
-            UndertowLogger.REQUEST_LOGGER.errorf(t, "Undertow request failed %s", exchange);
+            UndertowLogger.REQUEST_LOGGER.undertowRequestFailed(t, exchange);
             exchange.endExchange();
         }
     }

@@ -407,7 +407,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     sb.append(data.get());
                     sb.append(" ");
                 }
-                UndertowLogger.REQUEST_IO_LOGGER.error("Buffer: " + sb.toString());
                 markReadsBroken(new IOException());
             } else {
                 initialSettingsReceived = true;

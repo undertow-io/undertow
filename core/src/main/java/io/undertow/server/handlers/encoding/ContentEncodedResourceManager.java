@@ -139,7 +139,7 @@ public class ContentEncodedResourceManager {
             targetChannel.shutdownWrites();
             org.xnio.channels.Channels.flushBlocking(targetChannel);
             if (transferred != resource.getContentLength()) {
-                UndertowLogger.REQUEST_LOGGER.error("Failed to write pre-cached file");
+                UndertowLogger.REQUEST_LOGGER.failedToWritePreCachedFile();
             }
             Files.move(tempTarget, finalTarget);
             encoded.invalidate(newPath);

@@ -328,9 +328,6 @@ public final class WebSocketUtils {
                 case 0: {
                     // read listener
                     for (; ; ) {
-                        if(buffer.hasRemaining()) {
-                            WebSocketLogger.REQUEST_LOGGER.error("BUFFER HAS REMAINING!!!!!");
-                        }
                         try {
                             lres = source.transferTo(Long.MAX_VALUE, buffer, sink);
                         } catch (IOException e) {

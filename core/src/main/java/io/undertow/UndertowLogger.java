@@ -19,6 +19,7 @@
 package io.undertow;
 
 import io.undertow.client.ClientConnection;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -326,4 +327,15 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5068, value = "Pattern was just empty or whitespace")
     void extendedAccessLogEmptyPattern();
 
+    @LogMessage(level = ERROR)
+    @Message(id = 5069, value = "Failed to write JDBC access log")
+    void failedToWriteJdbcAccessLog(@Cause SQLException e);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5070, value = "Failed to write pre-cached file")
+    void failedToWritePreCachedFile();
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5071, value = "Undertow request failed %s")
+    void undertowRequestFailed(@Cause Throwable t, HttpServerExchange exchange);
 }

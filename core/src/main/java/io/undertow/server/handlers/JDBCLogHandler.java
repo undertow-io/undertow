@@ -215,7 +215,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
                         ps.executeUpdate();
                         numberOfTries = 0;
                     } catch (SQLException e) {
-                        UndertowLogger.ROOT_LOGGER.error(e);
+                        UndertowLogger.ROOT_LOGGER.failedToWriteJdbcAccessLog(e);
                     }
                     numberOfTries--;
                 }
