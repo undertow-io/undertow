@@ -688,7 +688,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The number of bytes sent in the entity body
      */
     public long getResponseBytesSent() {
-        return responseBytesSent;
+        if(Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
+            return responseBytesSent;
+        } else {
+            return 0; //body is not allowed, even if we attempt to write it will be ignored
+        }
     }
 
     public HttpServerExchange setPersistent(final boolean persistent) {
