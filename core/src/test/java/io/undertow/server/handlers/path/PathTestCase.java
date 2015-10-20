@@ -92,6 +92,7 @@ public class PathTestCase {
             runPathTest(client, "/aa/anotherSubPath", "/aa/anotherSubPath", "");
             runPathTest(client, "/aa/anotherSubPath/bob", "/aa/anotherSubPath", "/bob");
             runPathTest(client, "/aa/b?a=b", "/aa", "/b", Collections.singletonMap("a", "b"));
+            runPathTest(client, "/path/:bar/baz", "/path", "/:bar/baz");
 
             //now test the exact path match
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/aa");

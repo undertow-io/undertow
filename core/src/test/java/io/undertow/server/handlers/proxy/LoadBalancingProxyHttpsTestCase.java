@@ -21,8 +21,6 @@ package io.undertow.server.handlers.proxy;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
@@ -59,9 +57,7 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_SPDY, false)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
-                .setHandler(jvmRoute("JSESSIONID", "s1", path()
-                        .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
-                        .addPrefixPath("/name", new StringSendHandler("server1"))))
+                .setHandler(getRootHandler("s1", "server1"))
                 .build();
 
         final JvmRouteHandler handler = jvmRoute("JSESSIONID", "s2", path()
@@ -71,13 +67,7 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
                 .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_SPDY, false)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
-                .setHandler(new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        System.out.println(exchange.getRequestHeaders());
-                        handler.handleRequest(exchange);
-                    }
-                })
+                .setHandler(getRootHandler("s2", "server2"))
                 .build();
         server1.start();
         server2.start();

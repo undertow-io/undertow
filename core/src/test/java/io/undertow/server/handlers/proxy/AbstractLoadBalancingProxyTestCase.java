@@ -21,14 +21,15 @@ package io.undertow.server.handlers.proxy;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
+import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -37,6 +38,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+
+import static io.undertow.Handlers.jvmRoute;
+import static io.undertow.Handlers.path;
 
 /**
  * Tests the load balancing proxy
@@ -163,6 +167,19 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    protected static HttpHandler getRootHandler(String s1, String server1) {
+        final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+        return jvmRoute("JSESSIONID", s1, path()
+                .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
+                .addPrefixPath("/name", new StringSendHandler(server1))
+                .addPrefixPath("/path", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send(exchange.getRequestURI());
+                    }
+                }));
     }
 
     protected static final class SessionTestHandler implements HttpHandler {

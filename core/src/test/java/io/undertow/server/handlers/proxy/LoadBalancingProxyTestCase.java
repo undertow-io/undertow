@@ -20,9 +20,6 @@ package io.undertow.server.handlers.proxy;
 
 import io.undertow.Undertow;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -30,9 +27,6 @@ import org.xnio.Options;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
 
 /**
  * Tests the load balancing proxy
@@ -45,22 +39,17 @@ public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCa
     @BeforeClass
     public static void setup() throws URISyntaxException {
 
-        final SessionCookieConfig sessionConfig = new SessionCookieConfig();
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addHttpListener(port + 1, DefaultServer.getHostAddress("default"))
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
-                .setHandler(jvmRoute("JSESSIONID", "s1", path()
-                        .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
-                        .addPrefixPath("/name", new StringSendHandler("server1"))))
+                .setHandler(getRootHandler("s1", "server1"))
                 .build();
 
         server2 = Undertow.builder()
                 .addHttpListener(port + 2, DefaultServer.getHostAddress("default"))
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
-                .setHandler(jvmRoute("JSESSIONID", "s2", path()
-                        .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
-                        .addPrefixPath("/name", new StringSendHandler("server2"))))
+                .setHandler(getRootHandler("s2", "server2"))
                 .build();
         server1.start();
         server2.start();

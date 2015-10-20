@@ -22,13 +22,9 @@ import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.protocol.http2.Http2ServerConnection;
 import io.undertow.server.protocol.http2.Http2UpgradeHandler;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -47,9 +43,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
-
 /**
  * Tests the load balancing proxy
  *
@@ -60,11 +53,8 @@ public class LoadBalancingProxyHTTP2ViaUpgradeTestCase extends AbstractLoadBalan
 
     @BeforeClass
     public static void setup() throws URISyntaxException {
-        final SessionCookieConfig sessionConfig = new SessionCookieConfig();
         int port = DefaultServer.getHostPort("default");
-        final JvmRouteHandler handler1 = jvmRoute("JSESSIONID", "s1", path()
-                .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
-                .addPrefixPath("/name", new StringSendHandler("server1")));
+        final HttpHandler handler1 = getRootHandler("s1", "server1");
         server1 = Undertow.builder()
                 .addHttpListener(port + 1, DefaultServer.getHostAddress("default"))
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
@@ -82,9 +72,7 @@ public class LoadBalancingProxyHTTP2ViaUpgradeTestCase extends AbstractLoadBalan
                 }))
                 .build();
 
-        final JvmRouteHandler handler2 = jvmRoute("JSESSIONID", "s2", path()
-                .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
-                .addPrefixPath("/name", new StringSendHandler("server2")));
+        final HttpHandler handler2 = getRootHandler("s2", "server2");
         server2 = Undertow.builder()
                 .addHttpListener(port + 2, DefaultServer.getHostAddress("default"))
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
