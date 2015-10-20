@@ -78,6 +78,18 @@ public class Http2ClientConnection implements ClientConnection {
     private boolean initialUpgradeRequest;
     private final String defaultHost;
     private final ClientStatistics clientStatistics;
+    private final ChannelListener<AbstractHttp2StreamSourceChannel> closeTask = new ChannelListener<AbstractHttp2StreamSourceChannel>() {
+        @Override
+        public void handleEvent(AbstractHttp2StreamSourceChannel channel) {
+            currentExchanges.remove(((Http2StreamSourceChannel)channel).getStreamId());
+        }
+    };
+    private final ChannelListener<AbstractHttp2StreamSourceChannel> pushCloseTask = new ChannelListener<AbstractHttp2StreamSourceChannel>() {
+        @Override
+        public void handleEvent(AbstractHttp2StreamSourceChannel channel) {
+            currentExchanges.remove(((Http2PushPromiseStreamSourceChannel)channel).getPushedStreamId());
+        }
+    };
 
     public Http2ClientConnection(Http2Channel http2Channel, boolean initialUpgradeRequest, String defaultHost, ClientStatistics clientStatistics) {
 
@@ -328,19 +340,7 @@ public class Http2ClientConnection implements ClientConnection {
                         Channels.drain(result, Long.MAX_VALUE);
                         return;
                     }
-
-                    result.addCloseTask(new ChannelListener<AbstractHttp2StreamSourceChannel>() {
-                        @Override
-                        public void handleEvent(AbstractHttp2StreamSourceChannel channel) {
-                            currentExchanges.remove(streamSourceChannel.getStreamId());
-                        }
-                    });
-                    streamSourceChannel.setCompletionListener(new ChannelListener<Http2StreamSourceChannel>() {
-                        @Override
-                        public void handleEvent(Http2StreamSourceChannel channel) {
-                            currentExchanges.remove(streamSourceChannel.getStreamId());
-                        }
-                    });
+                    result.addCloseTask(closeTask);
                     if (request == null && initialUpgradeRequest) {
                         Channels.drain(result, Long.MAX_VALUE);
                         initialUpgradeRequest = false;
@@ -387,6 +387,7 @@ public class Http2ClientConnection implements ClientConnection {
                             IoUtils.safeClose(stream);
                         } else {
                             currentExchanges.put(stream.getPushedStreamId(), newExchange);
+                            result.addCloseTask(pushCloseTask);
                         }
                     }
                     Channels.drain(result, Long.MAX_VALUE);
