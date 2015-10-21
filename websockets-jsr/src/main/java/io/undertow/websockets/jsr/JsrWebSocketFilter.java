@@ -27,11 +27,7 @@ import io.undertow.util.StatusCodes;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.Handshake;
-import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
-import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
 import org.xnio.StreamConnection;
 
 import javax.servlet.Filter;
@@ -44,11 +40,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.websocket.server.ServerContainer;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static io.undertow.websockets.jsr.ServerWebSocketContainer.WebSocketHandshakeHolder;
 
 /**
  * Filter that provides HTTP upgrade functionality. This should be run after all user filters, but before any servlets.
@@ -66,29 +62,6 @@ public class JsrWebSocketFilter implements Filter {
     private Set<WebSocketChannel> peerConnections;
     private ServerWebSocketContainer container;
 
-    protected WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config) {
-        List<Handshake> handshakes = new ArrayList<>();
-        handshakes.add(new JsrHybi13Handshake(config));
-        handshakes.add(new JsrHybi08Handshake(config));
-        handshakes.add(new JsrHybi07Handshake(config));
-        return new WebSocketHandshakeHolder(handshakes, config);
-    }
-
-    protected WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config, List<ExtensionHandshake> extensions) {
-        List<Handshake> handshakes = new ArrayList<>();
-        Handshake jsrHybi13Handshake = new JsrHybi13Handshake(config);
-        Handshake jsrHybi08Handshake = new JsrHybi08Handshake(config);
-        Handshake jsrHybi07Handshake = new JsrHybi07Handshake(config);
-        for (ExtensionHandshake extension : extensions) {
-            jsrHybi13Handshake.addExtension(extension);
-            jsrHybi08Handshake.addExtension(extension);
-            jsrHybi07Handshake.addExtension(extension);
-        }
-        handshakes.add(jsrHybi13Handshake);
-        handshakes.add(jsrHybi08Handshake);
-        handshakes.add(jsrHybi07Handshake);
-        return new WebSocketHandshakeHolder(handshakes, config);
-    }
 
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
@@ -99,9 +72,9 @@ public class JsrWebSocketFilter implements Filter {
         WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)filterConfig.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
         for (ConfiguredServerEndpoint endpoint : container.getConfiguredServerEndpoints()) {
             if (info == null || info.getExtensions().isEmpty()) {
-                pathTemplateMatcher.add(endpoint.getPathTemplate(), handshakes(endpoint));
+                pathTemplateMatcher.add(endpoint.getPathTemplate(), ServerWebSocketContainer.handshakes(endpoint));
             } else {
-                pathTemplateMatcher.add(endpoint.getPathTemplate(), handshakes(endpoint, info.getExtensions()));
+                pathTemplateMatcher.add(endpoint.getPathTemplate(), ServerWebSocketContainer.handshakes(endpoint, info.getExtensions()));
             }
         }
         this.callback = new EndpointSessionHandler(container);
@@ -161,13 +134,4 @@ public class JsrWebSocketFilter implements Filter {
 
     }
 
-    private static final class WebSocketHandshakeHolder {
-        final List<Handshake> handshakes;
-        final ConfiguredServerEndpoint endpoint;
-
-        private WebSocketHandshakeHolder(List<Handshake> handshakes, ConfiguredServerEndpoint endpoint) {
-            this.handshakes = handshakes;
-            this.endpoint = endpoint;
-        }
-    }
 }

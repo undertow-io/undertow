@@ -17,6 +17,8 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -24,21 +26,33 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.PathTemplate;
+import io.undertow.util.StatusCodes;
 import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.client.WebSocketClientNegotiation;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.protocol.Handshake;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
+import io.undertow.websockets.jsr.handshake.HandshakeUtil;
+import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
+import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
+import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import io.undertow.connector.ByteBufferPool;
+import org.xnio.StreamConnection;
 import org.xnio.XnioWorker;
 import org.xnio.http.UpgradeFailedException;
 import org.xnio.ssl.XnioSsl;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.CloseReason;
@@ -59,6 +73,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -319,6 +334,84 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             return connectToServer(endpoint, cec, path);
         } catch (InstantiationException | NoSuchMethodException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+
+    public void doUpgrade(HttpServletRequest request,
+                          HttpServletResponse response, final ServerEndpointConfig sec,
+                          Map<String,String> pathParams)
+            throws ServletException, IOException {
+        ServerEndpointConfig.Configurator configurator = sec.getConfigurator();
+        try {
+            EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, sec.getDecoders(), sec.getEncoders());
+            PathTemplate pt = PathTemplate.create(sec.getPath());
+            AnnotatedEndpointFactory annotatedEndpointFactory = AnnotatedEndpointFactory.create(sec.getEndpointClass(), encodingFactory, pt.getParameterNames());
+            InstanceFactory<?> instanceFactory = null;
+            try {
+                instanceFactory = classIntrospecter.createInstanceFactory(sec.getEndpointClass());
+            } catch (Exception e) {
+                //so it is possible that this is still valid if a custom configurator is in use
+                if (configurator == null || configurator.getClass() == ServerEndpointConfig.Configurator.class) {
+                    throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+                } else {
+                    instanceFactory = new InstanceFactory<Object>() {
+                        @Override
+                        public InstanceHandle<Object> createInstance() throws InstantiationException {
+                            throw JsrWebSocketMessages.MESSAGES.endpointDoesNotHaveAppropriateConstructor(sec.getEndpointClass());
+                        }
+                    };
+                }
+            }
+            if (configurator == null) {
+                configurator = DefaultContainerConfigurator.INSTANCE;
+            }
+
+            ServerEndpointConfig config = ServerEndpointConfig.Builder.create(sec.getEndpointClass(), sec.getPath())
+                    .decoders(sec.getDecoders())
+                    .encoders(sec.getEncoders())
+                    .subprotocols(sec.getSubprotocols())
+                    .configurator(configurator)
+                    .build();
+
+            ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory);
+            WebSocketHandshakeHolder hand;
+
+            WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)contextToAddFilter.getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
+            if (info == null || info.getExtensions() == null) {
+                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint);
+            } else {
+                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getExtensions());
+            }
+
+            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<WebSocketChannel>());
+            Handshake handshaker = null;
+            for (Handshake method : hand.handshakes) {
+                if (method.matches(facade)) {
+                    handshaker = method;
+                    break;
+                }
+            }
+
+            if (handshaker != null) {
+                if(isClosed()) {
+                    response.sendError(StatusCodes.SERVICE_UNAVAILABLE);
+                    return;
+                }
+                facade.putAttachment(HandshakeUtil.PATH_PARAMS, pathParams);
+                final Handshake selected = handshaker;
+                facade.upgradeChannel(new HttpUpgradeListener() {
+                    @Override
+                    public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+                        WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
+                        new EndpointSessionHandler(ServerWebSocketContainer.this).onConnect(facade, channel);
+                    }
+                });
+                handshaker.handshake(facade);
+                return;
+            }
+        } catch (Exception e) {
+            throw new ServletException(e);
         }
     }
 
@@ -792,6 +885,39 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
     }
 
+    static WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config) {
+        List<Handshake> handshakes = new ArrayList<>();
+        handshakes.add(new JsrHybi13Handshake(config));
+        handshakes.add(new JsrHybi08Handshake(config));
+        handshakes.add(new JsrHybi07Handshake(config));
+        return new WebSocketHandshakeHolder(handshakes, config);
+    }
+
+    static WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config, List<ExtensionHandshake> extensions) {
+        List<Handshake> handshakes = new ArrayList<>();
+        Handshake jsrHybi13Handshake = new JsrHybi13Handshake(config);
+        Handshake jsrHybi08Handshake = new JsrHybi08Handshake(config);
+        Handshake jsrHybi07Handshake = new JsrHybi07Handshake(config);
+        for (ExtensionHandshake extension : extensions) {
+            jsrHybi13Handshake.addExtension(extension);
+            jsrHybi08Handshake.addExtension(extension);
+            jsrHybi07Handshake.addExtension(extension);
+        }
+        handshakes.add(jsrHybi13Handshake);
+        handshakes.add(jsrHybi08Handshake);
+        handshakes.add(jsrHybi07Handshake);
+        return new WebSocketHandshakeHolder(handshakes, config);
+    }
+
+    static final class WebSocketHandshakeHolder {
+        final List<Handshake> handshakes;
+        final ConfiguredServerEndpoint endpoint;
+
+        private WebSocketHandshakeHolder(List<Handshake> handshakes, ConfiguredServerEndpoint endpoint) {
+            this.handshakes = handshakes;
+            this.endpoint = endpoint;
+        }
+    }
     /**
      * resumes a paused container
      */
