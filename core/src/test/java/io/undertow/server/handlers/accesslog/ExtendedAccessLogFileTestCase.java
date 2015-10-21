@@ -75,7 +75,7 @@ public class ExtendedAccessLogFileTestCase {
         Path logFileName = directory.resolve("extended.log");
         DefaultAccessLogReceiver logReceiver = DefaultAccessLogReceiver.builder().setLogWriteExecutor(DefaultServer.getWorker())
                 .setOutputDirectory(directory)
-                .setLogBaseName("extended")
+                .setLogBaseName("extended.")
                 .setLogFileHeaderGenerator(new ExtendedAccessLogParser.ExtendedAccessLogHeaderGenerator(PATTERN)).build();
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }

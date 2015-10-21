@@ -50,7 +50,7 @@ import io.undertow.UndertowLogger;
  * @author Stuart Douglas
  */
 public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Closeable {
-    private static final String DEFAULT_LOG_SUFFIX = ".log";
+    private static final String DEFAULT_LOG_SUFFIX = "log";
 
     private final Executor logWriteExecutor;
 
@@ -255,11 +255,11 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             if (!Files.exists(defaultLogFile)) {
                 return;
             }
-            Path newFile = outputDirectory.resolve(logBaseName + currentDateString + logNameSuffix);
+            Path newFile = outputDirectory.resolve(logBaseName + currentDateString + "." + logNameSuffix);
             int count = 0;
             while (Files.exists(newFile)) {
                 ++count;
-                newFile = outputDirectory.resolve(logBaseName + currentDateString + "-" + count + logNameSuffix);
+                newFile = outputDirectory.resolve(logBaseName + currentDateString + "-" + count + "." + logNameSuffix);
             }
             Files.move(defaultLogFile, newFile);
         } catch (IOException e) {

@@ -82,7 +82,7 @@ public class AccessLogFileTestCase {
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
         Path directory = logDirectory;
         Path logFileName = directory.resolve("server1.log");
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1.");
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }
 
@@ -90,7 +90,7 @@ public class AccessLogFileTestCase {
     public void testSingleLogMessageToFileWithSuffix() throws IOException, InterruptedException {
         Path directory = logDirectory;
         Path logFileName = directory.resolve("server1.logsuffix");
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1", ".logsuffix");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1.", "logsuffix");
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }
 
@@ -119,7 +119,7 @@ public class AccessLogFileTestCase {
         Path directory = logDirectory;
         Path logFileName = directory.resolve("server2.log");
 
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server2");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server2.");
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(NUM_REQUESTS * NUM_THREADS, new AccessLogHandler(HELLO_HANDLER, logReceiver, "REQ %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
 
@@ -173,7 +173,7 @@ public class AccessLogFileTestCase {
     public void testForcedLogRotation() throws IOException, InterruptedException {
         Path logFileName = logDirectory.resolve("server.log");
 
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), logDirectory, "server");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), logDirectory, "server.");
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
         TestHttpClient client = new TestHttpClient();
@@ -190,7 +190,7 @@ public class AccessLogFileTestCase {
             logReceiver.rotate();
             logReceiver.awaitWrittenForTest();
             Assert.assertFalse(Files.exists(logFileName));
-            Path firstLogRotate = logDirectory.resolve("server" + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + ".log");
+            Path firstLogRotate = logDirectory.resolve("server." + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + ".log");
             Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1\n", new String(Files.readAllBytes(firstLogRotate)));
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -205,7 +205,7 @@ public class AccessLogFileTestCase {
             logReceiver.rotate();
             logReceiver.awaitWrittenForTest();
             Assert.assertFalse(Files.exists(logFileName));
-            Path secondLogRotate = logDirectory.resolve("server" + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "-1.log");
+            Path secondLogRotate = logDirectory.resolve("server." + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "-1.log");
             Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2\n", new String(Files.readAllBytes(secondLogRotate)));
 
         } finally {
