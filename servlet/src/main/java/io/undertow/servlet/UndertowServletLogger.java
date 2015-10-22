@@ -96,4 +96,23 @@ public interface UndertowServletLogger extends BasicLogger {
     @Message(id = 15012, value = "Failed to generate error page %s for original exception: %s. Generating error page resulted in a %s.")
     void errorGeneratingErrorPage(String originalErrorPage, Object originalException, int code,  @Cause Throwable cause);
 
+    @Message(id = 15013, value = "Error opening rewrite configuration")
+    String errorOpeningRewriteConfiguration();
+
+    @Message(id = 15014, value = "Error reading rewrite configuration")
+    @LogMessage(level = Logger.Level.ERROR)
+    void errorReadingRewriteConfiguration(@Cause IOException e);
+
+    @Message(id = 15015, value = "Error reading rewrite configuration: %s")
+    IllegalArgumentException invalidRewriteConfiguration(String line);
+
+    @Message(id = 15016, value = "Invalid rewrite map class: %s")
+    IllegalArgumentException invalidRewriteMap(String className);
+
+    @Message(id = 15017, value = "Error reading rewrite flags in line %s as %s")
+    IllegalArgumentException invalidRewriteFlags(String line, String flags);
+
+    @Message(id = 15018, value = "Error reading rewrite flags in line %s")
+    IllegalArgumentException invalidRewriteFlags(String line);
+
 }
