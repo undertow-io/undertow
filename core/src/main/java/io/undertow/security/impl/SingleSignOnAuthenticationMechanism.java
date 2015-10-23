@@ -37,6 +37,8 @@ import io.undertow.util.Sessions;
 import org.xnio.conduits.StreamSinkConduit;
 
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -161,13 +163,14 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         public void sessionDestroyed(Session session, HttpServerExchange exchange, SessionDestroyedReason reason) {
             String ssoId = (String) session.getAttribute(SSO_SESSION_ATTRIBUTE);
             if (ssoId != null) {
-                try (final SingleSignOn sso = singleSignOnManager.findSingleSignOn(ssoId)) {
+                List<Session> sessionsToRemove = new LinkedList<>();
+                try (SingleSignOn sso = singleSignOnManager.findSingleSignOn(ssoId)) {
                     if (sso != null) {
                         sso.remove(session);
                         if (reason == SessionDestroyedReason.INVALIDATED) {
                             for (Session associatedSession : sso) {
-                                associatedSession.invalidate(null);
                                 sso.remove(associatedSession);
+                                sessionsToRemove.add(associatedSession);
                             }
                         }
                         // If there are no more associated sessions, remove the SSO altogether
@@ -175,6 +178,11 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                             singleSignOnManager.removeSingleSignOn(sso);
                         }
                     }
+                }
+                // Any consequential session invalidations will trigger this listener recursively,
+                // so make sure we don't attempt to invalidate session until after the sso is removed.
+                for (Session sessionToRemove : sessionsToRemove) {
+                    sessionToRemove.invalidate(null);
                 }
             }
         }
