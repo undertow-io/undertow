@@ -18,26 +18,24 @@
 
 package io.undertow.websockets.jsr.test.dynamicupgrade;
 
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.MessageHandler;
 import javax.websocket.Session;
-import javax.websocket.server.PathParam;
 
 /**
  * @author Stuart Douglas
  */
-public class EchoEndpoint {
+public class EchoProgramaticEndpoint extends Endpoint {
 
-    private boolean opened = false;
-
-    @OnOpen
-    public void open(Session session) {
-        opened = true;
+    @Override
+    public void onOpen(final Session session, EndpointConfig config) {
+        final String foo = session.getPathParameters().get("foo");
+        session.addMessageHandler(String.class, new MessageHandler.Whole<String>() {
+            @Override
+            public void onMessage(String message) {
+                session.getAsyncRemote().sendText(foo + " " + message);
+            }
+        });
     }
-
-    @OnMessage
-    public String echo(@PathParam("foo") String foo, String message) {
-        return  "opened:" + opened + " " + foo + " " + message;
-    }
-
 }

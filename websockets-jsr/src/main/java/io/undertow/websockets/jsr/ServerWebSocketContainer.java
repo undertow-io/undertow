@@ -346,7 +346,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         try {
             EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, sec.getDecoders(), sec.getEncoders());
             PathTemplate pt = PathTemplate.create(sec.getPath());
-            AnnotatedEndpointFactory annotatedEndpointFactory = AnnotatedEndpointFactory.create(sec.getEndpointClass(), encodingFactory, pt.getParameterNames());
+
             InstanceFactory<?> instanceFactory = null;
             try {
                 instanceFactory = classIntrospecter.createInstanceFactory(sec.getEndpointClass());
@@ -373,6 +373,13 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                     .subprotocols(sec.getSubprotocols())
                     .configurator(configurator)
                     .build();
+
+
+            AnnotatedEndpointFactory annotatedEndpointFactory = null;
+            if(!Endpoint.class.isAssignableFrom(sec.getEndpointClass())) {
+                annotatedEndpointFactory = AnnotatedEndpointFactory.create(sec.getEndpointClass(), encodingFactory, pt.getParameterNames());
+            }
+
 
             ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory);
             WebSocketHandshakeHolder hand;
