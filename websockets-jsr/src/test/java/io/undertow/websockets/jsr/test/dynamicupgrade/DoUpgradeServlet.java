@@ -44,7 +44,11 @@ public class DoUpgradeServlet extends HttpServlet {
         ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).doUpgrade(req, resp, new ServerEndpointConfig() {
             @Override
             public Class<?> getEndpointClass() {
-                return EchoEndpoint.class;
+                if(req.getParameter("annotated") != null) {
+                    return EchoEndpoint.class;
+                } else {
+                    return EchoProgramaticEndpoint.class;
+                }
             }
 
             @Override
