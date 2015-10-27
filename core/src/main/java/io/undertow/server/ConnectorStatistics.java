@@ -53,12 +53,14 @@ public interface ConnectorStatistics {
     /**
      *
      * @return The total amount of time spent processing all requests on this connector
+     *         (nanoseconds)
      */
     long getProcessingTime();
 
     /**
      *
      * @return The time taken by the slowest request
+     *         (nanoseconds)
      */
     long getMaxProcessingTime();
 
