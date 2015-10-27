@@ -52,7 +52,7 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
                 }
                 long start = exchange.getRequestStartTime();
                 if (start > 0) {
-                    long elapsed = System.currentTimeMillis() - start;
+                    long elapsed = System.nanoTime() - start;
                     processingTimeUpdater.addAndGet(ConnectorStatisticsImpl.this, elapsed);
                     long oldMax;
                     do {
