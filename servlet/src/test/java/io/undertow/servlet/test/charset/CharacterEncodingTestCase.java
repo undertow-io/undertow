@@ -41,7 +41,6 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class CharacterEncodingTestCase {
 
-
     @BeforeClass
     public static void setup() throws ServletException {
         DeploymentUtils.setupServlet(

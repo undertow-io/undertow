@@ -123,7 +123,7 @@ public class RewriteConfigFactory {
      * @param line
      * @return
      */
-    public static Object parse(String line) {
+    private static Object parse(String line) {
         StringTokenizer tokenizer = new StringTokenizer(line);
         if (tokenizer.hasMoreTokens()) {
             String token = tokenizer.nextToken();
