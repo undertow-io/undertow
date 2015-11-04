@@ -122,7 +122,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     private ReferenceCountedPooled readData = null;
     private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<>();
-    private boolean flushingSenders = false;
+    private volatile boolean flushingSenders = false;
 
     private final Set<AbstractFramedStreamSourceChannel<C, R, S>> receivers = new HashSet<>();
 
@@ -638,7 +638,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      *
      * @param channel The channel
      */
-    protected synchronized void queueFrame(final S channel) throws IOException {
+    protected void queueFrame(final S channel) throws IOException {
         assert !newFrames.contains(channel);
         if (isWritesBroken() || !this.channel.getSinkChannel().isOpen() || channel.isBroken() || !channel.isOpen()) {
             IoUtils.safeClose(channel);
