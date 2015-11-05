@@ -120,7 +120,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             //not 100% sure this is the correct action
             return;
         }
+        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         if (responseStarted()) {
+            if(src.getErrorCode() > 0) {
+                return; //error already set
+            }
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         if(servletContext.getDeployment().getDeploymentInfo().isSendCustomReasonPhraseOnError()) {
@@ -129,7 +133,6 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         writer = null;
         responseState = ResponseState.NONE;
         exchange.setStatusCode(sc);
-        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         if(src.isRunningInsideHandler()) {
             //all we do is set the error on the context, we handle it when the request is returned
             treatAsCommitted = true;
