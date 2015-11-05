@@ -100,6 +100,24 @@ public class FileHandlerTestCase {
     }
 
     @Test
+    public void testDotSuffix() throws IOException, URISyntaxException {
+        TestHttpClient client = new TestHttpClient();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        try {
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
+                                    .setDirectoryListingEnabled(true))));
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html.");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+    @Test
     public void testFileTransfer() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
