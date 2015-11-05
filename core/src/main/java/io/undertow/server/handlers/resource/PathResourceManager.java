@@ -151,13 +151,13 @@ public class PathResourceManager implements ResourceManager  {
                     return null;
                 }
                 boolean followAll = this.followLinks && safePaths.isEmpty();
-                Path symlinkBase = getSymlinkBase(base, file);
-                if (!followAll && symlinkBase != null) {
+                SymlinkResult symlinkBase = getSymlinkBase(base, file);
+                if (!followAll && symlinkBase != null && symlinkBase.requiresCheck) {
                     if (this.followLinks && isSymlinkSafe(file)) {
-                        return getFileResource(file, path, symlinkBase);
+                        return getFileResource(file, path, symlinkBase.path);
                     }
                 } else {
-                    return getFileResource(file, path, symlinkBase);
+                    return getFileResource(file, path, symlinkBase == null ? null : symlinkBase.path);
                 }
             }
             return null;
@@ -217,19 +217,18 @@ public class PathResourceManager implements ResourceManager  {
     /**
      * Returns true is some element of path inside base path is a symlink.
      */
-    private Path getSymlinkBase(final String base, final Path file) throws IOException {
+    private SymlinkResult getSymlinkBase(final String base, final Path file) throws IOException {
         int nameCount = file.getNameCount();
         Path root = Paths.get(base);
         int rootCount = root.getNameCount();
-        if (nameCount > rootCount) {
-            Path f = root;
-            for (int i= rootCount; i<nameCount; i++) {
-                f = f.resolve(file.getName(i).toString());
-                if (Files.isSymbolicLink(f)) {
-                    return f;
-                }
+        Path f = file;
+        for (int i = nameCount - 1; i>=0; i--) {
+            if (Files.isSymbolicLink(f)) {
+                return new SymlinkResult(i+1 > rootCount, f);
             }
+            f = f.getParent();
         }
+
         return null;
     }
 
@@ -244,8 +243,8 @@ public class PathResourceManager implements ResourceManager  {
      * file.getName() == "./page.jsp" && file.getCanonicalFile().getName() == "page.jsp" should return true
      */
     private boolean isFileSameCase(final Path file) throws IOException {
-        String canonicalName = file.toRealPath().getFileName().toString();
-        return canonicalName.equals(file.getFileName().toString());
+        String canonicalName = file.toRealPath().toString();
+        return canonicalName.equals(file.toString());
     }
 
     /**
@@ -291,8 +290,8 @@ public class PathResourceManager implements ResourceManager  {
         if (this.caseSensitive) {
             if (symlinkBase != null) {
                 String relative = symlinkBase.relativize(file).toString();
-                String fileResolved = file.toRealPath().toAbsolutePath().toString();
-                String symlinkBaseResolved = symlinkBase.toRealPath().toAbsolutePath().toString();
+                String fileResolved = file.toRealPath().toString();
+                String symlinkBaseResolved = symlinkBase.toRealPath().toString();
                 if (!fileResolved.startsWith(symlinkBaseResolved)) {
                     return null;
                 }
@@ -315,6 +314,16 @@ public class PathResourceManager implements ResourceManager  {
             }
         } else {
             return new PathResource(file, this, path);
+        }
+    }
+
+    private static class SymlinkResult {
+        public final boolean requiresCheck;
+        public final Path path;
+
+        private SymlinkResult(boolean requiresCheck, Path path) {
+            this.requiresCheck = requiresCheck;
+            this.path = path;
         }
     }
 }
