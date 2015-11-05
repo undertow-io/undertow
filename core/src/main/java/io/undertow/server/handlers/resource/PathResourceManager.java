@@ -151,12 +151,13 @@ public class PathResourceManager implements ResourceManager  {
                     return null;
                 }
                 boolean followAll = this.followLinks && safePaths.isEmpty();
-                if (!followAll && isSymlinkPath(base, file)) {
+                Path symlinkBase = getSymlinkBase(base, file);
+                if (!followAll && symlinkBase != null) {
                     if (this.followLinks && isSymlinkSafe(file)) {
-                        return getFileResource(file, path);
+                        return getFileResource(file, path, symlinkBase);
                     }
                 } else {
-                    return getFileResource(file, path);
+                    return getFileResource(file, path, symlinkBase);
                 }
             }
             return null;
@@ -216,7 +217,7 @@ public class PathResourceManager implements ResourceManager  {
     /**
      * Returns true is some element of path inside base path is a symlink.
      */
-    private boolean isSymlinkPath(final String base, final Path file) throws IOException {
+    private Path getSymlinkBase(final String base, final Path file) throws IOException {
         int nameCount = file.getNameCount();
         Path root = Paths.get(base);
         int rootCount = root.getNameCount();
@@ -225,11 +226,11 @@ public class PathResourceManager implements ResourceManager  {
             for (int i= rootCount; i<nameCount; i++) {
                 f = f.resolve(file.getName(i).toString());
                 if (Files.isSymbolicLink(f)) {
-                    return true;
+                    return f;
                 }
             }
         }
-        return false;
+        return null;
     }
 
     /**
@@ -244,11 +245,7 @@ public class PathResourceManager implements ResourceManager  {
      */
     private boolean isFileSameCase(final Path file) throws IOException {
         String canonicalName = file.toRealPath().getFileName().toString();
-        if (canonicalName.equals(file.getFileName().toString())) {
-            return true;
-        } else {
-            return !canonicalName.equalsIgnoreCase(file.getFileName().toString());
-        }
+        return canonicalName.equals(file.getFileName().toString());
     }
 
     /**
@@ -290,9 +287,28 @@ public class PathResourceManager implements ResourceManager  {
     /**
      * Apply security check for case insensitive file systems.
      */
-    protected PathResource getFileResource(final Path file, final String path) throws IOException {
+    protected PathResource getFileResource(final Path file, final String path, final Path symlinkBase) throws IOException {
         if (this.caseSensitive) {
-            if (isFileSameCase(file)) {
+            if (symlinkBase != null) {
+                String relative = symlinkBase.relativize(file).toString();
+                String fileResolved = file.toRealPath().toAbsolutePath().toString();
+                String symlinkBaseResolved = symlinkBase.toRealPath().toAbsolutePath().toString();
+                if (!fileResolved.startsWith(symlinkBaseResolved)) {
+                    return null;
+                }
+                String compare = fileResolved.substring(symlinkBaseResolved.length());
+                if(compare.startsWith("/")) {
+                    compare = compare.substring(1);
+                }
+                if(relative.startsWith("/")) {
+                    relative = relative.substring(1);
+                }
+                if (relative.equals(compare)) {
+                    return new PathResource(file, this, path);
+                }
+
+                return null;
+            } else if (isFileSameCase(file)) {
                 return new PathResource(file, this, path);
             } else {
                 return null;
