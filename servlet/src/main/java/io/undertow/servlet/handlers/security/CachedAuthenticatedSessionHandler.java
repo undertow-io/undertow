@@ -26,6 +26,7 @@ import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.SavedRequest;
@@ -37,6 +38,8 @@ import javax.servlet.http.HttpSession;
 /**
  * {@link HttpHandler} responsible for setting up the {@link AuthenticatedSessionManager} for cached authentications and
  * registering a {@link NotificationReceiver} to receive the security notifications.
+ *
+ * This handler also forces the session to change its session ID on sucessful authentication.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
@@ -77,16 +80,24 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
         @Override
         public void handleNotification(SecurityNotification notification) {
             EventType eventType = notification.getEventType();
+            HttpSessionImpl httpSession = servletContext.getSession(notification.getExchange(), false);
             switch (eventType) {
                 case AUTHENTICATED:
+                    if(httpSession != null) {
+                        ServletRequestContext src = notification.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                        src.getOriginalRequest().changeSessionId();
+                    }
                     if (isCacheable(notification)) {
-                        HttpSessionImpl httpSession = servletContext.getSession(notification.getExchange(), true);
+                        if(httpSession == null) {
+                            httpSession = servletContext.getSession(notification.getExchange(), true);
+                        }
                         Session session;
                         if(System.getSecurityManager() == null) {
                             session = httpSession.getSession();
                         } else {
                             session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
                         }
+
                         // It is normal for this notification to be received when using a previously cached session - in that
                         // case the IDM would have been given an opportunity to re-load the Account so updating here ready for
                         // the next request is desired.
@@ -95,7 +106,6 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
                     }
                     break;
                 case LOGGED_OUT:
-                    HttpSessionImpl httpSession = servletContext.getSession(notification.getExchange(), false);
                     if (httpSession != null) {
                         Session session;
                         if (System.getSecurityManager() == null) {
