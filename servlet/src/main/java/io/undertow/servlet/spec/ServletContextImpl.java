@@ -199,7 +199,7 @@ public class ServletContextImpl implements ServletContext {
         String lower = file.toLowerCase(Locale.ENGLISH);
         int pos = lower.lastIndexOf('.');
         if (pos == -1) {
-            return deployment.getMimeExtensionMappings().get(lower);
+            return null; //no extension
         }
         return deployment.getMimeExtensionMappings().get(lower.substring(pos + 1));
     }
