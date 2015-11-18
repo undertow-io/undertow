@@ -30,17 +30,23 @@ import io.undertow.servlet.api.SessionManagerFactory;
 public class InMemorySessionManagerFactory implements SessionManagerFactory {
 
     private final int maxSessions;
+    private final boolean expireOldestUnusedSessionOnMax;
 
     public InMemorySessionManagerFactory() {
-        this(-1);
+        this(-1, false);
     }
 
     public InMemorySessionManagerFactory(int maxSessions) {
+        this(maxSessions, false);
+    }
+
+    public InMemorySessionManagerFactory(int maxSessions, boolean expireOldestUnusedSessionOnMax) {
         this.maxSessions = maxSessions;
+        this.expireOldestUnusedSessionOnMax = expireOldestUnusedSessionOnMax;
     }
 
     @Override
     public SessionManager createSessionManager(Deployment deployment) {
-        return new InMemorySessionManager(deployment.getDeploymentInfo().getSessionIdGenerator(), deployment.getDeploymentInfo().getDeploymentName(), maxSessions, deployment.getDeploymentInfo().getMetricsCollector() != null);
+        return new InMemorySessionManager(deployment.getDeploymentInfo().getSessionIdGenerator(), deployment.getDeploymentInfo().getDeploymentName(), maxSessions, expireOldestUnusedSessionOnMax, deployment.getDeploymentInfo().getMetricsCollector() != null);
     }
 }
