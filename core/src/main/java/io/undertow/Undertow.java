@@ -66,6 +66,17 @@ public final class Undertow {
     private final OptionMap socketOptions;
     private final OptionMap serverOptions;
 
+    /**
+     * Will be true when a {@link XnioWorker} instance was NOT provided to the {@link Builder}.
+     * When true, a new worker will be created during {@link Undertow#start()},
+     * and shutdown when {@link Undertow#stop()} is called.
+     *
+     * Will be false when a {@link XnioWorker} instance was provided to the {@link Builder}.
+     * When false, the provided {@link #worker} will be used instead of creating a new one in {@link Undertow#start()}.
+     * Also, when false, the {@link #worker} will NOT be shutdown when {@link Undertow#stop()} is called.
+     */
+    private final boolean internalWorker;
+
     private XnioWorker worker;
     private List<AcceptingChannel<? extends StreamConnection>> channels;
     private Xnio xnio;
@@ -77,6 +88,8 @@ public final class Undertow {
         this.directBuffers = builder.directBuffers;
         this.listeners.addAll(builder.listeners);
         this.rootHandler = builder.handler;
+        this.worker = builder.worker;
+        this.internalWorker = builder.worker == null;
         this.workerOptions = builder.workerOptions.getMap();
         this.socketOptions = builder.socketOptions.getMap();
         this.serverOptions = builder.serverOptions.getMap();
@@ -93,19 +106,21 @@ public final class Undertow {
         xnio = Xnio.getInstance(Undertow.class.getClassLoader());
         channels = new ArrayList<>();
         try {
-            worker = xnio.createWorker(OptionMap.builder()
-                    .set(Options.WORKER_IO_THREADS, ioThreads)
-                    .set(Options.CONNECTION_HIGH_WATER, 1000000)
-                    .set(Options.CONNECTION_LOW_WATER, 1000000)
-                    .set(Options.WORKER_TASK_CORE_THREADS, workerThreads)
-                    .set(Options.WORKER_TASK_MAX_THREADS, workerThreads)
-                    .set(Options.TCP_NODELAY, true)
-                    .set(Options.CORK, true)
-                    .addAll(workerOptions)
-                    .getMap());
+            if (internalWorker) {
+                worker = xnio.createWorker(OptionMap.builder()
+                        .set(Options.WORKER_IO_THREADS, ioThreads)
+                        .set(Options.CONNECTION_HIGH_WATER, 1000000)
+                        .set(Options.CONNECTION_LOW_WATER, 1000000)
+                        .set(Options.WORKER_TASK_CORE_THREADS, workerThreads)
+                        .set(Options.WORKER_TASK_MAX_THREADS, workerThreads)
+                        .set(Options.TCP_NODELAY, true)
+                        .set(Options.CORK, true)
+                        .addAll(workerOptions)
+                        .getMap());
+            }
 
             OptionMap socketOptions = OptionMap.builder()
-                    .set(Options.WORKER_IO_THREADS, ioThreads)
+                    .set(Options.WORKER_IO_THREADS, worker.getIoThreadCount())
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .set(Options.BALANCING_TOKENS, 1)
@@ -185,8 +200,14 @@ public final class Undertow {
             IoUtils.safeClose(channel);
         }
         channels = null;
-        worker.shutdownNow();
-        worker = null;
+
+        /*
+         * Only shutdown the worker if it was created during start()
+         */
+        if (internalWorker) {
+            worker.shutdownNow();
+            worker = null;
+        }
         xnio = null;
     }
 
@@ -235,6 +256,7 @@ public final class Undertow {
         private boolean directBuffers;
         private final List<ListenerConfig> listeners = new ArrayList<>();
         private HttpHandler handler;
+        private XnioWorker worker;
 
         private final OptionMap.Builder workerOptions = OptionMap.builder();
         private final OptionMap.Builder socketOptions = OptionMap.builder();
@@ -359,6 +381,23 @@ public final class Undertow {
 
         public <T> Builder setWorkerOption(final Option<T> option, final T value) {
             workerOptions.set(option, value);
+            return this;
+        }
+
+        /**
+         * When null (the default), a new {@link XnioWorker} will be created according
+         * to the various worker-related configuration (ioThreads, workerThreads, workerOptions)
+         * when {@link Undertow#start()} is called.
+         * Additionally, this newly created worker will be shutdown when {@link Undertow#stop()} is called.
+         * <br/>
+         *
+         * When non-null, the provided {@link XnioWorker} will be reused instead of creating a new {@link XnioWorker}
+         * when {@link Undertow#start()} is called.
+         * Additionally, the provided {@link XnioWorker} will NOT be shutdown when {@link Undertow#stop()} is called.
+         * Essentially, the lifecycle of the provided worker must be maintained outside of the {@link Undertow} instance.
+         */
+        public <T> Builder setWorker(XnioWorker worker) {
+            this.worker = worker;
             return this;
         }
     }
