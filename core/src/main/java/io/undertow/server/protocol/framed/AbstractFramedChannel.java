@@ -146,6 +146,22 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         }
     };
 
+    private static final ChannelListener<AbstractFramedChannel> DRAIN_LISTENER = new ChannelListener<AbstractFramedChannel>() {
+        @Override
+        public void handleEvent(AbstractFramedChannel channel) {
+            try {
+                AbstractFramedStreamSourceChannel stream = channel.receive();
+                if(stream != null) {
+                    WebSocketLogger.REQUEST_LOGGER.debugf("Draining channel %s as no receive listener has been set", stream);
+                    stream.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, null, null));
+                    stream.wakeupReads();
+                }
+            } catch (IOException e) {
+                IoUtils.safeClose(channel);
+            }
+        }
+    };
+
     /**
      * Create a new {@link io.undertow.server.protocol.framed.AbstractFramedChannel}
      * 8
@@ -846,13 +862,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 channel.suspendReads();
                 return;
             } else {
-                final ChannelListener listener = receiveSetter.get();
-                if (listener != null) {
-                    WebSocketLogger.REQUEST_LOGGER.tracef("Invoking receive listener", receiver);
-                    ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
-                } else {
-                    channel.suspendReads();
+                ChannelListener listener = receiveSetter.get();
+                if(listener == null) {
+                    listener = DRAIN_LISTENER;
                 }
+                WebSocketLogger.REQUEST_LOGGER.tracef("Invoking receive listener", receiver);
+                ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
             }
             if (readData != null  && !readData.isFreed() && channel.isOpen()) {
                 try {
@@ -895,25 +910,27 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 return; //both sides need to be closed
             } else if(readData != null && !readData.isFreed()) {
                 //we make sure there is no data left to receive, if there is then we invoke the receive listener
-                final ChannelListener<? super C> listener = receiveSetter.get();
-                if(listener != null) {
-                    runInIoThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            while (readData != null  && !readData.isFreed()) {
-                                int rem = readData.getBuffer().remaining();
-                                ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, (ChannelListener) receiveSetter.get());
-                                if(!AbstractFramedChannel.this.isOpen()) {
-                                    break;
-                                }
-                                if (readData != null && rem == readData.getBuffer().remaining()) {
-                                    break;//make sure we are making progress
-                                }
+                runInIoThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        while (readData != null  && !readData.isFreed()) {
+                            int rem = readData.getBuffer().remaining();
+                            ChannelListener listener = receiveSetter.get();
+                            if(listener == null) {
+                                listener = DRAIN_LISTENER;
                             }
-                            handleEvent(c);
+                            ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
+                            if(!AbstractFramedChannel.this.isOpen()) {
+                                break;
+                            }
+                            if (readData != null && rem == readData.getBuffer().remaining()) {
+                                break;//make sure we are making progress
+                            }
                         }
-                    });
-                }
+                        handleEvent(c);
+                    }
+                });
+
                 return;
             }
 
