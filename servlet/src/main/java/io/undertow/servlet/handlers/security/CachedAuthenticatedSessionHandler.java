@@ -83,7 +83,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
             HttpSessionImpl httpSession = servletContext.getSession(notification.getExchange(), false);
             switch (eventType) {
                 case AUTHENTICATED:
-                    if(httpSession != null) {
+                    if(httpSession != null && !httpSession.isNew() && !httpSession.isInvalid()) {
                         ServletRequestContext src = notification.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY);
                         src.getOriginalRequest().changeSessionId();
                     }
