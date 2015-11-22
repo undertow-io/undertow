@@ -57,7 +57,6 @@ import java.util.List;
 public final class Undertow {
 
     private final int bufferSize;
-    private final int buffersPerRegion;
     private final int ioThreads;
     private final int workerThreads;
     private final boolean directBuffers;
@@ -73,7 +72,6 @@ public final class Undertow {
 
     private Undertow(Builder builder) {
         this.bufferSize = builder.bufferSize;
-        this.buffersPerRegion = builder.buffersPerRegion;
         this.ioThreads = builder.ioThreads;
         this.workerThreads = builder.workerThreads;
         this.directBuffers = builder.directBuffers;
@@ -232,7 +230,6 @@ public final class Undertow {
     public static final class Builder {
 
         private int bufferSize;
-        private int buffersPerRegion;
         private int ioThreads;
         private int workerThreads;
         private boolean directBuffers;
@@ -252,18 +249,15 @@ public final class Undertow {
                 //use 512b buffers
                 directBuffers = false;
                 bufferSize = 512;
-                buffersPerRegion = 10;
             } else if (maxMemory < 128 * 1024 * 1024) {
                 //use 1k buffers
                 directBuffers = true;
                 bufferSize = 1024;
-                buffersPerRegion = 10;
             } else {
                 //use 16k buffers for best performance
                 //as 16k is generally the max amount of data that can be sent in a single write() call
                 directBuffers = true;
                 bufferSize = 1024 * 16;
-                buffersPerRegion = 20;
             }
 
         }
@@ -328,8 +322,8 @@ public final class Undertow {
             return this;
         }
 
+        @Deprecated
         public Builder setBuffersPerRegion(final int buffersPerRegion) {
-            this.buffersPerRegion = buffersPerRegion;
             return this;
         }
 
