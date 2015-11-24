@@ -109,6 +109,7 @@ public class ServletRequestContext {
     private HttpSessionImpl session;
 
     private ServletContextImpl currentServletContext;
+    private String overridenSessionId;
 
     /**
      * If this is true the request is running inside the context of ServletInitialHandler
@@ -266,6 +267,14 @@ public class ServletRequestContext {
 
     public boolean isAsyncSupported() {
         return asyncSupported;
+    }
+
+    public String getOverridenSessionId() {
+        return overridenSessionId;
+    }
+
+    public void setOverridenSessionId(String overridenSessionId) {
+        this.overridenSessionId = overridenSessionId;
     }
 
     public void setAsyncSupported(boolean asyncSupported) {

@@ -46,6 +46,7 @@ import io.undertow.servlet.core.ManagedListener;
 import io.undertow.servlet.core.ManagedServlet;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletHandler;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
@@ -150,7 +151,7 @@ public class ServletContextImpl implements ServletContext {
         if (wrapper != null) {
             sessionConfig = wrapper.wrap(sessionConfig, deployment);
         }
-        this.sessionConfig = new IgnoreInvalidatedSessionConfig(sessionConfig);
+        this.sessionConfig = new ServletContextSessionConfig(sessionConfig);
     }
 
     @Override
@@ -961,15 +962,15 @@ public class ServletContextImpl implements ServletContext {
     }
 
     /**
-     * This is a bit of a hack to make sure than an invalidated session ID is not re-used.
+     * This is a bit of a hack to make sure than an invalidated session ID is not re-used. It also allows {@link io.undertow.servlet.handlers.ServletRequestContext#getOverridenSessionId()} to be used.
      */
-    static final class IgnoreInvalidatedSessionConfig implements SessionConfig {
+    static final class ServletContextSessionConfig implements SessionConfig {
 
         private final AttachmentKey<String> INVALIDATED = AttachmentKey.create(String.class);
 
         private final SessionConfig delegate;
 
-        private IgnoreInvalidatedSessionConfig(SessionConfig delegate) {
+        private ServletContextSessionConfig(SessionConfig delegate) {
             this.delegate = delegate;
         }
 
@@ -987,7 +988,13 @@ public class ServletContextImpl implements ServletContext {
         @Override
         public String findSessionId(HttpServerExchange exchange) {
             String invalidated = exchange.getAttachment(INVALIDATED);
-            String current = delegate.findSessionId(exchange);
+            ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+            final String current;
+            if(src.getOverridenSessionId() == null) {
+                current = delegate.findSessionId(exchange);
+            } else {
+                current = src.getOverridenSessionId();
+            }
             if(invalidated == null) {
                 return current;
             }

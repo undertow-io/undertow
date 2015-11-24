@@ -68,6 +68,7 @@ import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
+import io.undertow.servlet.handlers.CrawlerSessionManagerHandler;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
@@ -208,6 +209,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
             MetricsCollector metrics = deploymentInfo.getMetricsCollector();
             if(metrics != null) {
                 wrappedHandlers = new MetricsChainHandler(wrappedHandlers, metrics, deployment);
+            }
+            if( deploymentInfo.getCrawlerSessionManagerConfig() != null ) {
+                wrappedHandlers = new CrawlerSessionManagerHandler(deploymentInfo.getCrawlerSessionManagerConfig(), wrappedHandlers);
             }
 
             final ServletInitialHandler servletInitialHandler = SecurityActions.createServletInitialHandler(deployment.getServletPaths(), wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
