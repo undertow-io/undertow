@@ -172,6 +172,11 @@ public class DeploymentInfo implements Cloneable {
 
     private SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
+    /**
+     * Config for the {@link io.undertow.servlet.handlers.CrawlerSessionManagerHandler}
+     */
+    private CrawlerSessionManagerConfig crawlerSessionManagerConfig;
+
     public void validate() {
         if (deploymentName == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("deploymentName");
@@ -1174,6 +1179,15 @@ public class DeploymentInfo implements Cloneable {
         return sendCustomReasonPhraseOnError;
     }
 
+    public CrawlerSessionManagerConfig getCrawlerSessionManagerConfig() {
+        return crawlerSessionManagerConfig;
+    }
+
+    public DeploymentInfo setCrawlerSessionManagerConfig(CrawlerSessionManagerConfig crawlerSessionManagerConfig) {
+        this.crawlerSessionManagerConfig = crawlerSessionManagerConfig;
+        return this;
+    }
+
     /**
      * If this is true then the message parameter of {@link javax.servlet.http.HttpServletResponse#sendError(int, String)} and
      * {@link javax.servlet.http.HttpServletResponse#setStatus(int, String)} will be used as the HTTP reason phrase in
@@ -1278,6 +1292,7 @@ public class DeploymentInfo implements Cloneable {
         info.sessionIdGenerator = sessionIdGenerator;
         info.sendCustomReasonPhraseOnError = sendCustomReasonPhraseOnError;
         info.changeSessionIdOnLogin = changeSessionIdOnLogin;
+        info.crawlerSessionManagerConfig = crawlerSessionManagerConfig;
         return info;
     }
 
