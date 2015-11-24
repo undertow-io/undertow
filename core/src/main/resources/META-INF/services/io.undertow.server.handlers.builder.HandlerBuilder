@@ -29,3 +29,4 @@ io.undertow.server.handlers.LearningPushHandler$Builder
 io.undertow.server.handlers.SetHeaderHandler$Builder
 io.undertow.predicate.PredicatesHandler$DoneHandlerBuilder
 io.undertow.predicate.PredicatesHandler$RestartHandlerBuilder
+io.undertow.server.handlers.RequestBufferingHandler$Builder

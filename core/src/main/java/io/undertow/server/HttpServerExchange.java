@@ -302,6 +302,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_SHOULD_RESUME_WRITES = 1 << 19;
 
     /**
+     * Flag that indicates that the request channel has been reset, and {@link #getRequestChannel()} can be called again
+     */
+    private static final int FLAG_REQUEST_RESET= 1 << 20;
+
+    /**
      * The source address for the request. If this is null then the actual source address from the channel is used
      */
     private InetSocketAddress sourceAddress;
@@ -1132,6 +1137,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public StreamSourceChannel getRequestChannel() {
         if (requestChannel != null) {
+            if(anyAreSet(state, FLAG_REQUEST_RESET)) {
+                state &= ~FLAG_REQUEST_RESET;
+                return requestChannel;
+            }
             return null;
         }
         if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
@@ -1147,8 +1156,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         return requestChannel = new ReadDispatchChannel(sourceChannel);
     }
 
+    void resetRequestChannel() {
+        state |= FLAG_REQUEST_RESET;
+    }
+
     public boolean isRequestChannelAvailable() {
-        return requestChannel == null;
+        return requestChannel == null || anyAreSet(state, FLAG_REQUEST_RESET);
     }
 
     /**
@@ -1166,6 +1179,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return true if the request is complete
      */
     public boolean isRequestComplete() {
+        PooledByteBuffer[] data = getAttachment(BUFFERED_REQUEST_DATA);
+        if(data != null) {
+            return false;
+        }
         return allAreSet(state, FLAG_REQUEST_TERMINATED);
     }
 
