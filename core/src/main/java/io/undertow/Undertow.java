@@ -66,12 +66,12 @@ public final class Undertow {
     private final OptionMap workerOptions;
     private final OptionMap socketOptions;
     private final OptionMap serverOptions;
-    
+
     /**
      * Will be true when a {@link XnioWorker} instance was NOT provided to the {@link Builder}.
      * When true, a new worker will be created during {@link Undertow#start()},
      * and shutdown when {@link Undertow#stop()} is called.
-     * 
+     *
      * Will be false when a {@link XnioWorker} instance was provided to the {@link Builder}.
      * When false, the provided {@link #worker} will be used instead of creating a new one in {@link Undertow#start()}.
      * Also, when false, the {@link #worker} will NOT be shutdown when {@link Undertow#stop()} is called.
@@ -202,7 +202,7 @@ public final class Undertow {
             IoUtils.safeClose(channel);
         }
         channels = null;
-        
+
         /*
          * Only shutdown the worker if it was created during start()
          */
@@ -389,14 +389,14 @@ public final class Undertow {
             workerOptions.set(option, value);
             return this;
         }
-        
+
         /**
          * When null (the default), a new {@link XnioWorker} will be created according
          * to the various worker-related configuration (ioThreads, workerThreads, workerOptions)
          * when {@link Undertow#start()} is called.
-         * Additionally, this newly created worker will be shutdown when {@link Undertow#stop()} is called. 
+         * Additionally, this newly created worker will be shutdown when {@link Undertow#stop()} is called.
          * <br/>
-         * 
+         *
          * When non-null, the provided {@link XnioWorker} will be reused instead of creating a new {@link XnioWorker}
          * when {@link Undertow#start()} is called.
          * Additionally, the provided {@link XnioWorker} will NOT be shutdown when {@link Undertow#stop()} is called.
