@@ -99,6 +99,10 @@ public class Connectors {
         exchange.terminateResponse();
     }
 
+    public static void resetRequestChannel(final HttpServerExchange exchange) {
+        exchange.resetRequestChannel();
+    }
+
     private static String getCookieString(final Cookie cookie) {
         switch (cookie.getVersion()) {
             case 0:
