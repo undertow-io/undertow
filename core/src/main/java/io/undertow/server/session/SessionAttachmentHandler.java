@@ -20,9 +20,6 @@ package io.undertow.server.session;
 
 import io.undertow.Handlers;
 import io.undertow.UndertowMessages;
-import io.undertow.security.api.NotificationReceiver;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.security.api.SecurityNotification;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -45,18 +42,6 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     private final SessionConfig sessionConfig;
 
-    private final NotificationReceiver RECEIVER = new NotificationReceiver() {
-        @Override
-        public void handleNotification(SecurityNotification notification) {
-            if(notification.getEventType() == SecurityNotification.EventType.AUTHENTICATED) {
-                Session sc = sessionManager.getSession(notification.getExchange(), sessionConfig);
-                if(sc != null) {
-                    sc.changeSessionId(notification.getExchange(), sessionConfig);
-                }
-            }
-        }
-    };
-
     public SessionAttachmentHandler(final SessionManager sessionManager, final SessionConfig sessionConfig) {
         this.sessionConfig = sessionConfig;
         if (sessionManager == null) {
@@ -78,10 +63,6 @@ public class SessionAttachmentHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
         exchange.putAttachment(SessionConfig.ATTACHMENT_KEY, sessionConfig);
-        SecurityContext sc = exchange.getSecurityContext();
-        if(sc != null) {
-            sc.registerNotificationReceiver(RECEIVER);
-        }
         final UpdateLastAccessTimeListener handler = new UpdateLastAccessTimeListener(sessionConfig, sessionManager);
         exchange.addExchangeCompleteListener(handler);
         next.handleRequest(exchange);
