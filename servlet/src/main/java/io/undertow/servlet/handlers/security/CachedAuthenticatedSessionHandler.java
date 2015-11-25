@@ -94,7 +94,9 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
                                 ServletRequestContext src = notification.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY);
                                 src.getOriginalRequest().changeSessionId();
                             }
-                            session.setAttribute(NO_ID_CHANGE_REQUIRED, true);
+                            if(session.getAttribute(NO_ID_CHANGE_REQUIRED) == null) {
+                                session.setAttribute(NO_ID_CHANGE_REQUIRED, true);
+                            }
                         }
                     }
                     if (isCacheable(notification)) {
