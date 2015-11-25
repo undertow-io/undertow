@@ -47,6 +47,8 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
 
     public static final String ATTRIBUTE_NAME = CachedAuthenticatedSessionHandler.class.getName() + ".AuthenticatedSession";
 
+    public static final String NO_ID_CHANGE_REQUIRED = CachedAuthenticatedSessionHandler.class.getName() + ".NoIdChangeRequired";
+
     private final NotificationReceiver NOTIFICATION_RECEIVER = new SecurityNotificationReceiver();
     private final AuthenticatedSessionManager SESSION_MANAGER = new ServletAuthenticatedSessionManager();
 
@@ -83,20 +85,23 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
             HttpSessionImpl httpSession = servletContext.getSession(notification.getExchange(), false);
             switch (eventType) {
                 case AUTHENTICATED:
-                    if(httpSession != null && !httpSession.isNew() && !httpSession.isInvalid()) {
-                        ServletRequestContext src = notification.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-                        src.getOriginalRequest().changeSessionId();
+                    if(servletContext.getDeployment().getDeploymentInfo().isChangeSessionIdOnLogin()) {
+                        if (httpSession != null) {
+                            Session session = underlyingSession(httpSession);
+                            if (!httpSession.isNew() &&
+                                    !httpSession.isInvalid() &&
+                                    session.getAttribute(NO_ID_CHANGE_REQUIRED) == null) {
+                                ServletRequestContext src = notification.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                                src.getOriginalRequest().changeSessionId();
+                            }
+                            session.setAttribute(NO_ID_CHANGE_REQUIRED, true);
+                        }
                     }
                     if (isCacheable(notification)) {
                         if(httpSession == null) {
                             httpSession = servletContext.getSession(notification.getExchange(), true);
                         }
-                        Session session;
-                        if(System.getSecurityManager() == null) {
-                            session = httpSession.getSession();
-                        } else {
-                            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
-                        }
+                        Session session = underlyingSession(httpSession);
 
                         // It is normal for this notification to be received when using a previously cached session - in that
                         // case the IDM would have been given an opportunity to re-load the Account so updating here ready for
@@ -107,18 +112,24 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
                     break;
                 case LOGGED_OUT:
                     if (httpSession != null) {
-                        Session session;
-                        if (System.getSecurityManager() == null) {
-                            session = httpSession.getSession();
-                        } else {
-                            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
-                        }
+                        Session session = underlyingSession(httpSession);
                         session.removeAttribute(ATTRIBUTE_NAME);
+                        session.removeAttribute(NO_ID_CHANGE_REQUIRED);
                     }
                     break;
             }
         }
 
+    }
+
+    protected Session underlyingSession(HttpSessionImpl httpSession) {
+        Session session;
+        if (System.getSecurityManager() == null) {
+            session = httpSession.getSession();
+        } else {
+            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+        }
+        return session;
     }
 
     private class ServletAuthenticatedSessionManager implements AuthenticatedSessionManager {
@@ -127,12 +138,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
         public AuthenticatedSession lookupSession(HttpServerExchange exchange) {
             HttpSessionImpl httpSession = servletContext.getSession(exchange, false);
             if (httpSession != null) {
-                Session session;
-                if (System.getSecurityManager() == null) {
-                    session = httpSession.getSession();
-                } else {
-                    session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
-                }
+                Session session = underlyingSession(httpSession);
                 return (AuthenticatedSession) session.getAttribute(ATTRIBUTE_NAME);
             }
             return null;
@@ -142,12 +148,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
         public void clearSession(HttpServerExchange exchange) {
             HttpSessionImpl httpSession = servletContext.getSession(exchange, false);
             if (httpSession != null) {
-                Session session;
-                if (System.getSecurityManager() == null) {
-                    session = httpSession.getSession();
-                } else {
-                    session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
-                }
+                Session session = underlyingSession(httpSession);
                 session.removeAttribute(ATTRIBUTE_NAME);
             }
         }

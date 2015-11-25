@@ -168,6 +168,8 @@ public class DeploymentInfo implements Cloneable {
      */
     private int contentTypeCacheSize = 100;
 
+    private boolean changeSessionIdOnLogin = true;
+
     private SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
     public void validate() {
@@ -1017,16 +1019,18 @@ public class DeploymentInfo implements Cloneable {
         return jaspiAuthenticationMechanism;
     }
 
-    public void setJaspiAuthenticationMechanism(AuthenticationMechanism jaspiAuthenticationMechanism) {
+    public DeploymentInfo setJaspiAuthenticationMechanism(AuthenticationMechanism jaspiAuthenticationMechanism) {
         this.jaspiAuthenticationMechanism = jaspiAuthenticationMechanism;
+        return this;
     }
 
     public SecurityContextFactory getSecurityContextFactory() {
         return this.securityContextFactory;
     }
 
-    public void setSecurityContextFactory(final SecurityContextFactory securityContextFactory) {
+    public DeploymentInfo setSecurityContextFactory(final SecurityContextFactory securityContextFactory) {
         this.securityContextFactory = securityContextFactory;
+        return this;
     }
 
     public String getServerName() {
@@ -1060,8 +1064,9 @@ public class DeploymentInfo implements Cloneable {
         return disableCachingForSecuredPages;
     }
 
-    public void setDisableCachingForSecuredPages(boolean disableCachingForSecuredPages) {
+    public DeploymentInfo setDisableCachingForSecuredPages(boolean disableCachingForSecuredPages) {
         this.disableCachingForSecuredPages = disableCachingForSecuredPages;
+        return this;
     }
 
     public DeploymentInfo addLifecycleInterceptor(final LifecycleInterceptor interceptor) {
@@ -1102,8 +1107,9 @@ public class DeploymentInfo implements Cloneable {
      *
      * @param escapeErrorMessage If the error message should be escaped
      */
-    public void setEscapeErrorMessage(boolean escapeErrorMessage) {
+    public DeploymentInfo setEscapeErrorMessage(boolean escapeErrorMessage) {
         this.escapeErrorMessage = escapeErrorMessage;
+        return this;
     }
 
 
@@ -1140,24 +1146,27 @@ public class DeploymentInfo implements Cloneable {
         return defaultMultipartConfig;
     }
 
-    public void setDefaultMultipartConfig(MultipartConfigElement defaultMultipartConfig) {
+    public DeploymentInfo setDefaultMultipartConfig(MultipartConfigElement defaultMultipartConfig) {
         this.defaultMultipartConfig = defaultMultipartConfig;
+        return this;
     }
 
     public int getContentTypeCacheSize() {
         return contentTypeCacheSize;
     }
 
-    public void setContentTypeCacheSize(int contentTypeCacheSize) {
+    public DeploymentInfo setContentTypeCacheSize(int contentTypeCacheSize) {
         this.contentTypeCacheSize = contentTypeCacheSize;
+        return this;
     }
 
     public SessionIdGenerator getSessionIdGenerator() {
         return sessionIdGenerator;
     }
 
-    public void setSessionIdGenerator(SessionIdGenerator sessionIdGenerator) {
+    public DeploymentInfo setSessionIdGenerator(SessionIdGenerator sessionIdGenerator) {
         this.sessionIdGenerator = sessionIdGenerator;
+        return this;
     }
 
 
@@ -1175,6 +1184,15 @@ public class DeploymentInfo implements Cloneable {
      */
     public DeploymentInfo setSendCustomReasonPhraseOnError(boolean sendCustomReasonPhraseOnError) {
         this.sendCustomReasonPhraseOnError = sendCustomReasonPhraseOnError;
+        return this;
+    }
+
+    public boolean isChangeSessionIdOnLogin() {
+        return changeSessionIdOnLogin;
+    }
+
+    public DeploymentInfo setChangeSessionIdOnLogin(boolean changeSessionIdOnLogin) {
+        this.changeSessionIdOnLogin = changeSessionIdOnLogin;
         return this;
     }
 
@@ -1259,6 +1277,7 @@ public class DeploymentInfo implements Cloneable {
         info.contentTypeCacheSize = contentTypeCacheSize;
         info.sessionIdGenerator = sessionIdGenerator;
         info.sendCustomReasonPhraseOnError = sendCustomReasonPhraseOnError;
+        info.changeSessionIdOnLogin = changeSessionIdOnLogin;
         return info;
     }
 
