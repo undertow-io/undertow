@@ -37,6 +37,7 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.List;
 
 import static org.jboss.logging.Logger.Level.DEBUG;
@@ -338,4 +339,13 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5071, value = "Undertow request failed %s")
     void undertowRequestFailed(@Cause Throwable t, HttpServerExchange exchange);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5072, value = "Thread %s (id=%s) has been active for %s milliseconds (since %s) to serve the same request for %s and may be stuck (configured threshold for this StuckThreadDetectionValve is %s seconds). There is/are %s thread(s) in total that are monitored by this Valve and may be stuck.")
+    void stuckThreadDetected(String threadName, long threadId, long active, Date start, String requestUri, int threshold, int stuckCount, @Cause Throwable stackTrace);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5073, value = "Thread %s (id=%s) was previously reported to be stuck but has completed. It was active for approximately %s milliseconds. There is/are still %s thread(s) that are monitored by this Valve and may be stuck.")
+    void stuckThreadCompleted(String threadName, long threadId, long active, int stuckCount);
+
 }
