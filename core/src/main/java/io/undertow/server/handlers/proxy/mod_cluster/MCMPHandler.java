@@ -49,11 +49,14 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -99,6 +102,8 @@ class MCMPHandler implements HttpHandler {
     public static final HttpString INFO = new HttpString("INFO");
     public static final HttpString PING = new HttpString("PING");
 
+    private static final Set<HttpString> HANDLED_METHODS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(CONFIG, ENABLE_APP, DISABLE_APP, STOP_APP, REMOVE_APP, STATUS, INFO, DUMP, PING)));
+
     protected static final String VERSION_PROTOCOL = "0.2.1";
     protected static final String MOD_CLUSTER_EXPOSED_VERSION = "mod_cluster_undertow/" + Version.getVersionString();
 
@@ -129,6 +134,11 @@ class MCMPHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
+        final HttpString method = exchange.getRequestMethod();
+        if(!HANDLED_METHODS.contains(method)) {
+            next.handleRequest(exchange);
+            return;
+        }
         /*
          * Proxy the request that needs to be proxied and process others
          */
@@ -146,7 +156,6 @@ class MCMPHandler implements HttpHandler {
             return;
         }
 
-        final HttpString method = exchange.getRequestMethod();
         try {
             handleRequest(method, exchange);
         } catch (Exception e) {
