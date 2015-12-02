@@ -346,7 +346,11 @@ public abstract class HttpRequestParser {
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
-                    if (parseState < HOST_DONE) {
+                    if(parseState == SECOND_SLASH) {
+                        exchange.setRequestPath("/");
+                        exchange.setRelativePath("/");
+                        exchange.setRequestURI(path);
+                    } else if (parseState < HOST_DONE) {
                         String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash);
                         exchange.setRequestPath(decodedPath);
                         exchange.setRelativePath(decodedPath);
@@ -400,7 +404,11 @@ public abstract class HttpRequestParser {
 
     private void beginPathParameters(ParseState state, HttpServerExchange exchange, StringBuilder stringBuilder, int parseState, int canonicalPathStart, boolean urlDecodeRequired) {
         final String path = stringBuilder.toString();
-        if (parseState < HOST_DONE) {
+        if(parseState == SECOND_SLASH) {
+            exchange.setRequestPath("/");
+            exchange.setRelativePath("/");
+            exchange.setRequestURI(path);
+        } else if (parseState < HOST_DONE) {
             String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash);
             exchange.setRequestPath(decodedPath);
             exchange.setRelativePath(decodedPath);
@@ -420,7 +428,11 @@ public abstract class HttpRequestParser {
 
     private void beginQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange, StringBuilder stringBuilder, int parseState, int canonicalPathStart, boolean urlDecodeRequired) {
         final String path = stringBuilder.toString();
-        if (parseState < HOST_DONE) {
+        if (parseState == SECOND_SLASH) {
+            exchange.setRequestPath("/");
+            exchange.setRelativePath("/");
+            exchange.setRequestURI(path);
+        } else if (parseState < HOST_DONE) {
             String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash);
             exchange.setRequestPath(decodedPath);
             exchange.setRelativePath(decodedPath);
