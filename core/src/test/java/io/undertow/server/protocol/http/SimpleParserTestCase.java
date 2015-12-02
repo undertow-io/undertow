@@ -119,6 +119,17 @@ public class SimpleParserTestCase {
     }
 
     @Test
+    public void testFullUrlRootPath() {
+        byte[] in = "GET http://myurl.com HTTP/1.1\r\n\r\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/", result.getRequestPath());
+        Assert.assertEquals("http://myurl.com", result.getRequestURI());
+    }
+    @Test
     public void testSimpleRequest() {
         byte[] in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\n".getBytes();
         runTest(in);
