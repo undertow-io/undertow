@@ -195,6 +195,11 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     }
 
     @Override
+    public boolean isUpgradeSupported() {
+        return false;
+    }
+
+    @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
             clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());

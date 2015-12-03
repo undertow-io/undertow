@@ -27,6 +27,7 @@ import io.undertow.client.UndertowClient;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
+import io.undertow.util.Headers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -503,7 +504,8 @@ public class ProxyConnectionPool implements Closeable {
         while (connectionHolder != null && !connectionHolder.clientConnection.isOpen()) {
             connectionHolder = data.availableConnections.poll();
         }
-        if (connectionHolder != null) {
+        boolean upgradeRequest = exchange.getRequestHeaders().contains(Headers.UPGRADE);
+        if (connectionHolder != null && (!upgradeRequest || connectionHolder.clientConnection.isUpgradeSupported())) {
             if (exclusive) {
                 data.connections--;
             }

@@ -95,6 +95,26 @@ public class Http2ClientConnection implements ClientConnection {
         this.initialUpgradeRequest = initialUpgradeRequest;
     }
 
+    public Http2ClientConnection(Http2Channel http2Channel, ClientCallback<ClientExchange> upgradeReadyCallback, ClientRequest clientRequest, String defaultHost, ClientStatistics clientStatistics) {
+
+        this.http2Channel = http2Channel;
+        this.defaultHost = defaultHost;
+        this.clientStatistics = clientStatistics;
+        http2Channel.getReceiveSetter().set(new Http2ReceiveListener());
+        http2Channel.resumeReceives();
+        http2Channel.addCloseTask(new ChannelListener<Http2Channel>() {
+            @Override
+            public void handleEvent(Http2Channel channel) {
+                ChannelListeners.invokeChannelListener(Http2ClientConnection.this, closeSetter.get());
+            }
+        });
+        this.initialUpgradeRequest = false;
+
+        Http2ClientExchange exchange = new Http2ClientExchange(this, null, clientRequest);
+        exchange.setResponseListener(upgradeReadyCallback);
+        currentExchanges.put(1, exchange);
+    }
+
     @Override
     public void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
         request.getRequestHeaders().put(PATH, request.getPath());
@@ -306,6 +326,11 @@ public class Http2ClientConnection implements ClientConnection {
     @Override
     public ClientStatistics getStatistics() {
         return clientStatistics;
+    }
+
+    @Override
+    public boolean isUpgradeSupported() {
+        return false;
     }
 
     private class Http2ReceiveListener implements ChannelListener<Http2Channel> {

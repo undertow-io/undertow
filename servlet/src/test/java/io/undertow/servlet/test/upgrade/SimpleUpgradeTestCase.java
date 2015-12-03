@@ -69,7 +69,7 @@ public class SimpleUpgradeTestCase {
 
             InputStream in = socket.getInputStream();
             OutputStream out = socket.getOutputStream();
-            out.write(("GET " + url + " HTTP/1.1\r\nConnection: upgrade\r\n\r\n").getBytes());
+            out.write(("GET " + url + " HTTP/1.1\r\nConnection: upgrade\r\nUpgrade: servlet\r\n\r\n").getBytes());
             out.flush();
             Assert.assertTrue(readBytes(in).startsWith("HTTP/1.1 101 Switching Protocols\r\n"));
 
@@ -94,7 +94,7 @@ public class SimpleUpgradeTestCase {
         final StringBuilder builder = new StringBuilder();
         byte[] buf = new byte[100];
         int read;
-        while (!builder.toString().endsWith("\r\n\r\n") && (read = in.read(buf)) != -1) { //awesome hack
+        while (!builder.toString().contains("\r\n\r\n") && (read = in.read(buf)) != -1) { //awesome hack
             builder.append(new String(buf, 0, read));
         }
         return builder.toString();

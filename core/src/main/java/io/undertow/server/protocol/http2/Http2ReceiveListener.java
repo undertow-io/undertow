@@ -200,7 +200,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setRequestScheme(initial.getRequestScheme());
         exchange.setProtocol(initial.getProtocol());
         exchange.setRequestMethod(initial.getRequestMethod());
-        Connectors.setExchangeRequestPath(exchange, initial.getRequestURI(), encoding, decode, allowEncodingSlash, decodeBuffer);
+        exchange.setQueryString(initial.getQueryString());
+        String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
+        Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer);
 
         SSLSession session = channel.getSslSession();
         if(session != null) {

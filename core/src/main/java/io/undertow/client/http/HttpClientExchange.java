@@ -77,9 +77,14 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
             return;
         }
         state |= REQUEST_TERMINATED;
+        clientConnection.requestDataSent();
         if (anyAreSet(state, RESPONSE_TERMINATED)) {
-            clientConnection.requestDone();
+            clientConnection.exchangeDone();
         }
+    }
+
+    boolean isRequestDataSent() {
+        return anyAreSet(state, REQUEST_TERMINATED);
     }
 
     void terminateResponse() {
@@ -88,7 +93,7 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
         }
         state |= RESPONSE_TERMINATED;
         if (anyAreSet(state, REQUEST_TERMINATED)) {
-            clientConnection.requestDone();
+            clientConnection.exchangeDone();
         }
     }
 
@@ -183,6 +188,10 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     @Override
     public ClientConnection getConnection() {
         return clientConnection;
+    }
+
+    ClientCallback<ClientExchange> getResponseCallback() {
+        return responseCallback;
     }
 
     void invokeReadReadyCallback() {
