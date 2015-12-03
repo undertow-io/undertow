@@ -28,6 +28,7 @@ import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
 import io.undertow.util.PathMatcher;
 import io.undertow.connector.ByteBufferPool;
+import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
@@ -70,10 +71,13 @@ class ModClusterContainer implements ModClusterController {
     private final NodeHealthChecker healthChecker;
     private final long removeBrokenNodesThreshold;
 
-    ModClusterContainer(final ModCluster modCluster, final XnioSsl xnioSsl, final UndertowClient client) {
+    private final OptionMap clientOptions;
+
+    ModClusterContainer(final ModCluster modCluster, final XnioSsl xnioSsl, final UndertowClient client, OptionMap clientOptions) {
         this.xnioSsl = xnioSsl;
         this.client = client;
         this.modCluster = modCluster;
+        this.clientOptions = clientOptions;
         this.healthChecker = modCluster.getHealthChecker();
         this.proxyClient = new ModClusterProxyClient(null, this);
         this.removeBrokenNodesThreshold = removeThreshold(modCluster.getHealthCheckInterval(), modCluster.getRemoveBrokenNodes());
@@ -459,6 +463,10 @@ class ModClusterContainer implements ModClusterController {
             }
         }
         return null;
+    }
+
+    OptionMap getClientOptions() {
+        return clientOptions;
     }
 
     static String getJVMRoute(final String sessionId) {

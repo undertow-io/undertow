@@ -76,7 +76,7 @@ class Node {
         this.balancerConfig = balancerConfig;
         this.container = container;
         this.connectionPoolManager = new NodeConnectionPoolManager();
-        this.connectionPool = new ProxyConnectionPool(connectionPoolManager, nodeConfig.getConnectionURI(), container.getXnioSsl(), container.getClient(), OptionMap.EMPTY);
+        this.connectionPool = new ProxyConnectionPool(connectionPoolManager, nodeConfig.getConnectionURI(), container.getXnioSsl(), container.getClient(), container.getClientOptions());
     }
 
     public int getId() {
