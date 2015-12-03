@@ -396,6 +396,11 @@ public final class ProxyHandler implements HttpHandler {
                 //we don't want to close the connection to the backend
                 outboundRequestHeaders.put(Headers.CONNECTION, "keep-alive");
             }
+            if("h2c".equals(exchange.getRequestHeaders().getFirst(Headers.UPGRADE))) {
+                //we don't allow h2c upgrade requests to be passed through to the backend
+                exchange.getRequestHeaders().remove(Headers.UPGRADE);
+                outboundRequestHeaders.put(Headers.CONNECTION, "keep-alive");
+            }
 
             for (Map.Entry<HttpString, ExchangeAttribute> entry : requestHeaders.entrySet()) {
                 String headerValue = entry.getValue().readAttribute(exchange);
