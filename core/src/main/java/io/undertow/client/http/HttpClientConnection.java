@@ -62,6 +62,7 @@ import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.PushBackStreamSourceConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
+import org.xnio.ssl.SslConnection;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -304,7 +305,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             return;
         }
         final HttpClientExchange httpClientExchange = new HttpClientExchange(clientCallback, request, this);
-        if(!http2Tried && options.get(UndertowOptions.ENABLE_HTTP2, false) && !request.getRequestHeaders().contains(Headers.UPGRADE) && request.getMethod().equals(Methods.GET)) {
+        boolean ssl = this.connection instanceof SslConnection;
+        if(!ssl && !http2Tried && options.get(UndertowOptions.ENABLE_HTTP2, false) && !request.getRequestHeaders().contains(Headers.UPGRADE) && request.getMethod().equals(Methods.GET)) {
             //this is the first request, as we want to try a HTTP2 upgrade
             request.getRequestHeaders().put(new HttpString("HTTP2-Settings"), Http2ClearClientProvider.createSettingsFrame(options, bufferPool));
             request.getRequestHeaders().put(Headers.UPGRADE, Http2Channel.CLEARTEXT_UPGRADE_STRING);
