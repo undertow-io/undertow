@@ -26,6 +26,7 @@ import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
+import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
@@ -67,7 +68,7 @@ public class ModCluster {
         this.maxRequestTime = builder.maxRequestTime;
         this.ttl = builder.ttl;
         this.useAlias = builder.useAlias;
-        this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client);
+        this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client, builder.clientOptions);
     }
 
     protected String getServerID() {
@@ -203,6 +204,7 @@ public class ModCluster {
         private NodeHealthChecker healthChecker = NodeHealthChecker.NO_CHECK;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
         private long removeBrokenNodes = TimeUnit.MINUTES.toMillis(1);
+        public OptionMap clientOptions = OptionMap.EMPTY;
 
         private Builder(XnioWorker xnioWorker, UndertowClient client, XnioSsl xnioSsl) {
             this.xnioSsl = xnioSsl;
@@ -265,6 +267,11 @@ public class ModCluster {
 
         public Builder setTtl(long ttl) {
             this.ttl = ttl;
+            return this;
+        }
+
+        public Builder setClientOptions(OptionMap clientOptions) {
+            this.clientOptions = clientOptions;
             return this;
         }
     }
