@@ -32,6 +32,7 @@ import io.undertow.util.StringWriteChannelListener;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -81,6 +82,7 @@ public class PreChunkedResponseTransferCodingTestCase {
 
     @Test
     public void sendHttpRequest() throws IOException {
+        Assume.assumeFalse(DefaultServer.isH2()); //this test will still run under h2-upgrade, but will fail
         connection = null;
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();

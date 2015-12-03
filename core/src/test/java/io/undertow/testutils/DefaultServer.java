@@ -125,6 +125,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final boolean spdy = Boolean.getBoolean("test.spdy");
     private static final boolean h2 = Boolean.getBoolean("test.h2");
     private static final boolean h2c = Boolean.getBoolean("test.h2c");
+    private static final boolean h2cUpgrade = Boolean.getBoolean("test.h2c-upgrade");
     private static final boolean spdyPlain = Boolean.getBoolean("test.spdy-plain");
     private static final boolean https = Boolean.getBoolean("test.https");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
@@ -332,7 +333,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
 
 
-                } else if (h2c) {
+                } else if (h2c || h2cUpgrade) {
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
@@ -342,7 +343,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2c-prior", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
+                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI(h2cUpgrade ? "http" : "h2c-prior", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, null, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 30000, HANDLE_404);
                     setupProxyHandlerForSSL(proxyHandler);
                     proxyOpenListener.setRootHandler(proxyHandler);
                     proxyServer.resumeAccepts();
@@ -406,7 +407,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     }
 
                 }
-                if(h2c) {
+                if(h2cUpgrade) {
                     openListener.setRootHandler(new Http2UpgradeHandler(rootHandler));
                 } else {
                     openListener.setRootHandler(rootHandler);
@@ -476,6 +477,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             }
         }
         if(spdy || spdyPlain || h2 || h2c || ajp) {
+            //h2c-upgrade we still allow HTTP1
             HttpOneOnly httpOneOnly = method.getAnnotation(HttpOneOnly.class);
             if(httpOneOnly == null) {
                 httpOneOnly = method.getMethod().getDeclaringClass().getAnnotation(HttpOneOnly.class);
@@ -544,6 +546,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             }
             if(h2c) {
                 sb.append("{http2-clear}");
+            }
+            if(h2cUpgrade) {
+                sb.append("{http2-clear-upgrade}");
             }
             return sb.toString();
         }
@@ -745,7 +750,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static boolean isProxy() {
-        return proxy || spdy || https || h2 || h2c|| spdyPlain || ajp;
+        return proxy || spdy || https || h2 || h2c|| spdyPlain || ajp || h2cUpgrade;
     }
 
     public static boolean isSpdy() {
@@ -754,6 +759,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     public static boolean isHttps() {
         return https;
+    }
+
+    public static boolean isH2() {
+        return h2 || h2c || h2cUpgrade;
     }
 
     /**

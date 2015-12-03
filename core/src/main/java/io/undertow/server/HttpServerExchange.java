@@ -853,6 +853,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
+        if(!getRequestHeaders().contains(Headers.UPGRADE)) {
+            throw UndertowMessages.MESSAGES.notAnUpgradeRequest();
+        }
         connection.setUpgradeListener(listener);
         setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);

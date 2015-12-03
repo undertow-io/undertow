@@ -55,7 +55,10 @@ import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
 
 /**
- * HTTP2 client provider that uses HTTP upgrade rather than ALPN
+ * HTTP2 client provider that uses HTTP upgrade rather than ALPN. This provider will only use h2c, and sends an initial
+ * dummy request to do the initial upgrade.
+ *
+ *
  *
  * @author Stuart Douglas
  */
@@ -135,12 +138,12 @@ public class Http2ClearClientProvider implements ClientProvider {
         headers.put(Headers.UPGRADE_STRING, Http2Channel.CLEARTEXT_UPGRADE_STRING);
         headers.put(Headers.CONNECTION_STRING, "Upgrade, HTTP2-Settings");
         headers.put(Headers.HOST_STRING, uri.getHost());
-        headers.put("X-HTTP2-connect-only", "connect"); //undertow specific header that tells the remote server that this request should
+        headers.put("X-HTTP2-connect-only", "connect"); //undertow specific header that tells the remote server that this request should be ignored
         return headers;
     }
 
 
-    private String createSettingsFrame(OptionMap options, ByteBufferPool bufferPool) {
+    public static String createSettingsFrame(OptionMap options, ByteBufferPool bufferPool) {
         PooledByteBuffer b = bufferPool.allocate();
         try {
             ByteBuffer currentBuffer = b.getBuffer();

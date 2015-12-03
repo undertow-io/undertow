@@ -266,6 +266,11 @@ public class SpdyClientConnection implements ClientConnection {
         return clientStatistics;
     }
 
+    @Override
+    public boolean isUpgradeSupported() {
+        return false;
+    }
+
     private class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
 
         @Override

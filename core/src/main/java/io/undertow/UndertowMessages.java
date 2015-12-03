@@ -425,4 +425,7 @@ public interface UndertowMessages {
 
     @Message(id = 132, value = "HPACK decode failed")
     HpackException hpackFailed();
+
+    @Message(id = 133, value = "Request did not contain an Upgrade header, upgrade is not permitted")
+    IllegalStateException notAnUpgradeRequest();
 }

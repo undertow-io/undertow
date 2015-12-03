@@ -111,4 +111,6 @@ public interface ClientConnection extends Channel {
      * @return the statistics information, or <code>null</code> if statistics are not supported or disabled
      */
     ClientStatistics getStatistics();
+
+    boolean isUpgradeSupported();
 }

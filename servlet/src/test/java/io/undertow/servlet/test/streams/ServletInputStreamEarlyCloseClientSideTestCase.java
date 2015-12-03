@@ -24,6 +24,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,6 +56,7 @@ public class ServletInputStreamEarlyCloseClientSideTestCase {
 
     @Test
     public void testServletInputStreamEarlyClose() throws Exception {
+        Assume.assumeFalse(DefaultServer.isH2());
         TestHttpClient client = new TestHttpClient();
         EarlyCloseClientServlet.reset();
         try (Socket socket = new Socket()) {

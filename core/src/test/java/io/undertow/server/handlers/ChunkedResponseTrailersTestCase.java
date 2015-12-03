@@ -38,6 +38,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.io.ChunkedInputStream;
 import org.apache.http.protocol.HttpContext;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -91,6 +92,7 @@ public class ChunkedResponseTrailersTestCase {
 
     @Test
     public void sendHttpRequest() throws Exception {
+        Assume.assumeFalse(DefaultServer.isH2()); //this test will still run under h2-upgrade, but will fail
 
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
