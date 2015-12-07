@@ -199,9 +199,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             HttpHandler wrappedHandlers = ServletDispatchingHandler.INSTANCE;
             wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
-            HttpHandler securityHandler = setupSecurityHandlers(wrappedHandlers);
-            wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, securityHandler, wrappedHandlers);
-
+            if(!deploymentInfo.isSecurityDisabled()) {
+                HttpHandler securityHandler = setupSecurityHandlers(wrappedHandlers);
+                wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, securityHandler, wrappedHandlers);
+            }
             HttpHandler outerHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
             wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, outerHandlers, wrappedHandlers);
             wrappedHandlers = handleDevelopmentModePersistentSessions(wrappedHandlers, deploymentInfo, deployment.getSessionManager(), servletContext);
