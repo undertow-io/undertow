@@ -177,6 +177,8 @@ public class DeploymentInfo implements Cloneable {
      */
     private CrawlerSessionManagerConfig crawlerSessionManagerConfig;
 
+    private boolean securityDisabled;
+
     public void validate() {
         if (deploymentName == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("deploymentName");
@@ -1210,6 +1212,15 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public boolean isSecurityDisabled() {
+        return securityDisabled;
+    }
+
+    public DeploymentInfo setSecurityDisabled(boolean securityDisabled) {
+        this.securityDisabled = securityDisabled;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1293,6 +1304,7 @@ public class DeploymentInfo implements Cloneable {
         info.sendCustomReasonPhraseOnError = sendCustomReasonPhraseOnError;
         info.changeSessionIdOnLogin = changeSessionIdOnLogin;
         info.crawlerSessionManagerConfig = crawlerSessionManagerConfig;
+        info.securityDisabled = securityDisabled;
         return info;
     }
 
