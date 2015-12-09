@@ -57,8 +57,6 @@ public class DeploymentImpl implements Deployment {
     private final ServletPathMatches servletPaths;
     private final ManagedServlets servlets;
     private final ManagedFilters filters;
-    private final Executor executor;
-    private final Executor asyncExecutor;
 
 
     private volatile ApplicationListeners applicationListeners;
@@ -76,8 +74,6 @@ public class DeploymentImpl implements Deployment {
         this.deploymentManager = deploymentManager;
         this.deploymentInfo = deploymentInfo;
         this.servletContainer = servletContainer;
-        this.executor = deploymentInfo.getExecutor();
-        this.asyncExecutor = deploymentInfo.getAsyncExecutor();
         servletPaths = new ServletPathMatches(this);
         servlets = new ManagedServlets(this, servletPaths);
         filters = new ManagedFilters(this, servletPaths);
@@ -190,12 +186,12 @@ public class DeploymentImpl implements Deployment {
 
     @Override
     public Executor getExecutor() {
-        return executor;
+        return deploymentInfo.getExecutor();
     }
 
     @Override
     public Executor getAsyncExecutor() {
-        return asyncExecutor;
+        return deploymentInfo.getAsyncExecutor();
     }
 
     public Charset getDefaultCharset() {
