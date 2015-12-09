@@ -428,4 +428,7 @@ public interface UndertowMessages {
 
     @Message(id = 133, value = "Request did not contain an Upgrade header, upgrade is not permitted")
     IllegalStateException notAnUpgradeRequest();
+
+    @Message(id = 134, value = "Authentication mechanism %s requires property %s to be set")
+    IllegalStateException authenticationPropertyNotSet(String name, String header);
 }

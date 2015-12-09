@@ -33,6 +33,7 @@ import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.security.impl.DigestAuthenticationMechanism;
 import io.undertow.security.impl.ExternalAuthenticationMechanism;
+import io.undertow.security.impl.GenericHeaderAuthenticationMechanism;
 import io.undertow.security.impl.SecurityContextFactoryImpl;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
@@ -294,6 +295,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
         if(!factoryMap.containsKey(ExternalAuthenticationMechanism.NAME)) {
             factoryMap.put(ExternalAuthenticationMechanism.NAME, new ExternalAuthenticationMechanism.Factory(identityManager));
+        }
+        if(!factoryMap.containsKey(GenericHeaderAuthenticationMechanism.NAME)) {
+            factoryMap.put(GenericHeaderAuthenticationMechanism.NAME, new GenericHeaderAuthenticationMechanism.Factory(identityManager));
         }
         HttpHandler current = initialHandler;
         current = new SSLInformationAssociationHandler(current);
