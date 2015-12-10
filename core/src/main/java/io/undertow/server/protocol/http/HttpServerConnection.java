@@ -221,6 +221,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     @Override
     protected void exchangeComplete(HttpServerExchange exchange) {
+        if(fixedLengthStreamSinkConduit != null) {
+            fixedLengthStreamSinkConduit.clearExchange();
+        }
         if (pipelineBuffer == null) {
             readListener.exchangeComplete(exchange);
         } else {
