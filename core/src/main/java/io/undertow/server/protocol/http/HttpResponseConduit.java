@@ -114,7 +114,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
      * @throws IOException
      */
     private int processWrite(int state, final Object userData, int pos, int length) throws IOException {
-        if (done) {
+        if (done || exchange == null) {
             throw new ClosedChannelException();
         }
         try {
@@ -270,6 +270,9 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     private void bufferDone() {
+        if(exchange == null) {
+            return;
+        }
         HttpServerConnection connection = (HttpServerConnection)exchange.getConnection();
         if(connection.getExtraBytes() != null && connection.isOpen() && exchange.isRequestComplete()) {
             //if we are pipelining we hold onto the buffer
@@ -278,6 +281,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
             pooledBuffer.close();
             pooledBuffer = null;
+            this.exchange = null;
         }
     }
 
