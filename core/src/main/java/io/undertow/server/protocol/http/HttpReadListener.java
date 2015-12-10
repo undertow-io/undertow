@@ -108,7 +108,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     public void newRequest() {
         state.reset();
         read = 0;
-        httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
         if(parseTimeoutUpdater != null) {
             parseTimeoutUpdater.connectionIdle();
         }
@@ -173,6 +172,9 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     buffer.flip();
                 }
                 int begin = buffer.remaining();
+                if(httpServerExchange == null) {
+                    httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
+                }
                 parser.handle(buffer, state, httpServerExchange);
                 if (buffer.hasRemaining()) {
                     free = false;

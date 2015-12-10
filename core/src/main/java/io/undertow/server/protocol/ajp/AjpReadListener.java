@@ -92,7 +92,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     public void startRequest() {
         connection.resetChannel();
         state = new AjpRequestParseState();
-        httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
         read = 0;
         if(parseTimeoutUpdater != null) {
             parseTimeoutUpdater.connectionIdle();
@@ -161,6 +160,9 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     buffer.flip();
                 }
                 int begin = buffer.remaining();
+                if(httpServerExchange == null) {
+                    httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
+                }
                 parser.parse(buffer, state, httpServerExchange);
 
                 read += begin - buffer.remaining();
