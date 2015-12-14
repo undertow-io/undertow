@@ -658,6 +658,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     return 0;
                 }
             }
+            dataToUnwrapLength = dataToUnwrap.getBuffer().remaining();
+
             long original = 0;
             if(userBuffers != null) {
                 original = Buffers.remaining(userBuffers);
@@ -846,9 +848,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 sink.suspendWrites();
                 if(anyAreSet(state, FLAG_WRITES_RESUMED)) {
                     source.resumeReads();
-                }
-                if (anyAreSet(state, FLAG_DATA_TO_UNWRAP) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED)) {
-                    runReadListener();
                 }
 
                 return false;
