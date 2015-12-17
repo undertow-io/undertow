@@ -189,9 +189,11 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
                 }
             } else if (closed) {
                 try {
-                    writer.flush();
-                    writer.close();
-                    writer = null;
+                    if(writer != null) {
+                        writer.flush();
+                        writer.close();
+                        writer = null;
+                    }
                 } catch (IOException e) {
                     UndertowLogger.ROOT_LOGGER.errorWritingAccessLog(e);
                 }
