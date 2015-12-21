@@ -51,6 +51,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     static {
         try {
             hashCodeField = HttpString.class.getDeclaredField("hashCode");
+            hashCodeField.setAccessible(true);
         } catch (NoSuchFieldException e) {
             throw new NoSuchFieldError(e.getMessage());
         }

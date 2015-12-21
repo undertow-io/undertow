@@ -21,6 +21,12 @@ package io.undertow.util;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
 /**
  * @author Matej Lazar
  */
@@ -55,6 +61,19 @@ public class HttpStringTestCase {
 
         HttpString cookie =  new HttpString(Headers.COOKIE_STRING);
         Assert.assertEquals(cookie.compareTo(Headers.CONTENT_TYPE), Headers.COOKIE.compareTo(Headers.CONTENT_TYPE));
+    }
+
+    @Test
+    public void testSerialization() throws IOException, ClassNotFoundException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ObjectOutputStream so = new ObjectOutputStream(out);
+        HttpString testString = new HttpString("test");
+        so.writeObject(testString);
+        so.close();
+
+        ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(out.toByteArray()));
+        Object res = in.readObject();
+        Assert.assertEquals(testString, res);
     }
 
 }
