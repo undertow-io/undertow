@@ -22,6 +22,7 @@ import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
@@ -111,5 +112,15 @@ public class RangeStreamSinkConduit extends AbstractStreamSinkConduit<StreamSink
     @Override
     public long transferFrom(FileChannel src, long position, long count) throws IOException {
         return src.transferTo(position, count, new ConduitWritableByteChannel(this));
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return Conduits.writeFinalBasic(this, srcs, offset, length);
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return Conduits.writeFinalBasic(this, src);
     }
 }
