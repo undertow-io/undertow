@@ -158,9 +158,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
         deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
-        for(SessionListener listener : deploymentInfo.getSessionListeners()) {
-            deployment.getSessionManager().registerSessionListener(listener);
-        }
 
         final List<ThreadSetupAction> setup = new ArrayList<>();
         setup.add(ServletRequestContextThreadSetupAction.INSTANCE);
@@ -191,6 +188,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
 
             deployment.getSessionManager().registerSessionListener(new SessionListenerBridge(threadSetupAction, listeners, servletContext));
+            for(SessionListener listener : deploymentInfo.getSessionListeners()) {
+                deployment.getSessionManager().registerSessionListener(listener);
+            }
 
             initializeErrorPages(deployment, deploymentInfo);
             initializeMimeMappings(deployment, deploymentInfo);
