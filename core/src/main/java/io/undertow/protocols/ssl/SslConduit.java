@@ -671,7 +671,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             } else {
                 dataToUnwrapLength = dataToUnwrap.getResource().remaining();
             }
-            dataToUnwrapLength = dataToUnwrap.getBuffer().remaining();
+            dataToUnwrapLength = dataToUnwrap.getResource().remaining();
 
             long original = 0;
             if(userBuffers != null) {

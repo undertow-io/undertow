@@ -413,7 +413,7 @@ public class AsyncContextImpl implements AsyncContext {
         dispatched = false; //we reset the dispatched state
         onAsyncError(error);
         if (!dispatched) {
-            exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+            exchange.setResponseCode(StatusCodes.INTERNAL_SERVER_ERROR);
             exchange.getResponseHeaders().clear();
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
             try {

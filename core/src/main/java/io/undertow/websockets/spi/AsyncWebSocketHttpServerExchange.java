@@ -36,7 +36,6 @@ import org.xnio.FinishedIoFuture;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
