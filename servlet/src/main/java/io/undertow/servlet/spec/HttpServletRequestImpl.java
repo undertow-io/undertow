@@ -63,6 +63,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
+import javax.servlet.http.PushBuilder;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -1107,5 +1108,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if(attributes != null) {
             this.attributes.clear();
         }
+    }
+
+    @Override
+    public PushBuilder getPushBuilder() {
+        return new PushBuilderImpl(this);
     }
 }

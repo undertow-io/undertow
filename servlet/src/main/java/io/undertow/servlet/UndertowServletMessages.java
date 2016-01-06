@@ -211,4 +211,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10055, value = "Listener is not started")
     IllegalStateException listenerIsNotStarted();
+
+    @Message(id = 10056, value = "path was not set")
+    IllegalStateException pathWasNotSet();
 }

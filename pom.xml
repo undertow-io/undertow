@@ -64,6 +64,7 @@
         <version.easymock>3.2</version.easymock>        
         <version.io.undertow.jastow>2.0.0.Beta2</version.io.undertow.jastow>
         <version.junit>4.12</version.junit>
+        <version.javax.servlet.api>4.0.0-b01</version.javax.servlet.api>
         <version.netty>4.1.0.Beta5</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpmime>4.2.6</version.org.apache.httpmime>
@@ -74,7 +75,6 @@
         <version.org.jboss.logging.processor>2.0.0.Final</version.org.jboss.logging.processor>
         <version.org.jboss.logmanager>2.0.0.Final</version.org.jboss.logmanager>
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.0.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
-        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.1.0.Final</version.org.jboss.spec.javax.websockets>
         <version.xnio>3.3.4.Final</version.xnio>
@@ -97,7 +97,9 @@
         <version.org.eclipse.jetty.alpn>1.0.0</version.org.eclipse.jetty.alpn>
         <alpn-boot-string></alpn-boot-string>
 
-        <jdk.min.version>1.7</jdk.min.version>
+        <jdk.min.version>1.8</jdk.min.version>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
         <version.com.twitter.hpack>0.10.1</version.com.twitter.hpack>
     </properties>
 
@@ -346,10 +348,11 @@
             </dependency>
 
             <dependency>
-                <groupId>org.jboss.spec.javax.servlet</groupId>
-                <artifactId>jboss-servlet-api_3.1_spec</artifactId>
-                <version>${version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec}</version>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>${version.javax.servlet.api}</version>
             </dependency>
+
 
             <dependency>
                 <groupId>org.jboss.spec.javax.servlet.jsp</groupId>
