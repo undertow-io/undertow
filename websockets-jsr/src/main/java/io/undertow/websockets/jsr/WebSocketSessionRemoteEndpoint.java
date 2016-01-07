@@ -201,17 +201,17 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void setBatchingAllowed(final boolean allowed) throws IOException {
-
+            undertowSession.getWebSocketChannel().setRequireExplicitFlush(allowed);
         }
 
         @Override
         public boolean getBatchingAllowed() {
-            return false;
+            return undertowSession.getWebSocketChannel().isRequireExplicitFlush();
         }
 
         @Override
         public void flushBatch() throws IOException {
-
+            undertowSession.getWebSocketChannel().flush();
         }
 
         @Override
