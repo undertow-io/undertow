@@ -390,6 +390,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Object getAttribute(final String name) {
+        if (name == null) {
+            throw UndertowServletMessages.MESSAGES.nullName();
+        }
         return attributes.get(name);
     }
 
@@ -400,7 +403,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void setAttribute(final String name, final Object object) {
-
+        if (name == null) {
+            throw UndertowServletMessages.MESSAGES.nullName();
+        }
         if (object == null) {
             Object existing = attributes.remove(name);
             if (deployment.getApplicationListeners() != null) {
