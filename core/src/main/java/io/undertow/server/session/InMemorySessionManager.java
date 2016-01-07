@@ -187,9 +187,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public Session getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
-        SessionImpl newSession = serverExchange.getAttachment(NEW_SESSION);
-        if(newSession != null) {
-            return newSession;
+        if (serverExchange != null) {
+            SessionImpl newSession = serverExchange.getAttachment(NEW_SESSION);
+            if(newSession != null) {
+                return newSession;
+            }
         }
         String sessionId = config.findSessionId(serverExchange);
         return getSession(sessionId);
