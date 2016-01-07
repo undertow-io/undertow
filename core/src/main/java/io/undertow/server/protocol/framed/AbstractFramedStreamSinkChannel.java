@@ -106,6 +106,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private static final int STATE_IN_LISTENER_LOOP = 1 << 3;
     private static final int STATE_FIRST_DATA_WRITTEN = 1 << 4;
 
+    private volatile boolean bufferFull;
+
 
     protected AbstractFramedStreamSinkChannel(C channel) {
         this.channel = channel;
@@ -459,6 +461,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void handleBufferFull() throws IOException {
+        bufferFull = true;
         if (!readyForFlush) {
             sendWriteBuffer();
             readyForFlush = true;
@@ -587,6 +590,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      */
     final void flushComplete() throws IOException {
         try {
+            bufferFull = false;
             int remaining = header.getRemainingInBuffer();
             boolean finalFrame = finalFrameQueued;
             boolean channelClosed = finalFrame && remaining == 0 && !header.isAnotherFrameRequired();
@@ -709,5 +713,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     public boolean isBroken() {
         return broken;
+    }
+
+    public boolean isBufferFull() {
+        return bufferFull;
     }
 }

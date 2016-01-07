@@ -132,6 +132,11 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     private final LinkedBlockingDeque<Runnable> taskRunQueue = new LinkedBlockingDeque<>();
 
+    /**
+     * If this is true then the flush() method must be called to queue writes. This is provided to support batching
+     */
+    private volatile boolean requireExplicitFlush = false;
+
     private final ReferenceCountedPooled.FreeNotifier freeNotifier = new ReferenceCountedPooled.FreeNotifier() {
         @Override
         public void freed() {
@@ -661,6 +666,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         newFrames.add(channel);
+
+        if (!requireExplicitFlush || channel.isBufferFull()) {
+            flush();
+        }
+    }
+
+    public void flush() {
         if (!flushingSenders) {
             if(channel.getIoThread() == Thread.currentThread()) {
                 flushSenders();
@@ -1019,4 +1031,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
         };
     }
+
+    public boolean isRequireExplicitFlush() {
+        return requireExplicitFlush;
+    }
+
+    public void setRequireExplicitFlush(boolean requireExplicitFlush) {
+        this.requireExplicitFlush = requireExplicitFlush;
+    }
+
 }
