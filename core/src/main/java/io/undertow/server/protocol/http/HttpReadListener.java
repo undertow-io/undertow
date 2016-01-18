@@ -119,8 +119,11 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             //if the CAS fails it is because another thread is in the process of changing state
             //we just immediately retry
             if (requestStateUpdater.compareAndSet(this, 1, 2)) {
-                channel.suspendReads();
-                requestStateUpdater.set(this, 1);
+                try {
+                    channel.suspendReads();
+                } finally {
+                    requestStateUpdater.set(this, 1);
+                }
                 return;
             }
         }
@@ -295,10 +298,13 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                             return;
                         } else {
                             if (requestStateUpdater.compareAndSet(this, 1, 2)) {
-                                newRequest();
-                                channel.getSourceChannel().setReadListener(HttpReadListener.this);
-                                requestStateUpdater.set(this, 0);
-                                channel.getSourceChannel().resumeReads();
+                                try {
+                                    newRequest();
+                                    channel.getSourceChannel().setReadListener(HttpReadListener.this);
+                                    channel.getSourceChannel().resumeReads();
+                                } finally {
+                                    requestStateUpdater.set(this, 0);
+                                }
                                 break;
                             }
                         }
@@ -318,9 +324,12 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                             IoUtils.safeClose(connection);
                             return;
                         } else if (requestStateUpdater.compareAndSet(this, 1, 2)) {
-                            newRequest();
-                            channel.getSourceChannel().suspendReads();
-                            requestStateUpdater.set(this, 0);
+                            try {
+                                newRequest();
+                                channel.getSourceChannel().suspendReads();
+                            } finally {
+                                requestStateUpdater.set(this, 0);
+                            }
                             break;
                         }
                     }
