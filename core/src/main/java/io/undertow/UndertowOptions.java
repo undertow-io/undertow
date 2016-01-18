@@ -262,6 +262,11 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_QUEUED_READ_BUFFERS = Option.simple(UndertowOptions.class, "MAX_QUEUED_READ_BUFFERS", Integer.class);
 
+    /**
+     * The maximum AJP packet size, default is 8192
+     */
+    public static final Option<Integer> MAX_AJP_PACKET_SIZE = Option.simple(UndertowOptions.class, "MAX_AJP_PACKET_SIZE", Integer.class);
+
     private UndertowOptions() {
 
     }

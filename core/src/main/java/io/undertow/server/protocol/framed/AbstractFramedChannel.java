@@ -131,6 +131,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private volatile AtomicIntegerFieldUpdater<AbstractFramedChannel> outstandingBuffersUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "outstandingBuffers");
 
     private final LinkedBlockingDeque<Runnable> taskRunQueue = new LinkedBlockingDeque<>();
+    private final OptionMap settings;
 
     /**
      * If this is true then the flush() method must be called to queue writes. This is provided to support batching
@@ -179,6 +180,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, FramePriority<C, R, S> framePriority, final PooledByteBuffer readData, OptionMap settings) {
         this.framePriority = framePriority;
         this.maxQueuedBuffers = settings.get(UndertowOptions.MAX_QUEUED_READ_BUFFERS, 10);
+        this.settings = settings;
         if (readData != null) {
             if(readData.getBuffer().hasRemaining()) {
                 this.readData = new ReferenceCountedPooled(readData, 1);
@@ -1040,4 +1042,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         this.requireExplicitFlush = requireExplicitFlush;
     }
 
+    protected OptionMap getSettings() {
+        return settings;
+    }
 }
