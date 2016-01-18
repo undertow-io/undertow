@@ -489,6 +489,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         if (currentBuffer != null) {
             currentBuffer.free();
             currentBuffer = null;
+            state = state & ~FLUSHING_BUFFER;
         }
     }
 }
