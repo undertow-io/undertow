@@ -19,6 +19,7 @@
 package io.undertow.server.protocol.ajp;
 
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.conduits.AbstractFramedStreamSinkConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.server.Connectors;
@@ -59,7 +60,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.channel.ajp.response");
 
-    private static final int MAX_DATA_SIZE = 8184;
+    private static final int DEFAULT_MAX_DATA_SIZE = 8192;
 
     private static final Map<HttpString, Integer> HEADER_MAP;
 
@@ -276,8 +277,9 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         }
         int limit = src.limit();
         try {
-            if (src.remaining() > MAX_DATA_SIZE) {
-                src.limit(src.position() + MAX_DATA_SIZE);
+            int maxData = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_AJP_PACKET_SIZE, DEFAULT_MAX_DATA_SIZE) - 8;
+            if (src.remaining() > maxData) {
+                src.limit(src.position() + maxData);
             }
             final int writeSize = src.remaining();
             final ByteBuffer[] buffers = createHeader(src);
