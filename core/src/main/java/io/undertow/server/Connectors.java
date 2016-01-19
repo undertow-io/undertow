@@ -210,7 +210,6 @@ public class Connectors {
                 Executor executor = exchange.getDispatchExecutor();
                 exchange.setDispatchExecutor(null);
                 exchange.unDispatch();
-                exchange.getConnection().preDispatch(exchange);
                 if (dispatchTask != null) {
                     executor = executor == null ? exchange.getConnection().getWorker() : executor;
                     executor.execute(dispatchTask);
