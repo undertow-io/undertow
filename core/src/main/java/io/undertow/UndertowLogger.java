@@ -21,6 +21,7 @@ package io.undertow;
 import io.undertow.client.ClientConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
+import io.undertow.server.handlers.sse.ServerSentEventConnection;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import org.jboss.logging.BasicLogger;
@@ -348,4 +349,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5073, value = "Thread %s (id=%s) was previously reported to be stuck but has completed. It was active for approximately %s milliseconds. There is/are still %s thread(s) that are monitored by this Valve and may be stuck.")
     void stuckThreadCompleted(String threadName, long threadId, long active, int stuckCount);
 
+    @LogMessage(level = ERROR)
+    @Message(id = 5074, value = "Failed to invoke error callback %s for SSE task")
+    void failedToInvokeFailedCallback(ServerSentEventConnection.EventCallback callback, @Cause Exception e);
 }
