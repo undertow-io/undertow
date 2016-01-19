@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.sse;
 
+import io.undertow.UndertowLogger;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
@@ -29,7 +31,6 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -39,8 +40,8 @@ import java.nio.channels.Channel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
-import java.util.HashMap;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -89,6 +90,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
                 for (ChannelListener<ServerSentEventConnection> listener : closeTasks) {
                     ChannelListeners.invokeChannelListener(ServerSentEventConnection.this, listener);
                 }
+                IoUtils.safeClose(ServerSentEventConnection.this);
             }
         });
         this.sink.getWriteSetter().set(writeListener);
@@ -369,10 +371,33 @@ public class ServerSentEventConnection implements Channel, Attachable {
 
     @Override
     public void close() throws IOException {
+        close(new ClosedChannelException());
+    }
+
+    private void close(IOException e) throws IOException {
         if (openUpdater.compareAndSet(this, 1, 0)) {
             if (pooled != null) {
                 pooled.close();
                 pooled = null;
+            }
+
+            for (SSEData i : buffered) {
+                if (i.callback != null) {
+                    try {
+                        i.callback.failed(this, i.data, i.event, i.id, e);
+                    } catch (Exception ex) {
+                        UndertowLogger.REQUEST_LOGGER.failedToInvokeFailedCallback(i.callback, ex);
+                    }
+                }
+            }
+            for (SSEData i : queue) {
+                if (i.callback != null) {
+                    try {
+                        i.callback.failed(this, i.data, i.event, i.id, e);
+                    } catch (Exception ex) {
+                        UndertowLogger.REQUEST_LOGGER.failedToInvokeFailedCallback(i.callback, ex);
+                    }
+                }
             }
             queue.clear();
             buffered.clear();
@@ -488,16 +513,6 @@ public class ServerSentEventConnection implements Channel, Attachable {
     }
 
     private void handleException(IOException e) {
-        for (SSEData i : buffered) {
-            if(i.callback != null) {
-                i.callback.failed(this, i.data, i.event, i.id, e);
-            }
-        }
-        for(SSEData i : queue) {
-            if(i.callback != null) {
-                i.callback.failed(this, i.data, i.event, i.id, e);
-            }
-        }
-        IoUtils.safeClose(this);
+        IoUtils.safeClose(this, sink, exchange.getConnection());
     }
 }
