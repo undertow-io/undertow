@@ -1010,7 +1010,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     protected StreamConnection getUnderlyingConnection() {
         return channel;
     }
-    
+
     protected ChannelExceptionHandler<SuspendableWriteChannel> writeExceptionHandler() {
         return new ChannelExceptionHandler<SuspendableWriteChannel>() {
             @Override
