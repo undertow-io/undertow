@@ -267,6 +267,10 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
         return false;
     }
 
+    protected void preDispatch(HttpServerExchange exchange) {
+
+    }
+
     public interface CloseListener {
 
         void closed(final ServerConnection connection);
