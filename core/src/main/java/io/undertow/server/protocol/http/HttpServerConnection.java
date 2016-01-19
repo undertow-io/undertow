@@ -40,7 +40,6 @@ import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.SslChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 
 import javax.net.ssl.SSLSession;
@@ -284,17 +283,5 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     boolean isConnectHandled() {
         return connectHandled;
-    }
-
-    protected void preDispatch(HttpServerExchange exchange) {
-
-        ConduitStreamSourceChannel sourceChannel = channel.getSourceChannel();
-        if(sourceChannel.getReadListener() instanceof HttpReadListener) {
-            if (!exchange.isRequestComplete() || getExtraBytes() != null) {
-                //if there is more data we suspend reads
-                sourceChannel.setReadListener(null);
-                sourceChannel.suspendReads();
-            }
-        }
     }
 }
