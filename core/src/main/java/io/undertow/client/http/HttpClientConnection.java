@@ -303,6 +303,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                             handleError(exception);
                         }
                     }));
+                    sinkChannel.resumeWrites();
                 }
             } catch (IOException e) {
                 handleError(e);
