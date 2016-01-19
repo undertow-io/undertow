@@ -30,6 +30,11 @@ import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Stuart Douglas
@@ -121,4 +126,41 @@ public class ServerSentEventTestCase {
         }
     }
 
+    @Test
+    public void testConnectionFail() throws IOException, InterruptedException {
+
+        final Socket socket = new Socket(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default"));
+        final CountDownLatch latch = new CountDownLatch(1);
+        DefaultServer.setRootHandler(new ServerSentEventHandler(new ServerSentEventConnectionCallback() {
+            @Override
+            public void connected(ServerSentEventConnection connection, String lastEventId) {
+                while (connection.isOpen()) {
+                    connection.send("hello", new ServerSentEventConnection.EventCallback() {
+                        @Override
+                        public void done(ServerSentEventConnection connection, String data, String event, String id) {
+                        }
+
+                        @Override
+                        public void failed(ServerSentEventConnection connection, String data, String event, String id, IOException e) {
+                            latch.countDown();
+                        }
+                    });
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }));
+        InputStream in = socket.getInputStream();
+        OutputStream out = socket.getOutputStream();
+        out.write(("GET / HTTP/1.1\r\n\r\n").getBytes());
+        out.flush();
+        out.close();
+        in.close();
+        if(!latch.await(10, TimeUnit.SECONDS)) {
+            Assert.fail();
+        }
+    }
 }
