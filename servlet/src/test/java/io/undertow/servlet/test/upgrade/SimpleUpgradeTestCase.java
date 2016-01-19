@@ -29,7 +29,6 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -63,31 +62,26 @@ public class SimpleUpgradeTestCase {
     }
 
     public void runTest(final String url) throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            final Socket socket = new Socket(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default"));
+        final Socket socket = new Socket(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default"));
 
-            InputStream in = socket.getInputStream();
-            OutputStream out = socket.getOutputStream();
-            out.write(("GET " + url + " HTTP/1.1\r\nConnection: upgrade\r\nUpgrade: servlet\r\n\r\n").getBytes());
-            out.flush();
-            Assert.assertTrue(readBytes(in).startsWith("HTTP/1.1 101 Switching Protocols\r\n"));
+        InputStream in = socket.getInputStream();
+        OutputStream out = socket.getOutputStream();
+        out.write(("GET " + url + " HTTP/1.1\r\nConnection: upgrade\r\nUpgrade: servlet\r\n\r\n").getBytes());
+        out.flush();
+        Assert.assertTrue(readBytes(in).startsWith("HTTP/1.1 101 Switching Protocols\r\n"));
 
-            out.write("Echo Messages\r\n\r\n".getBytes());
-            out.flush();
-            Assert.assertEquals("Echo Messages\r\n\r\n", readBytes(in));
+        out.write("Echo Messages\r\n\r\n".getBytes());
+        out.flush();
+        Assert.assertEquals("Echo Messages\r\n\r\n", readBytes(in));
 
-            out.write("Echo Messages2\r\n\r\n".getBytes());
-            out.flush();
-            Assert.assertEquals("Echo Messages2\r\n\r\n", readBytes(in));
+        out.write("Echo Messages2\r\n\r\n".getBytes());
+        out.flush();
+        Assert.assertEquals("Echo Messages2\r\n\r\n", readBytes(in));
 
-            out.write("exit\r\n\r\n".getBytes());
-            out.flush();
-            out.close();
+        out.write("exit\r\n\r\n".getBytes());
+        out.flush();
+        out.close();
 
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
     }
 
     private String readBytes(final InputStream in) throws IOException {
