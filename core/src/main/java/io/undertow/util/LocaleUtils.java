@@ -35,6 +35,9 @@ public class LocaleUtils {
             return null;
         }
         final String[] parts = localeString.split("-");
+        if (parts.length == 0) {
+            return null;
+        }
         if (parts.length == 1) {
             return new Locale(localeString, "");
         } else if (parts.length == 2) {
