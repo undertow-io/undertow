@@ -83,4 +83,19 @@ public class ServletConfidentialityConstraintHandler extends SinglePortConfident
         return super.getRedirectURI(exchange, port);
     }
 
+    /**
+     * Use the HttpServerExchange supplied to check if this request is already 'sufficiently' confidential.
+     *
+     * Here we say 'sufficiently' as sub-classes can override this and maybe even go so far as querying the actual SSLSession.
+     *
+     * @param exchange - The {@link HttpServerExchange} for the request being processed.
+     * @return true if the request is 'sufficiently' confidential, false otherwise.
+     */
+    protected boolean isConfidential(final HttpServerExchange exchange) {
+        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if(src != null) {
+            return src.getOriginalRequest().isSecure();
+        }
+        return super.isConfidential(exchange);
+    }
 }
