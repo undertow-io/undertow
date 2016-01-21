@@ -80,6 +80,7 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
         } else {
             getChannel().sendRstStream(streamId, SpdyChannel.RST_STATUS_INTERNAL_ERROR);
         }
+        markBroken();
     }
 
     @Override

@@ -154,4 +154,14 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
     public interface FreeNotifier {
         void freed();
     }
+
+    @Override
+    public String toString() {
+        return "ReferenceCountedPooled{" +
+                "underlying=" + underlying +
+                ", referenceCount=" + referenceCount +
+                ", mainFreed=" + mainFreed +
+                ", slice=" + slice +
+                '}';
+    }
 }

@@ -40,6 +40,7 @@ import java.nio.channels.Channel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
+import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -67,6 +68,10 @@ public class ServerSentEventConnection implements Channel, Attachable {
 
     private final Deque<SSEData> queue = new ConcurrentLinkedDeque<>();
     private final Queue<SSEData> buffered = new ConcurrentLinkedDeque<>();
+    /**
+     * Messages that have been written to the channel but flush() has failed
+     */
+    private final Queue<SSEData> flushingMessages = new ArrayDeque<>();
     private final List<ChannelListener<ServerSentEventConnection>> closeTasks = new CopyOnWriteArrayList<>();
     private Map<String, String> parameters;
     private Map<String, Object> properties = new HashMap<>();
@@ -101,7 +106,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
      *
      * @param listener The listener to invoke
      */
-    public void addCloseTask(ChannelListener<ServerSentEventConnection> listener) {
+    public synchronized void addCloseTask(ChannelListener<ServerSentEventConnection> listener) {
         this.closeTasks.add(listener);
     }
 
@@ -196,7 +201,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
      * @param id The event ID
      * @param callback A callback that is notified on Success or failure
      */
-    public void send(String data, String event, String id, EventCallback callback) {
+    public synchronized void send(String data, String event, String id, EventCallback callback) {
         if (open == 0 || shutdown) {
             if (callback != null) {
                 callback.failed(this, event, data, id, new ClosedChannelException());
@@ -374,7 +379,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
         close(new ClosedChannelException());
     }
 
-    private void close(IOException e) throws IOException {
+    private synchronized void close(IOException e) throws IOException {
         if (openUpdater.compareAndSet(this, 1, 0)) {
             if (pooled != null) {
                 pooled.close();
@@ -470,28 +475,50 @@ public class ServerSentEventConnection implements Channel, Attachable {
         public void handleEvent(StreamSinkChannel channel) {
 
             try {
-                if (pooled == null) {
+                if(!flushingMessages.isEmpty()) {
+                    if(!channel.flush()) {
+                        return;
+                    }
+                    ByteBuffer buffer = pooled.getBuffer();
+                    for(SSEData data: flushingMessages) {
+                        data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
+                    }
+                    flushingMessages.clear();
+                    if (!buffer.hasRemaining()) {
+                        fillBuffer();
+                    }
+                } else if (pooled == null) {
                     if(!channel.flush()) {
                         return;
                     }
                     channel.suspendWrites();
                     return;
                 }
+
                 ByteBuffer buffer = pooled.getBuffer();
                 int res;
                 do {
                     res = channel.write(buffer);
+                    boolean flushed = channel.flush();
                     while (!buffered.isEmpty()) {
                         //figure out which messages are complete
-                        SSEData data = buffered.peek();
+                        SSEData data = buffered.poll();
                         if (data.endBufferPosition > 0 && buffer.position() >= data.endBufferPosition) {
-                            if(data.callback != null) {
-                                data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
+                            if(data.callback != null && data.leftOverData == null) {
+                                //if flush was unsuccessful we defer the callback invocation, till it is actually on the wire
+                                if(flushed) {
+                                    data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
+                                } else {
+                                    flushingMessages.add(data);
+                                }
                             }
-                            buffered.poll();
                         } else {
                             break;
                         }
+                    }
+                    if(!flushed && !flushingMessages.isEmpty()) {
+                        sink.resumeWrites();
+                        return;
                     }
 
                     if (res == 0) {
@@ -499,12 +526,11 @@ public class ServerSentEventConnection implements Channel, Attachable {
                         return;
                     } else if (!buffer.hasRemaining()) {
                         fillBuffer();
+                        if(pooled == null) {
+                            return;
+                        }
                     }
 
-                    if(!channel.flush()) {
-                        sink.resumeWrites();
-                        return;
-                    }
                 } while (res > 0);
             } catch (IOException e) {
                 handleException(e);
