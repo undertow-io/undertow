@@ -244,7 +244,7 @@ public class PathResourceManager implements ResourceManager  {
      */
     private boolean isFileSameCase(final Path file) throws IOException {
         String canonicalName = file.toRealPath().toString();
-        return canonicalName.equals(file.toString());
+        return canonicalName.equals(file.normalize().toString());
     }
 
     /**
