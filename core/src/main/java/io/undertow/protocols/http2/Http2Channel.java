@@ -346,6 +346,14 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 Http2GoAwayParser spdyGoAwayParser = (Http2GoAwayParser) frameParser.parser;
                 channel = new Http2GoAwayStreamSourceChannel(this, frameData, frameParser.getFrameLength(), spdyGoAwayParser.getStatusCode(), spdyGoAwayParser.getLastGoodStreamId());
                 peerGoneAway = true;
+                //the peer is going away
+                //everything is broken
+                for(Http2StreamSourceChannel stream : incomingStreams.values()) {
+                    stream.close();
+                }
+                for(Http2StreamSinkChannel stream : outgoingStreams.values()) {
+                    stream.close();
+                }
                 break;
             }
             case FRAME_TYPE_WINDOW_UPDATE: {
