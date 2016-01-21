@@ -77,6 +77,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
         } else {
             getChannel().sendRstStream(streamId, Http2Channel.ERROR_STREAM_CLOSED);
         }
+        markBroken();
     }
 
     @Override
