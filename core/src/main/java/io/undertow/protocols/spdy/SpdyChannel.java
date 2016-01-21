@@ -175,6 +175,14 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                 SpdyGoAwayParser spdyGoAwayParser = (SpdyGoAwayParser) frameParser.parser;
                 channel = new SpdyGoAwayStreamSourceChannel(this, frameData, frameParser.getFrameLength(), spdyGoAwayParser.getStatusCode(), spdyGoAwayParser.getLastGoodStreamId());
                 peerGoneAway = true;
+                //the peer is going away
+                //everything is broken
+                for(SpdyStreamStreamSourceChannel stream : incomingStreams.values()) {
+                    stream.close();
+                }
+                for(SpdyStreamStreamSinkChannel stream : outgoingStreams.values()) {
+                    stream.close();
+                }
                 break;
             }
             case WINDOW_UPDATE: {
