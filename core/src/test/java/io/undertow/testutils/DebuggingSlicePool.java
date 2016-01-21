@@ -102,7 +102,7 @@ public class DebuggingSlicePool implements ByteBufferPool{
 
         @Override
         public String toString() {
-            return "[debug]" + delegate.toString();
+            return "[debug:"+no+"]" + delegate.toString() ;
         }
     }
 }

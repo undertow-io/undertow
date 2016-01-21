@@ -134,7 +134,7 @@ public class ServerSentEventTestCase {
         DefaultServer.setRootHandler(new ServerSentEventHandler(new ServerSentEventConnectionCallback() {
             @Override
             public void connected(ServerSentEventConnection connection, String lastEventId) {
-                while (connection.isOpen()) {
+                do {
                     connection.send("hello", new ServerSentEventConnection.EventCallback() {
                         @Override
                         public void done(ServerSentEventConnection connection, String data, String event, String id) {
@@ -150,7 +150,7 @@ public class ServerSentEventTestCase {
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                }
+                } while (latch.getCount() > 0);
             }
         }));
         InputStream in = socket.getInputStream();
