@@ -642,7 +642,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
 
         @Override
         public AbstractFramedStreamSourceChannel<?, ?, ?> getExistingChannel() {
-            if (type == SYN_STREAM || type == WINDOW_UPDATE) {
+            if (type == SYN_STREAM || type == WINDOW_UPDATE || type == RST_STREAM) {
                 return null;
             }
             int id;
