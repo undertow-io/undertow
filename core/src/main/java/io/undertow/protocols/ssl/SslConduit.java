@@ -209,19 +209,23 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_READ_REQUIRES_WRITE)) {
             delegate.getSinkChannel().resumeWrites();
         } else {
-            delegate.getSourceChannel().resumeReads();
             if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) || wakeup) {
-                runReadListener();
+                runReadListener(true);
+            } else {
+                delegate.getSourceChannel().resumeReads();
             }
         }
     }
 
 
-    private void runReadListener() {
+    private void runReadListener(final boolean resumeInListener) {
         try {
             delegate.getIoThread().execute(new Runnable() {
                 @Override
                 public void run() {
+                    if(resumeInListener) {
+                        delegate.getSourceChannel().resumeReads();
+                    }
                     readReadyHandler.readReady();
                 }
             });
@@ -387,10 +391,11 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     @Override
     public void wakeupWrites() {
-        resumeWrites();
+        state |= FLAG_WRITES_RESUMED;
         getWriteThread().execute(new Runnable() {
             @Override
             public void run() {
+                resumeWrites();
                 writeReadyHandler.writeReady();
             }
         });
@@ -580,7 +585,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             notifyWriteClosed();
         }
         if(runListener) {
-            runReadListener();
+            runReadListener(false);
         }
     }
 
@@ -756,7 +761,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             //if we are in the read listener handshake we don't need to invoke
             //as it is about to be invoked anyway
             if(requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
-                runReadListener();
+                runReadListener(false);
             }
         }
     }
@@ -770,7 +775,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @param userBuffers The buffers
      * @param off         The offset
      * @param len         The length
-     * @return
+     * @return The amount of data consumed
      * @throws IOException
      */
     private long doWrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
@@ -1073,7 +1078,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     //otherwise it will run in a busy loop till the channel becomes writable
                     //we also don't re-run if we have outstanding tasks
                     if(!(anyAreSet(state, FLAG_READ_REQUIRES_WRITE) && wrappedData != null) && outstandingTasks == 0 && !noProgress) {
-                        runReadListener();
+                        runReadListener(false);
                     }
                 }
             }
