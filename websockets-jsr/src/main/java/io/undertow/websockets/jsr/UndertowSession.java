@@ -360,11 +360,14 @@ public final class UndertowSession implements Session {
         getExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                openSessions.removeOpenSession(UndertowSession.this);
                 try {
                     endpoint.release();
                 } finally {
-                    encoding.close();
+                    try {
+                        encoding.close();
+                    } finally {
+                        openSessions.removeOpenSession(UndertowSession.this);
+                    }
                 }
             }
         });

@@ -748,14 +748,17 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         this.contextToAddFilter = contextToAddFilter;
     }
 
-    @Override
-    public synchronized void close() {
+    public synchronized void close(int waitTime) {
         doClose();
-        //wait up to 10 seconds for them to close
-        long end = currentTimeMillis() + 10000;
+        //wait for them to close
+        long end = currentTimeMillis() + waitTime;
         for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
             endpoint.awaitClose(end - System.currentTimeMillis());
         }
+    }
+    @Override
+    public synchronized void close() {
+        close(10000);
     }
 
     public ByteBufferPool getBufferPool() {
