@@ -125,6 +125,13 @@ class FrameHandler extends AbstractReceiveListener {
 
     @Override
     protected void onFullPongMessage(final WebSocketChannel webSocketChannel, BufferedBinaryMessage bufferedBinaryMessage) {
+        if(session.isSessionClosed()) {
+            //to bad, the channel has already been closed
+            //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
+            //this this should only happen if a message was on the wire when we called close()
+            bufferedBinaryMessage.getData().free();
+            return;
+        }
         final HandlerWrapper handler = getHandler(FrameType.PONG);
         if (handler != null) {
             final Pooled<ByteBuffer[]> pooled = bufferedBinaryMessage.getData();
@@ -147,6 +154,13 @@ class FrameHandler extends AbstractReceiveListener {
 
     @Override
     protected void onText(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
+        if(session.isSessionClosed()) {
+            //to bad, the channel has already been closed
+            //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
+            //this this should only happen if a message was on the wire when we called close()
+            messageChannel.close();
+            return;
+        }
         final HandlerWrapper handler = getHandler(FrameType.TEXT);
         if (handler != null && handler.isPartialHandler()) {
             BufferedTextMessage data = new BufferedTextMessage(false);
@@ -169,6 +183,13 @@ class FrameHandler extends AbstractReceiveListener {
 
     @Override
     protected void onBinary(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
+        if(session.isSessionClosed()) {
+            //to bad, the channel has already been closed
+            //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
+            //this this should only happen if a message was on the wire when we called close()
+            messageChannel.close();
+            return;
+        }
         final HandlerWrapper handler = getHandler(FrameType.BYTE);
         if (handler != null && handler.isPartialHandler()) {
             BufferedBinaryMessage data = new BufferedBinaryMessage(session.getMaxBinaryMessageBufferSize(), false);
@@ -282,6 +303,12 @@ class FrameHandler extends AbstractReceiveListener {
 
     @Override
     protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
+        if(session.isSessionClosed()) {
+            //to bad, the channel has already been closed
+            //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
+            //this this should only happen if a message was on the wire when we called close()
+            return;
+        }
         HandlerWrapper handler = getHandler(FrameType.TEXT);
         if (handler != null) {
             invokeTextHandler(message, handler, true);
@@ -290,6 +317,13 @@ class FrameHandler extends AbstractReceiveListener {
 
     @Override
     protected void onFullBinaryMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
+        if(session.isSessionClosed()) {
+            //to bad, the channel has already been closed
+            //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
+            //this this should only happen if a message was on the wire when we called close()
+            message.getData().close();
+            return;
+        }
         HandlerWrapper handler = getHandler(FrameType.BYTE);
         if (handler != null) {
             invokeBinaryHandler(message, handler, true);
