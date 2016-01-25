@@ -463,7 +463,7 @@ class ModClusterContainer implements ModClusterController {
                         continue;
                     //check if current server can process the request
                     for(Context hostContext : result.getValue().getContexts()) {
-                        if(getJBossNodeName().equals(hostContext.getNode().getJvmRoute()))
+                        if(hostContext.getNode().getJvmRoute().equals(getJBossNodeName()))
                             return null;
                     }
                     return result;
