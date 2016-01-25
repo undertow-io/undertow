@@ -20,11 +20,18 @@ package io.undertow.server.handlers;
 
 import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.StatusCodes;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -159,6 +166,90 @@ public class AccessControlListHandler implements HttpHandler {
                     + "deny=" + deny
                     + ", pattern='" + pattern + '\''
                     + '}';
+        }
+    }
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "access-control";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put("acl", String[].class);
+            params.put("default-allow", boolean.class);
+            params.put("attribute", ExchangeAttribute.class);
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            final HashSet<String> ret = new HashSet<>();
+            ret.add("acl");
+            ret.add("attribute");
+            return ret;
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+
+            String[] acl = (String[]) config.get("acl");
+            Boolean defaultAllow = (Boolean) config.get("default-allow");
+            ExchangeAttribute attribute = (ExchangeAttribute) config.get("attribute");
+
+            List<AclMatch> peerMatches = new ArrayList<>();
+            for(String rule :acl) {
+                String[] parts = rule.split(" ");
+                if(parts.length != 2) {
+                    throw UndertowMessages.MESSAGES.invalidAclRule(rule);
+                }
+                if(parts[1].trim().equals("allow")) {
+                    peerMatches.add(new AclMatch(false, parts[0].trim()));
+                } else if(parts[1].trim().equals("deny")) {
+                    peerMatches.add(new AclMatch(true, parts[0].trim()));
+                } else {
+                    throw UndertowMessages.MESSAGES.invalidAclRule(rule);
+                }
+            }
+            return new Wrapper(peerMatches, defaultAllow == null ? false : defaultAllow, attribute);
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final List<AclMatch> peerMatches;
+        private final boolean defaultAllow;
+        private final ExchangeAttribute attribute;
+
+
+        private Wrapper(List<AclMatch> peerMatches, boolean defaultAllow, ExchangeAttribute attribute) {
+            this.peerMatches = peerMatches;
+            this.defaultAllow = defaultAllow;
+            this.attribute = attribute;
+        }
+
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            AccessControlListHandler res = new AccessControlListHandler(handler, attribute);
+            for(AclMatch match: peerMatches) {
+                if(match.deny) {
+                    res.addDeny(match.pattern.pattern());
+                } else {
+                    res.addAllow(match.pattern.pattern());
+                }
+            }
+            res.setDefaultAllow(defaultAllow);
+            return res;
         }
     }
 }
