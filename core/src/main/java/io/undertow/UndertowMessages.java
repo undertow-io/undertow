@@ -431,4 +431,7 @@ public interface UndertowMessages {
 
     @Message(id = 134, value = "Authentication mechanism %s requires property %s to be set")
     IllegalStateException authenticationPropertyNotSet(String name, String header);
+
+    @Message(id = 135, value = "renegotiation failed")
+    IllegalStateException rengotiationFailed();
 }

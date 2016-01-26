@@ -171,8 +171,13 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                     }
                 }
                 if(!waiter.isDone()) {
-                    IoUtils.safeClose(serverConnection);
-                    throw UndertowMessages.MESSAGES.rengotiationTimedOut();
+                    if(serverConnection.isOpen()) {
+                        IoUtils.safeClose(serverConnection);
+                        throw UndertowMessages.MESSAGES.rengotiationTimedOut();
+                    } else {
+                        IoUtils.safeClose(serverConnection);
+                        throw UndertowMessages.MESSAGES.rengotiationFailed();
+                    }
                 }
             }
         } finally {
