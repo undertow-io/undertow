@@ -320,7 +320,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
             current = new ServletSecurityConstraintHandler(securityPathMatches, current);
         }
         List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<>();
-        authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager)); //TODO: does this really need to be hard coded?
 
         String mechName = null;
         if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
@@ -363,6 +362,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
         }
 
+        authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager)); //TODO: does this really need to be hard coded?
         deployment.setAuthenticationMechanisms(authenticationMechanisms);
         //if the JASPI auth mechanism is set then it takes over
         if(deploymentInfo.getJaspiAuthenticationMechanism() == null) {
