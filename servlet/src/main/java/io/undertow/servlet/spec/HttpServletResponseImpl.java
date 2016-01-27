@@ -682,6 +682,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         final HttpSession session = hreq.getSession(false);
         if (session == null) {
             return false;
+        } else if(hreq.isRequestedSessionIdFromCookie()) {
+            return false;
         } else if (!hreq.isRequestedSessionIdFromURL() && !session.isNew()) {
             return false;
         }
