@@ -554,12 +554,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (responseDone || treatAsCommitted) {
             return;
         }
-        servletContext.updateSessionAccessTime(exchange);
         responseDone = true;
         try {
             closeStreamAndWriter();
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+        } finally {
+            servletContext.updateSessionAccessTime(exchange);
         }
     }
 
