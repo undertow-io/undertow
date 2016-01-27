@@ -1089,7 +1089,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private SessionConfig.SessionCookieSource sessionCookieSource() {
         HttpSession session = getSession(false);
-        if(session == null || session.isNew()) {
+        if(session == null) {
             return SessionConfig.SessionCookieSource.NONE;
         }
         if(sessionCookieSource == null) {
