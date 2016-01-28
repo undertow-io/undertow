@@ -21,7 +21,9 @@ package io.undertow.server.ssl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
@@ -66,5 +68,36 @@ public class SimpleSSLTestCase {
         }
     }
 
+
+    @Test
+    public void testNonPersistentConnections() throws IOException, GeneralSecurityException {
+
+        DefaultServer.setRootHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+                exchange.endExchange();
+            }
+        });
+
+        DefaultServer.startSSLServer();
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            for(int i = 0; i <5; ++ i) {
+                HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+                HttpResponse result = client.execute(get);
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Header[] header = result.getHeaders("scheme");
+                Assert.assertEquals("https", header[0].getValue());
+                HttpClientUtils.readResponse(result);
+
+            }
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
 
 }

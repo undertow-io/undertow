@@ -97,6 +97,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
         server2.start();
 
         UndertowXnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, DefaultServer.createClientSslContext());
+
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
                 .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
