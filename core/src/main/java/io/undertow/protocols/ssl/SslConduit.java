@@ -223,7 +223,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             delegate.getIoThread().execute(new Runnable() {
                 @Override
                 public void run() {
-                    if(resumeInListener) {
+                    if(resumeInListener && allAreSet(state, FLAG_READS_RESUMED)) {
                         delegate.getSourceChannel().resumeReads();
                     }
                     readReadyHandler.readReady();
@@ -647,7 +647,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         try {
             //we need to store how much data is in the unwrap buffer. If no progress can be made then we unset
             //the data to unwrap flag
-            int dataToUnwrapLength = -1;
+            int dataToUnwrapLength;
             //try and read some data if we don't already have some
             if(allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
                 if(dataToUnwrap == null) {
@@ -1028,7 +1028,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
         @Override
         public void readReady() {
-            if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
+            if(allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
                 try {
                     invokingReadListenerHandshake = true;
                     doHandshake();
