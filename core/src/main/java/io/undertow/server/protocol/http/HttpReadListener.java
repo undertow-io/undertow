@@ -22,6 +22,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
@@ -29,6 +30,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.server.protocol.http2.Http2ReceiveListener;
 import io.undertow.util.ClosingChannelExceptionHandler;
+import io.undertow.util.ConnectionUtils;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -36,7 +38,6 @@ import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -341,7 +342,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 }
             }
         } else if (!exchange.isPersistent()) {
-            IoUtils.safeClose(connection);
+            ConnectionUtils.cleanClose(connection.getChannel(), connection);
         } else {
             //upgrade or connect handling
             if (connection.getExtraBytes() != null) {

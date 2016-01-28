@@ -40,6 +40,7 @@ import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.Connectors;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.AbstractAttachable;
+import io.undertow.util.ConnectionUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
@@ -428,7 +429,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             return;
         }
         state |= CLOSED | CLOSE_REQ;
-        connection.close();
+        ConnectionUtils.cleanClose(connection);
     }
 
     /**
