@@ -50,6 +50,7 @@ import io.undertow.util.Headers;
  */
 public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
+    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
     protected final Deflater deflater;
     private final ConduitFactory<StreamSinkConduit> conduitFactory;
     private final HttpServerExchange exchange;
@@ -101,7 +102,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             }
             //we may already have some input, if so compress it
             if (!deflater.needsInput()) {
-                deflateData();
+                deflateData(false);
                 if (!deflater.needsInput()) {
                     return 0;
                 }
@@ -110,7 +111,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             src.get(data);
             preDeflate(data);
             deflater.setInput(data);
-            deflateData();
+            deflateData(false);
             return data.length;
         } catch (IOException e) {
             freeBuffer();
@@ -299,7 +300,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                         }
                         //if the deflater has not been fully flushed we need to flush it
                         if (!deflater.finished()) {
-                            deflateData();
+                            deflateData(false);
                             //if could not fully flush
                             if (!deflater.finished()) {
                                 return false;
@@ -351,7 +352,19 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                         }
                     }
                 } else {
-                    return performFlushIfRequired();
+                    if(allAreClear(state, FLUSHING_BUFFER)) {
+                        if (next == null) {
+                            nextCreated = true;
+                            this.next = createNextChannel();
+                        }
+                        deflateData(true);
+                        currentBuffer.getBuffer().flip();
+                        this.state |= FLUSHING_BUFFER;
+                    }
+                    if(!performFlushIfRequired()) {
+                        return false;
+                    }
+                    return next.flush();
                 }
             } finally {
                 if (nextCreated) {
@@ -432,7 +445,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
      *
      * @throws IOException
      */
-    private void deflateData() throws IOException {
+    private void deflateData(boolean force) throws IOException {
         //we don't need to flush here, as this should have been called already by the time we get to
         //this point
         boolean nextCreated = false;
@@ -443,8 +456,8 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             final boolean shutdown = anyAreSet(state, SHUTDOWN);
 
             byte[] buffer = new byte[1024]; //TODO: we should pool this and make it configurable or something
-            while (!deflater.needsInput() || (shutdown && !deflater.finished())) {
-                int count = deflater.deflate(buffer);
+            while (force || !deflater.needsInput() || (shutdown && !deflater.finished())) {
+                int count = deflater.deflate(buffer, 0, buffer.length, force ? Deflater.SYNC_FLUSH: Deflater.NO_FLUSH);
                 if (count != 0) {
                     int remaining = outputBuffer.remaining();
                     if (remaining > count) {
@@ -466,6 +479,8 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                             return;
                         }
                     }
+                } else {
+                    force = false;
                 }
             }
         } finally {
