@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * Wrapper for write timeout. This should always be the first wrapper applied to the underlying channel.
  *
  * @author Stuart Douglas
- * @see org.xnio.Options#READ_TIMEOUT
+ * @see org.xnio.Options#WRITE_TIMEOUT
  */
 public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
