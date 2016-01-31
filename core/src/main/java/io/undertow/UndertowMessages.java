@@ -434,4 +434,7 @@ public interface UndertowMessages {
 
     @Message(id = 135, value = "renegotiation failed")
     IllegalStateException rengotiationFailed();
+
+    @Message(id = 136, value = "User agent charset string must have an even number of items, in the form pattern,charset,pattern,charset,... Instead got: %s")
+    IllegalArgumentException userAgentCharsetMustHaveEvenNumberOfItems(String supplied);
 }

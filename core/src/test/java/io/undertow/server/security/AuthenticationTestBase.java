@@ -86,6 +86,7 @@ public abstract class AuthenticationTestBase {
         final Map<String, char[]> passwordUsers = new HashMap<>(2);
         passwordUsers.put("userOne", "passwordOne".toCharArray());
         passwordUsers.put("userTwo", "passwordTwo".toCharArray());
+        passwordUsers.put("encodingUser", "password-ü".toCharArray());
 
         identityManager = new IdentityManager() {
 
