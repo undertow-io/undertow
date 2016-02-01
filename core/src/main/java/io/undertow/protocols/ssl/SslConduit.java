@@ -621,7 +621,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @throws SSLException
      */
     private long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
-        System.out.println("unwrap " + dataToUnwrap);
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
@@ -741,7 +740,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return original - Buffers.remaining(userBuffers);
             }
         } finally {
-            System.out.println("1:" + dataToUnwrap);
             try {
                 boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
                 if (unwrappedData != null && unwrappedData.getBuffer().hasRemaining()) {
@@ -764,7 +762,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 //if we are in the read listener handshake we don't need to invoke
                 //as it is about to be invoked anyway
                 if (requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
-                    System.out.println("run read lust " + dataToUnwrap + " " + anyAreSet(state, FLAG_DATA_TO_UNWRAP));
                     runReadListener(false);
                 }
             } catch (Exception e) {
@@ -1035,7 +1032,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
         @Override
         public void readReady() {
-            System.out.println("listener " + dataToUnwrap);
             if(allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
                 try {
                     invokingReadListenerHandshake = true;
@@ -1050,7 +1046,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             boolean noProgress = false;
             int initialUnwrapped = -1;
             if (anyAreSet(state, FLAG_READS_RESUMED)) {
-                System.out.println("reads resumed " + dataToUnwrap + connection.getSourceChannel().getReadListener());
                 if (delegateHandler == null) {
                     final ChannelListener<? super ConduitStreamSourceChannel> readListener = connection.getSourceChannel().getReadListener();
                     if (readListener == null) {
