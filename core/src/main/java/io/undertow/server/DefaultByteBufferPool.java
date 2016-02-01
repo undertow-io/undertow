@@ -213,6 +213,14 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         public boolean isOpen() {
             return referenceCount > 0;
         }
+
+        @Override
+        public String toString() {
+            return "DefaultPooledBuffer{" +
+                    "buffer=" + buffer +
+                    ", referenceCount=" + referenceCount +
+                    '}';
+        }
     }
 
     private class ThreadLocalData {

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -132,6 +133,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     private final LinkedBlockingDeque<Runnable> taskRunQueue = new LinkedBlockingDeque<>();
     private final OptionMap settings;
+
+    private boolean readChannelDone = false;
 
     private final ReferenceCountedPooled.FreeNotifier freeNotifier = new ReferenceCountedPooled.FreeNotifier() {
         @Override
@@ -310,7 +313,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * of calling this method then it can prevent frame channels for being fully consumed.
      */
     public synchronized R receive() throws IOException {
-        if (isLastFrameReceived() && receiver == null) {
+        if (readChannelDone && receiver == null) {
             //we have received the last frame, we just shut down and return
             //it would probably make more sense to have the last channel responsible for this
             //however it is much simpler just to have it here
@@ -355,19 +358,14 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     forceFree = true;
                     return null;
                 } else if (read == -1) {
-                    try {
-                        channel.getSourceChannel().shutdownReads();
-                    } catch (IOException e) {
-                        if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                            WebSocketLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
-                        }
-                        // nothing we can do here.. close
-                        safeClose(channel.getSourceChannel());
-                        throw e;
-                    }
                     forceFree = true;
+                    readChannelDone = true;
                     lastDataRead();
                     return null;
+                } else if(isLastFrameReceived()) {
+                    //we got data, although we should have received the last frame
+                    forceFree = true;
+                    markReadsBroken(new ClosedChannelException());
                 }
                 pooled.getBuffer().flip();
             }
@@ -860,7 +858,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
 
             final R receiver = AbstractFramedChannel.this.receiver;
-            if ((isLastFrameReceived() || receivesSuspended) && receiver == null) {
+            if ((readChannelDone || receivesSuspended) && receiver == null) {
                 channel.suspendReads();
                 return;
             } else {

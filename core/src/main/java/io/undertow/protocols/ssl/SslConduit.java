@@ -509,7 +509,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     @Override
     public long transferTo(long position, long count, FileChannel target) throws IOException {
         if(anyAreSet(state, FLAG_READ_SHUTDOWN)) {
-            throw new ClosedChannelException();
+            return -1;
         }
         return target.transferFrom(new ConduitReadableByteChannel(this), position, count);
     }
@@ -517,7 +517,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     @Override
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         if(anyAreSet(state, FLAG_READ_SHUTDOWN)) {
-            throw new ClosedChannelException();
+            return -1;
         }
         return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
     }
@@ -525,7 +525,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     @Override
     public int read(ByteBuffer dst) throws IOException {
         if(anyAreSet(state, FLAG_READ_SHUTDOWN)) {
-            throw new ClosedChannelException();
+            return -1;
         }
         return (int) doUnwrap(new ByteBuffer[]{dst}, 0, 1);
     }
@@ -533,7 +533,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     @Override
     public long read(ByteBuffer[] dsts, int offs, int len) throws IOException {
         if(anyAreSet(state, FLAG_READ_SHUTDOWN)) {
-            throw new ClosedChannelException();
+            return -1;
         }
         return doUnwrap(dsts, offs, len);
     }
@@ -621,6 +621,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @throws SSLException
      */
     private long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
+        System.out.println("unwrap " + dataToUnwrap);
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
@@ -740,28 +741,34 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return original - Buffers.remaining(userBuffers);
             }
         } finally {
-            boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
-            if (unwrappedData != null && unwrappedData.getBuffer().hasRemaining()) {
-                requiresListenerInvocation = true;
-            }
-            if(dataToUnwrap != null) {
-                //if there is no data in the buffer we just free it
-                if(!dataToUnwrap.getBuffer().hasRemaining()) {
-                    dataToUnwrap.close();
-                    dataToUnwrap = null;
-                    state &= ~FLAG_DATA_TO_UNWRAP;
-                } else if(allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
-                    //if there is not enough data in the buffer we compact it to make room for more
-                    dataToUnwrap.getBuffer().compact();
-                } else {
-                    //there is more data, make sure we trigger a read listener invocation
+            System.out.println("1:" + dataToUnwrap);
+            try {
+                boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
+                if (unwrappedData != null && unwrappedData.getBuffer().hasRemaining()) {
                     requiresListenerInvocation = true;
                 }
-            }
-            //if we are in the read listener handshake we don't need to invoke
-            //as it is about to be invoked anyway
-            if(requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
-                runReadListener(false);
+                if (dataToUnwrap != null) {
+                    //if there is no data in the buffer we just free it
+                    if (!dataToUnwrap.getBuffer().hasRemaining()) {
+                        dataToUnwrap.close();
+                        dataToUnwrap = null;
+                        state &= ~FLAG_DATA_TO_UNWRAP;
+                    } else if (allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
+                        //if there is not enough data in the buffer we compact it to make room for more
+                        dataToUnwrap.getBuffer().compact();
+                    } else {
+                        //there is more data, make sure we trigger a read listener invocation
+                        requiresListenerInvocation = true;
+                    }
+                }
+                //if we are in the read listener handshake we don't need to invoke
+                //as it is about to be invoked anyway
+                if (requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
+                    System.out.println("run read lust " + dataToUnwrap + " " + anyAreSet(state, FLAG_DATA_TO_UNWRAP));
+                    runReadListener(false);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
@@ -1028,6 +1035,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
         @Override
         public void readReady() {
+            System.out.println("listener " + dataToUnwrap);
             if(allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
                 try {
                     invokingReadListenerHandshake = true;
@@ -1042,6 +1050,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             boolean noProgress = false;
             int initialUnwrapped = -1;
             if (anyAreSet(state, FLAG_READS_RESUMED)) {
+                System.out.println("reads resumed " + dataToUnwrap + connection.getSourceChannel().getReadListener());
                 if (delegateHandler == null) {
                     final ChannelListener<? super ConduitStreamSourceChannel> readListener = connection.getSourceChannel().getReadListener();
                     if (readListener == null) {
