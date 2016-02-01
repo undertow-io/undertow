@@ -99,7 +99,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         this(realmName, mechanismName, silent, null);
     }
     public BasicAuthenticationMechanism(final String realmName, final String mechanismName, final boolean silent, final IdentityManager identityManager) {
-        this(realmName, mechanismName, silent, identityManager, StandardCharsets.UTF_8, Collections.emptyMap());
+        this(realmName, mechanismName, silent, identityManager, StandardCharsets.UTF_8, Collections.<Pattern, Charset>emptyMap());
     }
 
     public BasicAuthenticationMechanism(final String realmName, final String mechanismName, final boolean silent, final IdentityManager identityManager, Charset charset, Map<Pattern, Charset> userAgentCharsets) {
