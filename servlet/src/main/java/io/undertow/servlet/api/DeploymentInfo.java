@@ -102,6 +102,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean disableCachingForSecuredPages = true;
     private boolean escapeErrorMessage = true;
     private boolean sendCustomReasonPhraseOnError = false;
+    private boolean useCachedAuthenticationMechanism = true;
     private AuthenticationMode authenticationMode = AuthenticationMode.PRO_ACTIVE;
     private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
@@ -1212,6 +1213,22 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public boolean isUseCachedAuthenticationMechanism() {
+        return useCachedAuthenticationMechanism;
+    }
+
+    /**
+     * If this is set to false the the cached authenticated session mechanism won't be installed. If you want FORM and
+     * other auth methods that require caching to work then you need to install another caching based auth method (such
+     * as SSO).
+     * @param useCachedAuthenticationMechanism If Undertow should use its internal authentication cache mechanism
+     * @return this
+     */
+    public DeploymentInfo setUseCachedAuthenticationMechanism(boolean useCachedAuthenticationMechanism) {
+        this.useCachedAuthenticationMechanism = useCachedAuthenticationMechanism;
+        return this;
+    }
+
     public boolean isSecurityDisabled() {
         return securityDisabled;
     }
@@ -1305,6 +1322,7 @@ public class DeploymentInfo implements Cloneable {
         info.changeSessionIdOnLogin = changeSessionIdOnLogin;
         info.crawlerSessionManagerConfig = crawlerSessionManagerConfig;
         info.securityDisabled = securityDisabled;
+        info.useCachedAuthenticationMechanism = useCachedAuthenticationMechanism;
         return info;
     }
 
