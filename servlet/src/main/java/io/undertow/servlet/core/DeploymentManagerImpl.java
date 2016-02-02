@@ -361,8 +361,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 authenticationMechanisms.add(factory.create(name, parser, properties));
             }
         }
-
-        authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager)); //TODO: does this really need to be hard coded?
+        if(deploymentInfo.isUseCachedAuthenticationMechanism()) {
+            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager));
+        }
         deployment.setAuthenticationMechanisms(authenticationMechanisms);
         //if the JASPI auth mechanism is set then it takes over
         if(deploymentInfo.getJaspiAuthenticationMechanism() == null) {
