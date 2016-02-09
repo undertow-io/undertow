@@ -437,4 +437,7 @@ public interface UndertowMessages {
 
     @Message(id = 136, value = "User agent charset string must have an even number of items, in the form pattern,charset,pattern,charset,... Instead got: %s")
     IllegalArgumentException userAgentCharsetMustHaveEvenNumberOfItems(String supplied);
+
+    @Message(id = 137, value = "Could not find the datasource called %s")
+    IllegalArgumentException datasourceNotFound(String ds);
 }
