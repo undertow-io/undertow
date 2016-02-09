@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -71,6 +72,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     private final String challenge;
 
     private static final String BASIC_PREFIX = BASIC + " ";
+    private static final String LOWERCASE_BASIC_PREFIX = BASIC_PREFIX.toLowerCase(Locale.ENGLISH);
     private static final int PREFIX_LENGTH = BASIC_PREFIX.length();
     private static final String COLON = ":";
 
@@ -125,7 +127,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
-                if (current.startsWith(BASIC_PREFIX)) {
+                if (current.toLowerCase(Locale.ENGLISH).startsWith(LOWERCASE_BASIC_PREFIX)) {
                     String base64Challenge = current.substring(PREFIX_LENGTH);
                     String plainChallenge = null;
                     try {
