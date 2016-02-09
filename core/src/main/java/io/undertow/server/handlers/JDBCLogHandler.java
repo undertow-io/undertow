@@ -15,14 +15,16 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package io.undertow.server.handlers;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
 
 import javax.sql.DataSource;
@@ -32,11 +34,17 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 public class JDBCLogHandler implements HttpHandler, Runnable {
 
@@ -103,6 +111,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
     }
 
     private class JDBCLogCompletionListener implements ExchangeCompletionListener {
+
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
             try {
@@ -129,8 +138,9 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
         jdbcLogAttribute.query = exchange.getQueryString();
 
         jdbcLogAttribute.bytes = exchange.getResponseContentLength();
-        if (jdbcLogAttribute.bytes < 0)
+        if (jdbcLogAttribute.bytes < 0) {
             jdbcLogAttribute.bytes = 0;
+        }
 
         jdbcLogAttribute.status = exchange.getStatusCode();
 
@@ -208,8 +218,9 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
                         if (useLongContentLength) {
                             ps.setLong(6, jdbcLogAttribute.bytes);
                         } else {
-                            if (jdbcLogAttribute.bytes > Integer.MAX_VALUE)
+                            if (jdbcLogAttribute.bytes > Integer.MAX_VALUE) {
                                 jdbcLogAttribute.bytes = -1;
+                            }
                             ps.setInt(6, (int) jdbcLogAttribute.bytes);
                         }
                         ps.setString(7, jdbcLogAttribute.virtualHost);
@@ -247,8 +258,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
     }
 
     /**
-     * For tests only. Blocks the current thread until all messages are written
-     * Just does a busy wait.
+     * For tests only. Blocks the current thread until all messages are written Just does a busy wait.
      * <p/>
      * DO NOT USE THIS OUTSIDE OF A TEST
      */
@@ -262,17 +272,17 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
     }
 
     private PreparedStatement prepareStatement(Connection conn) throws SQLException {
-        return conn.prepareStatement
-                ("INSERT INTO " + tableName + " ("
-                        + remoteHostField + ", " + userField + ", "
-                        + timestampField + ", " + queryField + ", "
-                        + statusField + ", " + bytesField + ", "
-                        + virtualHostField + ", " + methodField + ", "
-                        + refererField + ", " + userAgentField
-                        + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        return conn.prepareStatement("INSERT INTO " + tableName + " ("
+                + remoteHostField + ", " + userField + ", "
+                + timestampField + ", " + queryField + ", "
+                + statusField + ", " + bytesField + ", "
+                + virtualHostField + ", " + methodField + ", "
+                + refererField + ", " + userAgentField
+                + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     }
 
     private class JDBCLogAttribute {
+
         protected String remoteHost = "";
         protected String user = "";
         protected String query = "";
@@ -384,9 +394,62 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
 
     @Override
     public String toString() {
-        return "JDBCLogHandler{" +
-                "formatString='" + formatString + '\'' +
-                '}';
+        return "JDBCLogHandler{"
+                + "formatString='" + formatString + '\''
+                + '}';
     }
 
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "jdbc-access-log";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put("format", String.class);
+            params.put("datasource", String.class);
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("datasource");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "datasource";
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            String datasourceName = (String) config.get("datasource");
+            try {
+                DataSource ds = (DataSource) new InitialContext().lookup((String) config.get("datasource"));
+                return new Wrapper((String) config.get("format"), ds);
+            } catch (NamingException ex) {
+                throw UndertowMessages.MESSAGES.datasourceNotFound(datasourceName);
+            }
+        }
+
+    }
+
+    private static class Wrapper implements HandlerWrapper {
+
+        private final DataSource datasource;
+        private final String format;
+
+        private Wrapper(String format, DataSource datasource) {
+            this.datasource = datasource;
+            this.format = "combined".equals(format) ? "combined" : "common";
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new JDBCLogHandler(handler, format, datasource);
+        }
+    }
 }
