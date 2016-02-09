@@ -27,6 +27,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
 
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.sql.DataSource;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
@@ -43,8 +45,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 
 public class JDBCLogHandler implements HttpHandler, Runnable {
 
@@ -411,6 +411,17 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
             Map<String, Class<?>> params = new HashMap<>();
             params.put("format", String.class);
             params.put("datasource", String.class);
+            params.put("tableName", String.class);
+            params.put("remoteHostField", String.class);
+            params.put("userField", String.class);
+            params.put("timestampField", String.class);
+            params.put("virtualHostField", String.class);
+            params.put("methodField", String.class);
+            params.put("queryField", String.class);
+            params.put("statusField", String.class);
+            params.put("bytesField", String.class);
+            params.put("refererField", String.class);
+            params.put("userAgentField", String.class);
             return params;
         }
 
@@ -429,7 +440,8 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
             String datasourceName = (String) config.get("datasource");
             try {
                 DataSource ds = (DataSource) new InitialContext().lookup((String) config.get("datasource"));
-                return new Wrapper((String) config.get("format"), ds);
+                String format = (String) config.get("format");
+                return new Wrapper(format, ds, (String)config.get("tableName"), (String)config.get("remoteHostField"), (String)config.get("userField"), (String)config.get("timestampField"), (String)config.get("virtualHostField"), (String)config.get("methodField"), (String)config.get("queryField"), (String)config.get("statusField"), (String)config.get("bytesField"), (String)config.get("refererField"), (String)config.get("userAgentField"));
             } catch (NamingException ex) {
                 throw UndertowMessages.MESSAGES.datasourceNotFound(datasourceName);
             }
@@ -442,14 +454,72 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
         private final DataSource datasource;
         private final String format;
 
-        private Wrapper(String format, DataSource datasource) {
+        private final String tableName;
+        private final String remoteHostField;
+        private final String userField;
+        private final String timestampField;
+        private final String virtualHostField;
+        private final String methodField;
+        private final String queryField;
+        private final String statusField;
+        private final String bytesField;
+        private final String refererField;
+        private final String userAgentField;
+
+        private Wrapper(String format, DataSource datasource, String tableName, String remoteHostField, String userField, String timestampField, String virtualHostField, String methodField, String queryField, String statusField, String bytesField, String refererField, String userAgentField) {
             this.datasource = datasource;
+            this.tableName = tableName;
+            this.remoteHostField = remoteHostField;
+            this.userField = userField;
+            this.timestampField = timestampField;
+            this.virtualHostField = virtualHostField;
+            this.methodField = methodField;
+            this.queryField = queryField;
+            this.statusField = statusField;
+            this.bytesField = bytesField;
+            this.refererField = refererField;
+            this.userAgentField = userAgentField;
             this.format = "combined".equals(format) ? "combined" : "common";
         }
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-            return new JDBCLogHandler(handler, format, datasource);
+            JDBCLogHandler jdbc = new JDBCLogHandler(handler, format, datasource);
+            if(tableName != null) {
+                jdbc.setTableName(tableName);
+            }
+            if(remoteHostField != null) {
+                jdbc.setRemoteHostField(remoteHostField);
+            }
+            if(userField != null) {
+                jdbc.setUserField(userField);
+            }
+            if(timestampField != null) {
+                jdbc.setTimestampField(timestampField);
+            }
+            if(virtualHostField != null) {
+                jdbc.setVirtualHostField(virtualHostField);
+            }
+            if(methodField != null) {
+                jdbc.setMethodField(methodField);
+            }
+            if(queryField != null) {
+                jdbc.setQueryField(queryField);
+            }
+            if(statusField != null) {
+                jdbc.setStatusField(statusField);
+            }
+            if(bytesField != null) {
+                jdbc.setBytesField(bytesField);
+            }
+            if(refererField != null) {
+                jdbc.setRefererField(refererField);
+            }
+            if(userAgentField != null) {
+                jdbc.setUserAgentField(userAgentField);
+            }
+
+            return jdbc;
         }
     }
 }
