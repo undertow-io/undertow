@@ -44,9 +44,6 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
     private final String formatString;
     private final ExchangeCompletionListener exchangeCompletionListener = new JDBCLogCompletionListener();
 
-
-    private final Executor logWriteExecutor;
-
     private final Deque<JDBCLogAttribute> pendingMessages;
 
     //0 = not running
@@ -54,6 +51,8 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
     //2 = running
     @SuppressWarnings("unused")
     private volatile int state = 0;
+    @SuppressWarnings("unused")
+    private volatile Executor executor;
 
     private static final AtomicIntegerFieldUpdater<JDBCLogHandler> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(JDBCLogHandler.class, "state");
 
@@ -73,7 +72,12 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
     private String refererField;
     private String userAgentField;
 
+    @Deprecated
     public JDBCLogHandler(final HttpHandler next, final Executor logWriteExecutor, final String formatString, DataSource dataSource) {
+        this(next, formatString, dataSource);
+    }
+
+    public JDBCLogHandler(final HttpHandler next, final String formatString, DataSource dataSource) {
         this.next = next;
         this.formatString = formatString;
         this.dataSource = dataSource;
@@ -89,7 +93,6 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
         bytesField = "bytes";
         refererField = "referer";
         userAgentField = "userAgent";
-        this.logWriteExecutor = logWriteExecutor;
         this.pendingMessages = new ConcurrentLinkedDeque<>();
     }
 
@@ -142,7 +145,8 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
         int state = stateUpdater.get(this);
         if (state == 0) {
             if (stateUpdater.compareAndSet(this, 0, 1)) {
-                logWriteExecutor.execute(this);
+                this.executor = exchange.getConnection().getWorker();
+                this.executor.execute(this);
             }
         }
     }
@@ -172,12 +176,13 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
                 writeMessage(messages);
             }
         } finally {
+            Executor executor = this.executor;
             stateUpdater.set(this, 0);
             //check to see if there is still more messages
             //if so then run this again
             if (!pendingMessages.isEmpty()) {
                 if (stateUpdater.compareAndSet(this, 0, 1)) {
-                    logWriteExecutor.execute(this);
+                    executor.execute(this);
                 }
             }
         }
