@@ -116,6 +116,11 @@ public final class Undertow {
                     .addAll(this.socketOptions)
                     .getMap();
 
+            OptionMap serverOptions = OptionMap.builder()
+                    .set(UndertowOptions.NO_REQUEST_TIMEOUT, 60000000)
+                    .addAll(this.serverOptions)
+                    .getMap();
+
 
             ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, bufferSize, -1, 4);
 
