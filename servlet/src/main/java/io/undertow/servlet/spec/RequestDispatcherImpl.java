@@ -60,13 +60,16 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     public RequestDispatcherImpl(final String path, final ServletContextImpl servletContext) {
         this.path = path;
         this.servletContext = servletContext;
-        int qPos = path.indexOf("?");
-
-        if (qPos == -1) {
-            this.pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(path);
-        } else {
-            this.pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(path.substring(0, qPos));
+        String basePath = path;
+        int qPos = basePath.indexOf("?");
+        if (qPos != -1) {
+            basePath = basePath.substring(0, qPos);
         }
+        int mPos = basePath.indexOf(";");
+        if(mPos != -1) {
+            basePath = basePath.substring(0, mPos);
+        }
+        this.pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(basePath);
         this.chain = pathMatch.getServletChain();
         this.named = false;
     }
