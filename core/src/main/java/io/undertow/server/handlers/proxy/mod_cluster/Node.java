@@ -423,7 +423,7 @@ class Node {
             } else if (availability == ProxyConnectionPool.AvailabilityType.FULL) {
                 if (existingSession) {
                     return true;
-                } else if (!existingSession && nodeConfig.isQueueNewRequests()) {
+                } else if (nodeConfig.isQueueNewRequests()) {
                     return true;
                 }
             }
