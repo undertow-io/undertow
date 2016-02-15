@@ -206,4 +206,22 @@ public class DispatcherForwardTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+
+
+    @Test
+    public void testIncludesPathParameters() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
+            get.setHeader("forward", "/path;pathparam=foo");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path requestUri:/servletContext/path;pathparam=foo", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }
