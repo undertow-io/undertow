@@ -112,7 +112,6 @@ public class MCMPConfig {
     static class AdvertiseConfig {
 
         private final String advertiseGroup;
-        private final String advertiseAddress;
         private final int advertisePort;
 
         private final String securityKey;
@@ -126,7 +125,6 @@ public class MCMPConfig {
 
         AdvertiseConfig(AdvertiseBuilder builder, MCMPConfig config) {
             this.advertiseGroup = builder.advertiseGroup;
-            this.advertiseAddress = builder.advertiseAddress;
             this.advertiseFrequency = builder.advertiseFrequency;
             this.advertisePort = builder.advertisePort;
             this.securityKey = builder.securityKey;
@@ -138,10 +136,6 @@ public class MCMPConfig {
 
         public String getAdvertiseGroup() {
             return advertiseGroup;
-        }
-
-        public String getAdvertiseAddress() {
-            return advertiseAddress;
         }
 
         public int getAdvertisePort() {
@@ -236,7 +230,6 @@ public class MCMPConfig {
     public static class AdvertiseBuilder {
 
         String advertiseGroup = "224.0.1.105";
-        String advertiseAddress = "127.0.0.1";
         int advertisePort = 23364;
 
         String securityKey;
@@ -252,11 +245,6 @@ public class MCMPConfig {
 
         public AdvertiseBuilder setAdvertiseGroup(String advertiseGroup) {
             this.advertiseGroup = advertiseGroup;
-            return this;
-        }
-
-        public AdvertiseBuilder setAdvertiseAddress(String advertiseAddress) {
-            this.advertiseAddress = advertiseAddress;
             return this;
         }
 
