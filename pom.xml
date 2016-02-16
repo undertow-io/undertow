@@ -106,6 +106,9 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
         <version.com.twitter.hpack>0.10.1</version.com.twitter.hpack>
+
+        <!-- Non-default maven plugin versions and configuration -->
+        <version.org.zanata.plugin>3.7.4</version.org.zanata.plugin>
     </properties>
 
     <modules>
@@ -121,6 +124,22 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
+            </plugin>
+
+            <!-- Zanata translations -->
+            <plugin>
+                <groupId>org.zanata</groupId>
+                <artifactId>zanata-maven-plugin</artifactId>
+                <version>${version.org.zanata.plugin}</version>
+                <configuration>
+                    <!-- Process sub-modules separately, sharing parent config -->
+                    <enableModules>true</enableModules>
+                    <projectConfig>${session.executionRootDirectory}/zanata.xml</projectConfig>
+                    <!-- Generated English i18n.properties are written here: -->
+                    <srcDir>target/classes</srcDir>
+                    <transDir>src/main/resources</transDir>
+                    <includes>**/*.i18n.properties,**/LocalDescriptions.properties</includes>
+                </configuration>
             </plugin>
         </plugins>
         <pluginManagement>
