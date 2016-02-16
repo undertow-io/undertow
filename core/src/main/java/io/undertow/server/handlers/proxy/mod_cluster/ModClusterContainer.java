@@ -474,12 +474,7 @@ class ModClusterContainer implements ModClusterController {
         if (index == -1) {
             return null;
         }
-        String route = sessionId.substring(index + 1);
-        index = route.indexOf('.');
-        if (index != -1) {
-            route = route.substring(0, index);
-        }
-        return route;
+        return sessionId.substring(index + 1);
     }
 
     static Context electNode(final Iterable<Context> contexts, final boolean existingSession, final String domain) {
