@@ -66,8 +66,8 @@ class MCMPAdvertiseTask implements Runnable {
 
     static void advertise(final ModClusterContainer container, final MCMPConfig.AdvertiseConfig config, final XnioWorker worker) throws IOException {
         InetSocketAddress bindAddress;
-        final InetAddress group = InetAddress.getByName(config.getAdvertiseGroup());
-        if (group == null || linuxLike || windows) {
+        final InetAddress group = InetAddress.getByName(config.getAdvertiseAddress());
+        if (group == null) {
             bindAddress = new InetSocketAddress(config.getAdvertisePort());
         } else {
             bindAddress = new InetSocketAddress(group, config.getAdvertisePort());
@@ -76,7 +76,7 @@ class MCMPAdvertiseTask implements Runnable {
         try {
             channel = worker.createUdpServer(bindAddress, null, OptionMap.EMPTY);
         } catch (IOException e) {
-            if(group != null && linuxLike) {
+            if(group != null && (linuxLike || windows)) {
                 //try again with no group
                 //see UNDERTOW-454
                 UndertowLogger.ROOT_LOGGER.potentialCrossTalking(group, (group instanceof Inet4Address) ? "IPv4" : "IPv6", e.getLocalizedMessage());
