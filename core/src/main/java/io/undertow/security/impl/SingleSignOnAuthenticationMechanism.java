@@ -123,7 +123,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
     }
 
     private void clearSsoCookie(HttpServerExchange exchange) {
-        exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName).setMaxAge(0).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain));
+        exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName).setMaxAge(0).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
     }
 
     @Override
