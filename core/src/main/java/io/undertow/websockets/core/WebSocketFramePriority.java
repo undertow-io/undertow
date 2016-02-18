@@ -61,7 +61,7 @@ public class WebSocketFramePriority implements FramePriority<WebSocketChannel, S
                         return false;
                     }
                 }
-                if(order == newFrame && newFrame.isWritesShutdown()) {
+                if(order == newFrame && newFrame.isFinalFragment()) {
                     strictOrderQueue.poll();
                 }
             }
@@ -114,7 +114,7 @@ public class WebSocketFramePriority implements FramePriority<WebSocketChannel, S
             if (currentFragmentedSender != newFrame) {
                 return false;
             } else {
-                if (newFrame.isWritesShutdown()) {
+                if (newFrame.isFinalFragment()) {
                     currentFragmentedSender = null;
                 }
                 pendingFrames.add(newFrame);
