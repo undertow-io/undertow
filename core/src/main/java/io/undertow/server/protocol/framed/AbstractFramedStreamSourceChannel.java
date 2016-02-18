@@ -632,8 +632,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         if(isReadResumed()) {
             resumeReadsInternal(true);
         }
-        if (waiters > 0) {
-            lock.notifyAll();
+        synchronized (lock) {
+            if (waiters > 0) {
+                lock.notifyAll();
+            }
         }
     }
 
