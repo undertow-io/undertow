@@ -725,7 +725,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static void setUndertowOptions(final OptionMap options) {
-        openListener.setUndertowOptions(options);
+        OptionMap.Builder builder = OptionMap.builder().addAll(options);
+        if(h2c) {
+            builder.set(UndertowOptions.ENABLE_HTTP2, true);
+        }
+        openListener.setUndertowOptions(builder.getMap());
     }
 
     public static XnioWorker getWorker() {
