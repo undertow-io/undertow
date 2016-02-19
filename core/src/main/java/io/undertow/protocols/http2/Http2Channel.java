@@ -410,12 +410,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if (!initialSettingsReceived) {
             if (frameParser.type != FRAME_TYPE_SETTINGS) {
                 UndertowLogger.REQUEST_IO_LOGGER.remoteEndpointFailedToSendInitialSettings(frameParser.type);
-                StringBuilder sb = new StringBuilder();
-                while (data.hasRemaining()) {
-                    sb.append(data.get());
-                    sb.append(" ");
-                }
-                UndertowLogger.REQUEST_IO_LOGGER.error("Buffer: " + sb.toString());
                 markReadsBroken(new IOException());
             } else {
                 initialSettingsReceived = true;
