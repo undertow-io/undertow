@@ -221,14 +221,21 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     void runInIoThread(Runnable task) {
         this.taskRunQueue.add(task);
-        getIoThread().execute(new Runnable() {
-            @Override
-            public void run() {
-                while (!taskRunQueue.isEmpty()) {
-                    taskRunQueue.poll().run();
+        try {
+            getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    while (!taskRunQueue.isEmpty()) {
+                        taskRunQueue.poll().run();
+                    }
                 }
+            });
+        } catch (RejectedExecutionException e) {
+            //thread is shutting down
+            while (!taskRunQueue.isEmpty()) {
+                taskRunQueue.poll().run();
             }
-        });
+        }
     }
 
     /**
