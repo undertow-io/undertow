@@ -1038,7 +1038,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
         @Override
         public void readReady() {
-            if(allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
+            if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
                 try {
                     invokingReadListenerHandshake = true;
                     doHandshake();
