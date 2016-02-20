@@ -384,7 +384,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory);
             WebSocketHandshakeHolder hand;
 
-            WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)contextToAddFilter.getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
+            WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)request.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
             if (info == null || info.getExtensions() == null) {
                 hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint);
             } else {
