@@ -154,6 +154,13 @@ public class DeploymentInfo implements Cloneable {
     private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<>();
 
     /**
+     * A handler chain wrapper to wrap the initial stages of the security handlers, if this is set it is assumed it
+     * is taking over the responsibility of setting the {@link SecurityContext} that can handle authentication and the
+     * remaining Undertow handlers specific to authentication will be skipped.
+     */
+    private HandlerWrapper initialSecurityWrapper = null;
+
+    /**
      * Handler chain wrappers that are applied just before the authentication mechanism is called. Theses handlers are
      * always called, even if authentication is not required
      */
@@ -757,6 +764,28 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(initialHandlerChainWrappers);
     }
 
+
+    /**
+     * Sets the initial handler wrapper that will take over responsibility for establishing
+     * a security context that will handle authentication for the request.
+     *
+     * Undertow specific authentication mechanisms will not be installed but Undertow handlers will
+     * still make the decision as to if authentication is required and will subsequently
+     * call {@link SecurityContext#authenticate()} as required.
+     *
+     * @param wrapper the {@link HandlerWrapper} to handle the initial security context installation.
+     * @return {@code this} to allow chaining.
+     */
+    public DeploymentInfo setInitialSecurityWrapper(final HandlerWrapper wrapper) {
+        this.initialSecurityWrapper = wrapper;
+
+        return this;
+    }
+
+    public HandlerWrapper getInitialSecurityWrapper() {
+        return initialSecurityWrapper;
+    }
+
     /**
      * Adds a security handler. These are invoked before the authentication mechanism, and are always invoked
      * even if authentication is not required.
@@ -1284,6 +1313,7 @@ public class DeploymentInfo implements Cloneable {
         info.securityConstraints.addAll(securityConstraints);
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
         info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);
+        info.initialSecurityWrapper = initialSecurityWrapper;
         info.securityWrappers.addAll(securityWrappers);
         info.initialHandlerChainWrappers.addAll(initialHandlerChainWrappers);
         info.securityRoles.addAll(securityRoles);
