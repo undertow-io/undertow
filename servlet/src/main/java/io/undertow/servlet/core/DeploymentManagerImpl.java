@@ -279,26 +279,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
 
-        final Map<String, AuthenticationMechanismFactory> factoryMap = new HashMap<>(deploymentInfo.getAuthenticationMechanisms());
-        final IdentityManager identityManager = deploymentInfo.getIdentityManager();
-        if(!factoryMap.containsKey(BASIC_AUTH)) {
-            factoryMap.put(BASIC_AUTH, new BasicAuthenticationMechanism.Factory(identityManager));
-        }
-        if(!factoryMap.containsKey(FORM_AUTH)) {
-            factoryMap.put(FORM_AUTH, new ServletFormAuthenticationMechanism.Factory(identityManager));
-        }
-        if(!factoryMap.containsKey(DIGEST_AUTH)) {
-            factoryMap.put(DIGEST_AUTH, new DigestAuthenticationMechanism.Factory(identityManager));
-        }
-        if(!factoryMap.containsKey(CLIENT_CERT_AUTH)) {
-            factoryMap.put(CLIENT_CERT_AUTH, new ClientCertAuthenticationMechanism.Factory(identityManager));
-        }
-        if(!factoryMap.containsKey(ExternalAuthenticationMechanism.NAME)) {
-            factoryMap.put(ExternalAuthenticationMechanism.NAME, new ExternalAuthenticationMechanism.Factory(identityManager));
-        }
-        if(!factoryMap.containsKey(GenericHeaderAuthenticationMechanism.NAME)) {
-            factoryMap.put(GenericHeaderAuthenticationMechanism.NAME, new GenericHeaderAuthenticationMechanism.Factory(identityManager));
-        }
         HttpHandler current = initialHandler;
         current = new SSLInformationAssociationHandler(current);
 
@@ -319,73 +299,107 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (!securityPathMatches.isEmpty()) {
             current = new ServletSecurityConstraintHandler(securityPathMatches, current);
         }
-        List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<>();
+
+        HandlerWrapper initialSecurityWrapper = deploymentInfo.getInitialSecurityWrapper();
 
         String mechName = null;
-        if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
+        if (initialSecurityWrapper == null) {
+            final Map<String, AuthenticationMechanismFactory> factoryMap = new HashMap<>(deploymentInfo.getAuthenticationMechanisms());
+            final IdentityManager identityManager = deploymentInfo.getIdentityManager();
+            if(!factoryMap.containsKey(BASIC_AUTH)) {
+                factoryMap.put(BASIC_AUTH, new BasicAuthenticationMechanism.Factory(identityManager));
+            }
+            if(!factoryMap.containsKey(FORM_AUTH)) {
+                factoryMap.put(FORM_AUTH, new ServletFormAuthenticationMechanism.Factory(identityManager));
+            }
+            if(!factoryMap.containsKey(DIGEST_AUTH)) {
+                factoryMap.put(DIGEST_AUTH, new DigestAuthenticationMechanism.Factory(identityManager));
+            }
+            if(!factoryMap.containsKey(CLIENT_CERT_AUTH)) {
+                factoryMap.put(CLIENT_CERT_AUTH, new ClientCertAuthenticationMechanism.Factory(identityManager));
+            }
+            if(!factoryMap.containsKey(ExternalAuthenticationMechanism.NAME)) {
+                factoryMap.put(ExternalAuthenticationMechanism.NAME, new ExternalAuthenticationMechanism.Factory(identityManager));
+            }
+            if(!factoryMap.containsKey(GenericHeaderAuthenticationMechanism.NAME)) {
+                factoryMap.put(GenericHeaderAuthenticationMechanism.NAME, new GenericHeaderAuthenticationMechanism.Factory(identityManager));
+            }
+            List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<>();
+            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager)); //TODO: does this really need to be hard coded?
 
-            //we don't allow multipart requests, and always use the default encoding
-            FormParserFactory parser = FormParserFactory.builder(false)
-                    .addParser(new FormEncodedDataDefinition().setDefaultEncoding(deploymentInfo.getDefaultEncoding()))
-                    .build();
+            if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
 
-            List<AuthMethodConfig> authMethods = Collections.<AuthMethodConfig>emptyList();
-            if(loginConfig != null) {
-                authMethods = loginConfig.getAuthMethods();
+                //we don't allow multipart requests, and always use the default encoding
+                FormParserFactory parser = FormParserFactory.builder(false)
+                        .addParser(new FormEncodedDataDefinition().setDefaultEncoding(deploymentInfo.getDefaultEncoding()))
+                        .build();
+
+                List<AuthMethodConfig> authMethods = Collections.<AuthMethodConfig>emptyList();
+                if(loginConfig != null) {
+                    authMethods = loginConfig.getAuthMethods();
+                }
+
+                for(AuthMethodConfig method : authMethods) {
+                    AuthenticationMechanismFactory factory = factoryMap.get(method.getName());
+                    if(factory == null) {
+                        throw UndertowServletMessages.MESSAGES.unknownAuthenticationMechanism(method.getName());
+                    }
+                    if(mechName == null) {
+                        mechName = method.getName();
+                    }
+
+                    final Map<String, String> properties = new HashMap<>();
+                    properties.put(AuthenticationMechanismFactory.CONTEXT_PATH, deploymentInfo.getContextPath());
+                    properties.put(AuthenticationMechanismFactory.REALM, loginConfig.getRealmName());
+                    properties.put(AuthenticationMechanismFactory.ERROR_PAGE, loginConfig.getErrorPage());
+                    properties.put(AuthenticationMechanismFactory.LOGIN_PAGE, loginConfig.getLoginPage());
+                    properties.putAll(method.getProperties());
+
+                    String name = method.getName().toUpperCase(Locale.US);
+                    // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
+                    // comparable using '=='
+                    name = name.equals(FORM_AUTH) ? FORM_AUTH : name;
+                    name = name.equals(BASIC_AUTH) ? BASIC_AUTH : name;
+                    name = name.equals(DIGEST_AUTH) ? DIGEST_AUTH : name;
+                    name = name.equals(CLIENT_CERT_AUTH) ? CLIENT_CERT_AUTH : name;
+
+                    authenticationMechanisms.add(factory.create(name, parser, properties));
+                }
             }
 
-            for(AuthMethodConfig method : authMethods) {
-                AuthenticationMechanismFactory factory = factoryMap.get(method.getName());
-                if(factory == null) {
-                    throw UndertowServletMessages.MESSAGES.unknownAuthenticationMechanism(method.getName());
-                }
-                if(mechName == null) {
-                    mechName = method.getName();
-                }
-
-                final Map<String, String> properties = new HashMap<>();
-                properties.put(AuthenticationMechanismFactory.CONTEXT_PATH, deploymentInfo.getContextPath());
-                properties.put(AuthenticationMechanismFactory.REALM, loginConfig.getRealmName());
-                properties.put(AuthenticationMechanismFactory.ERROR_PAGE, loginConfig.getErrorPage());
-                properties.put(AuthenticationMechanismFactory.LOGIN_PAGE, loginConfig.getLoginPage());
-                properties.putAll(method.getProperties());
-
-                String name = method.getName().toUpperCase(Locale.US);
-                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
-                // comparable using '=='
-                name = name.equals(FORM_AUTH) ? FORM_AUTH : name;
-                name = name.equals(BASIC_AUTH) ? BASIC_AUTH : name;
-                name = name.equals(DIGEST_AUTH) ? DIGEST_AUTH : name;
-                name = name.equals(CLIENT_CERT_AUTH) ? CLIENT_CERT_AUTH : name;
-
-                authenticationMechanisms.add(factory.create(name, parser, properties));
+            if(deploymentInfo.isUseCachedAuthenticationMechanism()) {
+                authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager));
             }
-        }
-        if(deploymentInfo.isUseCachedAuthenticationMechanism()) {
-            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager));
-        }
-        deployment.setAuthenticationMechanisms(authenticationMechanisms);
-        //if the JASPI auth mechanism is set then it takes over
-        if(deploymentInfo.getJaspiAuthenticationMechanism() == null) {
-            current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
-        } else {
-            current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(deploymentInfo.getJaspiAuthenticationMechanism()));
+
+            deployment.setAuthenticationMechanisms(authenticationMechanisms);
+            //if the JASPI auth mechanism is set then it takes over
+            if(deploymentInfo.getJaspiAuthenticationMechanism() == null) {
+                current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
+            } else {
+                current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(deploymentInfo.getJaspiAuthenticationMechanism()));
+            }
+
+            current = new CachedAuthenticatedSessionHandler(current, this.deployment.getServletContext());
         }
 
-        current = new CachedAuthenticatedSessionHandler(current, this.deployment.getServletContext());
         List<NotificationReceiver> notificationReceivers = deploymentInfo.getNotificationReceivers();
         if (!notificationReceivers.isEmpty()) {
             current = new NotificationReceiverHandler(current, notificationReceivers);
         }
 
-        // TODO - A switch to constraint driven could be configurable, however before we can support that with servlets we would
-        // need additional tracking within sessions if a servlet has specifically requested that authentication occurs.
-        SecurityContextFactory contextFactory = deploymentInfo.getSecurityContextFactory();
-        if (contextFactory == null) {
-            contextFactory = SecurityContextFactoryImpl.INSTANCE;
+        if (initialSecurityWrapper == null) {
+            // TODO - A switch to constraint driven could be configurable, however before we can support that with servlets we would
+            // need additional tracking within sessions if a servlet has specifically requested that authentication occurs.
+            SecurityContextFactory contextFactory = deploymentInfo.getSecurityContextFactory();
+            if (contextFactory == null) {
+                contextFactory = SecurityContextFactoryImpl.INSTANCE;
+            }
+            current = new SecurityInitialHandler(deploymentInfo.getAuthenticationMode(), deploymentInfo.getIdentityManager(), mechName,
+                    contextFactory, current);
+        } else {
+            current = initialSecurityWrapper.wrap(current);
         }
-        current = new SecurityInitialHandler(deploymentInfo.getAuthenticationMode(), identityManager, mechName,
-                contextFactory, current);
+
         return current;
     }
 
