@@ -76,6 +76,8 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     private static final int PREFIX_LENGTH = BASIC_PREFIX.length();
     private static final String COLON = ":";
 
+    private static final Map<Pattern, Charset> EMPTY_CHARSETS_MAP = Collections.emptyMap();
+
     /**
      * If silent is true then this mechanism will only take effect if there is an Authorization header.
      *
@@ -101,7 +103,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         this(realmName, mechanismName, silent, null);
     }
     public BasicAuthenticationMechanism(final String realmName, final String mechanismName, final boolean silent, final IdentityManager identityManager) {
-        this(realmName, mechanismName, silent, identityManager, StandardCharsets.UTF_8, Collections.emptyMap());
+        this(realmName, mechanismName, silent, identityManager, StandardCharsets.UTF_8, EMPTY_CHARSETS_MAP);
     }
 
     public BasicAuthenticationMechanism(final String realmName, final String mechanismName, final boolean silent, final IdentityManager identityManager, Charset charset, Map<Pattern, Charset> userAgentCharsets) {
