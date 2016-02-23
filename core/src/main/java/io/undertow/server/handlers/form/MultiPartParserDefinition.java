@@ -78,7 +78,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
     public FormDataParser create(final HttpServerExchange exchange) {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
-            String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
+            String boundary = Headers.extractQuotedValueFromHeader(mimeType, "boundary");
             if (boundary == null) {
                 UndertowLogger.REQUEST_LOGGER.debugf("Could not find boundary in multipart request with ContentType: %s, multipart data will not be available", mimeType);
                 return null;
