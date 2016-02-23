@@ -51,7 +51,7 @@ public class LoadBalancerConnectionPoolingTestCase {
 
         // Default server uses 8 io threads which is hard to test against
         undertow = Undertow.builder()
-                .setIoThreads(2)
+                .setIoThreads(1)
                 .addHttpListener(port + 1, host)
                 .setHandler(proxyHandler)
                 .build();
@@ -114,8 +114,11 @@ public class LoadBalancerConnectionPoolingTestCase {
             client.getConnectionManager().shutdown();
         }
 
-        Assert.assertEquals(2, activeConnections.size());
-        Thread.sleep(4000);
+        Assert.assertEquals(1, activeConnections.size());
+        long end = System.currentTimeMillis() + 4000;
+        while (!activeConnections.isEmpty() && System.currentTimeMillis() < end) {
+            Thread.sleep(100);
+        }
         Assert.assertEquals(0, activeConnections.size());
     }
 }
