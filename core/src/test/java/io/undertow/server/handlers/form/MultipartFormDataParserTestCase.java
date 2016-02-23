@@ -28,9 +28,11 @@ import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
@@ -103,6 +105,38 @@ public class MultipartFormDataParserTestCase {
         }
     }
 
+
+
+    @Test
+    public void testQuotedBoundary() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createHandler()));
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            post.setHeader(Headers.CONTENT_TYPE_STRING,"multipart/form-data; boundary=\"s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\"");
+            StringEntity entity = new StringEntity("--s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\r\n" +
+                    "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "\r\n" +
+                    "myValue\r\n" +
+                    "--s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\r\n" +
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\r\n" +
+                    "Content-Type: application/octet-stream\r\n" +
+                    "\r\n" +
+                    "file contents\r\n" +
+                    "\r\n" +
+                    "--s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje--\r\n");
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
     @Test
     public void testFileUploadWithEagerParsing() throws Exception {
