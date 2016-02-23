@@ -255,7 +255,9 @@ public class Http2PriorityTree {
             }
 
             for(Http2PriorityNode i : dependents) {
-                node.addDependent(i);
+                if(i != null) {
+                    node.addDependent(i);
+                }
             }
             dependents[0] = node;
             for(int i = 1; i < dependents.length; ++ i) {

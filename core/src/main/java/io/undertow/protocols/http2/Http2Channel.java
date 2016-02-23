@@ -163,8 +163,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
-    private final Http2PriorityTree priorityTree;
-
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, Pool<ByteBuffer> bufferPool, Pooled<ByteBuffer> data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, true, null, settings);
@@ -197,7 +195,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             sendSettings();
             initialSettingsSent = true;
         }
-        priorityTree = clientSide ? null : new Http2PriorityTree();
         if (initialOtherSideSettings != null) {
             Http2SettingsParser parser = new Http2SettingsParser(initialOtherSideSettings.remaining());
             try {
@@ -306,9 +303,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     sendRstStream(frameParser.streamId, ERROR_PROTOCOL_ERROR);
                     return null;
                 }
-                if(priorityTree != null) {
-                    priorityTree.registerStream(frameParser.streamId, parser.getDependentStreamId(), parser.getWeight(), parser.isExclusive());
-                }
+//                if(priorityTree != null) {
+//                    priorityTree.registerStream(frameParser.streamId, parser.getDependentStreamId(), parser.getWeight(), parser.isExclusive());
+//                }
                 break;
             }
             case FRAME_TYPE_RST_STREAM: {
@@ -371,13 +368,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     return null;
                 }
                 frameData.free();
-                if(priorityTree == null) {
-                    //we don't care, because we are the client side
-                    //so this situation should never happen
-                    return null;
-                }
-                priorityTree.priorityFrame(frameParser.streamId, parser.getStreamDependency(), parser.getWeight(), parser.isExclusive());
-                //we don't return priority notifications, they are handled internally
+//                if(priorityTree == null) {
+//                    //we don't care, because we are the client side
+//                    //so this situation should never happen
+//                    return null;
+//                }
+//                priorityTree.priorityFrame(frameParser.streamId, parser.getStreamDependency(), parser.getWeight(), parser.isExclusive());
+//                //we don't return priority notifications, they are handled internally
                 return null;
             }
             default: {
