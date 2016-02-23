@@ -563,9 +563,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             final String oldId = sessionId;
             String newId = sessionManager.sessionIdGenerator.createSessionId();
             this.sessionId = newId;
-            sessionManager.sessions.put(newId, this);
+            if(!invalid) {
+                sessionManager.sessions.put(newId, this);
+                config.setSessionId(exchange, this.getId());
+            }
             sessionManager.sessions.remove(oldId);
-            config.setSessionId(exchange, this.getId());
             sessionManager.sessionListeners.sessionIdChanged(this, oldId);
             return newId;
         }
