@@ -73,6 +73,8 @@ public class CrossContextServletSessionTestCase {
                 .addMapping("/servlet");
         ServletInfo forward = new ServletInfo("forward", ForwardServlet.class)
                 .addMapping("/forward");
+        ServletInfo include = new ServletInfo("include", IncludeServlet.class)
+                .addMapping("/include");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -80,7 +82,7 @@ public class CrossContextServletSessionTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName( name + ".war")
                 .setServletSessionConfig(new ServletSessionConfig().setPath("/"))
-                .addServlets(s, forward);
+                .addServlets(s, forward, include);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -89,7 +91,7 @@ public class CrossContextServletSessionTestCase {
 
 
     @Test
-    public void testCrossContextSessionInvocation() throws IOException {
+    public void testCrossContextSessionForwardInvocation() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/servlet");
@@ -141,6 +143,59 @@ public class CrossContextServletSessionTestCase {
         }
     }
 
+    @Test
+    public void testCrossContextSessionIncludeInvocation() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/servlet");
+            HttpGet include1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/include?context=/2&path=/servlet");
+            HttpGet direct2 = new HttpGet(DefaultServer.getDefaultServerURL() + "/2/servlet");
+            HttpGet include2 = new HttpGet(DefaultServer.getDefaultServerURL() + "/2/include?context=/1&path=/servlet");
+            HttpResponse result = client.execute(include2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("1", response);
+
+            result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("2", response);
+
+            result = client.execute(include2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("3", response);
+
+            result = client.execute(include2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("4", response);
+
+            result = client.execute(include1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("1", response);
+
+            result = client.execute(include1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("2", response);
+
+            result = client.execute(direct2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("3", response);
+
+            result = client.execute(direct2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("4", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 
     public static class ForwardServlet extends HttpServlet {
 
@@ -150,4 +205,12 @@ public class CrossContextServletSessionTestCase {
         }
     }
 
+
+    public static class IncludeServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+            req.getServletContext().getContext(req.getParameter("context")).getRequestDispatcher(req.getParameter("path")).include(req, resp);
+        }
+    }
 }
