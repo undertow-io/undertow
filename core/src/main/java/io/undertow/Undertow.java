@@ -45,7 +45,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -61,6 +63,7 @@ public final class Undertow {
     private final int workerThreads;
     private final boolean directBuffers;
     private final List<ListenerConfig> listeners = new ArrayList<>();
+    private volatile List<ListenerInfo> listenerInfo;
     private final HttpHandler rootHandler;
     private final OptionMap workerOptions;
     private final OptionMap socketOptions;
@@ -137,6 +140,7 @@ public final class Undertow {
 
             ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, bufferSize, -1, 4);
 
+            listenerInfo = new ArrayList<>();
             for (ListenerConfig listener : listeners) {
                 final HttpHandler rootHandler = listener.rootHandler != null ? listener.rootHandler : this.rootHandler;
                 if (listener.type == ListenerType.AJP) {
@@ -146,6 +150,7 @@ public final class Undertow {
                     AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
                     server.resumeAccepts();
                     channels.add(server);
+                    listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), null));
                 } else {
                     OptionMap undertowOptions = OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap();
                     if (listener.type == ListenerType.HTTP) {
@@ -155,6 +160,7 @@ public final class Undertow {
                         AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
                         server.resumeAccepts();
                         channels.add(server);
+                        listenerInfo.add(new ListenerInfo("http", server.getLocalAddress(), null));
                     } else if (listener.type == ListenerType.HTTPS) {
                         ChannelListener<StreamConnection> openListener;
 
@@ -190,6 +196,7 @@ public final class Undertow {
                         AcceptingChannel<SslConnection> sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptions);
                         sslServer.resumeAccepts();
                         channels.add(sslServer);
+                        listenerInfo.add(new ListenerInfo("https", sslServer.getLocalAddress(), listener.sslContext));
                     }
                 }
 
@@ -214,10 +221,17 @@ public final class Undertow {
             worker = null;
         }
         xnio = null;
+        listenerInfo = null;
     }
 
+    public List<ListenerInfo> getListenerInfo() {
+        if(listenerInfo == null) {
+            throw UndertowMessages.MESSAGES.serverNotStarted();
+        }
+        return Collections.unmodifiableList(listenerInfo);
+    }
 
-    public static enum ListenerType {
+    public enum ListenerType {
         HTTP,
         HTTPS,
         AJP
@@ -404,6 +418,40 @@ public final class Undertow {
         public <T> Builder setWorker(XnioWorker worker) {
             this.worker = worker;
             return this;
+        }
+    }
+
+    public static class ListenerInfo {
+
+        private final String protcol;
+        private final SocketAddress address;
+        private final SSLContext sslContext;
+
+        public ListenerInfo(String protcol, SocketAddress address, SSLContext sslContext) {
+            this.protcol = protcol;
+            this.address = address;
+            this.sslContext = sslContext;
+        }
+
+        public String getProtcol() {
+            return protcol;
+        }
+
+        public SocketAddress getAddress() {
+            return address;
+        }
+
+        public SSLContext getSslContext() {
+            return sslContext;
+        }
+
+        @Override
+        public String toString() {
+            return "ListenerInfo{" +
+                    "protcol='" + protcol + '\'' +
+                    ", address=" + address +
+                    ", sslContext=" + sslContext +
+                    '}';
         }
     }
 

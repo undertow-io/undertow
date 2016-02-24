@@ -440,4 +440,7 @@ public interface UndertowMessages {
 
     @Message(id = 137, value = "Could not find the datasource called %s")
     IllegalArgumentException datasourceNotFound(String ds);
+
+    @Message(id = 138, value = "Server not started")
+    IllegalStateException serverNotStarted();
 }
