@@ -155,6 +155,23 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private boolean invokingReadListenerHandshake = false;
 
+    private final Runnable runReadListenerCommand = new Runnable() {
+        @Override
+        public void run() {
+            readReadyHandler.readReady();
+        }
+    };
+
+    private final Runnable runReadListenerAndResumeCommand = new Runnable() {
+        @Override
+        public void run() {
+            if (allAreSet(state, FLAG_READS_RESUMED)) {
+                delegate.getSourceChannel().resumeReads();
+            }
+            readReadyHandler.readReady();
+        }
+    };
+
     SslConduit(UndertowSslConnection connection, StreamConnection delegate, SSLEngine engine, ByteBufferPool bufferPool, Runnable handshakeCallback) {
         this.connection = connection;
         this.delegate = delegate;
@@ -220,15 +237,11 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private void runReadListener(final boolean resumeInListener) {
         try {
-            delegate.getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    if(resumeInListener && allAreSet(state, FLAG_READS_RESUMED)) {
-                        delegate.getSourceChannel().resumeReads();
-                    }
-                    readReadyHandler.readReady();
-                }
-            });
+            if(resumeInListener) {
+                delegate.getIoThread().execute(runReadListenerAndResumeCommand);
+            } else {
+                delegate.getIoThread().execute(runReadListenerCommand);
+            }
         } catch (Exception e) {
             //will only happen on shutdown
             IoUtils.safeClose(connection, delegate);
