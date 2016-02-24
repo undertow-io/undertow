@@ -22,7 +22,7 @@ import io.undertow.security.impl.SingleSignOnManager;
 
 /**
  * This class name has a type, kept for backwards compatibility reasons
- * 
+ *
  * @author Stuart Douglas
  */
 @Deprecated
