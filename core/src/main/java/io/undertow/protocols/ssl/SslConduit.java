@@ -124,7 +124,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private final ByteBufferPool bufferPool;
     private final Runnable handshakeCallback;
 
-    private int state = 0;
+    private volatile int state = 0;
 
     private volatile int outstandingTasks = 0;
 
@@ -1063,6 +1063,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 }
             }
             boolean noProgress = false;
+            int initialDataToUnwrap = -1;
             int initialUnwrapped = -1;
             if (anyAreSet(state, FLAG_READS_RESUMED)) {
                 if (delegateHandler == null) {
@@ -1071,10 +1072,15 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                         suspendReads();
                     } else {
                         if(anyAreSet(state, FLAG_DATA_TO_UNWRAP)) {
-                            initialUnwrapped = dataToUnwrap.getBuffer().remaining();
+                            initialDataToUnwrap = dataToUnwrap.getBuffer().remaining();
+                        }
+                        if(unwrappedData != null) {
+                            initialUnwrapped = unwrappedData.getBuffer().remaining();
                         }
                         ChannelListeners.invokeChannelListener(connection.getSourceChannel(), readListener);
-                        if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) && initialUnwrapped == dataToUnwrap.getBuffer().remaining()) {
+                        if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) && initialDataToUnwrap == dataToUnwrap.getBuffer().remaining()) {
+                            noProgress = true;
+                        } else if(unwrappedData != null && unwrappedData.getBuffer().remaining() == initialUnwrapped) {
                             noProgress = true;
                         }
                     }
