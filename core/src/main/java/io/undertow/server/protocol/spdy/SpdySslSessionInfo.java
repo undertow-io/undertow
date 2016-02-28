@@ -27,6 +27,7 @@ import org.xnio.Options;
 import org.xnio.SslClientAuthMode;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 import java.io.IOException;
 import java.security.cert.Certificate;
@@ -88,5 +89,10 @@ class SpdySslSessionInfo implements SSLSessionInfo {
     @Override
     public void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException {
         throw UndertowMessages.MESSAGES.renegotiationNotSupported();
+    }
+
+    @Override
+    public SSLSession getSSLSession() {
+        return channel.getSslSession();
     }
 }

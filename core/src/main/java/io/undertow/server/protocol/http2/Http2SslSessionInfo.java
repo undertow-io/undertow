@@ -21,6 +21,7 @@ package io.undertow.server.protocol.http2;
 import java.io.IOException;
 import java.security.cert.Certificate;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 import org.xnio.Options;
 import org.xnio.SslClientAuthMode;
@@ -88,5 +89,10 @@ class Http2SslSessionInfo implements SSLSessionInfo {
     @Override
     public void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException {
         throw UndertowMessages.MESSAGES.renegotiationNotSupported();
+    }
+
+    @Override
+    public SSLSession getSSLSession() {
+        return channel.getSslSession();
     }
 }
