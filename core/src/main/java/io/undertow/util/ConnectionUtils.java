@@ -25,11 +25,9 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
 import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * @author Stuart Douglas
@@ -41,7 +39,7 @@ public class ConnectionUtils {
     }
 
     /**
-     * Cleanly close a connection, by shutting down and flushing writes and then draining reads.
+     * Cleanly close a connection, by shutting down and flushing writes.
      * <p/>
      * If this fails the connection is forcibly closed.
      *
@@ -55,7 +53,8 @@ public class ConnectionUtils {
                 connection.getSinkChannel().setWriteListener(ChannelListeners.flushingChannelListener(new ChannelListener<ConduitStreamSinkChannel>() {
                     @Override
                     public void handleEvent(ConduitStreamSinkChannel channel) {
-                        doDrain(connection, additional);
+                        IoUtils.safeClose(connection);
+                        IoUtils.safeClose(additional);
                     }
                 }, new ChannelExceptionHandler<ConduitStreamSinkChannel>() {
                     @Override
@@ -67,56 +66,10 @@ public class ConnectionUtils {
                 }));
                 connection.getSinkChannel().resumeWrites();
             } else {
-                doDrain(connection, additional);
-            }
-
-        } catch (Exception e) {
-            if (e instanceof IOException) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) e);
-            } else {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
-            }
-            IoUtils.safeClose(connection);
-            IoUtils.safeClose(additional);
-        }
-    }
-
-    private static void doDrain(final StreamConnection connection, Closeable... additional) {
-        if (!connection.getSourceChannel().isOpen()) {
-            IoUtils.safeClose(connection);
-            return;
-        }
-        final ByteBuffer b = ByteBuffer.allocate(1);
-        try {
-            int res = connection.getSourceChannel().read(b);
-            if (res == 0) {
-                connection.getSourceChannel().setReadListener(new ChannelListener<ConduitStreamSourceChannel>() {
-                    @Override
-                    public void handleEvent(ConduitStreamSourceChannel channel) {
-                        try {
-                            int res = channel.read(b);
-                            if (res == 0) {
-                                return;
-                            } else {
-                                IoUtils.safeClose(connection);
-                                IoUtils.safeClose(additional);
-                            }
-                        } catch (Exception e) {
-                            if (e instanceof IOException) {
-                                UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) e);
-                            } else {
-                                UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
-                            }
-                            IoUtils.safeClose(connection);
-                            IoUtils.safeClose(additional);
-                        }
-                    }
-                });
-                connection.getSourceChannel().resumeReads();
-            } else {
                 IoUtils.safeClose(connection);
                 IoUtils.safeClose(additional);
             }
+
         } catch (Exception e) {
             if (e instanceof IOException) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) e);
@@ -127,6 +80,4 @@ public class ConnectionUtils {
             IoUtils.safeClose(additional);
         }
     }
-
-
 }
