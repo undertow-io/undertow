@@ -41,6 +41,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -212,9 +213,11 @@ public class ServerSentEventConnection implements Channel, Attachable {
         sink.getIoThread().execute(new Runnable() {
             @Override
             public void run() {
-                if (pooled == null) {
-                    fillBuffer();
-                    writeListener.handleEvent(sink);
+                synchronized (ServerSentEventConnection.this) {
+                    if (pooled == null) {
+                        fillBuffer();
+                        writeListener.handleEvent(sink);
+                    }
                 }
             }
         });
@@ -357,13 +360,16 @@ public class ServerSentEventConnection implements Channel, Attachable {
         sink.getIoThread().execute(new Runnable() {
             @Override
             public void run() {
-                if (queue.isEmpty() && pooled == null) {
-                    try {
-                        sink.shutdownWrites();
-                    } catch (IOException e) {
-                        //ignore
+
+                synchronized (ServerSentEventConnection.this) {
+                    if (queue.isEmpty() && pooled == null) {
+                        try {
+                            sink.shutdownWrites();
+                        } catch (IOException e) {
+                            //ignore
+                        }
+                        IoUtils.safeClose(ServerSentEventConnection.this);
                     }
-                    IoUtils.safeClose(ServerSentEventConnection.this);
                 }
             }
         });
@@ -385,27 +391,22 @@ public class ServerSentEventConnection implements Channel, Attachable {
                 pooled.close();
                 pooled = null;
             }
-
-            for (SSEData i : buffered) {
-                if (i.callback != null) {
-                    try {
-                        i.callback.failed(this, i.data, i.event, i.id, e);
-                    } catch (Exception ex) {
-                        UndertowLogger.REQUEST_LOGGER.failedToInvokeFailedCallback(i.callback, ex);
-                    }
-                }
-            }
-            for (SSEData i : queue) {
-                if (i.callback != null) {
-                    try {
-                        i.callback.failed(this, i.data, i.event, i.id, e);
-                    } catch (Exception ex) {
-                        UndertowLogger.REQUEST_LOGGER.failedToInvokeFailedCallback(i.callback, ex);
-                    }
-                }
-            }
+            List<SSEData> cb = new ArrayList<>(buffered.size() + queue.size() + flushingMessages.size());
+            cb.addAll(buffered);
+            cb.addAll(queue);
+            cb.addAll(flushingMessages);
             queue.clear();
             buffered.clear();
+            flushingMessages.clear();
+            for (SSEData i : cb) {
+                if (i.callback != null) {
+                    try {
+                        i.callback.failed(this, i.data, i.event, i.id, e);
+                    } catch (Exception ex) {
+                        UndertowLogger.REQUEST_LOGGER.failedToInvokeFailedCallback(i.callback, ex);
+                    }
+                }
+            }
             sink.shutdownWrites();
             if(!sink.flush()) {
                 sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<StreamSinkChannel>() {
@@ -473,67 +474,80 @@ public class ServerSentEventConnection implements Channel, Attachable {
     private class SseWriteListener implements ChannelListener<StreamSinkChannel> {
         @Override
         public void handleEvent(StreamSinkChannel channel) {
-
-            try {
-                if(!flushingMessages.isEmpty()) {
-                    if(!channel.flush()) {
-                        return;
-                    }
-                    ByteBuffer buffer = pooled.getBuffer();
-                    for(SSEData data: flushingMessages) {
-                        data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
-                    }
-                    flushingMessages.clear();
-                    if (!buffer.hasRemaining()) {
-                        fillBuffer();
-                    }
-                } else if (pooled == null) {
-                    if(!channel.flush()) {
-                        return;
-                    }
-                    channel.suspendWrites();
-                    return;
-                }
-
-                ByteBuffer buffer = pooled.getBuffer();
-                int res;
-                do {
-                    res = channel.write(buffer);
-                    boolean flushed = channel.flush();
-                    while (!buffered.isEmpty()) {
-                        //figure out which messages are complete
-                        SSEData data = buffered.poll();
-                        if (data.endBufferPosition > 0 && buffer.position() >= data.endBufferPosition) {
-                            if(data.callback != null && data.leftOverData == null) {
-                                //if flush was unsuccessful we defer the callback invocation, till it is actually on the wire
-                                if(flushed) {
-                                    data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
-                                } else {
-                                    flushingMessages.add(data);
-                                }
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    if(!flushed && !flushingMessages.isEmpty()) {
-                        sink.resumeWrites();
-                        return;
-                    }
-
-                    if (res == 0) {
-                        sink.resumeWrites();
-                        return;
-                    } else if (!buffer.hasRemaining()) {
-                        fillBuffer();
-                        if(pooled == null) {
+            synchronized (ServerSentEventConnection.this) {
+                try {
+                    if (!flushingMessages.isEmpty()) {
+                        if (!channel.flush()) {
                             return;
                         }
+                        ByteBuffer buffer = pooled.getBuffer();
+                        for (SSEData data : flushingMessages) {
+                            if (data.callback != null && data.leftOverData == null) {
+                                data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
+                            }
+                        }
+                        flushingMessages.clear();
+                        if (!buffer.hasRemaining()) {
+                            fillBuffer();
+                            if (pooled == null) {
+                                if (channel.flush()) {
+                                    channel.suspendWrites();
+                                }
+                                return;
+                            }
+                        }
+                    } else if (pooled == null) {
+                        if (channel.flush()) {
+                            channel.suspendWrites();
+                        }
+                        return;
                     }
 
-                } while (res > 0);
-            } catch (IOException e) {
-                handleException(e);
+                    ByteBuffer buffer = pooled.getBuffer();
+                    int res;
+                    do {
+                        res = channel.write(buffer);
+                        boolean flushed = channel.flush();
+                        while (!buffered.isEmpty()) {
+                            //figure out which messages are complete
+                            SSEData data = buffered.peek();
+                            if (data.endBufferPosition > 0 && buffer.position() >= data.endBufferPosition) {
+                                buffered.poll();
+                                if (flushed) {
+                                    if (data.callback != null && data.leftOverData == null) {
+                                        data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
+                                    }
+                                } else {
+                                    //if flush was unsuccessful we defer the callback invocation, till it is actually on the wire
+                                    flushingMessages.add(data);
+                                }
+
+                            } else {
+                                if (data.endBufferPosition <= 0) {
+                                    buffered.poll();
+                                }
+                                break;
+                            }
+                        }
+                        if (!flushed && !flushingMessages.isEmpty()) {
+                            sink.resumeWrites();
+                            return;
+                        }
+
+                        if (res == 0) {
+                            sink.resumeWrites();
+                            return;
+                        } else if (!buffer.hasRemaining()) {
+                            fillBuffer();
+                            if (pooled == null) {
+                                return;
+                            }
+                        }
+
+                    } while (res > 0);
+                } catch (IOException e) {
+                    handleException(e);
+                }
             }
         }
     }
