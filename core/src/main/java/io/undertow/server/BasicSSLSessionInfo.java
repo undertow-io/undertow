@@ -23,6 +23,7 @@ import io.undertow.util.FlexBase64;
 import org.xnio.SslClientAuthMode;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.security.cert.CertificateException;
 import javax.security.cert.X509Certificate;
 import java.io.ByteArrayInputStream;
@@ -120,6 +121,10 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
         throw UndertowMessages.MESSAGES.renegotiationNotSupported();
     }
 
+    @Override
+    public SSLSession getSSLSession() {
+        return null;
+    }
 
     private static byte[] base64Decode(String sessionId) {
         try {

@@ -31,6 +31,7 @@ import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -90,6 +91,11 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
         } else {
             renegotiateBufferRequest(exchange, sslClientAuthMode);
         }
+    }
+
+    @Override
+    public SSLSession getSSLSession() {
+        return channel.getSslSession();
     }
 
     public void renegotiateBufferRequest(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {

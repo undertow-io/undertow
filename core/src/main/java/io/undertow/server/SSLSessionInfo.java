@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import org.xnio.SslClientAuthMode;
 
+import javax.net.ssl.SSLSession;
 import java.io.IOException;
 
 /**
@@ -58,5 +59,11 @@ public interface SSLSessionInfo {
      * @param sslClientAuthMode The client cert mode to use when renegotiating
      */
     void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException;
+
+    /**
+     *
+     * @return The SSL session, or null if it is not applicable
+     */
+    SSLSession getSSLSession();
 
 }
