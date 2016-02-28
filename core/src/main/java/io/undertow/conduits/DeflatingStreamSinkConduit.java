@@ -358,8 +358,11 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                             this.next = createNextChannel();
                         }
                         deflateData(true);
-                        currentBuffer.getBuffer().flip();
-                        this.state |= FLUSHING_BUFFER;
+                        if(allAreClear(state, FLUSHING_BUFFER)) {
+                            //deflateData can cause this to be change
+                            currentBuffer.getBuffer().flip();
+                            this.state |= FLUSHING_BUFFER;
+                        }
                     }
                     if(!performFlushIfRequired()) {
                         return false;
