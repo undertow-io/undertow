@@ -1949,14 +1949,18 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public long transferFrom(FileChannel src, long position, long count) throws IOException {
             long l = super.transferFrom(src, position, count);
-            responseBytesSent += l;
+            if(l > 0) {
+                responseBytesSent += l;
+            }
             return l;
         }
 
         @Override
         public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
             long l = super.transferFrom(source, count, throughBuffer);
-            responseBytesSent += l;
+            if(l > 0) {
+                responseBytesSent += l;
+            }
             return l;
         }
 
