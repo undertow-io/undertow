@@ -415,6 +415,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
                         IoUtils.safeClose(sink);
                     }
                 }));
+                sink.resumeWrites();
             }
         }
     }
