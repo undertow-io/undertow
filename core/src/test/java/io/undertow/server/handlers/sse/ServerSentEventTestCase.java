@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
+import org.xnio.XnioIoThread;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +41,6 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -200,41 +200,44 @@ public class ServerSentEventTestCase {
 
         final Socket socket = new Socket(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default"));
         final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicBoolean connected = new AtomicBoolean(false);
+        final CountDownLatch connected = new CountDownLatch(1);
         DefaultServer.setRootHandler(new ServerSentEventHandler(new ServerSentEventConnectionCallback() {
             @Override
-            public void connected(ServerSentEventConnection connection, String lastEventId) {
-                do {
-                    connected.set(true);
-                    connection.send("hello", new ServerSentEventConnection.EventCallback() {
-                        @Override
-                        public void done(ServerSentEventConnection connection, String data, String event, String id) {
-                        }
+            public void connected(final ServerSentEventConnection connection, final String lastEventId) {
+                final XnioIoThread thread = (XnioIoThread) Thread.currentThread();
+                connected.countDown();
+                thread.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        connection.send("hello", new ServerSentEventConnection.EventCallback() {
+                            @Override
+                            public void done(ServerSentEventConnection connection, String data, String event, String id) {
+                                System.out.println("failed");
+                            }
 
-                        @Override
-                        public void failed(ServerSentEventConnection connection, String data, String event, String id, IOException e) {
-                            latch.countDown();
+                            @Override
+                            public void failed(ServerSentEventConnection connection, String data, String event, String id, IOException e) {
+                                latch.countDown();
+                            }
+                        });
+                        if(latch.getCount() > 0) {
+                            thread.executeAfter(this, 100, TimeUnit.MILLISECONDS);
                         }
-                    });
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
                     }
-                } while (latch.getCount() > 0);
+                });
             }
         }));
         InputStream in = socket.getInputStream();
         OutputStream out = socket.getOutputStream();
         out.write(("GET / HTTP/1.1\r\n\r\n").getBytes());
         out.flush();
+        if(!connected.await(10, TimeUnit.SECONDS)) {
+            Assert.fail();
+        }
         out.close();
         in.close();
-        if(!latch.await(5, TimeUnit.SECONDS)) {
-            //in some circumstances it may have failed at the connection phase
-            if(connected.get()) {
-                Assert.fail();
-            }
+        if(!latch.await(10, TimeUnit.SECONDS)) {
+            Assert.fail();
         }
     }
 }
