@@ -373,7 +373,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     readChannelDone = true;
                     lastDataRead();
                     return null;
-                } else if(isLastFrameReceived()) {
+                } else if(isLastFrameReceived() && frameDataRemaining == 0) {
                     //we got data, although we should have received the last frame
                     forceFree = true;
                     markReadsBroken(new ClosedChannelException());
@@ -436,6 +436,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         receiver = (R) existing;
                     }
                     existing.dataReady(data, frameData);
+                    if(isLastFrameReceived()) {
+                        handleLastFrame(existing);
+                    }
                     return null;
                 } else {
                     boolean moreData = data.getFrameLength() > frameData.getBuffer().remaining();
@@ -447,10 +450,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         if (moreData) {
                             receiver = newChannel;
                         }
+
+                        if(isLastFrameReceived()) {
+                            handleLastFrame(newChannel);
+                        }
                     } else {
                         frameData.close();
                     }
-
                     return newChannel;
                 }
             }
@@ -475,6 +481,18 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     pooled.close();
 
                 }
+            }
+        }
+    }
+
+    /**
+     * Called when the last frame has been received (note that their may still be data from the last frame than needs to be read)
+     * @param newChannel The channel that received the last frame
+     */
+    private void handleLastFrame(AbstractFramedStreamSourceChannel newChannel) {
+        for(AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
+            if(r != newChannel) {
+                r.markStreamBroken();
             }
         }
     }
@@ -776,10 +794,15 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected void markReadsBroken(Throwable cause) {
         if (readsBrokenUpdater.compareAndSet(this, 0, 1)) {
+            if(receiver != null) {
+                receiver.markStreamBroken();
+            }
+            for(AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
+                r.markStreamBroken();
+            }
+
             handleBrokenSourceChannel(cause);
             safeClose(channel.getSourceChannel());
-
-
             closeSubChannels();
         }
     }
