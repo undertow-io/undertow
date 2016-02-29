@@ -629,6 +629,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             frame.frameData.close();
         }
         pendingFrameData.clear();
+        getFramedChannel().notifyClosed(this);
         if(isReadResumed()) {
             resumeReadsInternal(true);
         }
