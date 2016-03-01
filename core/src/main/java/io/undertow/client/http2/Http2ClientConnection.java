@@ -23,10 +23,12 @@ import static io.undertow.util.Headers.TRANSFER_ENCODING;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.undertow.client.ClientStatistics;
+import io.undertow.protocols.http2.Http2GoAwayStreamSourceChannel;
 import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Protocols;
@@ -290,7 +292,14 @@ public class Http2ClientConnection implements ClientConnection {
 
     @Override
     public void close() throws IOException {
-        http2Channel.sendGoAway(0);
+        try {
+            http2Channel.sendGoAway(0);
+        } finally {
+            for(Map.Entry<Integer, Http2ClientExchange> entry : currentExchanges.entrySet()) {
+                entry.getValue().failed(new ClosedChannelException());
+            }
+            currentExchanges.clear();
+        }
     }
 
     @Override
@@ -415,6 +424,9 @@ public class Http2ClientConnection implements ClientConnection {
                         }
                     }
                     Channels.drain(result, Long.MAX_VALUE);
+
+                } else if (result instanceof Http2GoAwayStreamSourceChannel) {
+                    close();
                 } else if(!channel.isOpen()) {
                     throw UndertowMessages.MESSAGES.channelIsClosed();
                 } else if(result != null) {
