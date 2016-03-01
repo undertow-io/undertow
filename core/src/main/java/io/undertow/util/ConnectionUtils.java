@@ -19,12 +19,8 @@
 package io.undertow.util;
 
 import io.undertow.UndertowLogger;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
-import org.xnio.conduits.ConduitStreamSinkChannel;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -49,27 +45,9 @@ public class ConnectionUtils {
     public static void cleanClose(StreamConnection connection, Closeable... additional) {
         try {
             connection.getSinkChannel().shutdownWrites();
-            if (!connection.getSinkChannel().flush()) {
-                connection.getSinkChannel().setWriteListener(ChannelListeners.flushingChannelListener(new ChannelListener<ConduitStreamSinkChannel>() {
-                    @Override
-                    public void handleEvent(ConduitStreamSinkChannel channel) {
-                        IoUtils.safeClose(connection);
-                        IoUtils.safeClose(additional);
-                    }
-                }, new ChannelExceptionHandler<ConduitStreamSinkChannel>() {
-                    @Override
-                    public void handleException(ConduitStreamSinkChannel channel, IOException exception) {
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-                        IoUtils.safeClose(connection);
-                        IoUtils.safeClose(additional);
-                    }
-                }));
-                connection.getSinkChannel().resumeWrites();
-            } else {
-                IoUtils.safeClose(connection);
-                IoUtils.safeClose(additional);
-            }
-
+            connection.getSinkChannel().flush();
+            IoUtils.safeClose(connection);
+            IoUtils.safeClose(additional);
         } catch (Exception e) {
             if (e instanceof IOException) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) e);
