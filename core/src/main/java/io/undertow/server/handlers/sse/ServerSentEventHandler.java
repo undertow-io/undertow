@@ -73,7 +73,7 @@ public class ServerSentEventHandler implements HttpHandler {
             }));
             sink.resumeWrites();
         } else {
-            exchange.dispatch(new Runnable() {
+            exchange.dispatch(exchange.getIoThread(), new Runnable() {
                 @Override
                 public void run() {
                     handleConnect(sink, exchange);
