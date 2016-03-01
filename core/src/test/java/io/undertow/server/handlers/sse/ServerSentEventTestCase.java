@@ -212,7 +212,6 @@ public class ServerSentEventTestCase {
                         connection.send("hello", new ServerSentEventConnection.EventCallback() {
                             @Override
                             public void done(ServerSentEventConnection connection, String data, String event, String id) {
-                                System.out.println("failed");
                             }
 
                             @Override

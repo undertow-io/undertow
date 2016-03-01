@@ -189,7 +189,12 @@ public class HttpClientTestCase {
                 Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
             }
         } finally {
-            IoUtils.safeClose(connection);
+            connection.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    IoUtils.safeClose(connection);
+                }
+            });
             DefaultServer.stopSSLServer();
         }
     }
