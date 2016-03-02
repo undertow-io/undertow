@@ -25,7 +25,7 @@ public class NetworkUtils {
 
     public static String formatPossibleIpv6Address(String address) {
         if (address == null) {
-            return address;
+            return null;
         }
         if (!address.contains(":")) {
             return address;

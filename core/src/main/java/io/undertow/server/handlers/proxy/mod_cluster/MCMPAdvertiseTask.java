@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
+import io.undertow.util.NetworkUtils;
 import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 import org.xnio.channels.MulticastMessageChannel;
@@ -94,7 +95,10 @@ class MCMPAdvertiseTask implements Runnable {
 
         this.container = container;
         this.protocol = config.getProtocol();
-        this.host = config.getManagementHost();
+        // MODCLUSTER-483 mod_cluster client does not yet support ipv6 addresses with zone indices so skip it
+        String host = config.getManagementHost();
+        int zoneIndex = host.indexOf("%");
+        this.host = (zoneIndex < 0) ? host : host.substring(0, zoneIndex);
         this.port = config.getManagementPort();
         this.path = config.getPath();
         this.channel = channel;
@@ -166,7 +170,7 @@ class MCMPAdvertiseTask implements Runnable {
                     .append("Sequence: ").append(seq).append(CRLF)
                     .append("Digest: ").append(digestString).append(CRLF)
                     .append("Server: ").append(server).append(CRLF)
-                    .append("X-Manager-Address: ").append(host).append(":").append(port).append(CRLF)
+                    .append("X-Manager-Address: ").append(NetworkUtils.formatPossibleIpv6Address(host)).append(":").append(port).append(CRLF)
                     .append("X-Manager-Url: ").append(path).append(CRLF)
                     .append("X-Manager-Protocol: ").append(protocol).append(CRLF)
                     .append("X-Manager-Host: ").append(host).append(CRLF);
