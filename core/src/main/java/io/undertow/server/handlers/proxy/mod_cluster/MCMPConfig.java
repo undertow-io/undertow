@@ -18,13 +18,14 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
 import io.undertow.server.HttpHandler;
+
+import java.net.InetSocketAddress;
 
 /**
  * @author Emanuel Muckenhuber
+ * @author Radoslav Husar
+ * @version March 2016
  */
 public class MCMPConfig {
 
@@ -36,41 +37,32 @@ public class MCMPConfig {
         return new WebBuilder();
     }
 
-    private final String managementHost;
-    private final String managementHostIp;
-    private final int managementPort;
+    private final InetSocketAddress managementSocketAddress;
     private final AdvertiseConfig advertiseConfig;
 
     public MCMPConfig(Builder builder) {
-        this.managementHost = builder.managementHost;
-        this.managementPort = builder.managementPort;
+        this.managementSocketAddress = new InetSocketAddress(builder.managementHost, builder.managementPort);
         if (builder.advertiseBuilder != null) {
             this.advertiseConfig = new AdvertiseConfig(builder.advertiseBuilder, this);
         } else {
             this.advertiseConfig = null;
         }
-        String mhip = managementHost;
-        try {
-            mhip = InetAddress.getByName(managementHost).getHostAddress();
-        } catch (UnknownHostException e) {
-
-        }
-        this.managementHostIp = mhip;
     }
 
+    @Deprecated
     public String getManagementHost() {
-        return managementHost;
+        return managementSocketAddress.getHostString();
     }
 
+    @Deprecated
     public int getManagementPort() {
-        return managementPort;
+        return managementSocketAddress.getPort();
+    }
+    public InetSocketAddress getManagementSocketAddress() {
+        return managementSocketAddress;
     }
 
-    public String getManagementHostIp() {
-        return managementHostIp;
-    }
-
-    AdvertiseConfig getAdvertiseConfig() {
+    public AdvertiseConfig getAdvertiseConfig() {
         return advertiseConfig;
     }
 
@@ -121,8 +113,7 @@ public class MCMPConfig {
 
         private final int advertiseFrequency;
 
-        private final String managementHost;
-        private final int managementPort;
+        private final InetSocketAddress managementSocketAddress;
 
         AdvertiseConfig(AdvertiseBuilder builder, MCMPConfig config) {
             this.advertiseGroup = builder.advertiseGroup;
@@ -132,8 +123,7 @@ public class MCMPConfig {
             this.securityKey = builder.securityKey;
             this.protocol = builder.protocol;
             this.path = builder.path;
-            this.managementHost = config.getManagementHost();
-            this.managementPort = config.getManagementPort();
+            this.managementSocketAddress = config.getManagementSocketAddress();
         }
 
         public String getAdvertiseGroup() {
@@ -164,20 +154,16 @@ public class MCMPConfig {
             return advertiseFrequency;
         }
 
-        public String getManagementHost() {
-            return managementHost;
-        }
-
-        public int getManagementPort() {
-            return managementPort;
+        public InetSocketAddress getManagementSocketAddress() {
+            return managementSocketAddress;
         }
     }
 
     public static class Builder {
 
-        private String managementHost;
-        private int managementPort;
-        private AdvertiseBuilder advertiseBuilder;
+        String managementHost;
+        int managementPort;
+        AdvertiseBuilder advertiseBuilder;
 
         public Builder setManagementHost(String managementHost) {
             this.managementHost = managementHost;

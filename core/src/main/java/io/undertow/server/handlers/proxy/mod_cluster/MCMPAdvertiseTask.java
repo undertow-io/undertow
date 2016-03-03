@@ -96,10 +96,10 @@ class MCMPAdvertiseTask implements Runnable {
         this.container = container;
         this.protocol = config.getProtocol();
         // MODCLUSTER-483 mod_cluster client does not yet support ipv6 addresses with zone indices so skip it
-        String host = config.getManagementHost();
+        String host = config.getManagementSocketAddress().getHostString();
         int zoneIndex = host.indexOf("%");
         this.host = (zoneIndex < 0) ? host : host.substring(0, zoneIndex);
-        this.port = config.getManagementPort();
+        this.port = config.getManagementSocketAddress().getPort();
         this.path = config.getPath();
         this.channel = channel;
 
