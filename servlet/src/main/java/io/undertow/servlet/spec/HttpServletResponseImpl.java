@@ -144,6 +144,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void doErrorDispatch(int sc, String error) throws IOException {
+        writer = null;
+        responseState = ResponseState.NONE;
         resetBuffer();
         treatAsCommitted = false;
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
