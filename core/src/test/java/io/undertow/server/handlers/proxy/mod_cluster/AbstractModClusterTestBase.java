@@ -34,6 +34,7 @@ import io.undertow.client.UndertowClient;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.LocalNameResolvingHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
@@ -118,7 +119,7 @@ public abstract class AbstractModClusterTestBase {
                 .setManagementPort(serverPort)
                 .create(modCluster, ResponseCodeHandler.HANDLE_404);
 
-        DefaultServer.setRootHandler(path(proxy).addPrefixPath("manager", mcmp));
+        DefaultServer.setRootHandler(new LocalNameResolvingHandler(path(proxy).addPrefixPath("manager", mcmp)));
         modCluster.start();
 
         httpClient = new DefaultHttpClient();
