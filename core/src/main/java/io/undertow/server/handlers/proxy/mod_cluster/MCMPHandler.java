@@ -143,7 +143,7 @@ class MCMPHandler implements HttpHandler {
          * Proxy the request that needs to be proxied and process others
          */
         // TODO maybe this should be handled outside here?
-        final InetSocketAddress addr = exchange.getDestinationAddress();
+        final InetSocketAddress addr = exchange.getConnection().getLocalAddress(InetSocketAddress.class);
         if (addr.getPort() != config.getManagementSocketAddress().getPort() || !Arrays.equals(addr.getAddress().getAddress(), config.getManagementSocketAddress().getAddress().getAddress())) {
             next.handleRequest(exchange);
             return;
