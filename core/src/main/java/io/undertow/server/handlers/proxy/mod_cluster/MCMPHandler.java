@@ -144,7 +144,7 @@ class MCMPHandler implements HttpHandler {
          */
         // TODO maybe this should be handled outside here?
         final InetSocketAddress addr = exchange.getConnection().getLocalAddress(InetSocketAddress.class);
-        if (addr.getPort() != config.getManagementSocketAddress().getPort() || !Arrays.equals(addr.getAddress().getAddress(), config.getManagementSocketAddress().getAddress().getAddress())) {
+        if (!addr.isUnresolved() && addr.getPort() != config.getManagementSocketAddress().getPort() || !Arrays.equals(addr.getAddress().getAddress(), config.getManagementSocketAddress().getAddress().getAddress())) {
             next.handleRequest(exchange);
             return;
         }
