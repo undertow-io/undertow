@@ -43,6 +43,7 @@ import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.cookie.Cookie;
@@ -62,6 +63,7 @@ import org.xnio.ssl.XnioSsl;
  * @author Emanuel Muckenhuber
  */
 @RunWith(DefaultServer.class)
+@ProxyIgnore
 public abstract class AbstractModClusterTestBase {
 
     protected static final MCMPTestClient.App NAME = new MCMPTestClient.App("/name", "localhost");
