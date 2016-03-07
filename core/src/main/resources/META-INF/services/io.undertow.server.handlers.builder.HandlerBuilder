@@ -33,3 +33,4 @@ io.undertow.server.handlers.RequestBufferingHandler$Builder
 io.undertow.server.handlers.StuckThreadDetectionHandler$Builder
 io.undertow.server.handlers.AccessControlListHandler$Builder
 io.undertow.server.handlers.JDBCLogHandler$Builder
+io.undertow.server.handlers.LocalNameResolvingHandler$Builder
