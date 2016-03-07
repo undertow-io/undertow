@@ -41,6 +41,7 @@
         <dump>false</dump>
         <https>false</https>
         <test.ipv6>false</test.ipv6>
+        <surefire.argLine/>
     </properties>
 
     <dependencies>
@@ -70,12 +71,6 @@
             <groupId>org.jboss.xnio</groupId>
             <artifactId>xnio-nio</artifactId>
             <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.mortbay.jetty.alpn</groupId>
-            <artifactId>alpn-boot</artifactId>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -188,10 +183,28 @@
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                     </systemPropertyVariables>
-                    <argLine>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</argLine>
+                    <argLine>${surefire.argLine}</argLine>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>not-jdk9</id>
+            <activation>
+                <jdk>9!</jdk>
+            </activation>
+            <properties>
+                <surefire.argLine>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</surefire.argLine>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mortbay.jetty.alpn</groupId>
+                    <artifactId>alpn-boot</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 
 </project>
