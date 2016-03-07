@@ -953,9 +953,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the source address of the HTTP request.
+     * Get the destination address of the HTTP request.
      *
-     * @return the source address of the HTTP request
+     * @return the destination address of the HTTP request
      */
     public InetSocketAddress getDestinationAddress() {
         if (destinationAddress != null) {
