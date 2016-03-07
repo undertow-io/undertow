@@ -80,18 +80,22 @@ public class DefaultAuthorizationManager implements AuthorizationManager {
                      */
                 found = true;
             } else if (account != null) {
-                final Set<String> roles = deployment.getDeploymentInfo().getPrincipalVersusRolesMap().get(account.getPrincipal().getName());
+                if(roleSet.contains("**")) {
+                    found = true;
+                } else {
+                    final Set<String> roles = deployment.getDeploymentInfo().getPrincipalVersusRolesMap().get(account.getPrincipal().getName());
 
-                for (String role : roleSet) {
-                    if (roles != null) {
-                        if (roles.contains(role)) {
+                    for (String role : roleSet) {
+                        if (roles != null) {
+                            if (roles.contains(role)) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (account.getRoles().contains(role)) {
                             found = true;
                             break;
                         }
-                    }
-                    if (account.getRoles().contains(role)) {
-                        found = true;
-                        break;
                     }
                 }
             }
