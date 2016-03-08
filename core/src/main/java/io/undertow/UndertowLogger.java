@@ -70,9 +70,9 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5001, value = "An exception occurred processing the request")
     void exceptionProcessingRequest(@Cause Throwable cause);
 
-    @LogMessage(level = INFO)
-    @Message(id = 5002, value = "Exception reading file %s: %s")
-    void exceptionReadingFile(final Path file, final IOException e);
+//    @LogMessage(level = INFO)
+//    @Message(id = 5002, value = "Exception reading file %s: %s")
+//    void exceptionReadingFile(final Path file, final IOException e);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5003, value = "IOException reading from channel")
@@ -130,17 +130,17 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5018, value = "Exception invoking close listener %s")
     void exceptionInvokingCloseListener(ServerConnection.CloseListener l, @Cause Throwable e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5019, value = "Cannot upgrade connection")
-    void cannotUpgradeConnection(@Cause Exception e);
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5019, value = "Cannot upgrade connection")
+//    void cannotUpgradeConnection(@Cause Exception e);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5020, value = "Error writing JDBC log")
     void errorWritingJDBCLog(@Cause SQLException e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5021, value = "Proxy request to %s timed out")
-    void proxyRequestTimedOut(String requestURI);
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5021, value = "Proxy request to %s timed out")
+//    void proxyRequestTimedOut(String requestURI);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5022, value = "Exception generating error page %s")
@@ -154,9 +154,9 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5024, value = "Could not register resource change listener for caching resource manager, automatic invalidation of cached resource will not work")
     void couldNotRegisterChangeListener(@Cause Exception e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5025, value = "Could not initiate SPDY connection and no HTTP fallback defined")
-    void couldNotInitiateSpdyConnection();
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5025, value = "Could not initiate SPDY connection and no HTTP fallback defined")
+//    void couldNotInitiateSpdyConnection();
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5026, value = "Jetty ALPN support not found on boot class path, %s client will not be available.")
@@ -170,9 +170,9 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5028, value = "Proxy request to %s failed")
     void proxyRequestFailed(String requestURI, @Cause Exception e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5030, value = "Proxy request to %s could not resolve a backend server")
-    void proxyRequestFailedToResolveBackend(String requestURI);
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5030, value = "Proxy request to %s could not resolve a backend server")
+//    void proxyRequestFailedToResolveBackend(String requestURI);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5031, value = "Proxy request to %s could not connect to backend server %s")
@@ -182,9 +182,9 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5032, value = "Listener not making progress on framed channel, closing channel to prevent infinite loop")
     void listenerNotProgressing();
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5033, value = "Failed to initiate HTTP2 connection")
-    void couldNotInitiateHttp2Connection();
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5033, value = "Failed to initiate HTTP2 connection")
+//    void couldNotInitiateHttp2Connection();
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5034, value = "Remote endpoint failed to send initial settings frame in HTTP2 connection, frame type %s")
