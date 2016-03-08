@@ -610,7 +610,7 @@ public class PredicatedHandlersParser {
                     ret.add(new Token(current.toString(), pos));
                     current.setLength(0);
                     currentStringDelim = 0;
-                } else if (c == '\n') {
+                } else if (c == '\n' || c == '\r') {
                     ret.add(new Token(current.toString(), pos));
                     current.setLength(0);
                     currentStringDelim = 0;
@@ -628,6 +628,7 @@ public class PredicatedHandlersParser {
                         }
                         break;
                     }
+                    case '\r':
                     case '\n': {
                         if (current.length() != 0) {
                             ret.add(new Token(current.toString(), pos));

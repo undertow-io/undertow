@@ -47,14 +47,14 @@ public class PredicatedHandlersTestCase {
 
                         PredicatedHandlersParser.parse(
                                         "path(/skipallrules) and true -> done\n" +
-                                        "method(GET) -> set(attribute='%{o,type}', value=get) \n" +
+                                        "method(GET) -> set(attribute='%{o,type}', value=get) \r\n" +
                                         "regex('(.*).css') -> {rewrite['${1}.xcss'];set(attribute='%{o,chained}', value=true)} \n" +
-                                        "regex('(.*).redirect$') -> redirect['${1}.redirected']\n" +
+                                        "regex('(.*).redirect$') -> redirect['${1}.redirected']\n\n\n\n\n" +
                                         "set[attribute='%{o,someHeader}', value=always]\n" +
-                                        "path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']\n" +
+                                        "path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']\r\n" +
                                         "path-template('/bar->foo') -> redirect(/);" +
                                         "regex('(.*).css') -> set[attribute='%{o,css}', value='true'] else set[attribute='%{o,css}', value='false']; " +
-                                        "path(/restart) -> {rewrite(/foo/a/b); restart; }", getClass().getClassLoader()), new HttpHandler() {
+                                        "path(/restart) -> {rewrite(/foo/a/b); restart; }\r\n", getClass().getClassLoader()), new HttpHandler() {
                             @Override
                             public void handleRequest(HttpServerExchange exchange) throws Exception {
                                 exchange.getResponseSender().send(exchange.getRelativePath());
