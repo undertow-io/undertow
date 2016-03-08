@@ -36,6 +36,7 @@ public class ContentLengthCloseFlushServlet extends HttpServlet {
     @Override
     protected synchronized void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         if (completed) {
+            completed = false;
             resp.getWriter().write("OK");
         } else {
             resp.setContentLength(1);

@@ -30,6 +30,7 @@ import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,6 +50,11 @@ public class FixedLengthResponseTestCase {
     private static volatile String message;
 
     private static volatile ServerConnection connection;
+
+    @Before
+    public void reset() {
+        connection = null;
+    }
 
     @BeforeClass
     public static void setup() {

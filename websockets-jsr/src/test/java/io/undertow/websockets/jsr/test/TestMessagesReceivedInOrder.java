@@ -93,6 +93,8 @@ public class TestMessagesReceivedInOrder {
 
     @Test
     public void testMessagesReceivedInOrder() throws Exception {
+        stacks.clear();
+        EchoSocket.receivedEchos = new FutureResult<>();
         final ClientEndpointConfig clientEndpointConfig = ClientEndpointConfig.Builder.create().build();
         final CountDownLatch done = new CountDownLatch(1);
         final AtomicReference<String> error = new AtomicReference<>();
@@ -145,8 +147,8 @@ public class TestMessagesReceivedInOrder {
 
     @ServerEndpoint("/webSocket")
     public static class EchoSocket {
-        private List<String> echos = new CopyOnWriteArrayList<>();
-        public static final FutureResult<List<String>> receivedEchos = new FutureResult<>();
+        private final List<String> echos = new CopyOnWriteArrayList<>();
+        public static volatile FutureResult<List<String>> receivedEchos = new FutureResult<>();
 
         @OnMessage
         public void onMessage(ByteBuffer dataBuffer, Session session) throws IOException {

@@ -384,10 +384,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                 } else {
                     if(h2) {
-                        log.error("HTTP2 selected but Netty ALPN was not on the boot class path");
+                        throw new RuntimeException("HTTP2 selected but Netty ALPN was not on the boot class path");
                     }
                     if(spdy) {
-                        log.error("SPDY selected but Netty ALPN was not on the boot class path");
+                        throw new RuntimeException("SPDY selected but Netty ALPN was not on the boot class path");
                     }
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true, UndertowOptions.ENABLE_CONNECTOR_STATISTICS, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
