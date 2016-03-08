@@ -352,4 +352,7 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5074, value = "Failed to invoke error callback %s for SSE task")
     void failedToInvokeFailedCallback(ServerSentEventConnection.EventCallback callback, @Cause Exception e);
+
+    @Message(id = 5075, value = "Unable to resolve mod_cluster management host's address for '%s'")
+    IllegalStateException unableToResolveModClusterManagementHost(String providedHost);
 }
