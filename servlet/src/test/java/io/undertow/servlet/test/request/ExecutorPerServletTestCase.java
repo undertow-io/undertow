@@ -36,9 +36,9 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,13 +49,13 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class ExecutorPerServletTestCase {
 
-    private static ExecutorService executorService;
+    private ExecutorService executorService;
 
     public static final int NUM_THREADS = 10;
     public static final int NUM_REQUESTS = 100;
 
-    @BeforeClass
-    public static void setup() throws ServletException {
+    @Before
+    public void setup() throws ServletException {
         DeploymentUtils.setupServlet(
                 new ServletInfo("racey", RaceyAddServlet.class)
                         .addMapping("/racey"),
@@ -64,8 +64,8 @@ public class ExecutorPerServletTestCase {
                         .setExecutor(executorService = Executors.newSingleThreadExecutor()));
     }
 
-    @AfterClass
-    public static void after() {
+    @After
+    public void after() {
         executorService.shutdown();
     }
 

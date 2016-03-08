@@ -29,6 +29,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.PathResourceManager;
+import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -47,6 +48,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,6 +64,14 @@ public class DefaultServletCachingTestCase {
     public static final String DIR_NAME = "cacheTest";
 
     static Path tmpDir;
+    static DirectBufferCache dataCache = new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE);
+
+    @Before
+    public void before() {
+        for(Object k : dataCache.getAllKeys()) {
+            dataCache.remove(k);
+        }
+    }
 
     @BeforeClass
     public static void setup() throws ServletException, IOException {
@@ -76,7 +86,7 @@ public class DefaultServletCachingTestCase {
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceManager(new CachingResourceManager(100, 10000, new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE), new PathResourceManager(tmpDir, 10485760), METADATA_MAX_AGE));
+                .setResourceManager(new CachingResourceManager(100, 10000, dataCache, new PathResourceManager(tmpDir, 10485760), METADATA_MAX_AGE));
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("/path/default"))
@@ -98,7 +108,7 @@ public class DefaultServletCachingTestCase {
     @Test
     public void testFileExistanceCheckCached() throws IOException, InterruptedException {
         TestHttpClient client = new TestHttpClient();
-        String fileName = "doesnotexist.html";
+        String fileName = new SecureRandomSessionIdGenerator().createSessionId() + ".html";
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             HttpResponse result = client.execute(get);
@@ -118,6 +128,7 @@ public class DefaultServletCachingTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("hello", response);
+            Files.delete(f);
         } finally {
             client.getConnectionManager().shutdown();
         }

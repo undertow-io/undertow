@@ -18,8 +18,6 @@
 
 package io.undertow.servlet.test.streams;
 
-import javax.servlet.ServletException;
-
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
@@ -30,7 +28,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -44,15 +41,12 @@ public class ServletInputStreamEarlyCloseTestCase {
 
     public static final String SERVLET = "servlet";
 
-    @BeforeClass
-    public static void setup() throws ServletException {
+    @Test
+    public void testServletInputStreamEarlyClose() throws Exception {
+
         DeploymentUtils.setupServlet(
                 new ServletInfo(SERVLET, EarlyCloseServlet.class)
                         .addMapping("/" + SERVLET));
-    }
-
-    @Test
-    public void testServletInputStreamEarlyClose() throws Exception {
         TestHttpClient client = new TestHttpClient();
         try {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + SERVLET;

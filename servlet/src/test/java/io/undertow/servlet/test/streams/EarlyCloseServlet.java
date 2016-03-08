@@ -37,7 +37,7 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class EarlyCloseServlet extends HttpServlet {
 
-    private static volatile ServerConnection connection;
+    private volatile ServerConnection connection;
 
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
