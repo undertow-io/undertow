@@ -66,23 +66,23 @@ public interface UndertowLogger extends BasicLogger {
      */
     UndertowLogger REQUEST_IO_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.io");
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5001, value = "An exception occurred processing the request")
     void exceptionProcessingRequest(@Cause Throwable cause);
 
-    @LogMessage(level = INFO)
-    @Message(id = 5002, value = "Exception reading file %s: %s")
-    void exceptionReadingFile(final Path file, final IOException e);
+//    @LogMessage(level = INFO)
+//    @Message(id = 5002, value = "Exception reading file %s: %s")
+//    void exceptionReadingFile(final Path file, final IOException e);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5003, value = "IOException reading from channel")
     void ioExceptionReadingFromChannel(@Cause IOException e);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5005, value = "Cannot remove uploaded file %s")
     void cannotRemoveUploadedFile(Path file);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5006, value = "Connection from %s terminated as request header was larger than %s")
     void requestHeaderWasTooLarge(SocketAddress address, int size);
 
@@ -102,7 +102,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5010, value = "Verification of authentication tokens for user '%s' has failed using mechanism '%s'.")
     void authenticationFailed(final String userName, final String mechanism);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5011, value = "Ignoring AJP request with prefix %s")
     void ignoringAjpRequestWithPrefixCode(byte prefix);
 
@@ -114,79 +114,79 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5014, value = "Failed to parse HTTP request")
     void failedToParseRequest(@Cause Exception e);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5015, value = "Error rotating access log")
     void errorRotatingAccessLog(@Cause IOException e);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5016, value = "Error writing access log")
     void errorWritingAccessLog(@Cause IOException e);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5017, value = "Unknown variable %s")
     void unknownVariable(String token);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5018, value = "Exception invoking close listener %s")
     void exceptionInvokingCloseListener(ServerConnection.CloseListener l, @Cause Throwable e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5019, value = "Cannot upgrade connection")
-    void cannotUpgradeConnection(@Cause Exception e);
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5019, value = "Cannot upgrade connection")
+//    void cannotUpgradeConnection(@Cause Exception e);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5020, value = "Error writing JDBC log")
     void errorWritingJDBCLog(@Cause SQLException e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5021, value = "Proxy request to %s timed out")
-    void proxyRequestTimedOut(String requestURI);
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5021, value = "Proxy request to %s timed out")
+//    void proxyRequestTimedOut(String requestURI);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5022, value = "Exception generating error page %s")
     void exceptionGeneratingErrorPage(@Cause Exception e, String location);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5023, value = "Exception handling request to %s")
     void exceptionHandlingRequest(@Cause Throwable t, String requestURI);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5024, value = "Could not register resource change listener for caching resource manager, automatic invalidation of cached resource will not work")
     void couldNotRegisterChangeListener(@Cause Exception e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5025, value = "Could not initiate SPDY connection and no HTTP fallback defined")
-    void couldNotInitiateSpdyConnection();
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5025, value = "Could not initiate SPDY connection and no HTTP fallback defined")
+//    void couldNotInitiateSpdyConnection();
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5026, value = "Jetty ALPN support not found on boot class path, %s client will not be available.")
     void jettyALPNNotFound(String protocol);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5027, value = "Timing out request to %s")
     void timingOutRequest(String requestURI);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5028, value = "Proxy request to %s failed")
     void proxyRequestFailed(String requestURI, @Cause Exception e);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5030, value = "Proxy request to %s could not resolve a backend server")
-    void proxyRequestFailedToResolveBackend(String requestURI);
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5030, value = "Proxy request to %s could not resolve a backend server")
+//    void proxyRequestFailedToResolveBackend(String requestURI);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5031, value = "Proxy request to %s could not connect to backend server %s")
     void proxyFailedToConnectToBackend(String requestURI, URI uri);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5032, value = "Listener not making progress on framed channel, closing channel to prevent infinite loop")
     void listenerNotProgressing();
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5033, value = "Failed to initiate HTTP2 connection")
-    void couldNotInitiateHttp2Connection();
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 5033, value = "Failed to initiate HTTP2 connection")
+//    void couldNotInitiateHttp2Connection();
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5034, value = "Remote endpoint failed to send initial settings frame in HTTP2 connection, frame type %s")
     void remoteEndpointFailedToSendInitialSettings(int type);
 
@@ -194,7 +194,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5035, value = "Closing channel because of parse timeout for remote address %s")
     void parseRequestTimedOut(java.net.SocketAddress remoteAddress);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5036, value = "ALPN negotiation failed for %s and no fallback defined, closing connection")
     void noALPNFallback(SocketAddress address);
 
@@ -218,7 +218,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5040, value = "Gonna send payload:\n%s")
     void proxyAdvertiseMessagePayload(String payload);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5041, value = "Cannot send advertise message. Address: %s")
     void proxyAdvertiseCannotSendMessage(@Cause Exception e, InetSocketAddress address);
 
@@ -226,7 +226,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5042, value = "Undertow mod_cluster proxy MCMPHandler created")
     void mcmpHandlerCreated();
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5043, value = "Error in processing MCMP commands: Type:%s, Mess: %s")
     void mcmpProcessingError(String type, String errString);
 
@@ -258,11 +258,11 @@ public interface UndertowLogger extends BasicLogger {
     void nodeConfigCreated(URI connectionURI, String balancer, String domain, String jvmRoute, boolean flushPackets, int flushwait, int ping, long ttl,
                            int timeout, int maxConnections, int cacheConnections, int requestQueueSize, boolean queueNewRequests);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5050, value = "Failed to process management request")
     void failedToProcessManagementReq(@Cause Exception e);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = ERROR)
     @Message(id = 5051, value = "Failed to send ping response")
     void failedToSendPingResponse(@Cause Exception e);
 
@@ -294,7 +294,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5058, value = "Could not bind multicast socket to %s (%s address): %s; make sure your multicast address is of the same type as the IP stack (IPv4 or IPv6). Multicast socket will not be bound to an address, but this may lead to cross talking (see http://www.jboss.org/community/docs/DOC-9469 for details).")
     void potentialCrossTalking(InetAddress group, String s, String localizedMessage);
 
-    @LogMessage(level = org.jboss.logging.Logger.Level.WARN)
+    @LogMessage(level = WARN)
     @Message(id = 5060, value = "Predicate %s uses old style square braces to define predicates, which will be removed in a future release. predicate[value] should be changed to predicate(value)")
     void oldStylePredicateSyntax(String string);
 
@@ -352,4 +352,7 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5074, value = "Failed to invoke error callback %s for SSE task")
     void failedToInvokeFailedCallback(ServerSentEventConnection.EventCallback callback, @Cause Exception e);
+
+    @Message(id = 5075, value = "Unable to resolve mod_cluster management host's address for '%s'")
+    IllegalStateException unableToResolveModClusterManagementHost(String providedHost);
 }
