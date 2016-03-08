@@ -37,7 +37,6 @@ import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.cookie.Cookie;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -53,11 +52,8 @@ import java.util.List;
 @RunWith(DefaultServer.class)
 public class ServletSessionCrawlerTestCase {
 
-
-    @BeforeClass
-    public static void setup() throws ServletException {
-
-
+    @Test
+    public void testCrawlerSessionUsage() throws IOException, InterruptedException {
         final PathHandler pathHandler = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
         DeploymentInfo builder = new DeploymentInfo()
@@ -77,11 +73,6 @@ public class ServletSessionCrawlerTestCase {
             throw new RuntimeException(e);
         }
         DefaultServer.setRootHandler(pathHandler);
-    }
-
-
-    @Test
-    public void testCrawlerSessionUsage() throws IOException, InterruptedException {
         TestHttpClient client = new TestHttpClient();
 
         client.setCookieStore(new CookieStore() {

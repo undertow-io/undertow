@@ -39,6 +39,7 @@ import org.apache.http.impl.io.ChunkedInputStream;
 import org.apache.http.protocol.HttpContext;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -60,6 +61,11 @@ public class ChunkedResponseTrailersTestCase {
     private static volatile String message;
 
     private static volatile ServerConnection connection;
+
+    @Before
+    public void reset() {
+        connection = null;
+    }
 
     @BeforeClass
     public static void setup() {

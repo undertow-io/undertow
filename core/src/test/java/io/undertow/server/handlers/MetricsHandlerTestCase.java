@@ -28,7 +28,6 @@ import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -40,10 +39,11 @@ import java.io.IOException;
 @RunWith(DefaultServer.class)
 public class MetricsHandlerTestCase {
 
-    private static MetricsHandler metricsHandler;
-    private static CompletionLatchHandler latchHandler;
-    @BeforeClass
-    public static void setup() {
+    @Test
+    public void testMetrics() throws IOException, InterruptedException {
+
+        MetricsHandler metricsHandler;
+        CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(metricsHandler = new MetricsHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -51,10 +51,6 @@ public class MetricsHandlerTestCase {
                 exchange.getResponseSender().send("Hello");
             }
         })));
-    }
-
-    @Test
-    public void testMetrics() throws IOException, InterruptedException {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
         try {

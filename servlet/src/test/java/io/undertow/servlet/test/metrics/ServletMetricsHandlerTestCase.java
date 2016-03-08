@@ -18,10 +18,6 @@
 
 package io.undertow.servlet.test.metrics;
 
-import java.io.IOException;
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-
 import io.undertow.server.handlers.MetricsHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -42,9 +38,10 @@ import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import javax.servlet.DispatcherType;
 
 /**
  * @author Stuart Douglas
@@ -52,13 +49,13 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class ServletMetricsHandlerTestCase {
 
-    private static TestMetricsCollector metricsCollector = new TestMetricsCollector();
+    @Test
+    public void testMetrics() throws Exception {
 
-    private static CompletionLatchHandler completionLatchHandler;
 
-    @BeforeClass
-    public static void setup() throws ServletException {
+        final TestMetricsCollector metricsCollector = new TestMetricsCollector();
 
+        CompletionLatchHandler completionLatchHandler;
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
@@ -81,11 +78,7 @@ public class ServletMetricsHandlerTestCase {
         root.addPrefixPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(completionLatchHandler = new CompletionLatchHandler(root));
-    }
 
-
-    @Test
-    public void testMetrics() throws IOException, InterruptedException {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/default");
         TestHttpClient client = new TestHttpClient();
         try {

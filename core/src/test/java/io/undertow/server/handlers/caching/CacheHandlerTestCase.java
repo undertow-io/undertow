@@ -34,7 +34,6 @@ import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -48,10 +47,10 @@ import org.junit.runner.RunWith;
 public class CacheHandlerTestCase {
 
 
-    private static final AtomicInteger responseCount = new AtomicInteger();
+    @Test
+    public void testBasicPathBasedCaching() throws IOException {
 
-    @BeforeClass
-    public static void setup() {
+        final AtomicInteger responseCount = new AtomicInteger();
 
         final HttpHandler messageHandler = new HttpHandler() {
             @Override
@@ -66,10 +65,7 @@ public class CacheHandlerTestCase {
         };
         final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(100, 10, 1000), messageHandler);
         DefaultServer.setRootHandler(cacheHandler);
-    }
 
-    @Test
-    public void testBasicPathBasedCaching() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
