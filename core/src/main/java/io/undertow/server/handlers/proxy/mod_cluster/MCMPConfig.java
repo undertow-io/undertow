@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 
 import java.net.InetSocketAddress;
@@ -42,6 +43,9 @@ public class MCMPConfig {
 
     public MCMPConfig(Builder builder) {
         this.managementSocketAddress = new InetSocketAddress(builder.managementHost, builder.managementPort);
+        if (managementSocketAddress.isUnresolved()) {
+            throw UndertowLogger.PROXY_REQUEST_LOGGER.unableToResolveModClusterManagementHost(builder.managementHost);
+        }
         if (builder.advertiseBuilder != null) {
             this.advertiseConfig = new AdvertiseConfig(builder.advertiseBuilder, this);
         } else {
