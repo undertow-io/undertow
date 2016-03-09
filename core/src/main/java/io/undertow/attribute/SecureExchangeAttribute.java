@@ -30,7 +30,7 @@ public class SecureExchangeAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(HttpServerExchange exchange) {
-        return Boolean.toString(exchange.getProtocol().equals("https"));
+        return Boolean.toString(exchange.getProtocol().equalToString("https"));
     }
 
     @Override
