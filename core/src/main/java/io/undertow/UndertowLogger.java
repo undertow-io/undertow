@@ -360,4 +360,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5076, value = "SSL read loop detected. This should not happen, please report this to the Undertow developers. Current state %s")
     void sslReadLoopDetected(SslConduit sslConduit);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5077, value = "SSL unwrap buffer overflow detected. This should not happen, please report this to the Undertow developers. Current state %s")
+    void sslBufferOverflow(SslConduit sslConduit);
 }

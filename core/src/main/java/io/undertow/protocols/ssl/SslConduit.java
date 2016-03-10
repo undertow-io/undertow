@@ -750,6 +750,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if (!handleHandshakeResult(result)) {
                 if (this.dataToUnwrap.getBuffer().hasRemaining() && result.getStatus() != SSLEngineResult.Status.BUFFER_UNDERFLOW && dataToUnwrap.getBuffer().remaining() != dataToUnwrapLength) {
                     state |= FLAG_DATA_TO_UNWRAP;
+                } else {
+                    state &= ~FLAG_DATA_TO_UNWRAP;
                 }
                 return 0;
             }
@@ -760,7 +762,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
                 state &= ~FLAG_DATA_TO_UNWRAP;
             } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
-                throw new IOException("overflow"); //todo: handle properly
+                UndertowLogger.REQUEST_LOGGER.sslBufferOverflow(this);
+                IoUtils.safeClose(delegate);
             } else if (this.dataToUnwrap.getBuffer().hasRemaining() && dataToUnwrap.getBuffer().remaining() != dataToUnwrapLength) {
                 state |= FLAG_DATA_TO_UNWRAP;
             } else {
