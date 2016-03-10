@@ -357,8 +357,13 @@ public class AjpRequestParser {
                             //we need to read the name. We overload currentIntegerPart to avoid adding another state field
                             state.currentIntegerPart = 1;
                         } else {
+                            if(val == 0 || val >= ATTRIBUTES.length) {
+                                //ignore unknown codes for compatibility
+                                continue;
+                            }
                             state.currentAttribute = ATTRIBUTES[val];
                         }
+
                     }
                     if (state.currentIntegerPart == 1) {
                         StringHolder result = parseString(buf, state, StringType.OTHER);
