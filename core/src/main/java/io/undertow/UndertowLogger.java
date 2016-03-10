@@ -19,6 +19,7 @@
 package io.undertow;
 
 import io.undertow.client.ClientConnection;
+import io.undertow.protocols.ssl.SslConduit;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.sse.ServerSentEventConnection;
@@ -355,4 +356,8 @@ public interface UndertowLogger extends BasicLogger {
 
     @Message(id = 5075, value = "Unable to resolve mod_cluster management host's address for '%s'")
     IllegalStateException unableToResolveModClusterManagementHost(String providedHost);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5076, value = "SSL read loop detected. This should not happen, please report this to the Undertow developers. Current state %s")
+    void sslReadLoopDetected(SslConduit sslConduit);
 }
