@@ -158,7 +158,7 @@ public interface UndertowLogger extends BasicLogger {
 //    @Message(id = 5025, value = "Could not initiate SPDY connection and no HTTP fallback defined")
 //    void couldNotInitiateSpdyConnection();
 
-    @LogMessage(level = ERROR)
+    @LogMessage(level = INFO)
     @Message(id = 5026, value = "Jetty ALPN support not found on boot class path, %s client will not be available.")
     void jettyALPNNotFound(String protocol);
 
