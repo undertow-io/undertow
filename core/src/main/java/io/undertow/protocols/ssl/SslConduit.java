@@ -62,6 +62,8 @@ import static org.xnio.Bits.anyAreSet;
  */
 public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
+    public static final int MAX_READ_LISTENER_INVOCATIONS = Integer.getInteger("io.undertow.ssl.max-read-listener-invocations", 100);
+
     /**
      * If this is set we are in the middle of a handshake, and we cannot
      * read any more data until we have written out our wrap result
@@ -152,11 +154,19 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private SslWriteReadyHandler writeReadyHandler;
     private SslReadReadyHandler readReadyHandler;
+    private int readListenerInvocationCount;
 
     private final Runnable runReadListenerCommand = new Runnable() {
         @Override
         public void run() {
-            readReadyHandler.readReady();
+            final int count = readListenerInvocationCount;
+            try {
+                readReadyHandler.readReady();
+            } finally {
+                if(count == readListenerInvocationCount) {
+                    readListenerInvocationCount = 0;
+                }
+            }
         }
     };
 
@@ -166,7 +176,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if (allAreSet(state, FLAG_READS_RESUMED)) {
                 delegate.getSourceChannel().resumeReads();
             }
-            readReadyHandler.readReady();
+            runReadListenerCommand.run();
         }
     };
 
@@ -235,6 +245,12 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private void runReadListener(final boolean resumeInListener) {
         try {
+            if(readListenerInvocationCount++ == MAX_READ_LISTENER_INVOCATIONS) {
+                UndertowLogger.REQUEST_LOGGER.sslReadLoopDetected(this);
+                IoUtils.safeClose(connection, delegate);
+                close();
+                return;
+            }
             if(resumeInListener) {
                 delegate.getIoThread().execute(runReadListenerAndResumeCommand);
             } else {
