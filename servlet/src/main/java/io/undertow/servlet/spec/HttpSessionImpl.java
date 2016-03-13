@@ -218,6 +218,22 @@ public class HttpSessionImpl implements HttpSession {
         return session;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        HttpSessionImpl that = (HttpSessionImpl) o;
+
+        return session.getId().equals(that.session.getId());
+
+    }
+
+    @Override
+    public int hashCode() {
+        return session.getId().hashCode();
+    }
+
     public boolean isInvalid() {
         return invalid;
     }
