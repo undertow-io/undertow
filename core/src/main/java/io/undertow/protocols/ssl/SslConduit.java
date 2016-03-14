@@ -156,6 +156,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private SslReadReadyHandler readReadyHandler;
     private int readListenerInvocationCount;
 
+    private boolean invokingReadListenerHandshake = false;
+
     private final Runnable runReadListenerCommand = new Runnable() {
         @Override
         public void run() {
@@ -779,6 +781,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             throw e;
         } finally {
             try {
+                boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
+                if (unwrappedData != null && unwrappedData.getBuffer().hasRemaining()) {
+                    requiresListenerInvocation = true;
+                }
                 if (dataToUnwrap != null) {
                     //if there is no data in the buffer we just free it
                     if (!dataToUnwrap.getBuffer().hasRemaining()) {
@@ -788,7 +794,15 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     } else if (allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
                         //if there is not enough data in the buffer we compact it to make room for more
                         dataToUnwrap.getBuffer().compact();
+                    } else {
+                        //there is more data, make sure we trigger a read listener invocation
+                        requiresListenerInvocation = true;
                     }
+                }
+                //if we are in the read listener handshake we don't need to invoke
+                //as it is about to be invoked anyway
+                if (requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
+                    runReadListener(false);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -950,34 +964,31 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             return;
         }
         state |= FLAG_CLOSED | FLAG_DELEGATE_SINK_SHUTDOWN | FLAG_DELEGATE_SOURCE_SHUTDOWN | FLAG_WRITE_SHUTDOWN | FLAG_READ_SHUTDOWN;
-        try {
-            notifyReadClosed();
-            notifyWriteClosed();
-            if (dataToUnwrap != null) {
-                dataToUnwrap.close();
-                dataToUnwrap = null;
-            }
-            if (unwrappedData != null) {
-                unwrappedData.close();
-                unwrappedData = null;
-            }
-            if (wrappedData != null) {
-                wrappedData.close();
-                wrappedData = null;
-            }
-            if (allAreClear(state, FLAG_ENGINE_OUTBOUND_SHUTDOWN)) {
-                engine.closeOutbound();
-            }
-            if (allAreClear(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
-                try {
-                    engine.closeInbound();
-                } catch (SSLException e) {
-                    UndertowLogger.REQUEST_LOGGER.ioException(e);
-                }
-            }
-        } finally {
-            IoUtils.safeClose(delegate);
+        notifyReadClosed();
+        notifyWriteClosed();
+        if(dataToUnwrap != null) {
+            dataToUnwrap.close();
+            dataToUnwrap = null;
         }
+        if(unwrappedData != null) {
+            unwrappedData.close();
+            unwrappedData = null;
+        }
+        if(wrappedData != null) {
+            wrappedData.close();
+            wrappedData = null;
+        }
+        if(allAreClear(state, FLAG_ENGINE_OUTBOUND_SHUTDOWN)) {
+            engine.closeOutbound();
+        }
+        if(allAreClear(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
+            try {
+                engine.closeInbound();
+            } catch (SSLException e) {
+                UndertowLogger.REQUEST_LOGGER.ioException(e);
+            }
+        }
+        IoUtils.safeClose(delegate);
     }
 
     /**
@@ -1064,12 +1075,15 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
         @Override
         public void readReady() {
-            if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_READ_REQUIRES_WRITE) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
+            if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
                 try {
+                    invokingReadListenerHandshake = true;
                     doHandshake();
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_LOGGER.ioException(e);
                     IoUtils.safeClose(delegate);
+                } finally {
+                    invokingReadListenerHandshake = false;
                 }
             }
             boolean noProgress = false;
