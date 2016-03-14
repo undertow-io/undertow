@@ -93,12 +93,12 @@ public class PredicatedHandlersParserTestCase {
 
     @Test
     public void testParsedHandler2() {
-        String value = "header(header=a, value='b')";
+        String value = "header(header=a, value='a%%lb')";
         List<PredicatedHandler> ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
         SetHeaderHandler handler = (SetHeaderHandler) ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200);
         Assert.assertEquals("a", handler.getHeader().toString());
-        Assert.assertEquals("b", handler.getValue().readAttribute(null));
+        Assert.assertEquals("a%lb", handler.getValue().readAttribute(null));
     }
 
     @Test
