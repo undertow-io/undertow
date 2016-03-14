@@ -774,7 +774,12 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if (userBuffers == null) {
                 return 0;
             } else {
-                return original - Buffers.remaining(userBuffers);
+                long res = original - Buffers.remaining(userBuffers);
+                if(res > 0) {
+                    //if data has been sucessfully returned this is not a read loop
+                    readListenerInvocationCount = 0;
+                }
+                return res;
             }
         } catch (RuntimeException|IOException e) {
             close();
