@@ -154,8 +154,11 @@ public class SuspendResumeTestCase {
                     }
                     Channels.drain(res, Long.MAX_VALUE);
                 } catch (IOException e) {
-                    message.set("error");
-                    done.countDown();
+                    if(message.get() == null) {
+                        e.printStackTrace();
+                        message.set("error");
+                        done.countDown();
+                    }
                 }
             }
         });
