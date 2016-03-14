@@ -124,7 +124,7 @@ public interface UndertowLogger extends BasicLogger {
     void errorWritingAccessLog(@Cause IOException e);
 
     @LogMessage(level = ERROR)
-    @Message(id = 5017, value = "Unknown variable %s")
+    @Message(id = 5017, value = "Unknown variable %s. For the literal percent character use two percent characters: '%%'")
     void unknownVariable(String token);
 
     @LogMessage(level = ERROR)
