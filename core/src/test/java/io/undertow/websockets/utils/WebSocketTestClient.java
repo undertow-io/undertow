@@ -42,6 +42,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -165,7 +166,13 @@ public final class WebSocketTestClient {
         if (ch != null) {
             ch.close().syncUninterruptibly();
         }
-        bootstrap.group().shutdownGracefully();
+        try {
+            bootstrap.group().shutdownGracefully(0, 1, TimeUnit.SECONDS).get();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public interface FrameListener {
