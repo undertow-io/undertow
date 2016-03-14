@@ -53,9 +53,10 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2InboundFrameLogger;
 import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
-import io.netty.handler.codec.http2.HttpUtil;
-import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
+import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder;
+import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterBuilder;
 import io.netty.handler.logging.LogLevel;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
@@ -67,8 +68,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import org.junit.Assert;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -192,15 +193,15 @@ public class HTTP2ViaUpgradeTestCase {
         @Override
         public void initChannel(SocketChannel ch) throws Exception {
             final Http2Connection connection = new DefaultHttp2Connection(false);
-            final Http2FrameWriter frameWriter = frameWriter();
-            connectionHandler = new HttpToHttp2ConnectionHandler(connection,
-                    frameReader(),
-                    frameWriter,
-                    new DelegatingDecompressorFrameListener(connection,
-                            new InboundHttp2ToHttpAdapter.Builder(connection)
+            connectionHandler = new HttpToHttp2ConnectionHandlerBuilder()
+                    .connection(connection)
+                    .frameListener(new DelegatingDecompressorFrameListener(connection,
+                            new InboundHttp2ToHttpAdapterBuilder(connection)
                                     .maxContentLength(maxContentLength)
                                     .propagateSettings(true)
-                                    .build()));
+                                    .build()))
+
+                    .build();
             responseHandler = new HttpResponseHandler();
             settingsHandler = new Http2SettingsHandler(ch.newPromise());
             configureClearText(ch);
@@ -353,7 +354,7 @@ public class HTTP2ViaUpgradeTestCase {
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-            Integer streamId = msg.headers().getInt(HttpUtil.ExtensionHeaderNames.STREAM_ID.text());
+            Integer streamId = msg.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
             if (streamId == null) {
                 System.err.println("HttpResponseHandler unexpected message received: " + msg);
                 return;
