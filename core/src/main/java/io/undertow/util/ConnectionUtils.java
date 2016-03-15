@@ -24,6 +24,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
+import org.xnio.XnioExecutor;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
@@ -93,17 +94,24 @@ public class ConnectionUtils {
         final ByteBuffer b = ByteBuffer.allocate(1);
         try {
             int res = connection.getSourceChannel().read(b);
+            b.clear();
             if (res == 0) {
+                final XnioExecutor.Key key = connection.getIoThread().executeAfter(new Runnable() {
+                    @Override
+                    public void run() {
+                        IoUtils.safeClose(connection);
+                        IoUtils.safeClose(additional);
+                    }
+                }, MAX_DRAIN_TIME, TimeUnit.MILLISECONDS);
                 connection.getSourceChannel().setReadListener(new ChannelListener<ConduitStreamSourceChannel>() {
                     @Override
                     public void handleEvent(ConduitStreamSourceChannel channel) {
                         try {
                             int res = channel.read(b);
-                            if (res == 0) {
-                                return;
-                            } else {
+                            if (res != 0) {
                                 IoUtils.safeClose(connection);
                                 IoUtils.safeClose(additional);
+                                key.remove();
                             }
                         } catch (Exception e) {
                             if (e instanceof IOException) {
@@ -113,17 +121,11 @@ public class ConnectionUtils {
                             }
                             IoUtils.safeClose(connection);
                             IoUtils.safeClose(additional);
+                            key.remove();
                         }
                     }
                 });
                 connection.getSourceChannel().resumeReads();
-                connection.getIoThread().executeAfter(new Runnable() {
-                    @Override
-                    public void run() {
-                        IoUtils.safeClose(connection);
-                        IoUtils.safeClose(additional);
-                    }
-                }, MAX_DRAIN_TIME, TimeUnit.MILLISECONDS);
             } else {
                 IoUtils.safeClose(connection);
                 IoUtils.safeClose(additional);
