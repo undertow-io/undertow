@@ -440,9 +440,6 @@ public class WebSockets {
         if (callback != null) {
             callback.complete(wsChannel, context);
         }
-        if (type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
-            IoUtils.safeClose(wsChannel);
-        }
     }
 
     private static void setupTimeout(final StreamSinkFrameChannel channel, long timeoutmillis) {

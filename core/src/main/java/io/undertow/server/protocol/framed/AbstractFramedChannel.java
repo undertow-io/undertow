@@ -872,11 +872,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     }
 
     void notifyFrameReadComplete(AbstractFramedStreamSourceChannel<C, R, S> channel) {
-        synchronized (AbstractFramedChannel.this) {
-            if (isLastFrameReceived()) {
-                safeClose(AbstractFramedChannel.this.channel.getSourceChannel());
-            }
-        }
+
     }
 
     void notifyClosed(AbstractFramedStreamSourceChannel<C, R, S> channel) {
