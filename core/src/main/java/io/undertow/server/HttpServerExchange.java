@@ -70,7 +70,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
-import java.security.AccessController;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
@@ -1738,8 +1737,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public void setSecurityContext(SecurityContext securityContext) {
-        if(System.getSecurityManager() != null) {
-            AccessController.checkPermission(SET_SECURITY_CONTEXT);
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            sm.checkPermission(SET_SECURITY_CONTEXT);
         }
         this.securityContext = securityContext;
     }
