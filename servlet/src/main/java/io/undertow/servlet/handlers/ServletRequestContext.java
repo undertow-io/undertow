@@ -20,7 +20,6 @@ package io.undertow.servlet.handlers;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.security.AccessController;
 import java.util.List;
 
 import io.undertow.UndertowMessages;
@@ -60,22 +59,25 @@ public class ServletRequestContext {
     private static final ThreadLocal<ServletRequestContext> CURRENT = new ThreadLocal<>();
 
     public static void setCurrentRequestContext(ServletRequestContext servletRequestContext) {
-        if(System.getSecurityManager() != null) {
-            AccessController.checkPermission(SET_CURRENT_REQUEST);
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            sm.checkPermission(SET_CURRENT_REQUEST);
         }
         CURRENT.set(servletRequestContext);
     }
 
     public static void clearCurrentServletAttachments() {
-        if(System.getSecurityManager() != null) {
-            AccessController.checkPermission(SET_CURRENT_REQUEST);
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            sm.checkPermission(SET_CURRENT_REQUEST);
         }
         CURRENT.remove();
     }
 
     public static ServletRequestContext requireCurrent() {
-        if(System.getSecurityManager() != null) {
-            AccessController.checkPermission(GET_CURRENT_REQUEST);
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            sm.checkPermission(GET_CURRENT_REQUEST);
         }
         ServletRequestContext attachments = CURRENT.get();
         if (attachments == null) {
@@ -85,8 +87,9 @@ public class ServletRequestContext {
     }
 
     public static ServletRequestContext current() {
-        if(System.getSecurityManager() != null) {
-            AccessController.checkPermission(GET_CURRENT_REQUEST);
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            sm.checkPermission(GET_CURRENT_REQUEST);
         }
         return CURRENT.get();
     }

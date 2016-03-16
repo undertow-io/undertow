@@ -103,10 +103,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         this.servletContext = servletContext;
         this.paths = paths;
         this.listeners = servletContext.getDeployment().getApplicationListeners();
-        if(System.getSecurityManager() != null) {
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
             //handle request can use doPrivilidged
             //we need to make sure this is not abused
-            AccessController.checkPermission(PERMISSION);
+            sm.checkPermission(PERMISSION);
         }
         ExceptionHandler handler = servletContext.getDeployment().getDeploymentInfo().getExceptionHandler();
         if(handler != null) {

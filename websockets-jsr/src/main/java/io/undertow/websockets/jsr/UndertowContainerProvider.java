@@ -101,15 +101,17 @@ public class UndertowContainerProvider extends ContainerProvider {
     }
 
     public static void addContainer(final ClassLoader classLoader, final WebSocketContainer webSocketContainer) {
-        if(System.getSecurityManager() != null) {
-            AccessController.checkPermission(PERMISSION);
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            sm.checkPermission(PERMISSION);
         }
         webSocketContainers.put(classLoader, webSocketContainer);
     }
 
     public static void removeContainer(final ClassLoader classLoader) {
-        if(System.getSecurityManager() != null) {
-            AccessController.checkPermission(PERMISSION);
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            sm.checkPermission(PERMISSION);
         }
         webSocketContainers.remove(classLoader);
     }
@@ -122,8 +124,9 @@ public class UndertowContainerProvider extends ContainerProvider {
     }
 
     public static void disableDefaultContainer() {
-        if(System.getSecurityManager() != null) {
-            AccessController.checkPermission(PERMISSION);
+        SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            sm.checkPermission(PERMISSION);
         }
         defaultContainerDisabled = true;
     }
