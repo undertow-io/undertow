@@ -128,7 +128,7 @@
                 <configuration>
                     <enableAssertions>true</enableAssertions>
                     <runOrder>reversealphabetical</runOrder>
-                    <skip>${test.spdy}</skip>
+                    <skip>${skipWebSocketTests}</skip>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <systemPropertyVariables>
                         <proxy>${proxy}</proxy>
@@ -146,6 +146,30 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>spdy-no-tests</id>
+            <activation>
+                <property>
+                    <name>test.spdy</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <skipWebSocketTests>true</skipWebSocketTests>
+            </properties>
+        </profile>
+        <profile>
+            <id>h2-no-tests</id>
+            <activation>
+                <property>
+                    <name>test.h2</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <skipWebSocketTests>true</skipWebSocketTests>
+            </properties>
+        </profile>
         <profile>
             <id>autobahn</id>
             <activation>
