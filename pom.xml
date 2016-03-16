@@ -666,7 +666,7 @@
         <profile>
             <id>jdk8.71</id>
             <activation>
-                <jdk>1.8.0_071</jdk>
+                <jdk>1.8.0_71</jdk>
             </activation>
             <properties>
                 <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8.71}</version.org.mortbay.jetty.alpn>
@@ -686,7 +686,7 @@
         <profile>
             <id>jdk8.73</id>
             <activation>
-                <jdk>1.8.0_073</jdk>
+                <jdk>1.8.0_73</jdk>
             </activation>
             <properties>
                 <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8.71}</version.org.mortbay.jetty.alpn>
