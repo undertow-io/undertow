@@ -57,10 +57,12 @@ public class ByteRangeHandler implements HttpHandler {
     private static final ResponseCommitListener ACCEPT_RANGE_LISTENER = new ResponseCommitListener() {
         @Override
         public void beforeCommit(HttpServerExchange exchange) {
-            if (exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH)) {
-                exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "bytes");
-            } else {
-                exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "none");
+            if(!exchange.getResponseHeaders().contains(Headers.ACCEPT_RANGES)) {
+                if (exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH)) {
+                    exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "bytes");
+                } else {
+                    exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "none");
+                }
             }
         }
 
