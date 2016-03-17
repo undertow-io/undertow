@@ -345,6 +345,8 @@ public class DefaultServlet extends HttpServlet {
                             resp.setStatus(StatusCodes.PARTIAL_CONTENT);
                             resp.setHeader(Headers.CONTENT_RANGE_STRING, range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
                         }
+                    } else {
+                        resp.setHeader(Headers.ACCEPT_RANGES_STRING, "bytes");
                     }
                 }
             }
