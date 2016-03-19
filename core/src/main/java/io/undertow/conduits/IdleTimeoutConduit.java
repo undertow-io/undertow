@@ -69,7 +69,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
                 return;
             }
 
-            UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity");
+            UndertowLogger.REQUEST_LOGGER.trace("Timing out channel due to inactivity");
             timedOut = true;
             doClose();
             if (sink.isWriteResumed()) {
