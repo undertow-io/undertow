@@ -26,6 +26,7 @@
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
         <version>2.0.0.Beta1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <groupId>io.undertow</groupId>
@@ -41,6 +42,7 @@
         <dump>false</dump>
         <https>false</https>
         <test.ipv6>false</test.ipv6>
+        <surefire.argLine/>
     </properties>
 
     <dependencies>
@@ -56,12 +58,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jboss.logging</groupId>
-            <artifactId>jboss-logging-processor</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.jboss.xnio</groupId>
             <artifactId>xnio-api</artifactId>
         </dependency>
@@ -73,29 +69,17 @@
         </dependency>
 
         <dependency>
-            <groupId>org.mortbay.jetty.alpn</groupId>
-            <artifactId>alpn-boot</artifactId>
-            <scope>test</scope>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>compile</scope>
         </dependency>
+        <!-- Test dependencies -->
 
         <dependency>
             <groupId>org.eclipse.jetty.alpn</groupId>
             <artifactId>alpn-api</artifactId>
             <scope>provided</scope>
         </dependency>
-
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>compile</scope>
-        </dependency>
-        <!-- Test dependencies -->
-        
-        <dependency>
-            <groupId>org.apache.directory.server</groupId>
-            <artifactId>apacheds-all</artifactId>
-            <scope>test</scope>
-        </dependency>        
 
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -110,20 +94,8 @@
         </dependency>
 
         <dependency>
-            <groupId>org.easymock</groupId>
-            <artifactId>easymock</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.jboss.logmanager</groupId>
             <artifactId>jboss-logmanager</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
         </dependency>
 
     </dependencies>
@@ -177,6 +149,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>${version.surefire.plugin}</version>
                 <configuration>
                     <testClassesDirectory>${project.build.directory}/classes</testClassesDirectory>
                     <enableAssertions>true</enableAssertions>
@@ -188,10 +161,29 @@
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                     </systemPropertyVariables>
-                    <argLine>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</argLine>
+                    <argLine>${surefire.argLine}</argLine>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>jdk8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <properties>
+                <surefire.argLine>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</surefire.argLine>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mortbay.jetty.alpn</groupId>
+                    <artifactId>alpn-boot</artifactId>
+                    <version>${version.org.mortbay.jetty.alpn}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 
 </project>

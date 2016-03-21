@@ -47,7 +47,11 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import io.undertow.server.DefaultByteBufferPool;
+
 
 /**
  * A class that starts a server before the test suite. By swapping out the root handler
@@ -75,12 +79,27 @@ public class Http2TestRunner extends BlockJUnit4ClassRunner {
 
     private static ServerController serverController;
 
+    private static final int JVM_MAJOR_VERSION;
+
     static {
         try {
             serverController = (ServerController) Http2TestRunner.class.getClassLoader().loadClass(System.getProperty("server.controller.class", "io.undertow.http2.tests.framework.UndertowTestServer")).newInstance();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        int vmVersion;
+        try {
+            String vmVersionStr = System.getProperty("java.specification.version", null);
+            Matcher matcher = Pattern.compile("^(?:1\\.)?(\\d+)$").matcher(vmVersionStr); //match 1.<number> or <number>
+            if (matcher.find()) {
+                vmVersion = Integer.valueOf(matcher.group(1));
+            } else {
+                throw new RuntimeException("Unknown version of jvm " + vmVersionStr);
+            }
+        } catch (Exception e) {
+            vmVersion = 8;
+        }
+        JVM_MAJOR_VERSION = vmVersion;
     }
 
     private static final Logger log = Logger.getLogger(Http2TestRunner.class);
@@ -173,11 +192,13 @@ public class Http2TestRunner extends BlockJUnit4ClassRunner {
     }
 
     private static void assertAlpnEnabled() {
-        try {
-            Class c = Class.forName("org.eclipse.jetty.alpn.ALPN");
+        if (JVM_MAJOR_VERSION < 9) { //JDK 9 has ALPN present by default
+            try {
+                Class c = Class.forName("org.eclipse.jetty.alpn.ALPN");
 
-        } catch (ClassNotFoundException e) {
-            Assert.fail("Jetty ALPN was not found on the boot class path, tests cannot be run");
+            } catch (ClassNotFoundException e) {
+                Assert.fail("Jetty ALPN was not found on the boot class path, tests cannot be run");
+            }
         }
     }
 
