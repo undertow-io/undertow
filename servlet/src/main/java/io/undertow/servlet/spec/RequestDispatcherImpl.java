@@ -152,6 +152,12 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
             Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
 
+            request.removeAttribute(INCLUDE_REQUEST_URI);
+            request.removeAttribute(INCLUDE_CONTEXT_PATH);
+            request.removeAttribute(INCLUDE_SERVLET_PATH);
+            request.removeAttribute(INCLUDE_PATH_INFO);
+            request.removeAttribute(INCLUDE_QUERY_STRING);
+
             if (!named) {
 
                 //only update if this is the first forward
