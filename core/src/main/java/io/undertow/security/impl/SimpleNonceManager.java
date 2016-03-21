@@ -291,7 +291,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                     return false;
                 }
 
-                if (nonce.timeStamp > earliestAccepted && nonce.timeStamp < now) {
+                if (nonce.timeStamp > earliestAccepted && nonce.timeStamp <= now) {
                     knownNonces.put(nonce.nonce, nonce);
                     long timeTillExpiry = nonce.timeStamp - earliestAccepted;
                     nonce.executorKey = executor.executeAfter(new KnownNonceCleaner(nonce.nonce), timeTillExpiry,
