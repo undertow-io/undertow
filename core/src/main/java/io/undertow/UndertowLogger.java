@@ -31,6 +31,7 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
+import org.xnio.ssl.SslConnection;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -364,4 +365,12 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5077, value = "SSL unwrap buffer overflow detected. This should not happen, please report this to the Undertow developers. Current state %s")
     void sslBufferOverflow(SslConduit sslConduit);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5078, value = "ALPN connection failed")
+    void alpnConnectionFailed(@Cause Exception e);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5079, value = "ALPN negotiation on %s failed")
+    void alpnConnectionFailed(SslConnection connection);
 }

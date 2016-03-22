@@ -18,46 +18,36 @@
 
 package io.undertow.client.spdy;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import javax.net.ssl.SSLEngine;
-
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.client.ALPNClientSelector;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientProvider;
 import io.undertow.client.ClientStatistics;
 import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.protocols.spdy.SpdyChannel;
 import io.undertow.server.DefaultByteBufferPool;
-import org.eclipse.jetty.alpn.ALPN;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.PushBackStreamSourceConduit;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientProvider;
-import io.undertow.protocols.spdy.SpdyChannel;
-import io.undertow.util.ImmediatePooled;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Dedicated SPDY client that will never fall back to HTTPS
@@ -66,28 +56,17 @@ import io.undertow.util.ImmediatePooled;
  */
 public class SpdyClientProvider implements ClientProvider {
 
-    private static final String PROTOCOL_KEY = SpdyClientProvider.class.getName() + ".protocol";
+    public static final String SPDY_3 = "spdy/3";
+    public static final String SPDY_3_1 = "spdy/3.1";
 
-    private static final String SPDY_3 = "spdy/3";
-    private static final String SPDY_3_1 = "spdy/3.1";
-    private static final String HTTP_1_1 = "http/1.1";
-
-    private static final List<String> PROTOCOLS = Collections.unmodifiableList(Arrays.asList(SPDY_3_1, HTTP_1_1));
-
-    private static final Method ALPN_PUT_METHOD;
-
-    static {
-        Method npnPutMethod;
-        try {
-            Class<?> npnClass = Class.forName("org.eclipse.jetty.alpn.ALPN", false, SpdyClientProvider.class.getClassLoader());
-            npnPutMethod = npnClass.getDeclaredMethod("put", SSLEngine.class, Class.forName("org.eclipse.jetty.alpn.ALPN$Provider", false, SpdyClientProvider.class.getClassLoader()));
-        } catch (Exception e) {
-            UndertowLogger.CLIENT_LOGGER.jettyALPNNotFound("SPDY");
-            npnPutMethod = null;
+    private static final ChannelListener<SslConnection> FAILED = new ChannelListener<SslConnection>() {
+        @Override
+        public void handleEvent(SslConnection connection) {
+            UndertowLogger.ROOT_LOGGER.alpnConnectionFailed(connection);
+            IoUtils.safeClose(connection);
         }
-        ALPN_PUT_METHOD = npnPutMethod;
-    }
-
+    };
+    public static final DefaultByteBufferPool HEAP_BUFFER_POOL = new DefaultByteBufferPool(false, 8192);
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
@@ -117,8 +96,8 @@ public class SpdyClientProvider implements ClientProvider {
         }
 
 
-        if(ALPN_PUT_METHOD == null) {
-            listener.failed(UndertowMessages.MESSAGES.jettyNPNNotAvailable());
+        if(!ALPNClientSelector.isEnabled()) {
+            listener.failed(UndertowMessages.MESSAGES.alpnNotAvailable());
             return;
         }
         if (ssl == null) {
@@ -146,8 +125,8 @@ public class SpdyClientProvider implements ClientProvider {
             return;
         }
 
-        if(ALPN_PUT_METHOD == null) {
-            listener.failed(UndertowMessages.MESSAGES.jettyNPNNotAvailable());
+        if(!ALPNClientSelector.isEnabled()) {
+            listener.failed(UndertowMessages.MESSAGES.alpnNotAvailable());
             return;
         }
         if (ssl == null) {
@@ -185,88 +164,20 @@ public class SpdyClientProvider implements ClientProvider {
 
     private void handleConnected(StreamConnection connection, final ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
         if(connection instanceof SslConnection) {
-            handlePotentialSpdyConnection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
-                @Override
-                public void handleEvent(SslConnection channel) {
-                    listener.failed(UndertowMessages.MESSAGES.spdyNotSupported());
-                }
-            });
+            ALPNClientSelector.runAlpn((SslConnection) connection, FAILED, listener, alpnProtocol(listener, uri, bufferPool, options, SPDY_3_1), alpnProtocol(listener, uri, bufferPool, options, SPDY_3));
         } else {
             listener.completed(createSpdyChannel(connection, bufferPool, options));
         }
     }
 
-    public static boolean isEnabled() {
-        return ALPN_PUT_METHOD != null;
-    }
-
-    /**
-     * Not really part of the public API, but is used by the HTTP client to initiate a SPDY connection for HTTPS requests.
-     */
-    public static void handlePotentialSpdyConnection(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, final ChannelListener<SslConnection> spdyFailedListener) {
-
-        final SslConnection sslConnection = (SslConnection) connection;
-        final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(sslConnection);
-
-        final SpdySelectionProvider spdySelectionProvider = new SpdySelectionProvider(sslEngine);
-        try {
-            ALPN_PUT_METHOD.invoke(null, sslEngine, spdySelectionProvider);
-        } catch (Exception e) {
-            spdyFailedListener.handleEvent(sslConnection);
-            return;
-        }
-
-        try {
-            sslConnection.startHandshake();
-            sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
-                @Override
-                public void handleEvent(StreamSourceChannel channel) {
-
-                    if (spdySelectionProvider.selected != null) {
-                        if (spdySelectionProvider.selected.equals(HTTP_1_1)) {
-                            sslConnection.getSourceChannel().suspendReads();
-                            spdyFailedListener.handleEvent(sslConnection);
-                            return;
-                        } else if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
-                            listener.completed(createSpdyChannel(connection, bufferPool, options));
-                        }
-                    } else {
-                        ByteBuffer buf = ByteBuffer.allocate(100);
-                        try {
-                            int read = channel.read(buf);
-                            if (read > 0) {
-                                buf.flip();
-                                PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
-                                pb.pushBack(new ImmediatePooled<>(buf));
-                                connection.getSourceChannel().setConduit(pb);
-                            }
-                            if(spdySelectionProvider.selected == null) {
-                                spdySelectionProvider.selected = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);
-                            }
-                            if ((spdySelectionProvider.selected == null && read > 0) || HTTP_1_1.equals(spdySelectionProvider.selected)) {
-                                sslConnection.getSourceChannel().suspendReads();
-                                spdyFailedListener.handleEvent(sslConnection);
-                                return;
-                            } else if (spdySelectionProvider.selected != null) {
-                                //we have spdy
-                                if (spdySelectionProvider.selected.equals(SPDY_3) || spdySelectionProvider.selected.equals(SPDY_3_1)) {
-                                    listener.completed(createSpdyChannel(connection, bufferPool, options));
-                                }
-                            }
-                        } catch (IOException e) {
-                            listener.failed(e);
-                        }
-                    }
-                }
-
-            });
-            sslConnection.getSourceChannel().resumeReads();
-        } catch (IOException e) {
-            listener.failed(e);
-        }
-
-
-    }
+    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, URI uri, ByteBufferPool bufferPool, OptionMap options , String protocol) {
+        return new ALPNClientSelector.ALPNProtocol(new ChannelListener<SslConnection>() {
+            @Override
+            public void handleEvent(SslConnection connection) {
+                listener.completed(createSpdyChannel(connection, bufferPool, options));
+            }
+        }, protocol);
+    };
 
     private static SpdyClientConnection createSpdyChannel(StreamConnection connection, ByteBufferPool bufferPool, OptionMap options) {
 
@@ -289,44 +200,8 @@ public class SpdyClientProvider implements ClientProvider {
         } else {
             clientStatistics = null;
         }
-        SpdyChannel spdyChannel = new SpdyChannel(connection, bufferPool, null, new DefaultByteBufferPool(false, 8192), true, options);
+        SpdyChannel spdyChannel = new SpdyChannel(connection, bufferPool, null, HEAP_BUFFER_POOL, true, options);
         return new SpdyClientConnection(spdyChannel, clientStatistics);
-    }
-
-    private static class SpdySelectionProvider implements ALPN.ClientProvider {
-        private String selected;
-        private final SSLEngine sslEngine;
-
-        private SpdySelectionProvider(SSLEngine sslEngine) {
-            this.sslEngine = sslEngine;
-        }
-
-        @Override
-        public boolean supports() {
-            return true;
-        }
-
-        @Override
-        public List<String> protocols() {
-            return PROTOCOLS;
-        }
-
-        @Override
-        public void unsupported() {
-            selected = HTTP_1_1;
-        }
-
-        @Override
-        public void selected(String s) {
-
-            ALPN.remove(sslEngine);
-            selected = s;
-            sslEngine.getHandshakeSession().putValue(PROTOCOL_KEY, selected);
-        }
-
-        private String getSelected() {
-            return selected;
-        }
     }
 
     private static class ClientStatisticsImpl implements ClientStatistics {
