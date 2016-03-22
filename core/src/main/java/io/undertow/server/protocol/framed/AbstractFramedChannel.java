@@ -486,6 +486,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * @param newChannel The channel that received the last frame
      */
     private void handleLastFrame(AbstractFramedStreamSourceChannel newChannel) {
+        //make a defensive copy
+        Set<AbstractFramedStreamSourceChannel<C, R, S>> receivers = new HashSet<>(this.receivers);
         for(AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
             if(r != newChannel) {
                 r.markStreamBroken();
