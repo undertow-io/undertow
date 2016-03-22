@@ -249,7 +249,7 @@ public class DefaultServlet extends HttpServlet {
         }
     }
 
-    private void serveFileBlocking(final HttpServletRequest req, final HttpServletResponse resp, final Resource resource) throws IOException {
+    protected void serveFileBlocking(final HttpServletRequest req, final HttpServletResponse resp, final Resource resource) throws IOException {
         final ETag etag = resource.getETag();
         final Date lastModified = resource.getLastModified();
         if(req.getDispatcherType() != DispatcherType.INCLUDE) {
