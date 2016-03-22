@@ -77,7 +77,7 @@
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.0.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.1.0.Final</version.org.jboss.spec.javax.websockets>
-        <version.xnio>3.3.4.Final</version.xnio>
+        <version.xnio>3.3.6.Final</version.xnio>
 
         <!-- jacoco -->
         <version.org.jacoco>0.7.1.201405082137</version.org.jacoco>
