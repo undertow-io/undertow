@@ -20,6 +20,7 @@ package io.undertow.client.http;
 
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.client.ALPNClientSelector;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
@@ -39,8 +40,10 @@ import org.xnio.ssl.XnioSsl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -129,29 +132,26 @@ public class HttpClientProvider implements ClientProvider {
 
 
     private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, URI uri) {
-        if (options.get(UndertowOptions.ENABLE_SPDY, false) && connection instanceof SslConnection && SpdyClientProvider.isEnabled()) {
-            try {
-                SpdyClientProvider.handlePotentialSpdyConnection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
-                    @Override
-                    public void handleEvent(SslConnection channel) {
-                        listener.completed(new HttpClientConnection(connection, options, bufferPool));
-                    }
-                });
-            } catch (Exception e) {
-                listener.failed(new IOException(e));
+
+        boolean spdy = options.get(UndertowOptions.ENABLE_SPDY, false);
+        boolean h2 = options.get(UndertowOptions.ENABLE_HTTP2, false);
+        if(connection instanceof SslConnection && (h2 | spdy)) {
+            List<ALPNClientSelector.ALPNProtocol> protocolList = new ArrayList<>();
+            if(h2) {
+                protocolList.add(Http2ClientProvider.alpnProtocol(listener, uri, bufferPool, options));
             }
-        } else if (options.get(UndertowOptions.ENABLE_HTTP2, false) && connection instanceof SslConnection && Http2ClientProvider.isEnabled()) {
-            try {
-                Http2ClientProvider.handlePotentialHttp2Connection(connection, listener, bufferPool, options, new ChannelListener<SslConnection>() {
-                    @Override
-                    public void handleEvent(SslConnection channel) {
-                        listener.completed(new HttpClientConnection(connection, options, bufferPool));
-                    }
-                }, uri);
-            } catch (Exception e) {
-                listener.failed(new IOException(e));
+            if(spdy) {
+                protocolList.add(SpdyClientProvider.alpnProtocol(listener, uri, bufferPool, options, SpdyClientProvider.SPDY_3_1));
+                protocolList.add(SpdyClientProvider.alpnProtocol(listener, uri, bufferPool, options, SpdyClientProvider.SPDY_3));
             }
-        }  else {
+
+            ALPNClientSelector.runAlpn((SslConnection) connection, new ChannelListener<SslConnection>() {
+                @Override
+                public void handleEvent(SslConnection connection) {
+                    listener.completed(new HttpClientConnection(connection, options, bufferPool));
+                }
+            }, listener, protocolList.toArray(new ALPNClientSelector.ALPNProtocol[protocolList.size()]));
+        } else {
             if(connection instanceof SslConnection) {
                 try {
                     ((SslConnection) connection).startHandshake();
