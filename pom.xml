@@ -481,9 +481,7 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
+
         </profile>
         <profile>
             <id>jdk8.11</id>
@@ -501,9 +499,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.20</id>
@@ -521,9 +516,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.25</id>
@@ -541,9 +533,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.31</id>
@@ -561,9 +550,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.40</id>
@@ -581,9 +567,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.45</id>
@@ -601,9 +584,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.51</id>
@@ -621,9 +601,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.60</id>
@@ -641,9 +618,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.65</id>
@@ -661,9 +635,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.66</id>
@@ -681,9 +652,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.71</id>
@@ -701,9 +669,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.73</id>
@@ -721,9 +686,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk8.74</id>
@@ -741,9 +703,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>jdk7</id>
@@ -760,9 +719,6 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
-            <modules>
-                <module>http2-test-suite</module>
-            </modules>
         </profile>
         <profile>
             <id>dist</id>
