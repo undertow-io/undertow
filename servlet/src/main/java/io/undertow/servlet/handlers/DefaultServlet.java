@@ -382,7 +382,7 @@ public class DefaultServlet extends HttpServlet {
         };
     }
 
-    private String getPath(final HttpServletRequest request) {
+    protected String getPath(final HttpServletRequest request) {
         String servletPath;
         String pathInfo;
 
@@ -408,7 +408,7 @@ public class DefaultServlet extends HttpServlet {
 
     }
 
-    private boolean isAllowed(String path, DispatcherType dispatcherType) {
+    protected boolean isAllowed(String path, DispatcherType dispatcherType) {
         if (!path.isEmpty()) {
             if(dispatcherType == DispatcherType.REQUEST) {
                 //WFLY-3543 allow the dispatcher to access stuff in web-inf and meta inf
