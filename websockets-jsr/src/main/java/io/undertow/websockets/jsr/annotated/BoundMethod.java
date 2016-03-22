@@ -43,7 +43,7 @@ final class BoundMethod {
     private final boolean decoderRequired;
     private final long maxMessageSize;
 
-    public BoundMethod(final Method method, final Class<?> messageType, final boolean decoderRequired, long maxMessageSize, BoundParameter... params) throws DeploymentException {
+    BoundMethod(final Method method, final Class<?> messageType, final boolean decoderRequired, long maxMessageSize, BoundParameter... params) throws DeploymentException {
         this.method = method;
         this.messageType = messageType;
         this.decoderRequired = decoderRequired;

@@ -35,7 +35,7 @@ class MinContentSizePredicate implements Predicate {
 
     private final long minSize;
 
-    public MinContentSizePredicate(final long minSize) {
+    MinContentSizePredicate(final long minSize) {
         this.minSize = minSize;
     }
 

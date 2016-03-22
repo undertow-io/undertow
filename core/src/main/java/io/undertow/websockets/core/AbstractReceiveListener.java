@@ -201,7 +201,7 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
     private static class FreeDataCallback implements WebSocketCallback<Void> {
         private final Pooled<ByteBuffer[]> data;
 
-        public FreeDataCallback(Pooled<ByteBuffer[]> data) {
+        FreeDataCallback(Pooled<ByteBuffer[]> data) {
             this.data = data;
         }
 

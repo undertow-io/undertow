@@ -57,7 +57,7 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     private static final int REQUEST_TERMINATED = 1;
     private static final int RESPONSE_TERMINATED = 1 << 1;
 
-    public HttpClientExchange(ClientCallback<ClientExchange> readyCallback, ClientRequest request, HttpClientConnection clientConnection) {
+    HttpClientExchange(ClientCallback<ClientExchange> readyCallback, ClientRequest request, HttpClientConnection clientConnection) {
         this.readyCallback = readyCallback;
         this.request = request;
         this.clientConnection = clientConnection;

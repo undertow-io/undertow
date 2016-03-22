@@ -82,7 +82,7 @@ public class ExtendedAccessLogParser {
         private boolean subToken;
         private boolean parameter;
 
-        public PatternTokenizer(String str) {
+        PatternTokenizer(String str) {
             sr = new StringReader(str);
         }
 

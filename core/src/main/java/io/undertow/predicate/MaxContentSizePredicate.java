@@ -35,7 +35,7 @@ class MaxContentSizePredicate implements Predicate {
 
     private final long maxSize;
 
-    public MaxContentSizePredicate(final long maxSize) {
+    MaxContentSizePredicate(final long maxSize) {
         this.maxSize = maxSize;
     }
 

@@ -46,7 +46,7 @@ public enum DigestQop {
     private final String token;
     private final boolean integrity;
 
-    private DigestQop(final String token, final boolean integrity) {
+    DigestQop(final String token, final boolean integrity) {
         this.token = token;
         this.integrity = integrity;
     }

@@ -29,7 +29,7 @@ class Http2WindowUpdateParser extends Http2PushBackParser {
 
     private int deltaWindowSize;
 
-    public Http2WindowUpdateParser(int frameLength) {
+    Http2WindowUpdateParser(int frameLength) {
         super(frameLength);
     }
 

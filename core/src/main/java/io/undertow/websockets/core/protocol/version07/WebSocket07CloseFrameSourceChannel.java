@@ -46,7 +46,7 @@ class WebSocket07CloseFrameSourceChannel extends StreamSourceFrameChannel {
         private int statusBytesRead;
         private int status;
 
-        public CloseFrameValidatorChannelFunction(WebSocket07Channel wsChannel) {
+        CloseFrameValidatorChannelFunction(WebSocket07Channel wsChannel) {
             this.wsChannel = wsChannel;
         }
 

@@ -48,7 +48,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
     private final Basic basic = new BasicWebSocketSessionRemoteEndpoint();
     private final Encoding encoding;
 
-    public WebSocketSessionRemoteEndpoint(UndertowSession session, final Encoding encoding) {
+    WebSocketSessionRemoteEndpoint(UndertowSession session, final Encoding encoding) {
         this.undertowSession = session;
         this.encoding = encoding;
     }

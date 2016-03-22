@@ -53,7 +53,7 @@ public enum AuthenticationInfoToken implements HeaderToken {
     private final String name;
     private final boolean quoted;
 
-    private AuthenticationInfoToken(final HttpString name, final boolean quoted) {
+    AuthenticationInfoToken(final HttpString name, final boolean quoted) {
         this.name = name.toString();
         this.quoted = quoted;
     }

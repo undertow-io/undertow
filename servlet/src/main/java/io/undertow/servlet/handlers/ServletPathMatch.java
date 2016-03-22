@@ -82,7 +82,7 @@ public class ServletPathMatch {
         return type;
     }
 
-    public static enum Type {
+    public enum Type {
         /**
          * A normal servlet match, the invocation should proceed as normal
          */

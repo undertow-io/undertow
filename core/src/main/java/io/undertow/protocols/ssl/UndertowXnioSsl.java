@@ -305,7 +305,7 @@ public class UndertowXnioSsl extends XnioSsl {
         private final FutureResult<SslConnection> futureResult;
         private final ChannelListener<? super SslConnection> openListener;
 
-        public StreamConnectionChannelListener(OptionMap optionMap, InetSocketAddress destination, FutureResult<SslConnection> futureResult, ChannelListener<? super SslConnection> openListener) {
+        StreamConnectionChannelListener(OptionMap optionMap, InetSocketAddress destination, FutureResult<SslConnection> futureResult, ChannelListener<? super SslConnection> openListener) {
             this.optionMap = optionMap;
             this.destination = destination;
             this.futureResult = futureResult;

@@ -331,7 +331,7 @@ public final class ProxyHandler implements HttpHandler {
         private final boolean rewriteHostHeader;
         private final boolean reuseXForwarded;
 
-        public ProxyAction(final ProxyConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders,
+        ProxyAction(final ProxyConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders,
                            boolean rewriteHostHeader, boolean reuseXForwarded) {
             this.clientConnection = clientConnection;
             this.exchange = exchange;

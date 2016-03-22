@@ -308,7 +308,7 @@ public class CachedResource implements Resource, RangeAwareResource {
         private final DirectBufferCache.CacheEntry entry;
         private final IoCallback callback;
 
-        public DereferenceCallback(DirectBufferCache.CacheEntry entry, final IoCallback callback) {
+        DereferenceCallback(DirectBufferCache.CacheEntry entry, final IoCallback callback) {
             this.entry = entry;
             this.callback = callback;
         }

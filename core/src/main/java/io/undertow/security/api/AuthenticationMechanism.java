@@ -85,7 +85,7 @@ public interface AuthenticationMechanism {
      * overall authentication process will then used this along with the current AuthenticationState to decide how to proceed
      * with the current request.
      */
-    public enum AuthenticationMechanismOutcome {
+    enum AuthenticationMechanismOutcome {
         /**
          * Based on the current request the mechanism has successfully performed authentication.
          */
@@ -108,7 +108,7 @@ public interface AuthenticationMechanism {
     /**
      * Simple class to wrap the result of requesting a mechanism sends it's challenge.
      */
-    public class ChallengeResult {
+    class ChallengeResult {
 
         private final boolean challengeSent;
         private final Integer statusCode;

@@ -193,7 +193,7 @@ public class Http2ClearClientProvider implements ClientProvider {
         private final ClientCallback<ClientConnection> listener;
         private final String defaultHost;
 
-        public Http2ClearOpenListener(ByteBufferPool bufferPool, OptionMap options, ClientCallback<ClientConnection> listener, String defaultHost) {
+        Http2ClearOpenListener(ByteBufferPool bufferPool, OptionMap options, ClientCallback<ClientConnection> listener, String defaultHost) {
             this.bufferPool = bufferPool;
             this.options = options;
             this.listener = listener;
@@ -233,7 +233,7 @@ public class Http2ClearClientProvider implements ClientProvider {
     private static class FailedNotifier implements IoFuture.Notifier<StreamConnection, Object> {
         private final ClientCallback<ClientConnection> listener;
 
-        public FailedNotifier(ClientCallback<ClientConnection> listener) {
+        FailedNotifier(ClientCallback<ClientConnection> listener) {
             this.listener = listener;
         }
 

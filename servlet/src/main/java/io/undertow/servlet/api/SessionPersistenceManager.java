@@ -37,7 +37,7 @@ public interface SessionPersistenceManager {
 
     void clear(final String deploymentName);
 
-    public class PersistentSession {
+    class PersistentSession {
         private final Date expiration;
         private final Map<String, Object> sessionData;
 

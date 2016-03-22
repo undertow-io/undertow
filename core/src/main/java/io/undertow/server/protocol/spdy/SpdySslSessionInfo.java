@@ -38,7 +38,7 @@ class SpdySslSessionInfo implements SSLSessionInfo {
 
     private final SpdyChannel channel;
 
-    public SpdySslSessionInfo(SpdyChannel channel) {
+    SpdySslSessionInfo(SpdyChannel channel) {
         this.channel = channel;
     }
 

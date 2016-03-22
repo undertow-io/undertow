@@ -34,7 +34,7 @@ class SpdySynStreamParser extends SpdyHeaderBlockParser {
     private int associatedToStreamId = -1;
     private int priority = -1;
 
-    public SpdySynStreamParser(ByteBufferPool bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
+    SpdySynStreamParser(ByteBufferPool bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
         super(channel, frameLength, inflater);
     }
 

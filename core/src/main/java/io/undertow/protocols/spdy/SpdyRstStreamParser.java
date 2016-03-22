@@ -29,7 +29,7 @@ class SpdyRstStreamParser extends SpdyPushBackParser {
 
     private int statusCode;
 
-    public SpdyRstStreamParser(int frameLength) {
+    SpdyRstStreamParser(int frameLength) {
         super(frameLength);
     }
 

@@ -29,7 +29,7 @@ public enum ServletStackTraces {
 
     private final String value;
 
-    private ServletStackTraces(String value) {
+    ServletStackTraces(String value) {
         this.value = value;
     }
 

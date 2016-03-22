@@ -60,7 +60,7 @@ class ChunkReader<T extends Conduit> {
     private final ConduitListener<? super T> finishListener;
     private final T conduit;
 
-    public ChunkReader(final Attachable attachable, final AttachmentKey<HeaderMap> trailerAttachmentKey, ConduitListener<? super T> finishListener, T conduit) {
+    ChunkReader(final Attachable attachable, final AttachmentKey<HeaderMap> trailerAttachmentKey, ConduitListener<? super T> finishListener, T conduit) {
         this.attachable = attachable;
         this.trailerAttachmentKey = trailerAttachmentKey;
         this.finishListener = finishListener;

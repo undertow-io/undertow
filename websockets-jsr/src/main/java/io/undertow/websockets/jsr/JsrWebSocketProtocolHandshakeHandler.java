@@ -35,7 +35,7 @@ import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
  */
 final class JsrWebSocketProtocolHandshakeHandler extends WebSocketProtocolHandshakeHandler {
 
-    public JsrWebSocketProtocolHandshakeHandler(WebSocketConnectionCallback callback, ConfiguredServerEndpoint... configs) {
+    JsrWebSocketProtocolHandshakeHandler(WebSocketConnectionCallback callback, ConfiguredServerEndpoint... configs) {
         super(handshakes(configs), callback);
     }
 

@@ -192,7 +192,7 @@ public final class WebSocketTestClient {
         private final WebSocketClientHandshaker handshaker;
         private final CountDownLatch handshakeLatch;
 
-        public WSClientHandler(WebSocketClientHandshaker handshaker, CountDownLatch handshakeLatch) {
+        WSClientHandler(WebSocketClientHandshaker handshaker, CountDownLatch handshakeLatch) {
             super(false);
             this.handshaker = handshaker;
             this.handshakeLatch = handshakeLatch;

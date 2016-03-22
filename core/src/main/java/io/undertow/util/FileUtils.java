@@ -80,8 +80,7 @@ public class FileUtils {
             }
 
             @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException
-            {
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
                 try {
                     Files.delete(dir);
                 } catch (IOException e) {

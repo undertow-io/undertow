@@ -38,7 +38,7 @@ class Http2SslSessionInfo implements SSLSessionInfo {
 
     private final Http2Channel channel;
 
-    public Http2SslSessionInfo(Http2Channel channel) {
+    Http2SslSessionInfo(Http2Channel channel) {
         this.channel = channel;
     }
 
