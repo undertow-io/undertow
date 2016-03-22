@@ -343,7 +343,7 @@ public class DefaultServlet extends HttpServlet {
                         }
                         if(range != null) {
                             resp.setStatus(StatusCodes.PARTIAL_CONTENT);
-                            resp.setHeader(Headers.CONTENT_RANGE_STRING, range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
+                            resp.setHeader(Headers.CONTENT_RANGE_STRING, "bytes " + range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
                         }
                     } else {
                         resp.setHeader(Headers.ACCEPT_RANGES_STRING, "bytes");

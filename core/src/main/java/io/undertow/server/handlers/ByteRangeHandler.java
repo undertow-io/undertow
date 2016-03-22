@@ -128,7 +128,7 @@ public class ByteRangeHandler implements HttpHandler {
                         exchange.setResponseContentLength(toWrite);
                     }
                     exchange.setStatusCode(StatusCodes.PARTIAL_CONTENT);
-                    exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, start + "-" + end + "/" + responseLength);
+                    exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + responseLength);
                     return new RangeStreamSinkConduit(factory.create(), start, end, responseLength);
                 }
             });
