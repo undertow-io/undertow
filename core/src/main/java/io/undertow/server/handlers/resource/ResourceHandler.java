@@ -268,7 +268,7 @@ public class ResourceHandler implements HttpHandler {
                         }
                         if(range != null) {
                             exchange.setStatusCode(StatusCodes.PARTIAL_CONTENT);
-                            exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, start + "-" + end + "/" + contentLength);
+                            exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + contentLength);
                         }
                     }
                 }

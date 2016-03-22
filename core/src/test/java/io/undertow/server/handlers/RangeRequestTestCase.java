@@ -88,7 +88,7 @@ public class RangeRequestTestCase {
             Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
             String response = EntityUtils.toString(result.getEntity());
             Assert.assertEquals("23", response);
-            Assert.assertEquals( "2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            Assert.assertEquals( "bytes 2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader("range", "bytes=0-0");
@@ -96,7 +96,7 @@ public class RangeRequestTestCase {
             Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
             response = EntityUtils.toString(result.getEntity());
             Assert.assertEquals("0", response);
-            Assert.assertEquals( "0-0/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            Assert.assertEquals( "bytes 0-0/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader("range", "bytes=1-");
@@ -104,7 +104,7 @@ public class RangeRequestTestCase {
             Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
             response = EntityUtils.toString(result.getEntity());
             Assert.assertEquals("123456789", response);
-            Assert.assertEquals( "1-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            Assert.assertEquals( "bytes 1-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader("range", "bytes=0-");
@@ -112,7 +112,7 @@ public class RangeRequestTestCase {
             Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
             response = EntityUtils.toString(result.getEntity());
             Assert.assertEquals("0123456789", response);
-            Assert.assertEquals("0-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            Assert.assertEquals("bytes 0-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader("range", "bytes=9-");
@@ -120,7 +120,7 @@ public class RangeRequestTestCase {
             Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
             response = EntityUtils.toString(result.getEntity());
             Assert.assertEquals("9", response);
-            Assert.assertEquals("9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader("range", "bytes=-1");
@@ -128,7 +128,7 @@ public class RangeRequestTestCase {
             Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
             response = EntityUtils.toString(result.getEntity());
             Assert.assertEquals("9", response);
-            Assert.assertEquals("9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
         } finally {
             client.getConnectionManager().shutdown();
