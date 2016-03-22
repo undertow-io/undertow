@@ -38,6 +38,7 @@ import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.server.protocol.http2.Http2UpgradeHandler;
 import io.undertow.server.protocol.spdy.SpdyOpenListener;
 import io.undertow.server.protocol.spdy.SpdyPlainOpenListener;
+import io.undertow.util.ALPN;
 import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
@@ -790,7 +791,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     private static boolean isAlpnEnabled() {
-        return !System.getProperty("alpn-boot-string", "").isEmpty();
+        return !System.getProperty("alpn-boot-string", "").isEmpty() || ALPN.JDK_9_ALPN_METHODS != null;
     }
 
     public static void assumeAlpnEnabled() {

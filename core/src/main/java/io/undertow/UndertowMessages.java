@@ -296,8 +296,8 @@ public interface UndertowMessages {
     @Message(id = 89, value = "SPDY not supported")
     IOException spdyNotSupported();
 
-    @Message(id = 90, value = "Jetty NPN not available")
-    IOException jettyNPNNotAvailable();
+    @Message(id = 90, value = "No ALPN implementation available (tried Jetty ALPN and JDK9)")
+    IOException alpnNotAvailable();
 
     @Message(id = 91, value = "Buffer has already been freed")
     IllegalStateException bufferAlreadyFreed();
