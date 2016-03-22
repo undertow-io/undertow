@@ -49,7 +49,7 @@ public enum DigestAlgorithm {
     private final String digestAlgorithm;
     private final boolean session;
 
-    private DigestAlgorithm(final String token, final String digestAlgorithm, final boolean session) {
+    DigestAlgorithm(final String token, final String digestAlgorithm, final boolean session) {
         this.token = token;
         this.digestAlgorithm = digestAlgorithm;
         this.session = session;

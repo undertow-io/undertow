@@ -79,7 +79,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
     protected final boolean startTls;
     protected final ByteBufferPool applicationBufferPool;
 
-    public UndertowAcceptingSslChannel(final UndertowXnioSsl ssl, final AcceptingChannel<? extends StreamConnection> tcpServer, final OptionMap optionMap, final ByteBufferPool applicationBufferPool, final boolean startTls) {
+    UndertowAcceptingSslChannel(final UndertowXnioSsl ssl, final AcceptingChannel<? extends StreamConnection> tcpServer, final OptionMap optionMap, final ByteBufferPool applicationBufferPool, final boolean startTls) {
         this.tcpServer = tcpServer;
         this.ssl = ssl;
         this.applicationBufferPool = applicationBufferPool;

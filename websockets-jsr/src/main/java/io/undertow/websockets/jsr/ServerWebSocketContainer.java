@@ -785,7 +785,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
         private final ClientEndpointConfig config;
 
-        public ClientNegotiation(List<String> supportedSubProtocols, List<WebSocketExtension> supportedExtensions, ClientEndpointConfig config) {
+        ClientNegotiation(List<String> supportedSubProtocols, List<WebSocketExtension> supportedExtensions, ClientEndpointConfig config) {
             super(supportedSubProtocols, supportedExtensions);
             this.config = config;
         }

@@ -64,7 +64,7 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
     private static final int REQUEST_TERMINATED = 1;
     private static final int RESPONSE_TERMINATED = 1 << 1;
 
-    public AjpClientExchange(ClientCallback<ClientExchange> readyCallback, ClientRequest request, AjpClientConnection clientConnection) {
+    AjpClientExchange(ClientCallback<ClientExchange> readyCallback, ClientRequest request, AjpClientConnection clientConnection) {
         this.readyCallback = readyCallback;
         this.request = request;
         this.clientConnection = clientConnection;

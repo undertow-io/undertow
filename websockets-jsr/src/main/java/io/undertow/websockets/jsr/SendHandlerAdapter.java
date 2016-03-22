@@ -34,7 +34,7 @@ final class SendHandlerAdapter implements WebSocketCallback<Void> {
     private static final SendResult OK = new SendResult();
     private volatile boolean done;
 
-    public SendHandlerAdapter(SendHandler handler) {
+    SendHandlerAdapter(SendHandler handler) {
         this.handler = handler;
     }
     @Override

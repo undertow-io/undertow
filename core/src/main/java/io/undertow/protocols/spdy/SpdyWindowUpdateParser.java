@@ -29,7 +29,7 @@ class SpdyWindowUpdateParser extends SpdyPushBackParser {
 
     private int deltaWindowSize;
 
-    public SpdyWindowUpdateParser(int frameLength) {
+    SpdyWindowUpdateParser(int frameLength) {
         super(frameLength);
     }
 

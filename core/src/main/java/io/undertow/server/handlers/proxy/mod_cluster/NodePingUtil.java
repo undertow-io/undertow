@@ -421,7 +421,7 @@ class NodePingUtil {
         }
     }
 
-    static enum State {
+    enum State {
         WAITING, DONE, CANCELLED;
     }
 

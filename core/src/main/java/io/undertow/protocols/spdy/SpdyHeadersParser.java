@@ -30,7 +30,7 @@ import java.util.zip.Inflater;
  */
 class SpdyHeadersParser extends SpdyHeaderBlockParser {
 
-    public SpdyHeadersParser(ByteBufferPool bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
+    SpdyHeadersParser(ByteBufferPool bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
         super(channel,frameLength, inflater);
     }
 

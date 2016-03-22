@@ -34,7 +34,7 @@ class Http2PingParser extends Http2PushBackParser {
 
     final byte[] data = new byte[PING_FRAME_LENGTH];
 
-    public Http2PingParser(int frameLength) {
+    Http2PingParser(int frameLength) {
         super(frameLength);
     }
 

@@ -186,7 +186,7 @@ public class HTTP2ViaUpgradeTestCase {
         private HttpResponseHandler responseHandler;
         private Http2SettingsHandler settingsHandler;
 
-        public Http2ClientInitializer(int maxContentLength) {
+        Http2ClientInitializer(int maxContentLength) {
             this.maxContentLength = maxContentLength;
         }
 
@@ -279,7 +279,7 @@ public class HTTP2ViaUpgradeTestCase {
          *
          * @param promise Promise object used to notify when first settings are received
          */
-        public Http2SettingsHandler(ChannelPromise promise) {
+        Http2SettingsHandler(ChannelPromise promise) {
             this.promise = promise;
         }
 
@@ -313,7 +313,7 @@ public class HTTP2ViaUpgradeTestCase {
 
         private SortedMap<Integer, ChannelPromise> streamidPromiseMap;
 
-        public HttpResponseHandler() {
+        HttpResponseHandler() {
             streamidPromiseMap = new TreeMap<Integer, ChannelPromise>();
         }
 

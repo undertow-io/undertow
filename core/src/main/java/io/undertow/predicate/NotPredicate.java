@@ -27,7 +27,7 @@ class NotPredicate implements Predicate {
 
     private final Predicate predicate;
 
-    public NotPredicate(final Predicate predicate) {
+    NotPredicate(final Predicate predicate) {
         this.predicate = predicate;
     }
 

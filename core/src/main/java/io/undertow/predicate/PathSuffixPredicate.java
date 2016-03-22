@@ -31,7 +31,7 @@ class PathSuffixPredicate implements Predicate {
 
     private final String suffix;
 
-    public PathSuffixPredicate(final String suffix) {
+    PathSuffixPredicate(final String suffix) {
             this.suffix = suffix;
     }
 

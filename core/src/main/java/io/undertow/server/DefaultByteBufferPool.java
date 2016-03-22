@@ -184,7 +184,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
 
 
-        public DefaultPooledBuffer(DefaultByteBufferPool pool, ByteBuffer buffer, boolean detectLeaks) {
+        DefaultPooledBuffer(DefaultByteBufferPool pool, ByteBuffer buffer, boolean detectLeaks) {
             this.pool = pool;
             this.buffer = buffer;
             this.leakDetector = detectLeaks ? new LeakDetector() : null;

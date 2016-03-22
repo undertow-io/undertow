@@ -99,7 +99,7 @@ public class LocalNameResolvingHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
-    public static enum ResolveType {
+    public enum ResolveType {
         FORWARD,
         REVERSE,
         FORWARD_AND_REVERSE

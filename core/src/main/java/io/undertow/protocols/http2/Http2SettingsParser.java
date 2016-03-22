@@ -31,7 +31,7 @@ class Http2SettingsParser extends Http2PushBackParser {
 
     private final List<Http2Setting> settings = new ArrayList<>();
 
-    public Http2SettingsParser(int frameLength) {
+    Http2SettingsParser(int frameLength) {
         super(frameLength);
     }
 

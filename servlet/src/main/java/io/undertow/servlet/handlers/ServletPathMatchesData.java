@@ -38,7 +38,7 @@ class ServletPathMatchesData {
 
     private final Map<String, ServletChain> nameMatches;
 
-    public ServletPathMatchesData(final Map<String, ServletChain> exactPathMatches, final SubstringMap<PathMatch> prefixMatches, final Map<String, ServletChain> nameMatches) {
+    ServletPathMatchesData(final Map<String, ServletChain> exactPathMatches, final SubstringMap<PathMatch> prefixMatches, final Map<String, ServletChain> nameMatches) {
         this.prefixMatches = prefixMatches;
         this.nameMatches = nameMatches;
         Map<String, ServletPathMatch> newExactPathMatches = new HashMap<>();
@@ -155,7 +155,7 @@ class ServletPathMatchesData {
         private volatile ServletChain defaultHandler;
         private volatile boolean requireWelcomeFileMatch;
 
-        public PathMatch(final ServletChain defaultHandler) {
+        PathMatch(final ServletChain defaultHandler) {
             this.defaultHandler = defaultHandler;
         }
     }

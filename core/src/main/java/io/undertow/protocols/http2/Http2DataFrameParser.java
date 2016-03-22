@@ -30,7 +30,7 @@ class Http2DataFrameParser extends Http2PushBackParser {
 
     private int padding = 0;
 
-    public Http2DataFrameParser(int frameLength) {
+    Http2DataFrameParser(int frameLength) {
         super(frameLength);
     }
 

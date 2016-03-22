@@ -53,7 +53,7 @@ public class FilterMappingInfo {
         return filterName;
     }
 
-    public static enum MappingType {
+    public enum MappingType {
         URL,
         SERVLET;
     }

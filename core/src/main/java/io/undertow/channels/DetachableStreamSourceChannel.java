@@ -220,7 +220,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
         private final SimpleSetter<StreamSourceChannel> setter;
         private final StreamSourceChannel channel;
 
-        public SetterDelegatingListener(final SimpleSetter<StreamSourceChannel> setter, final StreamSourceChannel channel) {
+        SetterDelegatingListener(final SimpleSetter<StreamSourceChannel> setter, final StreamSourceChannel channel) {
             this.setter = setter;
             this.channel = channel;
         }

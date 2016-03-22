@@ -41,7 +41,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     private int frameRemaining = -1;
     private boolean invalid = false;
 
-    public Http2HeaderBlockParser(int frameLength, HpackDecoder decoder) {
+    Http2HeaderBlockParser(int frameLength, HpackDecoder decoder) {
         super(frameLength);
         this.decoder = decoder;
     }

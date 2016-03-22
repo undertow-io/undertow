@@ -39,7 +39,7 @@ class Context {
 
     private static final AtomicInteger idGen = new AtomicInteger();
 
-    static enum Status {
+    enum Status {
 
         ENABLED,
         DISABLED,

@@ -267,7 +267,7 @@ public class SecurityPathMatches {
         final Set<String> methods;
         final SecurityInformation securityInformation;
 
-        public ExcludedMethodRoles(final Set<String> methods, final SecurityInformation securityInformation) {
+        ExcludedMethodRoles(final Set<String> methods, final SecurityInformation securityInformation) {
             this.methods = methods;
             this.securityInformation = securityInformation;
         }

@@ -274,7 +274,7 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
         private final SimpleSetter<StreamSinkChannel> setter;
         private final StreamSinkChannel channel;
 
-        public SetterDelegatingListener(final SimpleSetter<StreamSinkChannel> setter, final StreamSinkChannel channel) {
+        SetterDelegatingListener(final SimpleSetter<StreamSinkChannel> setter, final StreamSinkChannel channel) {
             this.setter = setter;
             this.channel = channel;
         }

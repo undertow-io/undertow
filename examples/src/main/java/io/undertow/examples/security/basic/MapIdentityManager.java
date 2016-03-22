@@ -42,7 +42,7 @@ class MapIdentityManager implements IdentityManager {
 
     private final Map<String, char[]> users;
 
-    public MapIdentityManager(final Map<String, char[]> users) {
+    MapIdentityManager(final Map<String, char[]> users) {
         this.users = users;
     }
 

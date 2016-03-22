@@ -155,7 +155,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         DelegateOpenListener listener;
         int weight;
 
-        public ListenerEntry(DelegateOpenListener listener, int weight) {
+        ListenerEntry(DelegateOpenListener listener, int weight) {
             this.listener = listener;
             this.weight = weight;
         }

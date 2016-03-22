@@ -202,7 +202,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         private final AtomicInteger state = new AtomicInteger(
             MonitoredThreadState.RUNNING.ordinal());
 
-        public MonitoredThread(Thread thread, String requestUri) {
+        MonitoredThread(Thread thread, String requestUri) {
             this.thread = thread;
             this.requestUri = requestUri;
             this.start = System.currentTimeMillis();
@@ -245,7 +245,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         private final long threadId;
         private final long totalActiveTime;
 
-        public CompletedStuckThread(Thread thread, long totalActiveTime) {
+        CompletedStuckThread(Thread thread, long totalActiveTime) {
             this.threadName = thread.getName();
             this.threadId = thread.getId();
             this.totalActiveTime = totalActiveTime;

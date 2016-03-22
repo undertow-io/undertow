@@ -112,7 +112,7 @@ class ParseState {
      */
     final HashMap<HttpString, String> headerValuesCache = new HashMap<>();
 
-    public ParseState() {
+    ParseState() {
         this.parseState = 0;
         this.pos = 0;
     }

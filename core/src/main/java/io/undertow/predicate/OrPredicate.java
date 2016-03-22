@@ -27,7 +27,7 @@ class OrPredicate implements Predicate {
 
     private final Predicate[] predicates;
 
-    public OrPredicate(final Predicate... predicates) {
+    OrPredicate(final Predicate... predicates) {
         this.predicates = predicates;
     }
 

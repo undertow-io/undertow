@@ -32,7 +32,7 @@ class PathMatchPredicate implements Predicate {
 
     private final PathMatcher<Boolean> pathMatcher;
 
-    public PathMatchPredicate(final String... paths) {
+    PathMatchPredicate(final String... paths) {
         PathMatcher<Boolean> matcher = new PathMatcher<>();
         for(String path : paths) {
             if(!path.startsWith("/")) {

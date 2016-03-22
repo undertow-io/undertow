@@ -27,7 +27,7 @@ class AndPredicate implements Predicate {
 
     private final Predicate[] predicates;
 
-    public AndPredicate(final Predicate ... predicates) {
+    AndPredicate(final Predicate ... predicates) {
         this.predicates = predicates;
     }
 

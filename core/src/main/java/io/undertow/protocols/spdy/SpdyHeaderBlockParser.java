@@ -52,7 +52,7 @@ abstract class SpdyHeaderBlockParser extends SpdyPushBackParser {
     private byte[] dataOverflow;
 
 
-    public SpdyHeaderBlockParser(SpdyChannel channel, int frameLength, Inflater inflater) {
+    SpdyHeaderBlockParser(SpdyChannel channel, int frameLength, Inflater inflater) {
         super(frameLength);
         this.channel = channel;
         this.inflater = inflater;

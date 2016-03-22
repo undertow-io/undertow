@@ -80,7 +80,7 @@ class ResponseParseState {
      */
     HttpString nextHeader;
 
-    public ResponseParseState() {
+    ResponseParseState() {
         this.parseState = 0;
         this.pos = 0;
     }

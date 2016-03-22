@@ -35,7 +35,7 @@ class Http2HeadersParser extends Http2HeaderBlockParser {
     private boolean headersEndStream = false;
     private boolean exclusive;
 
-    public Http2HeadersParser(int frameLength, HpackDecoder hpackDecoder) {
+    Http2HeadersParser(int frameLength, HpackDecoder hpackDecoder) {
         super(frameLength, hpackDecoder);
     }
 

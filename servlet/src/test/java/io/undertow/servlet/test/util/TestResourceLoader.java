@@ -55,7 +55,7 @@ public class TestResourceLoader extends ClassPathResourceManager {
     private static class TestResource implements RangeAwareResource {
         private final Resource delegate;
 
-        public TestResource(Resource delegate) {
+        TestResource(Resource delegate) {
             this.delegate = delegate;
         }
 
