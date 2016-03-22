@@ -57,7 +57,7 @@ class Http2FrameHeaderParser implements FrameHeaderData {
     private static final int SECOND_RESERVED_MASK = ~(1 << 7);
     private Http2Channel http2Channel;
 
-    public Http2FrameHeaderParser(Http2Channel http2Channel, Http2HeadersParser continuationParser) {
+    Http2FrameHeaderParser(Http2Channel http2Channel, Http2HeadersParser continuationParser) {
         this.http2Channel = http2Channel;
         this.continuationParser = continuationParser;
     }

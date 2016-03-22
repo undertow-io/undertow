@@ -34,7 +34,7 @@ class ClientFixedLengthStreamSinkConduit extends AbstractFixedLengthStreamSinkCo
      * @param propagateClose {@code true} if this instance should pass close to the next
      * @param exchange
      */
-    public ClientFixedLengthStreamSinkConduit(StreamSinkConduit next, long contentLength, boolean configurable, boolean propagateClose, HttpClientExchange exchange) {
+    ClientFixedLengthStreamSinkConduit(StreamSinkConduit next, long contentLength, boolean configurable, boolean propagateClose, HttpClientExchange exchange) {
         super(next, contentLength, configurable, propagateClose);
         this.exchange = exchange;
     }

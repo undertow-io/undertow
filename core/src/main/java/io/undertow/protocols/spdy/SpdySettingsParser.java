@@ -35,7 +35,7 @@ class SpdySettingsParser extends SpdyPushBackParser {
 
     private final List<SpdySetting> settings = new ArrayList<>();
 
-    public SpdySettingsParser(int frameLength) {
+    SpdySettingsParser(int frameLength) {
         super(frameLength);
     }
 

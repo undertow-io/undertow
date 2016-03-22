@@ -749,7 +749,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         return contentLength;
     }
 
-    public static enum ResponseState {
+    public enum ResponseState {
         NONE,
         STREAM,
         WRITER

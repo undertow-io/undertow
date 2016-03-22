@@ -123,7 +123,7 @@ class MCMPHandler implements HttpHandler {
     private final ModCluster modCluster;
     protected final ModClusterContainer container;
 
-    public MCMPHandler(MCMPConfig config, ModCluster modCluster, HttpHandler next) {
+    MCMPHandler(MCMPConfig config, ModCluster modCluster, HttpHandler next) {
         this.config = config;
         this.next = next;
         this.modCluster = modCluster;

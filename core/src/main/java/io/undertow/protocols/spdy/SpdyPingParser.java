@@ -30,7 +30,7 @@ class SpdyPingParser extends SpdyPushBackParser {
 
     private int id;
 
-    public SpdyPingParser(int frameLength) {
+    SpdyPingParser(int frameLength) {
         super(frameLength);
     }
 

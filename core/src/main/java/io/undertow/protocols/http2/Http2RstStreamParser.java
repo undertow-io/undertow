@@ -29,7 +29,7 @@ class Http2RstStreamParser extends Http2PushBackParser {
 
     private int errorCode;
 
-    public Http2RstStreamParser(int frameLength) {
+    Http2RstStreamParser(int frameLength) {
         super(frameLength);
     }
 

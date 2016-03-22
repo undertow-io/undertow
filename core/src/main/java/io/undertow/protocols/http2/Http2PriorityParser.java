@@ -33,7 +33,7 @@ class Http2PriorityParser extends Http2PushBackParser {
     private int weight;
     private boolean exclusive;
 
-    public Http2PriorityParser(int frameLength) {
+    Http2PriorityParser(int frameLength) {
         super(frameLength);
     }
 

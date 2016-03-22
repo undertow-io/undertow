@@ -40,7 +40,7 @@ public interface AuthenticatedSessionManager {
 
     void clearSession(HttpServerExchange exchange);
 
-    public static class AuthenticatedSession implements Serializable {
+    class AuthenticatedSession implements Serializable {
 
         private final Account account;
         private final String mechanism;

@@ -30,7 +30,7 @@ import java.util.zip.Inflater;
  */
 class SpdySynReplyParser extends SpdyHeaderBlockParser {
 
-    public SpdySynReplyParser(ByteBufferPool bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
+    SpdySynReplyParser(ByteBufferPool bufferPool, SpdyChannel channel, int frameLength, Inflater inflater) {
         super(channel, frameLength, inflater);
     }
 

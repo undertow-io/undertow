@@ -56,7 +56,7 @@ public interface DeploymentManager {
      */
     Deployment getDeployment();
 
-    public static enum State {
+    enum State {
         UNDEPLOYED,
         DEPLOYED,
         STARTED;

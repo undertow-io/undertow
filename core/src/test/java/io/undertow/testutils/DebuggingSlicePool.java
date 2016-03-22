@@ -58,7 +58,7 @@ public class DebuggingSlicePool implements ByteBufferPool{
         private volatile boolean free = false;
         private RuntimeException freePoint;
 
-        public DebuggingBuffer(PooledByteBuffer delegate, String label) {
+        DebuggingBuffer(PooledByteBuffer delegate, String label) {
             this.delegate = delegate;
             this.label = label;
             this.no = allocationCount.getAndIncrement();

@@ -202,7 +202,7 @@ public class ResponseCache {
     private static class DereferenceCallback implements IoCallback {
         private final DirectBufferCache.CacheEntry entry;
 
-        public DereferenceCallback(DirectBufferCache.CacheEntry entry) {
+        DereferenceCallback(DirectBufferCache.CacheEntry entry) {
             this.entry = entry;
         }
 

@@ -1787,7 +1787,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         private final HttpServerExchange exchange;
         private int i;
 
-        public ExchangeCompleteNextListener(final ExchangeCompletionListener[] list, final HttpServerExchange exchange, int i) {
+        ExchangeCompleteNextListener(final ExchangeCompletionListener[] list, final HttpServerExchange exchange, int i) {
             this.list = list;
             this.exchange = exchange;
             this.i = i;
@@ -1865,7 +1865,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         private boolean wakeup;
 
-        public WriteDispatchChannel(final ConduitStreamSinkChannel delegate) {
+        WriteDispatchChannel(final ConduitStreamSinkChannel delegate) {
             super(delegate);
         }
 
@@ -2023,7 +2023,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         private boolean readsResumed = false;
 
 
-        public ReadDispatchChannel(final ConduitStreamSourceChannel delegate) {
+        ReadDispatchChannel(final ConduitStreamSourceChannel delegate) {
             super(delegate);
         }
 

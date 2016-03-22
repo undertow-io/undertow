@@ -224,7 +224,7 @@ public class WebsocketStressTestCase {
         private final ExecutorService executor;
         final CountDownLatch latch = new CountDownLatch(1);
 
-        public SendRunnable(Session session, int thread, ExecutorService executor) {
+        SendRunnable(Session session, int thread, ExecutorService executor) {
             this.session = session;
             this.thread = thread;
             this.executor = executor;

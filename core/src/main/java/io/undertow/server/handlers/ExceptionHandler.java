@@ -47,7 +47,7 @@ public class ExceptionHandler implements HttpHandler {
     private static class ExceptionHandlerHolder<T extends Throwable> {
         private final Class<T> clazz;
         private final HttpHandler handler;
-        public ExceptionHandlerHolder(Class<T> clazz, HttpHandler handler) {
+        ExceptionHandlerHolder(Class<T> clazz, HttpHandler handler) {
             super();
             this.clazz = clazz;
             this.handler = handler;

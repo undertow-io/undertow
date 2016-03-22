@@ -33,7 +33,7 @@ class PathPrefixPredicate implements Predicate {
 
     private final PathMatcher<Boolean> pathMatcher;
 
-    public PathPrefixPredicate(final String... paths) {
+    PathPrefixPredicate(final String... paths) {
         PathMatcher<Boolean> matcher = new PathMatcher<>();
         for(String path : paths) {
             if(!path.startsWith("/")) {

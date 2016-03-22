@@ -60,7 +60,7 @@ public class AsyncInputStreamServlet extends HttpServlet {
 
         int written = 0;
 
-        public MyListener(final ServletOutputStream outputStream, final ServletInputStream inputStream, final AsyncContext context) {
+        MyListener(final ServletOutputStream outputStream, final ServletInputStream inputStream, final AsyncContext context) {
             this.outputStream = outputStream;
             this.inputStream = inputStream;
             this.context = context;

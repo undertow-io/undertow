@@ -309,12 +309,12 @@ public class AnnotatedEndpointFactory {
         private final int position;
         private final Class<?> type;
 
-        public BoundSingleParameter(int position, final Class<?> type) {
+        BoundSingleParameter(int position, final Class<?> type) {
             this.position = position;
             this.type = type;
         }
 
-        public BoundSingleParameter(final Method method, final Class<?> type, final boolean optional) {
+        BoundSingleParameter(final Method method, final Class<?> type, final boolean optional) {
             this.type = type;
             int pos = -1;
             for (int i = 0; i < method.getParameterTypes().length; ++i) {
@@ -376,7 +376,7 @@ public class AnnotatedEndpointFactory {
         private final Encoding[] encoders;
         private final Class[] types;
 
-        public BoundPathParameters(final String[] positions, final Method method, Class<?> endpointClass, Set<String> paths) throws DeploymentException {
+        BoundPathParameters(final String[] positions, final Method method, Class<?> endpointClass, Set<String> paths) throws DeploymentException {
             this.positions = positions;
             this.endpointClass = endpointClass;
             this.paths = paths;

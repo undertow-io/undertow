@@ -336,7 +336,7 @@ public class WebSocketClient {
             private final URI newUri;
             private final FutureResult<WebSocketChannel> ioFuture;
 
-            public WebsocketConnectionListener(OptionMap options, WebSocketClientHandshake handshake, URI newUri, FutureResult<WebSocketChannel> ioFuture) {
+            WebsocketConnectionListener(OptionMap options, WebSocketClientHandshake handshake, URI newUri, FutureResult<WebSocketChannel> ioFuture) {
                 this.options = options;
                 this.handshake = handshake;
                 this.newUri = newUri;

@@ -41,7 +41,7 @@ public interface ServletContainer {
 
     DeploymentManager getDeploymentByPath(String uripath);
 
-    public static class Factory {
+    class Factory {
 
         public static ServletContainer newInstance() {
             return new ServletContainerImpl();

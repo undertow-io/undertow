@@ -817,7 +817,7 @@ public class PredicatedHandlersParser {
         private final Node left;
         private final Node right;
 
-        public AndNode(Token token, Node left, Node right) {
+        AndNode(Token token, Node left, Node right) {
             this.token = token;
             this.left = left;
             this.right = right;
@@ -841,7 +841,7 @@ public class PredicatedHandlersParser {
         private final Node left;
         private final Node right;
 
-        public OrNode(Token token, Node left, Node right) {
+        OrNode(Token token, Node left, Node right) {
             this.token = token;
             this.left = left;
             this.right = right;
@@ -867,7 +867,7 @@ public class PredicatedHandlersParser {
         private final Node right;
         private final Node elseBranch;
 
-        public PredicateOperatorNode(Token token, Node left, Node right, Node elseBranch) {
+        PredicateOperatorNode(Token token, Node left, Node right, Node elseBranch) {
             this.token = token;
             this.left = left;
             this.right = right;
@@ -897,7 +897,7 @@ public class PredicatedHandlersParser {
         private final Token token;
         private final Node node;
 
-        public NotNode(Token token, Node node) {
+        NotNode(Token token, Node node) {
             this.token = token;
             this.node = node;
         }
@@ -915,7 +915,7 @@ public class PredicatedHandlersParser {
         private final Token token;
         private final List<Node> block;
 
-        public BlockNode(Token token, List<Node> block) {
+        BlockNode(Token token, List<Node> block) {
             this.token = token;
             this.block = block;
         }
@@ -935,7 +935,7 @@ public class PredicatedHandlersParser {
         private final String token;
         private final int position;
 
-        public Token(final String token, final int position) {
+        Token(final String token, final int position) {
             this.token = token;
             this.position = position;
         }
