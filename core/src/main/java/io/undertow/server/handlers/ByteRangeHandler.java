@@ -81,14 +81,11 @@ public class ByteRangeHandler implements HttpHandler {
             next.handleRequest(exchange);
             return;
         }
+        if (sendAcceptRanges) {
+            exchange.addResponseCommitListener(ACCEPT_RANGE_LISTENER);
+        }
         final ByteRange range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
-        if (range == null || range.getRanges() > 1) {
-            if (sendAcceptRanges) {
-                exchange.addResponseCommitListener(ACCEPT_RANGE_LISTENER);
-            }
-            next.handleRequest(exchange);
-        } else {
-
+        if (range != null && range.getRanges() == 1) {
             exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
                 @Override
                 public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
@@ -132,8 +129,9 @@ public class ByteRangeHandler implements HttpHandler {
                     return new RangeStreamSinkConduit(factory.create(), start, end, responseLength);
                 }
             });
-            next.handleRequest(exchange);
         }
+        next.handleRequest(exchange);
+
     }
 
     public static class Wrapper implements HandlerWrapper {
