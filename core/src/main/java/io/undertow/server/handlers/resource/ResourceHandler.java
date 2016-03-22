@@ -236,6 +236,8 @@ public class ResourceHandler implements HttpHandler {
                 ByteRange range = null;
                 long start = -1, end = -1;
                 if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported() && contentLength != null && contentEncodedResourceManager == null) {
+
+                    exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "bytes");
                     //TODO: figure out what to do with the content encoded resource manager
                     range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
                     if(range != null && range.getRanges() == 1) {

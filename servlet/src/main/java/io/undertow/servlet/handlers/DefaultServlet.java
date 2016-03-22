@@ -299,6 +299,7 @@ public class DefaultServlet extends HttpServlet {
                     resp.setContentLength(contentLength.intValue());
                 }
                 if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported()) {
+                    resp.setHeader(Headers.ACCEPT_RANGES_STRING, "bytes");
                     //TODO: figure out what to do with the content encoded resource manager
                     range = ByteRange.parse(req.getHeader(Headers.RANGE_STRING));
                     if(range != null && range.getRanges() == 1) {
@@ -345,8 +346,6 @@ public class DefaultServlet extends HttpServlet {
                             resp.setStatus(StatusCodes.PARTIAL_CONTENT);
                             resp.setHeader(Headers.CONTENT_RANGE_STRING, "bytes " + range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
                         }
-                    } else {
-                        resp.setHeader(Headers.ACCEPT_RANGES_STRING, "bytes");
                     }
                 }
             }
