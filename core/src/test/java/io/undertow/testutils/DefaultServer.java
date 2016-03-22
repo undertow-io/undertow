@@ -18,6 +18,7 @@
 
 package io.undertow.testutils;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
@@ -384,10 +385,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                 } else {
                     if(h2) {
-                        throw new RuntimeException("HTTP2 selected but Netty ALPN was not on the boot class path");
+                        UndertowLogger.ROOT_LOGGER.error("HTTP2 selected but Netty ALPN was not on the boot class path");
                     }
                     if(spdy) {
-                        throw new RuntimeException("SPDY selected but Netty ALPN was not on the boot class path");
+                        UndertowLogger.ROOT_LOGGER.error("SPDY selected but Netty ALPN was not on the boot class path");
                     }
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true, UndertowOptions.ENABLE_CONNECTOR_STATISTICS, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
@@ -485,6 +486,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             if(httpOneOnly != null) {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
+            }
+            if(h2 || spdy) {
+                assumeAlpnEnabled();
             }
         }
         if(https) {
