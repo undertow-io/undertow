@@ -380,12 +380,17 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 if (frameDataRemaining >= pooled.getBuffer().remaining()) {
                     frameDataRemaining -= pooled.getBuffer().remaining();
                     if(receiver != null) {
-                        receiver.dataReady(null, pooled);
+                        //we still create a pooled view, this means that if the buffer is still active we can re-used it
+                        //which prevents attacks based on sending lots of small fragments
+                        ByteBuffer buf = pooled.getBuffer().duplicate();
+                        pooled.getBuffer().position(pooled.getBuffer().limit());
+                        PooledByteBuffer frameData = pooled.createView(buf);
+                        receiver.dataReady(null, frameData);
                     } else {
                         //we are dropping a frame
                         pooled.close();
+                        readData = null;
                     }
-                    readData = null;
                     if(frameDataRemaining == 0) {
                         receiver = null;
                     }
