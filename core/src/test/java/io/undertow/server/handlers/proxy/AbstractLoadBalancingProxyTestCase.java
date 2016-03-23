@@ -91,11 +91,13 @@ public abstract class AbstractLoadBalancingProxyTestCase {
             try {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
                 HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
                 resultString.append(HttpClientUtils.readResponse(result));
                 resultString.append(' ');
+            } catch (AssertionError e) {
+                throw e;
             } catch (Throwable t) {
-                throw new RuntimeException("Failed with i=" + i, t);
+                throw new AssertionError("Failed with i=" + i, t);
             } finally {
                 client.getConnectionManager().shutdown();
             }
@@ -107,7 +109,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                 //so this is not great, but we need to make sure the connection has actually closed
                 //otherwise the TCP close may not have been processed yet, resulting in the proxy
                 //picking a connection that is about to be closed
-                Thread.sleep(300);
+                Thread.sleep(600);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -126,11 +128,13 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/session");
                     get.addHeader("Connection", "close");
                     HttpResponse result = client.execute(get);
-                    Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                    Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
                     int count = Integer.parseInt(HttpClientUtils.readResponse(result));
                     Assert.assertEquals(expected++, count);
+                } catch (AssertionError e) {
+                    throw e;
                 } catch (Exception e) {
-                    throw new RuntimeException("Test failed with i=" + i, e);
+                    throw new AssertionError("Test failed with i=" + i, e);
                 }
             }
         } finally {
@@ -157,11 +161,13 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     get.addHeader("a", "b");
                     get.addHeader("Connection", "close");
                     HttpResponse result = client.execute(get);
-                    Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                    Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
                     int count = Integer.parseInt(HttpClientUtils.readResponse(result));
-                    Assert.assertEquals(expected++, count);
+                    Assert.assertEquals("Test failed with i=" + i, expected++, count);
+                } catch (AssertionError e) {
+                    throw e;
                 } catch (Exception e) {
-                    throw new RuntimeException("Test failed with i=" + i, e);
+                    throw new AssertionError("Test failed with i=" + i, e);
                 }
             }
         } finally {
