@@ -136,6 +136,17 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
                 }
                 return newValue;
             }
+
+            @Override
+            public String toString() {
+                return "ReferenceCountedPooled$view{" +
+                        "free=" + free +
+                        "underlying=" + underlying +
+                        ", referenceCount=" + referenceCount +
+                        ", mainFreed=" + mainFreed +
+                        ", slice=" + slice +
+                        '}';
+            }
         };
     }
 
