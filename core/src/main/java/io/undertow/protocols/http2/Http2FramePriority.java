@@ -39,7 +39,7 @@ class Http2FramePriority implements FramePriority<Http2Channel, AbstractHttp2Str
     public boolean insertFrame(AbstractHttp2StreamSinkChannel newFrame, List<AbstractHttp2StreamSinkChannel> pendingFrames) {
         //first deal with flow control
         if (newFrame instanceof Http2StreamSinkChannel) {
-            if(newFrame.isBroken()) {
+            if(newFrame.isBroken() || !newFrame.isOpen()) {
                 return true; //just quietly drop the frame
             }
             try {
