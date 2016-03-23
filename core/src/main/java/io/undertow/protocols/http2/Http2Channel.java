@@ -175,6 +175,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         super(connectedStreamChannel, bufferPool, Http2FramePriority.INSTANCE, data, settings);
         streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
+        this.initialReceiveWindowSize = settings.get(UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, DEFAULT_INITIAL_WINDOW_SIZE);
+
         this.protocol = protocol == null ? Http2OpenListener.HTTP2 : protocol;
 
         encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
@@ -217,6 +219,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             settings.add(new Http2Setting(Http2Setting.SETTINGS_ENABLE_PUSH, pushEnabled ? 1 : 0));
         }
         settings.add(new Http2Setting(Http2Setting.SETTINGS_MAX_FRAME_SIZE, receiveMaxFrameSize));
+        settings.add(new Http2Setting(Http2Setting.SETTINGS_INITIAL_WINDOW_SIZE, initialReceiveWindowSize));
         Http2SettingsStreamSinkChannel stream = new Http2SettingsStreamSinkChannel(this, settings);
         flushChannel(stream);
     }
