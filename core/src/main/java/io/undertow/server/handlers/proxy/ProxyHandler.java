@@ -309,10 +309,10 @@ public final class ProxyHandler implements HttpHandler {
             final ProxyConnection connectionAttachment = exchange.getAttachment(CONNECTION);
             if (connectionAttachment != null) {
                 ClientConnection clientConnection = connectionAttachment.getConnection();
-                UndertowLogger.REQUEST_LOGGER.timingOutRequest(clientConnection.getPeerAddress() + "" + exchange.getRequestURI());
+                UndertowLogger.PROXY_REQUEST_LOGGER.timingOutRequest(clientConnection.getPeerAddress() + "" + exchange.getRequestURI());
                 IoUtils.safeClose(clientConnection);
             } else {
-                UndertowLogger.REQUEST_LOGGER.timingOutRequest(exchange.getRequestURI());
+                UndertowLogger.PROXY_REQUEST_LOGGER.timingOutRequest(exchange.getRequestURI());
             }
             if (exchange.isResponseStarted()) {
                 IoUtils.safeClose(exchange.getConnection());
@@ -381,6 +381,7 @@ public final class ProxyHandler implements HttpHandler {
                 }
             } catch (UnsupportedEncodingException e) {
                 //impossible
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 exchange.endExchange();
                 return;
@@ -726,6 +727,7 @@ public final class ProxyHandler implements HttpHandler {
                     IoUtils.safeClose(exchange.getConnection());
                 }
             } else {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 exchange.endExchange();
             }
