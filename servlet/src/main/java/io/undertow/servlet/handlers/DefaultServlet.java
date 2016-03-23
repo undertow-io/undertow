@@ -15,7 +15,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package io.undertow.servlet.handlers;
 
 import io.undertow.io.IoCallback;
@@ -54,23 +53,19 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Default servlet responsible for serving up resources. This is both a handler and a servlet. If no filters
- * match the current path then the resources will be served up asynchronously using the
+ * Abstract default servlet implementation for serving static content.
+ * This is both a handler and a servlet. If no filters
+ * match the current path then the content will be served up asynchronously using the
  * {@link io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange)} method,
  * otherwise the request is handled as a normal servlet request.
  * <p>
  * By default we only allow a restricted set of extensions.
  * <p>
- * todo: this thing needs a lot more work. In particular:
- * - caching for blocking requests
- * - correct mime type
- * - range/last-modified and other headers to be handled properly
- * - head requests
- * - and probably heaps of other things
  *
  * @author Stuart Douglas
+ * @author Ondrej Zizka, zizka at seznam.cz
  */
-public class DefaultServlet extends HttpServlet {
+public abstract class DefaultServlet extends HttpServlet {
 
     public static final String DIRECTORY_LISTING = "directory-listing";
     public static final String DEFAULT_ALLOWED = "default-allowed";
@@ -78,55 +73,65 @@ public class DefaultServlet extends HttpServlet {
     public static final String DISALLOWED_EXTENSIONS = "disallowed-extensions";
     public static final String RESOLVE_AGAINST_CONTEXT_ROOT = "resolve-against-context-root";
 
-    private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList("js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf", "jpeg", "xml")));
-
+    private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf", "jpeg", "xml",
+            "svg", "ttf", "java")));
 
     private Deployment deployment;
     private ResourceManager resourceManager;
-    private boolean directoryListingEnabled = false;
 
-    private boolean defaultAllowed = true;
-    private Set<String> allowed = DEFAULT_ALLOWED_EXTENSIONS;
-    private Set<String> disallowed = Collections.emptySet();
-    private boolean resolveAgainstContextRoot;
+    private final Settings settings = new Settings();
+
+    public Settings getSettings() {
+        return settings;
+    }
+
+
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+
         ServletContextImpl sc = (ServletContextImpl) config.getServletContext();
         this.deployment = sc.getDeployment();
-        DefaultServletConfig defaultServletConfig = deployment.getDeploymentInfo().getDefaultServletConfig();
-        if (defaultServletConfig != null) {
-            defaultAllowed = defaultServletConfig.isDefaultAllowed();
-            allowed = new HashSet<>();
-            if (defaultServletConfig.getAllowed() != null) {
-                allowed.addAll(defaultServletConfig.getAllowed());
-            }
-            disallowed = new HashSet<>();
-            if (defaultServletConfig.getDisallowed() != null) {
-                disallowed.addAll(defaultServletConfig.getDisallowed());
-            }
-        }
+
+        // Settings from the servlet init parameters.
         if (config.getInitParameter(DEFAULT_ALLOWED) != null) {
-            defaultAllowed = Boolean.parseBoolean(config.getInitParameter(DEFAULT_ALLOWED));
+            settings.defaultAllowed = Boolean.parseBoolean(config.getInitParameter(DEFAULT_ALLOWED));
         }
         if (config.getInitParameter(ALLOWED_EXTENSIONS) != null) {
             String extensions = config.getInitParameter(ALLOWED_EXTENSIONS);
-            allowed = new HashSet<>(Arrays.asList(extensions.split(",")));
+            settings.allowed = new HashSet<>(Arrays.asList(extensions.split(",")));
         }
         if (config.getInitParameter(DISALLOWED_EXTENSIONS) != null) {
             String extensions = config.getInitParameter(DISALLOWED_EXTENSIONS);
-            disallowed = new HashSet<>(Arrays.asList(extensions.split(",")));
+            settings.disallowed = new HashSet<>(Arrays.asList(extensions.split(",")));
         }
         if (config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT) != null) {
-            resolveAgainstContextRoot = Boolean.parseBoolean(config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT));
+            settings.resolveAgainstContextRoot = Boolean.parseBoolean(config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT));
         }
-        this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
+
         String listings = config.getInitParameter(DIRECTORY_LISTING);
         if (Boolean.valueOf(listings)) {
-            this.directoryListingEnabled = true;
+            settings.directoryListingEnabled = true;
         }
+
+        // Settings from the deployment configuration.
+        DefaultServletConfig defaultServletConfig = getDeployment().getDeploymentInfo().getDefaultServletConfig();
+        if (defaultServletConfig != null) {
+            getSettings().setDefaultAllowed(defaultServletConfig.isDefaultAllowed());
+            getSettings().setAllowed(new HashSet<>());
+            if (defaultServletConfig.getAllowed() != null) {
+                getSettings().getAllowed().addAll(defaultServletConfig.getAllowed());
+            }
+            getSettings().setDisallowed(new HashSet<>());
+            if (defaultServletConfig.getDisallowed() != null) {
+                getSettings().getDisallowed().addAll(defaultServletConfig.getDisallowed());
+            }
+        }
+
     }
+
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
@@ -139,6 +144,7 @@ public class DefaultServlet extends HttpServlet {
             //if the separator char is not / we want to replace it with a / and canonicalise
             path = CanonicalPathUtils.canonicalize(path.replace(File.separatorChar, '/'));
         }
+
         final Resource resource;
         //we want to disallow windows characters in the path
         if(File.separatorChar == '/' || !path.contains(File.separator)) {
@@ -155,7 +161,14 @@ public class DefaultServlet extends HttpServlet {
                 resp.sendError(StatusCodes.NOT_FOUND);
             }
             return;
-        } else if (resource.isDirectory()) {
+        }
+
+        // Directory
+        if (resource.isDirectory()) {
+            if (!settings.directoryListingEnabled)
+                resp.sendError(StatusCodes.FORBIDDEN);
+
+            //  /servlet-name/some/dir/?css or ?js
             if ("css".equals(req.getQueryString())) {
                 resp.setContentType("text/css");
                 resp.getWriter().write(DirectoryUtils.Blobs.FILE_CSS);
@@ -165,13 +178,13 @@ public class DefaultServlet extends HttpServlet {
                 resp.getWriter().write(DirectoryUtils.Blobs.FILE_JS);
                 return;
             }
-            if (directoryListingEnabled) {
-                StringBuilder output = DirectoryUtils.renderDirectoryListing(req.getRequestURI(), resource);
-                resp.getWriter().write(output.toString());
-            } else {
-                resp.sendError(StatusCodes.FORBIDDEN);
-            }
-        } else {
+
+            StringBuilder output = DirectoryUtils.renderDirectoryListing(req.getRequestURI(), resource);
+            resp.getWriter().write(output.toString());
+        }
+
+        // File
+        else {
             if(path.endsWith("/")) {
                 //UNDERTOW-432
                 resp.sendError(StatusCodes.NOT_FOUND);
@@ -345,8 +358,6 @@ public class DefaultServlet extends HttpServlet {
                             resp.setStatus(StatusCodes.PARTIAL_CONTENT);
                             resp.setHeader(Headers.CONTENT_RANGE_STRING, range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
                         }
-                    } else {
-                        resp.setHeader(Headers.ACCEPT_RANGES_STRING, "bytes");
                     }
                 }
             }
@@ -382,7 +393,10 @@ public class DefaultServlet extends HttpServlet {
         };
     }
 
-    protected String getPath(final HttpServletRequest request) {
+    /**
+     * Returns the canonicalized URL path.
+     */
+    private String getPath(final HttpServletRequest request) {
         String servletPath;
         String pathInfo;
 
@@ -396,7 +410,7 @@ public class DefaultServlet extends HttpServlet {
         String result = pathInfo;
         if (result == null) {
             result = servletPath;
-        } else if(resolveAgainstContextRoot) {
+        } else if(settings.resolveAgainstContextRoot) {
             result = servletPath + CanonicalPathUtils.canonicalize(pathInfo);
         } else {
             result = CanonicalPathUtils.canonicalize(result);
@@ -408,18 +422,10 @@ public class DefaultServlet extends HttpServlet {
 
     }
 
+    /**
+     * @return true if the resource at the given path is allowed to be sent to the client.
+     */
     protected boolean isAllowed(String path, DispatcherType dispatcherType) {
-        if (!path.isEmpty()) {
-            if(dispatcherType == DispatcherType.REQUEST) {
-                //WFLY-3543 allow the dispatcher to access stuff in web-inf and meta inf
-                if (path.startsWith("/META-INF") ||
-                        path.startsWith("META-INF") ||
-                        path.startsWith("/WEB-INF") ||
-                        path.startsWith("WEB-INF")) {
-                    return false;
-                }
-            }
-        }
         int pos = path.lastIndexOf('/');
         final String lastSegment;
         if (pos == -1) {
@@ -436,11 +442,86 @@ public class DefaultServlet extends HttpServlet {
             return true;
         }
         final String extension = lastSegment.substring(ext + 1, lastSegment.length());
-        if (defaultAllowed) {
-            return !disallowed.contains(extension);
+        if (settings.defaultAllowed) {
+            return !settings.disallowed.contains(extension);
         } else {
-            return allowed.contains(extension);
+            return settings.allowed.contains(extension);
         }
     }
 
+    public boolean isDirectoryListingEnabled() {
+        return settings.directoryListingEnabled;
+    }
+
+
+    public void setDirectoryListingEnabled(boolean directoryListingEnabled) {
+        settings.directoryListingEnabled = directoryListingEnabled;
+    }
+
+    public ResourceManager getResourceManager() {
+        return resourceManager;
+    }
+
+
+    public void setResourceManager(ResourceManager resourceManager) {
+        this.resourceManager = resourceManager;
+    }
+
+
+    public Deployment getDeployment() {
+        return deployment;
+    }
+
+
+
+
+    protected static class Settings
+    {
+        private boolean directoryListingEnabled = false;
+        private boolean defaultAllowed = true;
+        private Set<String> allowed = DEFAULT_ALLOWED_EXTENSIONS;
+        private Set<String> disallowed = Collections.emptySet();
+        private boolean resolveAgainstContextRoot;
+
+
+        public boolean isDirectoryListingEnabled() {
+            return directoryListingEnabled;
+        }
+
+        public void setDirectoryListingEnabled(boolean directoryListingEnabled) {
+            this.directoryListingEnabled = directoryListingEnabled;
+        }
+
+        public boolean isDefaultAllowed() {
+            return defaultAllowed;
+        }
+
+        public void setDefaultAllowed(boolean defaultAllowed) {
+            this.defaultAllowed = defaultAllowed;
+        }
+
+        public Set<String> getAllowed() {
+            return allowed;
+        }
+
+        public void setAllowed(Set<String> allowed) {
+            this.allowed = allowed;
+        }
+
+        public Set<String> getDisallowed() {
+            return disallowed;
+        }
+
+        public void setDisallowed(Set<String> disallowed) {
+            this.disallowed = disallowed;
+        }
+
+        public boolean isResolveAgainstContextRoot() {
+            return resolveAgainstContextRoot;
+        }
+
+        public void setResolveAgainstContextRoot(boolean resolveAgainstContextRoot) {
+            this.resolveAgainstContextRoot = resolveAgainstContextRoot;
+        }
+    }
 }
