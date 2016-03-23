@@ -189,10 +189,8 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
         }
         if(!ignoreForceClose) {
             getHttp2Channel().sendRstStream(streamId, Http2Channel.ERROR_CANCEL);
-        } else {
-            //normally sending the RST would mark this broken
-            markStreamBroken();
         }
+        markStreamBroken();
     }
 
     public void setIgnoreForceClose(boolean ignoreForceClose) {

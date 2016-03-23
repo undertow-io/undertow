@@ -38,6 +38,10 @@ class SpdyFramePriority implements FramePriority<SpdyChannel, SpdyStreamSourceCh
     public boolean insertFrame(SpdyStreamSinkChannel newFrame, List<SpdyStreamSinkChannel> pendingFrames) {
         //first deal with flow control
         if(newFrame instanceof SpdyStreamStreamSinkChannel) {
+            if(newFrame.isBroken() || !newFrame.isOpen()) {
+                //drop the frame
+                return true;
+            }
             SendFrameHeader header = ((SpdyStreamStreamSinkChannel) newFrame).generateSendFrameHeader();
             //if no header is generated then flow control means we can't send anything
             if(header.getByteBuffer() == null) {

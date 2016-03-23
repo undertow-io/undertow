@@ -356,7 +356,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * @param frameData  The frame data
      */
     protected void dataReady(FrameHeaderData headerData, PooledByteBuffer frameData) {
-        if(anyAreSet(state, STATE_STREAM_BROKEN)) {
+        if(anyAreSet(state, STATE_STREAM_BROKEN | STATE_CLOSED)) {
             frameData.close();
             return;
         }
@@ -620,6 +620,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * in an exception.
      */
     protected synchronized void markStreamBroken() {
+        if(anyAreSet(state, STATE_STREAM_BROKEN)) {
+            return;
+        }
         state |= STATE_STREAM_BROKEN;
         if(data != null) {
             data.close();
