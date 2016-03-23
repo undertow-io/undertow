@@ -21,7 +21,6 @@ package io.undertow.util;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -41,6 +40,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Deprecated
 public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
     private static final int MAX_ROW_LENGTH = 32;
     private static final int DEFAULT_INITIAL_CAPACITY = 16;
@@ -667,18 +667,6 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
             return new KeyIterator();
         }
 
-        public Object[] toArray() {
-            ArrayList<Object> list = new ArrayList<>(size());
-            list.addAll(this);
-            return list.toArray();
-        }
-
-        public <T> T[] toArray(final T[] a) {
-            ArrayList<T> list = new ArrayList<>();
-            list.addAll((Collection<T>) this);
-            return list.toArray(a);
-        }
-
         public boolean add(final K k) {
             return doPut(k, null, true, table) == NONEXISTENT;
         }
@@ -700,18 +688,6 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
 
         public Iterator<V> iterator() {
             return new ValueIterator();
-        }
-
-        public Object[] toArray() {
-            ArrayList<Object> list = new ArrayList<>(size());
-            list.addAll(this);
-            return list.toArray();
-        }
-
-        public <T> T[] toArray(final T[] a) {
-            ArrayList<T> list = new ArrayList<>();
-            list.addAll((Collection<T>) this);
-            return list.toArray(a);
         }
 
         public int size() {
@@ -740,18 +716,6 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
 
         public void clear() {
             SecureHashMap.this.clear();
-        }
-
-        public Object[] toArray() {
-            ArrayList<Object> list = new ArrayList<>(size());
-            list.addAll(this);
-            return list.toArray();
-        }
-
-        public <T> T[] toArray(final T[] a) {
-            ArrayList<T> list = new ArrayList<>();
-            list.addAll((Set<T>) this);
-            return list.toArray(a);
         }
 
         @SuppressWarnings("unchecked")
