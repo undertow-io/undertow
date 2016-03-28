@@ -394,7 +394,7 @@ public class DefaultServlet extends HttpServlet {
         }
         String result = pathInfo;
         if (result == null) {
-            result = servletPath;
+            result = CanonicalPathUtils.canonicalize(servletPath);
         } else if(resolveAgainstContextRoot) {
             result = servletPath + CanonicalPathUtils.canonicalize(pathInfo);
         } else {

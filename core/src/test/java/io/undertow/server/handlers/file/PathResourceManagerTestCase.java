@@ -24,4 +24,14 @@ public class PathResourceManagerTestCase {
         Assert.assertNotNull(resourceManager.getResource("./page.html"));
         Assert.assertNotNull(resourceManager.getResource("../file/page.html"));
     }
+
+
+    @Test
+    public void testCantEscapeRoot() throws Exception {
+
+        final Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent().resolve("subdir");
+        final PathResourceManager resourceManager = new PathResourceManager(rootPath, 1024 * 1024);
+        Assert.assertNotNull(resourceManager.getResource("a.txt"));
+        Assert.assertNull(resourceManager.getResource("../page.html"));
+    }
 }
