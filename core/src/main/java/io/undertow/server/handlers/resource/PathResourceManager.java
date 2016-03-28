@@ -38,7 +38,7 @@ public class PathResourceManager implements ResourceManager  {
 
     /**
      * Check to validate caseSensitive issues for specific case-insensitive FS.
-     * @see io.undertow.server.handlers.resource.PathResourceManager#isFileSameCase(java.nio.file.Path)
+     * @see io.undertow.server.handlers.resource.PathResourceManager#isFileSameCase(java.nio.file.Path, String)
      */
     private final boolean caseSensitive;
 
@@ -145,6 +145,17 @@ public class PathResourceManager implements ResourceManager  {
         }
         try {
             Path file = Paths.get(base, path);
+            String normalizedFile = file.normalize().toString();
+            if(!normalizedFile.startsWith(base)) {
+                if(normalizedFile.length() == base.length() - 1) {
+                    //special case for the root path, which may not have a trailing slash
+                    if(!base.startsWith(normalizedFile)) {
+                        return null;
+                    }
+                } else {
+                    return null;
+                }
+            }
             if (Files.exists(file)) {
                 if(path.endsWith("/") && ! Files.isDirectory(file)) {
                     //UNDERTOW-432 don't return non directories if the path ends with a /
@@ -154,10 +165,10 @@ public class PathResourceManager implements ResourceManager  {
                 SymlinkResult symlinkBase = getSymlinkBase(base, file);
                 if (!followAll && symlinkBase != null && symlinkBase.requiresCheck) {
                     if (this.followLinks && isSymlinkSafe(file)) {
-                        return getFileResource(file, path, symlinkBase.path);
+                        return getFileResource(file, path, symlinkBase.path, normalizedFile);
                     }
                 } else {
-                    return getFileResource(file, path, symlinkBase == null ? null : symlinkBase.path);
+                    return getFileResource(file, path, symlinkBase == null ? null : symlinkBase.path, normalizedFile);
                 }
             }
             return null;
@@ -242,9 +253,9 @@ public class PathResourceManager implements ResourceManager  {
      * file.getName() == "page.jsp" && file.getCanonicalFile().getName() == "page.JSP" should return false
      * file.getName() == "./page.jsp" && file.getCanonicalFile().getName() == "page.jsp" should return true
      */
-    private boolean isFileSameCase(final Path file) throws IOException {
+    private boolean isFileSameCase(final Path file, String normalizeFile) throws IOException {
         String canonicalName = file.toRealPath().toString();
-        return canonicalName.equals(file.normalize().toString());
+        return canonicalName.equals(normalizeFile);
     }
 
     /**
@@ -286,7 +297,7 @@ public class PathResourceManager implements ResourceManager  {
     /**
      * Apply security check for case insensitive file systems.
      */
-    protected PathResource getFileResource(final Path file, final String path, final Path symlinkBase) throws IOException {
+    protected PathResource getFileResource(final Path file, final String path, final Path symlinkBase, String normalizedFile) throws IOException {
         if (this.caseSensitive) {
             if (symlinkBase != null) {
                 String relative = symlinkBase.relativize(file).toString();
@@ -307,7 +318,7 @@ public class PathResourceManager implements ResourceManager  {
                 }
 
                 return null;
-            } else if (isFileSameCase(file)) {
+            } else if (isFileSameCase(file, normalizedFile)) {
                 return new PathResource(file, this, path);
             } else {
                 return null;
