@@ -92,11 +92,13 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
             }
 
             ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-            Principal principal;
-            if(src.getServletRequest() instanceof HttpServletRequest) {
-                principal = ((HttpServletRequest)src.getServletRequest()).getUserPrincipal();
-            } else {
-                principal = src.getOriginalRequest().getUserPrincipal();
+            Principal principal = exchange.getAttachment(HandshakeUtil.PRINCIPAL);
+            if(principal == null) {
+                if(src.getServletRequest() instanceof HttpServletRequest) {
+                    principal = ((HttpServletRequest)src.getServletRequest()).getUserPrincipal();
+                } else {
+                    principal = src.getOriginalRequest().getUserPrincipal();
+                }
             }
             final InstanceHandle<Endpoint> endpointInstance;
             if(config.getAnnotatedEndpointFactory() != null) {
