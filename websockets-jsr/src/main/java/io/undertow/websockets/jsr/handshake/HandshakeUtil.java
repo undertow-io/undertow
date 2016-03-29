@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
+import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -41,6 +42,7 @@ public final class HandshakeUtil {
 
 
     public static final AttachmentKey<Map<String, String>> PATH_PARAMS = AttachmentKey.create(Map.class);
+    public static final AttachmentKey<Principal> PRINCIPAL = AttachmentKey.create(Principal.class);
 
     private HandshakeUtil() {
     }

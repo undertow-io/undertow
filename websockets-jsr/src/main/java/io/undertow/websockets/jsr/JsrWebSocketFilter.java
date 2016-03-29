@@ -112,6 +112,7 @@ public class JsrWebSocketFilter implements Filter {
                         return;
                     }
                     facade.putAttachment(HandshakeUtil.PATH_PARAMS, matchResult.getParameters());
+                    facade.putAttachment(HandshakeUtil.PRINCIPAL, req.getUserPrincipal());
                     final Handshake selected = handshaker;
                     facade.upgradeChannel(new HttpUpgradeListener() {
                         @Override
