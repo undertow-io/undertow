@@ -410,7 +410,7 @@ public class ServletPathMatches {
             if (key.endsWith("/*")) {
                 final String base = key.substring(0, key.length() - 1);
                 if (match == null || base.length() > match.length()) {
-                    if (path.startsWith(base)) {
+                    if (path.startsWith(base) || path.equals(base.substring(0, base.length() - 1))) {
                         match = base.substring(0, base.length() - 1);
                         servlet = entry.getValue();
                     }
