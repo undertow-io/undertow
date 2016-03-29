@@ -114,6 +114,8 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
     private void registerSessionIfRequired(SingleSignOn sso, Session session) {
         if (!sso.contains(session)) {
             sso.add(session);
+        }
+        if(session.getAttribute(SSO_SESSION_ATTRIBUTE) == null) {
             session.setAttribute(SSO_SESSION_ATTRIBUTE, sso.getId());
             SessionManager manager = session.getSessionManager();
             if (seenSessionManagers.add(manager)) {
