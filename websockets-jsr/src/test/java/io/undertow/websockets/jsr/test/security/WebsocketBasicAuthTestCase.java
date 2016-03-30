@@ -32,6 +32,7 @@ import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.FlexBase64;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
@@ -77,6 +78,7 @@ import static io.undertow.util.Headers.BASIC;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@HttpOneOnly
 public class WebsocketBasicAuthTestCase {
     private static final String REALM_NAME = "Servlet_Realm";
 
