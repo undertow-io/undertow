@@ -610,7 +610,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
     protected void doHttp2Upgrade() {
         try {
-            Http2Channel http2Channel = new Http2Channel(this.performUpgrade(), null, bufferPool, null, true, true, options);
+            StreamConnection connectedStreamChannel = this.performUpgrade();
+            Http2Channel http2Channel = new Http2Channel(connectedStreamChannel, null, bufferPool, null, true, true, options);
             Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, currentRequest.getResponseCallback(), currentRequest.getRequest(), currentRequest.getRequest().getRequestHeaders().getFirst(Headers.HOST), clientStatistics);
             http2ClientConnection.getCloseSetter().set(new ChannelListener<ClientConnection>() {
                 @Override
@@ -619,6 +620,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 }
             });
             http2Delegate = http2ClientConnection;
+            connectedStreamChannel.getSourceChannel().wakeupReads(); //make sure the read listener is immediately invoked, as it may not happen if data is pushed back
             currentRequest = null;
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
