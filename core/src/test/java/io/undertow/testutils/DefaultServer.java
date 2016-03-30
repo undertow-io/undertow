@@ -44,7 +44,6 @@ import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
 
-import org.jboss.logging.Logger;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.runner.Description;
@@ -137,10 +136,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final int runs = Integer.getInteger("test.runs", 1);
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
-
-    private static final Logger log = Logger.getLogger(DefaultServer.class);
-
-
 
     private static final DebuggingSlicePool pool = new DebuggingSlicePool(new DefaultByteBufferPool(true, BUFFER_SIZE, 1000, 10, 100));
 

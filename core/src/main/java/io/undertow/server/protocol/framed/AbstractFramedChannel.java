@@ -38,6 +38,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
@@ -60,7 +61,6 @@ import org.xnio.channels.StreamSourceChannel;
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.util.ReferenceCountedPooled;
-import io.undertow.websockets.core.WebSocketLogger;
 import org.xnio.channels.SuspendableWriteChannel;
 
 /**
@@ -147,6 +147,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if(!receivesSuspended && res == maxQueuedBuffers - 1) {
                 synchronized (AbstractFramedChannel.this) {
                     if(outstandingBuffersUpdater.get(AbstractFramedChannel.this) < maxQueuedBuffers) {
+                        if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.REQUEST_IO_LOGGER.debugf("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
+                        }
                         channel.getSourceChannel().resumeReads();
                     }
                 }
@@ -160,7 +163,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             try {
                 AbstractFramedStreamSourceChannel stream = channel.receive();
                 if(stream != null) {
-                    WebSocketLogger.REQUEST_LOGGER.debugf("Draining channel %s as no receive listener has been set", stream);
+                    UndertowLogger.REQUEST_IO_LOGGER.debugf("Draining channel %s as no receive listener has been set", stream);
                     stream.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, null, null));
                     stream.wakeupReads();
                 }
@@ -173,7 +176,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     /**
      * Create a new {@link io.undertow.server.protocol.framed.AbstractFramedChannel}
      * 8
-     *  @param connectedStreamChannel The {@link org.xnio.channels.ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     *  @param connectedStreamChannel The {@link org.xnio.channels.ConnectedStreamChannel} over which the Frames should get send and received.
      *                               Be aware that it already must be "upgraded".
      * @param bufferPool             The {@link ByteBufferPool} which will be used to acquire {@link ByteBuffer}'s from.
      * @param framePriority
@@ -514,6 +517,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         //we need to re-read in a sync block, to prevent races
                         expect = outstandingBuffersUpdater.get(this);
                         if (expect == maxQueuedBuffers) {
+                            if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
+                                UndertowLogger.REQUEST_IO_LOGGER.debugf("Suspending reads on %s due to too many outstanding buffers", this);
+                            }
                             channel.getSourceChannel().suspendReads();
                             return null;
                         }
@@ -910,7 +916,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 if(listener == null) {
                     listener = DRAIN_LISTENER;
                 }
-                WebSocketLogger.REQUEST_LOGGER.tracef("Invoking receive listener", receiver);
+                UndertowLogger.REQUEST_IO_LOGGER.tracef("Invoking receive listener", receiver);
                 ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
             }
             if (readData != null  && !readData.isFreed() && channel.isOpen()) {
