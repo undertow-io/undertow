@@ -87,8 +87,8 @@ public class PathResourceManager implements ResourceManager  {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         String basePath = base.toAbsolutePath().toString();
-        if (!basePath.endsWith("/")) {
-            basePath = basePath + '/';
+        if (!basePath.endsWith(File.separator)) {
+            basePath = basePath + File.separatorChar;
         }
         this.base = basePath;
         this.transferMinSize = transferMinSize;
@@ -116,8 +116,8 @@ public class PathResourceManager implements ResourceManager  {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         String basePath = base.toAbsolutePath().toString();
-        if (!basePath.endsWith("/")) {
-            basePath = basePath + '/';
+        if (!basePath.endsWith(File.separator)) {
+            basePath = basePath + File.separatorChar;
         }
         this.base = basePath;
         return this;
@@ -128,8 +128,8 @@ public class PathResourceManager implements ResourceManager  {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         String basePath = base.getAbsolutePath();
-        if (!basePath.endsWith("/")) {
-            basePath = basePath + '/';
+        if (!basePath.endsWith(File.separator)) {
+            basePath = basePath + File.separatorChar;
         }
         this.base = basePath;
         return this;
@@ -157,7 +157,7 @@ public class PathResourceManager implements ResourceManager  {
                 }
             }
             if (Files.exists(file)) {
-                if(path.endsWith("/") && ! Files.isDirectory(file)) {
+                if(path.endsWith(File.separator) && ! Files.isDirectory(file)) {
                     //UNDERTOW-432 don't return non directories if the path ends with a /
                     return null;
                 }
@@ -266,7 +266,7 @@ public class PathResourceManager implements ResourceManager  {
         String canonicalPath = file.toRealPath().toString();
         for (String safePath : this.safePaths) {
             if (safePath.length() > 0) {
-                if (safePath.charAt(0) == '/') {
+                if (safePath.charAt(0) == File.separatorChar) {
                     /*
                      * Absolute path
                      */
@@ -279,7 +279,7 @@ public class PathResourceManager implements ResourceManager  {
                     /*
                      * In relative path we build the path appending to base
                      */
-                    String absSafePath = base + '/' + safePath;
+                    String absSafePath = base + File.separatorChar + safePath;
                     Path absSafePathFile = Paths.get(absSafePath);
                     String canonicalSafePath = absSafePathFile.toRealPath().toString();
                     if (canonicalSafePath.length() > 0 &&
@@ -307,10 +307,10 @@ public class PathResourceManager implements ResourceManager  {
                     return null;
                 }
                 String compare = fileResolved.substring(symlinkBaseResolved.length());
-                if(compare.startsWith("/")) {
+                if(compare.startsWith(File.separator)) {
                     compare = compare.substring(1);
                 }
-                if(relative.startsWith("/")) {
+                if(relative.startsWith(File.separator)) {
                     relative = relative.substring(1);
                 }
                 if (relative.equals(compare)) {
