@@ -171,7 +171,7 @@ public class ServerSentEventTestCase {
                     connection.send(sb.toString(), new ServerSentEventConnection.EventCallback() {
                         @Override
                         public void done(ServerSentEventConnection connection, String data, String event, String id) {
-                            IoUtils.safeClose(connection);
+                            connection.shutdown();
                         }
 
                         @Override
