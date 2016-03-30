@@ -63,7 +63,7 @@ public class ServerSentEventTestCase {
                             connection.send("msg 2", new ServerSentEventConnection.EventCallback() {
                                 @Override
                                 public void done(ServerSentEventConnection connection, String data, String event, String id) {
-                                    IoUtils.safeClose(connection);
+                                    connection.shutdown();
                                 }
 
                                 @Override
