@@ -662,9 +662,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return 0;
             }
         }
-
+        boolean bytesProduced = false;
         PooledByteBuffer unwrappedData = this.unwrappedData;
-        boolean existingUnwrappedData = false;
         //copy any exiting data
         if(unwrappedData != null) {
             if(userBuffers != null) {
@@ -674,8 +673,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     this.unwrappedData = null;
                 }
                 return copied;
-            } else {
-                existingUnwrappedData = true;
             }
         }
         try {
@@ -729,6 +726,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                         result = engine.unwrap(this.dataToUnwrap.getBuffer(), d);
                         unwrapBufferUsed = true;
                     }
+                    bytesProduced = result.bytesProduced() > 0;
                 } else {
                     unwrapBufferUsed = true;
                     if (unwrappedData == null) {
@@ -737,6 +735,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                         unwrappedData.getBuffer().compact();
                     }
                     result = engine.unwrap(this.dataToUnwrap.getBuffer(), unwrappedData.getBuffer());
+                    bytesProduced = result.bytesProduced() > 0;
                 }
             } finally {
                 if (unwrapBufferUsed) {
@@ -786,7 +785,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             throw e;
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
-            if (unwrappedData != null && unwrappedData.getBuffer().hasRemaining()) {
+            //we always need to re-invoke if bytes have been produced, as the engine may have buffered some data
+            if (bytesProduced || (unwrappedData != null && unwrappedData.getBuffer().hasRemaining())) {
                 requiresListenerInvocation = true;
             }
             if (dataToUnwrap != null) {
@@ -805,7 +805,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
             //if we are in the read listener handshake we don't need to invoke
             //as it is about to be invoked anyway
-            if (requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
+            if (requiresListenerInvocation && (anyAreSet(state, FLAG_READS_RESUMED) || allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED)) && !invokingReadListenerHandshake) {
                 runReadListener(false);
             }
         }
