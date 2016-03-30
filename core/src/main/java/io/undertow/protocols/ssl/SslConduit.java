@@ -788,32 +788,28 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             close();
             throw e;
         } finally {
-            try {
-                boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
-                if (unwrappedData != null && unwrappedData.getBuffer().hasRemaining()) {
+            boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
+            if (unwrappedData != null && unwrappedData.getBuffer().hasRemaining()) {
+                requiresListenerInvocation = true;
+            }
+            if (dataToUnwrap != null) {
+                //if there is no data in the buffer we just free it
+                if (!dataToUnwrap.getBuffer().hasRemaining()) {
+                    dataToUnwrap.close();
+                    dataToUnwrap = null;
+                    state &= ~FLAG_DATA_TO_UNWRAP;
+                } else if (allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
+                    //if there is not enough data in the buffer we compact it to make room for more
+                    dataToUnwrap.getBuffer().compact();
+                } else {
+                    //there is more data, make sure we trigger a read listener invocation
                     requiresListenerInvocation = true;
                 }
-                if (dataToUnwrap != null) {
-                    //if there is no data in the buffer we just free it
-                    if (!dataToUnwrap.getBuffer().hasRemaining()) {
-                        dataToUnwrap.close();
-                        dataToUnwrap = null;
-                        state &= ~FLAG_DATA_TO_UNWRAP;
-                    } else if (allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
-                        //if there is not enough data in the buffer we compact it to make room for more
-                        dataToUnwrap.getBuffer().compact();
-                    } else {
-                        //there is more data, make sure we trigger a read listener invocation
-                        requiresListenerInvocation = true;
-                    }
-                }
-                //if we are in the read listener handshake we don't need to invoke
-                //as it is about to be invoked anyway
-                if (requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
-                    runReadListener(false);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            }
+            //if we are in the read listener handshake we don't need to invoke
+            //as it is about to be invoked anyway
+            if (requiresListenerInvocation && anyAreSet(state, FLAG_READS_RESUMED) && !invokingReadListenerHandshake) {
+                runReadListener(false);
             }
         }
     }
