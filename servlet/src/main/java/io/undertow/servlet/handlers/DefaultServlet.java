@@ -282,7 +282,7 @@ public class DefaultServlet extends HttpServlet {
         if (etag != null) {
             resp.setHeader(Headers.ETAG_STRING, etag.toString());
         }
-        ByteRange range = null;
+        ByteRange.RangeResponseResult rangeResponse = null;
         long start = -1, end = -1;
         try {
             //only set the content length if we are using a stream
@@ -298,53 +298,26 @@ public class DefaultServlet extends HttpServlet {
                 } else {
                     resp.setContentLength(contentLength.intValue());
                 }
-                if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported()) {
+                if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported() && resource.getContentLength() != null) {
                     resp.setHeader(Headers.ACCEPT_RANGES_STRING, "bytes");
                     //TODO: figure out what to do with the content encoded resource manager
-                    range = ByteRange.parse(req.getHeader(Headers.RANGE_STRING));
-                    if(range != null && range.getRanges() == 1) {
-                        start = range.getStart(0);
-                        end = range.getEnd(0);
-                        if(start == -1 ) {
-                            //suffix range
-                            long toWrite = end;
-                            if(toWrite >= 0) {
-                                if(toWrite > Integer.MAX_VALUE) {
-                                    resp.setContentLengthLong(toWrite);
-                                } else {
-                                    resp.setContentLength((int)toWrite);
-                                }
+                    final ByteRange range = ByteRange.parse(req.getHeader(Headers.RANGE_STRING));
+                    if(range != null) {
+                        rangeResponse = range.getResponseResult(resource.getContentLength(), req.getHeader(Headers.IF_RANGE_STRING), resource.getLastModified(), resource.getETag() == null ? null : resource.getETag().getTag());
+                        if(rangeResponse != null){
+                            start = rangeResponse.getStart();
+                            end = rangeResponse.getEnd();
+                            resp.setStatus(rangeResponse.getStatusCode());
+                            resp.setHeader(Headers.CONTENT_RANGE_STRING, rangeResponse.getContentRange());
+                            long length = rangeResponse.getContentLength();
+                            if(length > Integer.MAX_VALUE) {
+                                resp.setContentLengthLong(length);
                             } else {
-                                //ignore the range request
-                                range = null;
+                                resp.setContentLength((int) length);
                             }
-                            start = contentLength - end;
-                            end = contentLength - 1;
-                        } else if(end == -1) {
-                            //prefix range
-                            long toWrite = contentLength - start;
-                            if(toWrite >= 0) {
-                                if(toWrite > Integer.MAX_VALUE) {
-                                    resp.setContentLengthLong(toWrite);
-                                } else {
-                                    resp.setContentLength((int)toWrite);
-                                }
-                            } else {
-                                //ignore the range request
-                                range = null;
+                            if(rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
+                                return;
                             }
-                            end = contentLength - 1;
-                        } else {
-                            long toWrite = end - start + 1;
-                            if(toWrite > Integer.MAX_VALUE) {
-                                resp.setContentLengthLong(toWrite);
-                            } else {
-                                resp.setContentLength((int)toWrite);
-                            }
-                        }
-                        if(range != null) {
-                            resp.setStatus(StatusCodes.PARTIAL_CONTENT);
-                            resp.setHeader(Headers.CONTENT_RANGE_STRING, "bytes " + start + "-" + end + "/" + contentLength);
                         }
                     }
                 }
@@ -355,7 +328,7 @@ public class DefaultServlet extends HttpServlet {
         final boolean include = req.getDispatcherType() == DispatcherType.INCLUDE;
         if (!req.getMethod().equals(Methods.HEAD_STRING)) {
             HttpServerExchange exchange = SecurityActions.requireCurrentServletRequestContext().getOriginalRequest().getExchange();
-            if(range == null) {
+            if(rangeResponse == null) {
                 resource.serve(exchange.getResponseSender(), exchange, completionCallback(include));
             } else {
                 ((RangeAwareResource)resource).serveRange(exchange.getResponseSender(), exchange, start, end, completionCallback(include));
