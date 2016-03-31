@@ -60,7 +60,7 @@ import java.util.Set;
  * otherwise the request is handled as a normal servlet request.
  * <p>
  * By default we only allow a restricted set of extensions.
- * <p>
+ * </p>
  * todo: this thing needs a lot more work. In particular:
  * - caching for blocking requests
  * - correct mime type
@@ -319,7 +319,7 @@ public class DefaultServlet extends HttpServlet {
                                 range = null;
                             }
                             start = contentLength - end;
-                            end = contentLength;
+                            end = contentLength - 1;
                         } else if(end == -1) {
                             //prefix range
                             long toWrite = contentLength - start;
@@ -333,7 +333,7 @@ public class DefaultServlet extends HttpServlet {
                                 //ignore the range request
                                 range = null;
                             }
-                            end = contentLength;
+                            end = contentLength - 1;
                         } else {
                             long toWrite = end - start + 1;
                             if(toWrite > Integer.MAX_VALUE) {
@@ -344,7 +344,7 @@ public class DefaultServlet extends HttpServlet {
                         }
                         if(range != null) {
                             resp.setStatus(StatusCodes.PARTIAL_CONTENT);
-                            resp.setHeader(Headers.CONTENT_RANGE_STRING, "bytes " + range.getStart(0) + "-" + range.getEnd(0) + "/" + contentLength);
+                            resp.setHeader(Headers.CONTENT_RANGE_STRING, "bytes " + start + "-" + end + "/" + contentLength);
                         }
                     }
                 }
