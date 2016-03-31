@@ -36,9 +36,11 @@ import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.util.EntityUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -102,7 +104,8 @@ public class DefaultServletTestCase {
     }
 
     @Test
-    public void testRangeRequest() throws IOException {
+    public void testRangeRequest() throws IOException, InterruptedException {
+        String uri = DefaultServer.getDefaultServerURL() + "/servletContext/range.txt";
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/index.html");
@@ -111,6 +114,55 @@ public class DefaultServletTestCase {
             Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("--", response);
+
+
+            get = new HttpGet(uri);
+            get.addHeader("range", "bytes=2-3");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("23", response);
+            Assert.assertEquals( "bytes 2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+
+            get = new HttpGet(uri);
+            get.addHeader("range", "bytes=0-0");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("0", response);
+            Assert.assertEquals( "bytes 0-0/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+
+            get = new HttpGet(uri);
+            get.addHeader("range", "bytes=1-");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("123456789", response);
+            Assert.assertEquals( "bytes 1-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+
+            get = new HttpGet(uri);
+            get.addHeader("range", "bytes=0-");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("0123456789", response);
+            Assert.assertEquals("bytes 0-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+
+            get = new HttpGet(uri);
+            get.addHeader("range", "bytes=9-");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("9", response);
+            Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+
+            get = new HttpGet(uri);
+            get.addHeader("range", "bytes=-1");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("9", response);
+            Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
         } finally {
             client.getConnectionManager().shutdown();
