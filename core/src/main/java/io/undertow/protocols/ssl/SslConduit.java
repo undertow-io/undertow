@@ -672,6 +672,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     unwrappedData.close();
                     this.unwrappedData = null;
                 }
+                if(copied > 0) {
+                    readListenerInvocationCount = 0;
+                }
                 return copied;
             }
         }
