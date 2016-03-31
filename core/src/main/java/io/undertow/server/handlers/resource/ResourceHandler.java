@@ -233,44 +233,25 @@ public class ResourceHandler implements HttpHandler {
                 if (contentLength != null && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(contentLength);
                 }
-                ByteRange range = null;
+                ByteRange.RangeResponseResult rangeResponse = null;
                 long start = -1, end = -1;
                 if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported() && contentLength != null && contentEncodedResourceManager == null) {
 
                     exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "bytes");
                     //TODO: figure out what to do with the content encoded resource manager
-                    range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
-                    if(range != null && range.getRanges() == 1) {
-                        start = range.getStart(0);
-                        end = range.getEnd(0);
-                        if(start == -1 ) {
-                            //suffix range
-                            long toWrite = end;
-                            if(toWrite >= 0) {
-                                exchange.setResponseContentLength(toWrite);
-                            } else {
-                                //ignore the range request
-                                range = null;
+                    ByteRange range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
+                    if(range != null && range.getRanges() == 1 && resource.getContentLength() != null) {
+                        rangeResponse = range.getResponseResult(resource.getContentLength(), exchange.getRequestHeaders().getFirst(Headers.IF_RANGE), resource.getLastModified(), resource.getETag() == null ? null : resource.getETag().getTag());
+                        if(rangeResponse != null){
+                            start = rangeResponse.getStart();
+                            end = rangeResponse.getEnd();
+                            exchange.setStatusCode(rangeResponse.getStatusCode());
+                            exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, rangeResponse.getContentRange());
+                            long length = rangeResponse.getContentLength();
+                            exchange.setResponseContentLength(length);
+                            if(rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
+                                return;
                             }
-                            start = contentLength - end;
-                            end = contentLength -1;
-                        } else if(end == -1) {
-                            //prefix range
-                            long toWrite = contentLength - start;
-                            if(toWrite >= 0) {
-                                exchange.setResponseContentLength(toWrite);
-                            } else {
-                                //ignore the range request
-                                range = null;
-                            }
-                            end = contentLength - 1;
-                        } else {
-                            long toWrite = end - start + 1;
-                            exchange.setResponseContentLength(toWrite);
-                        }
-                        if(range != null) {
-                            exchange.setStatusCode(StatusCodes.PARTIAL_CONTENT);
-                            exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + contentLength);
                         }
                     }
                 }
@@ -312,7 +293,7 @@ public class ResourceHandler implements HttpHandler {
 
                 if (!sendContent) {
                     exchange.endExchange();
-                } else if(range != null) {
+                } else if(rangeResponse != null) {
                     ((RangeAwareResource)resource).serveRange(exchange.getResponseSender(), exchange, start, end, IoCallback.END_EXCHANGE);
                 } else {
                     resource.serve(exchange.getResponseSender(), exchange, IoCallback.END_EXCHANGE);

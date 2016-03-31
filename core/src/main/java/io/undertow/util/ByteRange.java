@@ -21,6 +21,7 @@ package io.undertow.util;
 import io.undertow.UndertowLogger;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -102,10 +103,6 @@ public class ByteRange {
                     long end;
                     if (index + 1 < part.length()) {
                         end = Long.parseLong(part.substring(index + 1));
-                        if(end < start) {
-                            UndertowLogger.REQUEST_LOGGER.debugf("Invalid range spec %s", rangeHeader);
-                            return null;
-                        }
                     } else {
                         end = -1;
                     }
@@ -120,6 +117,99 @@ public class ByteRange {
             return null;
         }
         return new ByteRange(ranges);
+    }
+
+    /**
+     * Returns a representation of the range result. If this returns null then a 200 response should be sent instead
+     * @param resourceContentLength
+     * @return
+     */
+    public RangeResponseResult getResponseResult(final long resourceContentLength, String ifRange, Date lastModified, String eTag) {
+        if(ranges.isEmpty()) {
+            return null;
+        }
+        long start = getStart(0);
+        long end = getEnd(0);
+        long rangeLength;
+        if(ifRange != null && !ifRange.isEmpty()) {
+            if(ifRange.charAt(0) == '"') {
+                //entity tag
+                if(eTag != null && !eTag.equals(ifRange)) {
+                    return null;
+                }
+            } else {
+                Date ifDate = DateUtils.parseDate(ifRange);
+                if(ifDate != null && lastModified != null && ifDate.getTime() < lastModified.getTime()) {
+                    return null;
+                }
+            }
+        }
+
+        if(start == -1 ) {
+            //suffix range
+            long toWrite = end;
+            if(toWrite >= 0) {
+                rangeLength = toWrite;
+            } else {
+                //ignore the range request
+                return new RangeResponseResult(0, 0, 0, "bytes */" + resourceContentLength, StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE);
+            }
+            start = resourceContentLength - end;
+            end = resourceContentLength - 1;
+        } else if(end == -1) {
+            //prefix range
+            long toWrite = resourceContentLength - start;
+            if(toWrite >= 0) {
+                rangeLength = toWrite;
+            } else {
+                //ignore the range request
+                return new RangeResponseResult(0, 0, 0, "bytes */" + resourceContentLength, StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE);
+            }
+            end = resourceContentLength - 1;
+        } else {
+            if(start >= resourceContentLength || start > end) {
+                return new RangeResponseResult(0, 0, 0, "bytes */" + resourceContentLength, StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE);
+            }
+            long toWrite = end - start + 1;
+            rangeLength = toWrite;
+        }
+        return new RangeResponseResult(start, end, rangeLength,  "bytes " + start + "-" + end + "/" + resourceContentLength, StatusCodes.PARTIAL_CONTENT);
+    }
+
+    public class RangeResponseResult {
+        private final long start;
+        private final long end;
+        private final long contentLength;
+        private final String contentRange;
+        private final int statusCode;
+
+        public RangeResponseResult(long start, long end, long contentLength, String contentRange, int statusCode) {
+            this.start = start;
+            this.end = end;
+            this.contentLength = contentLength;
+            this.contentRange = contentRange;
+            this.statusCode = statusCode;
+        }
+
+        public long getStart() {
+            return start;
+        }
+
+        public long getEnd() {
+            return end;
+        }
+
+        public long getContentLength() {
+            return contentLength;
+        }
+
+        public String getContentRange() {
+            return contentRange;
+        }
+
+        public int getStatusCode() {
+            return statusCode;
+        }
     }
 
     public static class Range {
