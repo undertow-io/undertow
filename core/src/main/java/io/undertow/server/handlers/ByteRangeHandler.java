@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.conduits.RangeStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HandlerWrapper;
@@ -106,7 +107,7 @@ public class ByteRangeHandler implements HttpHandler {
                         exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, rangeResponse.getContentRange());
                         exchange.setResponseContentLength(rangeResponse.getContentLength());
                         if(rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
-                            return new RangeStreamSinkConduit(factory.create(), 0, 0, responseLength);
+                            return new HeadStreamSinkConduit(factory.create(), null, true);
                         }
                         return new RangeStreamSinkConduit(factory.create(), start, end, responseLength);
                     } else {
