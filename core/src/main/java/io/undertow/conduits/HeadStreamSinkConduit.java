@@ -44,6 +44,7 @@ public final class HeadStreamSinkConduit extends AbstractStreamSinkConduit<Strea
     private final ConduitListener<? super HeadStreamSinkConduit> finishListener;
 
     private int state;
+    private final boolean shutdownDelegate;
 
     private static final int FLAG_CLOSE_REQUESTED = 1;
     private static final int FLAG_CLOSE_COMPLETE = 1 << 1;
@@ -56,10 +57,20 @@ public final class HeadStreamSinkConduit extends AbstractStreamSinkConduit<Strea
      * @param finishListener the listener to call when the channel is closed or the length is reached
      */
     public HeadStreamSinkConduit(final StreamSinkConduit next, final ConduitListener<? super HeadStreamSinkConduit> finishListener) {
-        super(next);
-        this.finishListener = finishListener;
+        this(next, finishListener, false);
     }
 
+    /**
+     * Construct a new instance.
+     *
+     * @param next           the next channel
+     * @param finishListener the listener to call when the channel is closed or the length is reached
+     */
+    public HeadStreamSinkConduit(final StreamSinkConduit next, final ConduitListener<? super HeadStreamSinkConduit> finishListener, boolean shutdownDelegate) {
+        super(next);
+        this.finishListener = finishListener;
+        this.shutdownDelegate = shutdownDelegate;
+    }
 
     public int write(final ByteBuffer src) throws IOException {
         if (anyAreSet(state, FLAG_CLOSE_COMPLETE)) {
@@ -161,6 +172,9 @@ public final class HeadStreamSinkConduit extends AbstractStreamSinkConduit<Strea
         }
         newVal = oldVal | FLAG_CLOSE_REQUESTED;
         state = newVal;
+        if(shutdownDelegate) {
+            next.terminateWrites();
+        }
     }
 
     private void exitFlush(int oldVal, boolean flushed) {
