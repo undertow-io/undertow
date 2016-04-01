@@ -82,4 +82,22 @@ public class AjpClientResponseStreamSourceChannel extends AbstractAjpClientStrea
             finishListener.handleEvent(this);
         }
     }
+
+    @Override
+    public void wakeupReads() {
+        super.wakeupReads();
+        getFramedChannel().resumeReceives();
+    }
+
+    @Override
+    public void resumeReads() {
+        super.resumeReads();
+        getFramedChannel().resumeReceives();
+    }
+
+    @Override
+    public void suspendReads() {
+        getFramedChannel().suspendReceives();
+        super.suspendReads();
+    }
 }
