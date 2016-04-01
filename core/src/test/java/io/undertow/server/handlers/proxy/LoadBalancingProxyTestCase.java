@@ -55,7 +55,7 @@ public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCa
         server2.start();
 
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
-                .setConnectionsPerThread(1)
+                .setConnectionsPerThread(4)
                 .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
                 .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
                 , 10000, ResponseCodeHandler.HANDLE_404));
