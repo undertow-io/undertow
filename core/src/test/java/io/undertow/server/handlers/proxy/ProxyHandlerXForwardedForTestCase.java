@@ -71,7 +71,7 @@ public class ProxyHandlerXForwardedForTestCase {
     private static void setProxyHandler(boolean rewriteHostHeader, boolean reuseXForwarded) throws Exception {
 
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
-            .setConnectionsPerThread(1)
+            .setConnectionsPerThread(4)
             .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), handlerPort, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, false))
             , 10000, ResponseCodeHandler.HANDLE_404, rewriteHostHeader, reuseXForwarded));
 
