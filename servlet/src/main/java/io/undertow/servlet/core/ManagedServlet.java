@@ -33,6 +33,7 @@ import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.server.handlers.resource.ResourceChangeListener;
 import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.InstanceFactory;
@@ -191,6 +192,13 @@ public class ManagedServlet implements Lifecycle {
         return multipartConfig;
     }
 
+    @Override
+    public String toString() {
+        return "ManagedServlet{" +
+                "servletInfo=" + servletInfo +
+                '}';
+    }
+
     /**
      * interface used to abstract the difference between single thread model servlets and normal servlets
      */
@@ -252,8 +260,8 @@ public class ManagedServlet implements Lifecycle {
             List<LifecycleInterceptor> interceptors = servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors();
             try {
                 new LifecyleInterceptorInvocation(interceptors, servletInfo, instance).proceed();
-            } catch (ServletException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                UndertowServletLogger.ROOT_LOGGER.failedToDestroy(servletInfo, e);
             }
         }
 

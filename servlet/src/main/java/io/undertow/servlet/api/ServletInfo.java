@@ -287,4 +287,13 @@ public class ServletInfo implements Cloneable {
         this.requireWelcomeFileMapping = requireWelcomeFileMapping;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "ServletInfo{" +
+                "mappings=" + mappings +
+                ", servletClass=" + servletClass +
+                ", name='" + name + '\'' +
+                '}';
+    }
 }

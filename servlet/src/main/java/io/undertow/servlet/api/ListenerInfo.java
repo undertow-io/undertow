@@ -65,4 +65,11 @@ public class ListenerInfo {
     public Class<?> getListenerClass() {
         return listenerClass;
     }
+
+    @Override
+    public String toString() {
+        return "ListenerInfo{" +
+                "listenerClass=" + listenerClass +
+                '}';
+    }
 }
