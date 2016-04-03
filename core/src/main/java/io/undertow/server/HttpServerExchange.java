@@ -1351,6 +1351,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
             throw UndertowMessages.MESSAGES.responseAlreadyStarted();
         }
+        if(statusCode >= 500) {
+            if(UndertowLogger.ERROR_RESPONSE.isDebugEnabled()) {
+                UndertowLogger.ERROR_RESPONSE.debugf(new RuntimeException(), "Setting error code %s for exchange %s", statusCode, this);
+            }
+        }
         this.state = oldVal & ~MASK_RESPONSE_CODE | statusCode & MASK_RESPONSE_CODE;
         return this;
     }

@@ -67,6 +67,7 @@ public interface UndertowLogger extends BasicLogger {
      * attacker to fill up the logs by intentionally causing IO exceptions.
      */
     UndertowLogger REQUEST_IO_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.io");
+    UndertowLogger ERROR_RESPONSE = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.error-response");
 
     @LogMessage(level = ERROR)
     @Message(id = 5001, value = "An exception occurred processing the request")
