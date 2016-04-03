@@ -123,5 +123,11 @@ public class FilterInfo implements Cloneable {
         return this;
     }
 
-
+    @Override
+    public String toString() {
+        return "FilterInfo{" +
+                "filterClass=" + filterClass +
+                ", name='" + name + '\'' +
+                '}';
+    }
 }

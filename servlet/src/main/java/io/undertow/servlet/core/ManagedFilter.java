@@ -26,6 +26,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
@@ -94,8 +95,8 @@ public class ManagedFilter implements Lifecycle {
         if (handle != null) {
             try {
                 new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), filterInfo, filter).proceed();
-            } catch (ServletException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                UndertowServletLogger.ROOT_LOGGER.failedToDestroy(filterInfo, e);
             }
             handle.release();
         }
@@ -110,5 +111,12 @@ public class ManagedFilter implements Lifecycle {
 
     public FilterInfo getFilterInfo() {
         return filterInfo;
+    }
+
+    @Override
+    public String toString() {
+        return "ManagedFilter{" +
+                "filterInfo=" + filterInfo +
+                '}';
     }
 }
