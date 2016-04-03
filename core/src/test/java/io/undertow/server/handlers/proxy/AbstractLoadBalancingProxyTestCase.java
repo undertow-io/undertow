@@ -109,7 +109,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                 //so this is not great, but we need to make sure the connection has actually closed
                 //otherwise the TCP close may not have been processed yet, resulting in the proxy
                 //picking a connection that is about to be closed
-                Thread.sleep(600);
+                Thread.sleep(2000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
