@@ -66,7 +66,7 @@ public class LoadBalancingProxyHTTP2ViaUpgradeTestCase extends AbstractLoadBalan
                             throw new RuntimeException("Not HTTP2");
                         }
                         exchange.getResponseHeaders().add(new HttpString("X-Custom-Header"), "foo");
-                        System.out.println(exchange.getRequestHeaders());
+                        System.out.println("server1 " + exchange.getRequestHeaders());
                         handler1.handleRequest(exchange);
                     }
                 }))
@@ -84,7 +84,7 @@ public class LoadBalancingProxyHTTP2ViaUpgradeTestCase extends AbstractLoadBalan
                             throw new RuntimeException("Not HTTP2");
                         }
                         exchange.getResponseHeaders().add(new HttpString("X-Custom-Header"), "foo");
-                        System.out.println(exchange.getRequestHeaders());
+                        System.out.println("server2 " + exchange.getRequestHeaders());
                         handler2.handleRequest(exchange);
                     }
                 }))
