@@ -560,7 +560,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
         ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
             for (Lifecycle object : deployment.getLifecycleObjects()) {
-                object.stop();
+                try {
+                    object.stop();
+                } catch (Exception e) {
+                    UndertowServletLogger.ROOT_LOGGER.failedToDestroy(object, e);
+                }
             }
             deployment.getSessionManager().stop();
         } finally {

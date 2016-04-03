@@ -79,4 +79,11 @@ public class ManagedListener implements Lifecycle {
     public boolean isProgramatic() {
         return programatic;
     }
+
+    @Override
+    public String toString() {
+        return "ManagedListener{" +
+                "listenerInfo=" + listenerInfo +
+                '}';
+    }
 }
