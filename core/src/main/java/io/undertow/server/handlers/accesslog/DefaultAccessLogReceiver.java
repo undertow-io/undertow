@@ -121,7 +121,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.HOUR, 0);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.add(Calendar.DATE, 1);
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
         currentDateString = df.format(new Date());
