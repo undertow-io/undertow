@@ -147,8 +147,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if(!receivesSuspended && res == maxQueuedBuffers - 1) {
                 synchronized (AbstractFramedChannel.this) {
                     if(outstandingBuffersUpdater.get(AbstractFramedChannel.this) < maxQueuedBuffers) {
-                        if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.REQUEST_IO_LOGGER.debugf("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
+                        if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                            UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
                         }
                         channel.getSourceChannel().resumeReads();
                     }
@@ -517,8 +517,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         //we need to re-read in a sync block, to prevent races
                         expect = outstandingBuffersUpdater.get(this);
                         if (expect == maxQueuedBuffers) {
-                            if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
-                                UndertowLogger.REQUEST_IO_LOGGER.debugf("Suspending reads on %s due to too many outstanding buffers", this);
+                            if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                                UndertowLogger.REQUEST_IO_LOGGER.tracef("Suspending reads on %s due to too many outstanding buffers", this);
                             }
                             channel.getSourceChannel().suspendReads();
                             return null;
