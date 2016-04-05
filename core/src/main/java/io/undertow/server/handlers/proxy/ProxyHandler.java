@@ -98,7 +98,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class ProxyHandler implements HttpHandler {
 
-    private static final int DEFAULT_MAX_RETRY_ATTEMPTS = Integer.getInteger("io.undertow.server.handlers.proxy.maxRetries", 1);
+    private static final int DEFAULT_MAX_RETRY_ATTEMPTS = Integer.getInteger("io.undertow.server.handlers.proxy.maxRetries", 0);
 
     private static final Logger log = Logger.getLogger(ProxyHandler.class.getPackage().getName());
 
