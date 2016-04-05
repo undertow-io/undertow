@@ -60,7 +60,7 @@ public class LoadBalancingProxyAJPTestCase extends AbstractLoadBalancingProxyTes
                 .setConnectionsPerThread(16)
                 .addHost(new URI("ajp", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
                 .addHost(new URI("ajp", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
-                , 10000, ResponseCodeHandler.HANDLE_404));
+                , 10000, ResponseCodeHandler.HANDLE_404, false, false , 2));
     }
 
 }
