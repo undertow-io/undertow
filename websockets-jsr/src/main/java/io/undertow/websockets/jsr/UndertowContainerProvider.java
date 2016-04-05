@@ -51,7 +51,7 @@ public class UndertowContainerProvider extends ContainerProvider {
 
     private static final Map<ClassLoader, WebSocketContainer> webSocketContainers = new ConcurrentHashMap<>();
 
-    private static volatile WebSocketContainer defaultContainer;
+    private static volatile ServerWebSocketContainer defaultContainer;
     private static volatile boolean defaultContainerDisabled = false;
 
     private static final SwitchableClassIntrospector defaultIntrospector = new SwitchableClassIntrospector();
@@ -76,7 +76,7 @@ public class UndertowContainerProvider extends ContainerProvider {
         return webSocketContainer;
     }
 
-    private WebSocketContainer getDefaultContainer() {
+    static ServerWebSocketContainer getDefaultContainer() {
         if(defaultContainerDisabled) {
             return null;
         }
