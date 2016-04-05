@@ -25,6 +25,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
 import io.undertow.util.CopyOnWriteMap;
 import org.xnio.OptionMap;
 import org.xnio.ssl.XnioSsl;
@@ -56,6 +57,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
      */
     private final AttachmentKey<ExclusiveConnectionHolder> exclusiveConnectionKey = AttachmentKey.create(ExclusiveConnectionHolder.class);
 
+    private static final AttachmentKey<AttachmentList<Host>> ATTEMPTED_HOSTS = AttachmentKey.createList(Host.class);
 
     /**
      * Time in seconds between retries for problem servers
@@ -250,6 +252,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         if (host == null) {
             callback.couldNotResolveBackend(exchange);
         } else {
+            exchange.addToAttachmentList(ATTEMPTED_HOSTS, host);
             if (holder != null || (exclusivityChecker != null && exclusivityChecker.isExclusivityRequired(exchange))) {
                 // If we have a holder, even if the connection was closed we now exclusivity was already requested so our client
                 // may be assuming it still exists.
@@ -301,13 +304,16 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     protected Host selectHost(HttpServerExchange exchange) {
+        AttachmentList<Host> attempted = exchange.getAttachment(ATTEMPTED_HOSTS);
         Host[] hosts = this.hosts;
         if (hosts.length == 0) {
             return null;
         }
         Host sticky = findStickyHost(exchange);
         if (sticky != null) {
-            return sticky;
+            if(attempted == null || !attempted.contains(sticky)) {
+                return sticky;
+            }
         }
         int host = hostSelector.selectHost(hosts);
 
@@ -316,13 +322,15 @@ public class LoadBalancingProxyClient implements ProxyClient {
         Host problem = null;
         do {
             Host selected = hosts[host];
-            ProxyConnectionPool.AvailabilityType available = selected.connectionPool.available();
-            if (available == AVAILABLE) {
-                return selected;
-            } else if (available == FULL && full == null) {
-                full = selected;
-            } else if ((available == PROBLEM || available == FULL_QUEUE) && problem == null) {
-                problem = selected;
+            if(attempted == null || !attempted.contains(selected)) {
+                ProxyConnectionPool.AvailabilityType available = selected.connectionPool.available();
+                if (available == AVAILABLE) {
+                    return selected;
+                } else if (available == FULL && full == null) {
+                    full = selected;
+                } else if ((available == PROBLEM || available == FULL_QUEUE) && problem == null) {
+                    problem = selected;
+                }
             }
             host = (host + 1) % hosts.length;
         } while (host != startHost);
