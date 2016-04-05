@@ -83,32 +83,32 @@ public abstract class AbstractLoadBalancingProxyTestCase {
 
 
     @Test
-    public void testLoadSharedWithServerShutdown() throws IOException {
+    public void testLoadSharedWithServerShutdown() throws Exception {
         final StringBuilder resultString = new StringBuilder();
 
         for (int i = 0; i < 6; ++i) {
             TestHttpClient client = new TestHttpClient();
-            try {
-                HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
-                resultString.append(HttpClientUtils.readResponse(result));
-                resultString.append(' ');
-            } finally {
-                client.getConnectionManager().shutdown();
-            }
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
+            resultString.append(HttpClientUtils.readResponse(result));
+            resultString.append(' ');
             server1.stop();
+            Thread.sleep(600);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
+            result = client.execute(get);
+            Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
+            resultString.append(HttpClientUtils.readResponse(result));
+            resultString.append(' ');
             server1.start();
             server2.stop();
+            Thread.sleep(600);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
+            result = client.execute(get);
+            Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
+            resultString.append(HttpClientUtils.readResponse(result));
+            resultString.append(' ');
             server2.start();
-            try {
-                //so this is not great, but we need to make sure the connection has actually closed
-                //otherwise the TCP close may not have been processed yet, resulting in the proxy
-                //picking a connection that is about to be closed
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
         }
         Assert.assertTrue(resultString.toString().contains("server1"));
         Assert.assertTrue(resultString.toString().contains("server2"));
