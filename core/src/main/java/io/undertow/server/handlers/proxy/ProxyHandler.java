@@ -98,6 +98,8 @@ import java.util.concurrent.TimeUnit;
  */
 public final class ProxyHandler implements HttpHandler {
 
+    private static final int DEFAULT_MAX_RETRY_ATTEMPTS = Integer.getInteger("io.undertow.server.handlers.proxy.maxRetries", 1);
+
     private static final Logger log = Logger.getLogger(ProxyHandler.class.getPackage().getName());
 
     public static final String UTF_8 = StandardCharsets.UTF_8.name();
@@ -117,25 +119,39 @@ public final class ProxyHandler implements HttpHandler {
 
     private final boolean rewriteHostHeader;
     private final boolean reuseXForwarded;
+    private final int maxConnectionRetries;
 
     public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next) {
         this(proxyClient, maxRequestTime, next, false, false);
     }
 
-  /**
-   *
-   * @param proxyClient the client to use to make the proxy call
+    /**
+     *
+     * @param proxyClient the client to use to make the proxy call
+     * @param maxRequestTime the maximum amount of time to allow the request to be processed
+     * @param next the next handler in line
+     * @param rewriteHostHeader should the HOST header be rewritten to use the target host of the call.
+     * @param reuseXForwarded should any existing X-Forwarded-For header be used or should it be overwritten.
+     */
+      public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next, boolean rewriteHostHeader, boolean reuseXForwarded) {
+          this(proxyClient, maxRequestTime, next, rewriteHostHeader, reuseXForwarded, DEFAULT_MAX_RETRY_ATTEMPTS);
+      }
+
+    /**
+   *  @param proxyClient the client to use to make the proxy call
    * @param maxRequestTime the maximum amount of time to allow the request to be processed
-   * @param next the next handler in line
-   * @param rewriteHostHeader should the HOST header be rewritten to use the target host of the call.
-   * @param reuseXForwarded should any existing X-Forwarded-For header be used or should it be overwritten.
-   */
-    public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next, boolean rewriteHostHeader, boolean reuseXForwarded) {
+     * @param next the next handler in line
+     * @param rewriteHostHeader should the HOST header be rewritten to use the target host of the call.
+     * @param reuseXForwarded should any existing X-Forwarded-For header be used or should it be overwritten.
+     * @param maxConnectionRetries
+     */
+    public ProxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next, boolean rewriteHostHeader, boolean reuseXForwarded, int maxConnectionRetries) {
         this.proxyClient = proxyClient;
         this.maxRequestTime = maxRequestTime;
         this.next = next;
         this.rewriteHostHeader = rewriteHostHeader;
         this.reuseXForwarded = reuseXForwarded;
+        this.maxConnectionRetries = maxConnectionRetries;
     }
 
 
@@ -150,9 +166,8 @@ public final class ProxyHandler implements HttpHandler {
             next.handleRequest(exchange);
             return;
         }
-        final int maxRetryAttempts = 0; // TODO make this configurable, or just take from the error policy?
         final long timeout = maxRequestTime > 0 ? System.currentTimeMillis() + maxRequestTime : 0;
-        final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, maxRetryAttempts);
+        final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, DEFAULT_MAX_RETRY_ATTEMPTS);
         if (timeout > 0) {
             final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
@@ -734,7 +749,9 @@ public final class ProxyHandler implements HttpHandler {
         }
     }
 
-
+    public int getMaxConnectionRetries() {
+        return maxConnectionRetries;
+    }
 
     private static final class ClosingExceptionHandler implements ChannelExceptionHandler<Channel> {
 
