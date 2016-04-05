@@ -96,7 +96,7 @@ public class LoadBalancingProxyHTTP2ViaUpgradeTestCase extends AbstractLoadBalan
                 .setConnectionsPerThread(4)
                 .addHost(new URI("h2c", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
                 .addHost(new URI("h2c", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
-                , 10000, ResponseCodeHandler.HANDLE_404));
+                , 10000, ResponseCodeHandler.HANDLE_404, false, false , 2));
     }
 
     @Test
