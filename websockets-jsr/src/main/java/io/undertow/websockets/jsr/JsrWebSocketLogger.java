@@ -81,4 +81,9 @@ public interface JsrWebSocketLogger extends BasicLogger {
     @Message(id = 26010, value = "Buffer pool was not set on WebSocketDeploymentInfo, the default pool will be used")
     void bufferPoolWasNull();
 
+    @Message(id = 26011, value = "XNIO worker was not set on WebSocketDeploymentInfo, and there is no default to use")
+    IllegalArgumentException xnioWorkerWasNullAndNoDefault();
+
+    @Message(id = 26012, value = "Buffer pool was not set on WebSocketDeploymentInfo, and there is no default to use")
+    IllegalArgumentException bufferPoolWasNullAndNoDefault();
 }
