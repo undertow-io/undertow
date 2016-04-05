@@ -33,7 +33,6 @@ import javax.servlet.FilterRegistration;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
-import javax.websocket.ContainerProvider;
 import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
@@ -58,13 +57,21 @@ public class Bootstrap implements ServletExtension {
         }
         XnioWorker worker = info.getWorker();
         if(worker == null) {
+            ServerWebSocketContainer defaultContainer = UndertowContainerProvider.getDefaultContainer();
+            if(defaultContainer == null) {
+                throw JsrWebSocketLogger.ROOT_LOGGER.xnioWorkerWasNullAndNoDefault();
+            }
             JsrWebSocketLogger.ROOT_LOGGER.xnioWorkerWasNull();
-            worker = ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).getXnioWorker();
+            worker = defaultContainer.getXnioWorker();
         }
         ByteBufferPool buffers = info.getBuffers();
         if(buffers == null) {
+            ServerWebSocketContainer defaultContainer = UndertowContainerProvider.getDefaultContainer();
+            if(defaultContainer == null) {
+                throw JsrWebSocketLogger.ROOT_LOGGER.bufferPoolWasNullAndNoDefault();
+            }
             JsrWebSocketLogger.ROOT_LOGGER.bufferPoolWasNull();
-            buffers = ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).getBufferPool();
+            buffers = defaultContainer.getBufferPool();
         }
 
         final List<ThreadSetupAction> setup = new ArrayList<>();
