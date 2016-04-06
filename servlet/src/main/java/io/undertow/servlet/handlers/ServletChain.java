@@ -23,6 +23,8 @@ import java.util.concurrent.Executor;
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.core.ManagedServlet;
 
+import javax.servlet.http.MappingMatch;
+
 /**
 * @author Stuart Douglas
 */
@@ -32,17 +34,21 @@ public class ServletChain {
     private final String servletPath;
     private final Executor executor;
     private final boolean defaultServletMapping;
+    private final MappingMatch mappingMatch;
+    private final String pattern;
 
-    public ServletChain(final HttpHandler handler, final ManagedServlet managedServlet, final String servletPath, boolean defaultServletMapping) {
+    public ServletChain(final HttpHandler handler, final ManagedServlet managedServlet, final String servletPath, boolean defaultServletMapping, MappingMatch mappingMatch, String pattern) {
         this.handler = handler;
         this.managedServlet = managedServlet;
         this.servletPath = servletPath;
         this.defaultServletMapping = defaultServletMapping;
+        this.mappingMatch = mappingMatch;
+        this.pattern = pattern;
         this.executor = managedServlet.getServletInfo().getExecutor();
     }
 
-    public ServletChain(final ServletChain other) {
-        this(other.getHandler(), other.getManagedServlet(), other.getServletPath(), other.isDefaultServletMapping());
+    public ServletChain(final ServletChain other, String pattern, MappingMatch mappingMatch) {
+        this(other.getHandler(), other.getManagedServlet(), other.getServletPath(), other.isDefaultServletMapping(), mappingMatch, pattern);
     }
 
     public HttpHandler getHandler() {
@@ -67,5 +73,13 @@ public class ServletChain {
 
     public boolean isDefaultServletMapping() {
         return defaultServletMapping;
+    }
+
+    public MappingMatch getMappingMatch() {
+        return mappingMatch;
+    }
+
+    public String getPattern() {
+        return pattern;
     }
 }

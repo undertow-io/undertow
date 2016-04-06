@@ -62,6 +62,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
+import javax.servlet.http.Mapping;
 import javax.servlet.http.Part;
 import javax.servlet.http.PushBuilder;
 import java.io.BufferedReader;
@@ -218,6 +219,33 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             headers.add(i.toString());
         }
         return new IteratorEnumeration<>(headers.iterator());
+    }
+
+    @Override
+    public Mapping getMapping() {
+        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        ServletPathMatch match = src.getOriginalServletPathMatch();
+        String matchValue;
+        switch (match.getMappingMatch()) {
+            case EXACT:
+                matchValue = getServletPath();
+                break;
+            case DEFAULT:
+                matchValue = "/";
+                break;
+            case CONTEXT_ROOT:
+                matchValue = "";
+                break;
+            case PATH:
+                matchValue = match.getRemaining();
+                break;
+            case EXTENSION:
+                matchValue = match.getMatched().substring(0, match.getMatched().length() - match.getMatchString().length() + 1);
+                break;
+            default:
+                matchValue = match.getRemaining();
+        }
+        return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch());
     }
 
     @Override

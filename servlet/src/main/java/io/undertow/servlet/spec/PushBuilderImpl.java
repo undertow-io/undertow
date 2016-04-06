@@ -180,23 +180,23 @@ public class PushBuilderImpl implements PushBuilder {
             throw UndertowServletMessages.MESSAGES.pathWasNotSet();
         }
         ServerConnection con = servletRequest.getExchange().getConnection();
-        if(con.isPushSupported()) {
+        if (con.isPushSupported()) {
             HeaderMap newHeaders = new HeaderMap();
-            for(HeaderValues entry : headers) {
+            for (HeaderValues entry : headers) {
                 newHeaders.addAll(entry.getHeaderName(), entry);
             }
-            if(conditional) {
-                if(etag != null) {
+            if (conditional) {
+                if (etag != null) {
                     newHeaders.put(Headers.IF_NONE_MATCH, etag);
-                } else if(lastModified != null) {
+                } else if (lastModified != null) {
                     newHeaders.put(Headers.IF_MODIFIED_SINCE, lastModified);
                 }
             }
-            if(sessionId != null) {
+            if (sessionId != null) {
                 newHeaders.put(Headers.COOKIE, "JSESSIONID=" + sessionId); //TODO: do this properly, may be a different tracking method or a different cookie name
             }
             String path = this.path;
-            if(queryString != null && !queryString.isEmpty()) {
+            if (queryString != null && !queryString.isEmpty()) {
                 path += "?" + queryString;
             }
             con.pushResource(path, new HttpString(method), newHeaders);
