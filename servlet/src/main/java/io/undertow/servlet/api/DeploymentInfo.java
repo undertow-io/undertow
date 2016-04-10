@@ -89,7 +89,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean invalidateSessionOnLogout = false;
     private int defaultCookieVersion = 0;
     private SessionPersistenceManager sessionPersistenceManager;
-    private String defaultEncoding = "ISO-8859-1";
+    private String defaultEncoding = "UTF-8";
     private String urlEncoding = null;
     private boolean ignoreFlush = false;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
