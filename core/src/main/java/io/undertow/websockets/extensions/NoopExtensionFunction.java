@@ -6,7 +6,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import java.io.IOException;
 
 public class NoopExtensionFunction implements ExtensionFunction {
-    public static final ExtensionFunction instance = new NoopExtensionFunction();
+    public static final ExtensionFunction INSTANCE = new NoopExtensionFunction();
 
     @Override
     public boolean hasExtensionOpCode() {

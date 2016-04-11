@@ -164,12 +164,12 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
             partialFrame.handle(data);
         } catch (WebSocketException e) {
             //the data was corrupt
+            //send a close message
+            WebSockets.sendClose(new CloseMessage(CloseMessage.WRONG_CODE, e.getMessage()).toByteBuffer(), this, null);
             markReadsBroken(e);
             if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
                 WebSocketLogger.REQUEST_LOGGER.debugf(e, "receive failed due to Exception");
             }
-            //send a close message
-            WebSockets.sendClose(new CloseMessage(CloseMessage.WRONG_CODE, e.getMessage()).toByteBuffer(), this, null);
 
             throw new IOException(e);
         }
