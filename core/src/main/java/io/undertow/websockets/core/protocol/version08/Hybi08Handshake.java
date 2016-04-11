@@ -22,11 +22,14 @@ import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
+import io.undertow.websockets.extensions.CompositeExtensionFunction;
+import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -46,7 +49,8 @@ public class Hybi08Handshake extends Hybi07Handshake {
 
     @Override
     public WebSocketChannel createChannel(final WebSocketHttpExchange exchange, final StreamConnection channel, final ByteBufferPool pool) {
-        return new WebSocket08Channel(channel, pool, getWebSocketLocation(exchange), exchange.getResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING), false, allowExtensions, initExtensions(exchange), exchange.getPeerConnections(), exchange.getOptions());
+        List<ExtensionFunction> extensionFunctions = initExtensions(exchange);
+        return new WebSocket08Channel(channel, pool, getWebSocketLocation(exchange), exchange.getResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING), false, !extensionFunctions.isEmpty(), CompositeExtensionFunction.compose(extensionFunctions), exchange.getPeerConnections(), exchange.getOptions());
 
     }
 }

@@ -72,7 +72,7 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         if (rsv > 0) {
             this.extensionFunction = wsChannel.getExtensionFunction();
         } else {
-            this.extensionFunction = NoopExtensionFunction.instance;
+            this.extensionFunction = NoopExtensionFunction.INSTANCE;
         }
     }
 
