@@ -225,7 +225,7 @@ public abstract class Handshake {
      * @param exchange the exchange used to retrieve negotiated extensions
      * @return         a list of {@code ExtensionFunction} with the implementation of the extensions
      */
-    protected final ExtensionFunction initExtensions(final WebSocketHttpExchange exchange) {
+    protected final List<ExtensionFunction> initExtensions(final WebSocketHttpExchange exchange) {
         String extHeader = exchange.getResponseHeaders().get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING) != null ?
                 exchange.getResponseHeaders().get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING).get(0) : null;
 
@@ -242,6 +242,6 @@ public abstract class Handshake {
                 }
             }
         }
-        return CompositeExtensionFunction.compose(negotiated);
+        return negotiated;
     }
 }

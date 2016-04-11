@@ -87,7 +87,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
             }
             return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation.getSelectedSubProtocol(), true, !negotiated.isEmpty(), CompositeExtensionFunction.compose(negotiated), new HashSet<WebSocketChannel>(), options);
         } else {
-            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, NoopExtensionFunction.instance, new HashSet<WebSocketChannel>(), options);
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, NoopExtensionFunction.INSTANCE, new HashSet<WebSocketChannel>(), options);
         }
     }
 

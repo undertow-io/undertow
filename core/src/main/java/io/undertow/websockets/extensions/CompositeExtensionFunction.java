@@ -16,14 +16,14 @@ public class CompositeExtensionFunction implements ExtensionFunction {
 
     public static ExtensionFunction compose(List<ExtensionFunction> functions) {
         if (null == functions) {
-            return NoopExtensionFunction.instance;
+            return NoopExtensionFunction.INSTANCE;
         }
         return compose(functions.toArray(new ExtensionFunction[functions.size()]));
     }
 
     public static ExtensionFunction compose(ExtensionFunction... functions) {
         if (functions == null || functions.length == 0) {
-            return NoopExtensionFunction.instance;
+            return NoopExtensionFunction.INSTANCE;
         } else if (functions.length == 1) {
             return functions[0];
         }

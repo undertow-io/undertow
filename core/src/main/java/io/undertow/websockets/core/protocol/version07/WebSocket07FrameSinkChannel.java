@@ -56,7 +56,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
             extensionFunction = wsChannel.getExtensionFunction();
             setRsv(extensionFunction.writeRsv(0));
         } else {
-            extensionFunction = NoopExtensionFunction.instance;
+            extensionFunction = NoopExtensionFunction.INSTANCE;
             setRsv(0);
         }
     }
