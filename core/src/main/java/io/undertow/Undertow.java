@@ -208,15 +208,17 @@ public final class Undertow {
     }
 
     public synchronized void stop() {
-        for (AcceptingChannel<? extends StreamConnection> channel : channels) {
-            IoUtils.safeClose(channel);
+        if (channels != null) {
+            for (AcceptingChannel<? extends StreamConnection> channel : channels) {
+                IoUtils.safeClose(channel);
+            }
+            channels = null;
         }
-        channels = null;
 
         /*
          * Only shutdown the worker if it was created during start()
          */
-        if (internalWorker) {
+        if (internalWorker && worker != null) {
             worker.shutdownNow();
             worker = null;
         }
