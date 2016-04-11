@@ -22,7 +22,6 @@ import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.extensions.CompositeExtensionFunction;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
