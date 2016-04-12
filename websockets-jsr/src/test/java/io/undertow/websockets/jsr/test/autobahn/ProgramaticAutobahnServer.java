@@ -23,11 +23,11 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerEndpointConfigImpl;
-import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.OptionMap;
@@ -39,14 +39,11 @@ import org.xnio.channels.AcceptingChannel;
 
 import javax.servlet.DispatcherType;
 import java.net.InetSocketAddress;
-import java.util.Collections;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class ProgramaticAutobahnServer implements Runnable {
-
-    private static ServerWebSocketContainer deployment;
 
     private final int port;
 
@@ -60,8 +57,6 @@ public class ProgramaticAutobahnServer implements Runnable {
         try {
 
             XnioWorker worker = xnio.createWorker(OptionMap.builder()
-                    .set(Options.WORKER_WRITE_THREADS, 4)
-                    .set(Options.WORKER_READ_THREADS, 4)
                     .set(Options.CONNECTION_HIGH_WATER, 1000000)
                     .set(Options.CONNECTION_LOW_WATER, 1000000)
                     .set(Options.WORKER_TASK_CORE_THREADS, 10)
@@ -71,29 +66,33 @@ public class ProgramaticAutobahnServer implements Runnable {
                     .getMap());
 
             OptionMap serverOptions = OptionMap.builder()
-                    .set(Options.WORKER_ACCEPT_THREADS, 4)
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
-            HttpOpenListener openListener = new HttpOpenListener(new DefaultByteBufferPool(true, 8192));
+            DefaultByteBufferPool pool = new DefaultByteBufferPool(true, 8192);
+            HttpOpenListener openListener = new HttpOpenListener(pool);
             ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
            AcceptingChannel<StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
             server.resumeAccepts();
 
             final ServletContainer container = ServletContainer.Factory.newInstance();
-
-            ServerWebSocketContainer deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, worker, new DefaultByteBufferPool(true, 8192),new CompositeThreadSetupAction(Collections.EMPTY_LIST), true, false);
-            DeploymentInfo builder = new DeploymentInfo()
+                    DeploymentInfo builder = new DeploymentInfo()
                     .setClassLoader(ProgramaticAutobahnServer.class.getClassLoader())
                     .setContextPath("/")
                     .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                     .setDeploymentName("servletContext.war")
-                    .addServletContextAttribute(javax.websocket.server.ServerContainer.class.getName(), deployment)
                     .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
-                    .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
+                    .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST)
 
-            deployment.addEndpoint(new ServerEndpointConfigImpl(ProgramaticAutobahnEndpoint.class, "/"));
+                            .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
+                                    new WebSocketDeploymentInfo()
+                                            .setBuffers(pool)
+                                            .setWorker(worker)
+                                            .setDispatchToWorkerThread(true)
+                                            .addEndpoint(new ServerEndpointConfigImpl(ProgramaticAutobahnEndpoint.class, "/"))
+                                            .addExtension(new PerMessageDeflateHandshake())
+                            );
 
             DeploymentManager manager = container.addDeployment(builder);
             manager.deploy();

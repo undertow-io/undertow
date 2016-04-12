@@ -19,7 +19,8 @@
 package io.undertow.websockets.extensions;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
 
 import java.io.IOException;
 
@@ -77,7 +78,7 @@ public interface ExtensionFunction {
      * @return transformed buffer (may be the same one, just with modified contents)
      * @throws IOException
      */
-    PooledByteBuffer transformForWrite(PooledByteBuffer pooledBuffer, WebSocketChannel channel) throws IOException;
+    PooledByteBuffer transformForWrite(PooledByteBuffer pooledBuffer, StreamSinkFrameChannel channel, boolean lastFrame) throws IOException;
 
     /**
      * Transform the supplied buffer per this extension. The buffer can be modified in place, or a new pooled buffer
@@ -85,10 +86,11 @@ public interface ExtensionFunction {
      *
      * @param pooledBuffer Buffer to transform
      * @param channel      working channel
+     * @param lastFragmentOfMessage If this frame is the last fragment of a message. Note that this may not be received for every message, if the message ends with an empty frame
      * @return transformed buffer (may be the same one, just with modified contents)
      * @throws IOException
      */
-    PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, WebSocketChannel channel, boolean lastFragmentOfFrame) throws IOException;
+    PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, StreamSourceFrameChannel channel, boolean lastFragmentOfMessage) throws IOException;
 
     /**
      * Dispose this function. Called upon connection closure

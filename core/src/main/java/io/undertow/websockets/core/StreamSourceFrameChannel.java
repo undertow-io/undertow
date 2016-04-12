@@ -246,7 +246,15 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         if(masker != null) {
             masker.afterRead(frameData.getBuffer(), frameData.getBuffer().position(), frameData.getBuffer().remaining());
         }
-        return extensionFunction.transformForRead(frameData, getWebSocketChannel(), lastFragmentOfFrame);
+        try {
+            return extensionFunction.transformForRead(frameData, this, lastFragmentOfFrame && isFinalFragment());
+        } catch (IOException e) {
+            getWebSocketChannel().markReadsBroken(new WebSocketFrameCorruptedException(e));
+            throw e;
+        } catch (Exception e) {
+            getWebSocketChannel().markReadsBroken(new WebSocketFrameCorruptedException(e));
+            throw new IOException(e);
+        }
     }
 
     private static class Bounds {

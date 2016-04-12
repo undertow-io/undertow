@@ -29,6 +29,8 @@ import java.nio.channels.FileChannel;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
+
+import io.undertow.UndertowLogger;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -506,7 +508,11 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             }
             return 0;
         } finally {
-            exitRead();
+            try {
+                exitRead();
+            } catch (Exception e) {
+                markStreamBroken();
+            }
         }
     }
 
@@ -520,9 +526,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                 if (pending != null) {
                     PooledByteBuffer frameData = pending.getFrameData();
                     boolean hasData = true;
-                    if(frameData.getBuffer().hasRemaining()) {
-                        this.data = frameData;
-                    } else {
+                    if(!frameData.getBuffer().hasRemaining()) {
                         frameData.close();
                         hasData = false;
                     }
@@ -533,7 +537,13 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                     if(hasData) {
                         this.frameDataRemaining = updateFrameDataRemaining(frameData, frameDataRemaining);
                         this.currentDataOriginalSize = frameData.getBuffer().remaining();
-                        this.data = processFrameData(frameData, frameDataRemaining - currentDataOriginalSize == 0);
+                        try {
+                            this.data = processFrameData(frameData, frameDataRemaining - currentDataOriginalSize == 0);
+                        } catch (Exception e) {
+                            frameData.close();
+                            UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
+                            markStreamBroken();
+                        }
                     }
                 }
             }
