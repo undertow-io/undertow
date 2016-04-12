@@ -1,7 +1,8 @@
 package io.undertow.websockets.extensions;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,20 +52,20 @@ public class CompositeExtensionFunction implements ExtensionFunction {
     }
 
     @Override
-    public PooledByteBuffer transformForWrite(PooledByteBuffer pooledBuffer, WebSocketChannel channel) throws IOException {
+    public PooledByteBuffer transformForWrite(PooledByteBuffer pooledBuffer, StreamSinkFrameChannel channel, boolean lastFrame) throws IOException {
         PooledByteBuffer result = pooledBuffer;
         for (ExtensionFunction delegate : delegates) {
-            result = delegate.transformForWrite(result, channel);
+            result = delegate.transformForWrite(result, channel, lastFrame);
         }
         return result;
     }
 
     @Override
-    public PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, WebSocketChannel channel, boolean lastFragmentOfFrame) throws IOException {
+    public PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, StreamSourceFrameChannel channel, boolean lastFragementOfMessage) throws IOException {
         PooledByteBuffer result = pooledBuffer;
         // TODO do we iterate over functions in the opposite order when reading vs writing?
         for (ExtensionFunction delegate : delegates) {
-            result = delegate.transformForRead(result, channel, lastFragmentOfFrame);
+            result = delegate.transformForRead(result, channel, lastFragementOfMessage);
         }
         return result;
     }

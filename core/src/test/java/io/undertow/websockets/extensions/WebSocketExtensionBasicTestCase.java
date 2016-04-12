@@ -115,7 +115,7 @@ public class WebSocketExtensionBasicTestCase {
             @Override
             protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
                 String data = message.getData();
-                WebSocketLogger.ROOT_LOGGER.info("onFullTextMessage() - Client - Received: " + data.getBytes().length + " bytes.");
+                //WebSocketLogger.ROOT_LOGGER.info("onFullTextMessage() - Client - Received: " + data.getBytes().length + " bytes.");
                 result.set(data);
                 latch.countDown();
             }

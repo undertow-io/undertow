@@ -86,6 +86,7 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
             extensionMap.put(availible.getName(), availible);
         }
         List<WebSocketExtension> ret = new ArrayList<>();
+        List<ExtensionHandshake> accepted = new ArrayList<>();
         for(Extension i : selected) {
             ExtensionHandshake handshake = extensionMap.get(i.getName());
             if(handshake == null) {
@@ -95,7 +96,13 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
             for(Extension.Parameter p : i.getParameters()) {
                 parameters.add(new WebSocketExtension.Parameter(p.getName(), p.getValue()));
             }
-            ret.add(handshake.accept(new WebSocketExtension(i.getName(), parameters)));
+            if(!handshake.isIncompatible(accepted)) {
+                WebSocketExtension accept = handshake.accept(new WebSocketExtension(i.getName(), parameters));
+                if (accept != null) {
+                    ret.add(accept);
+                    accepted.add(handshake);
+                }
+            }
         }
 
         return ret;
