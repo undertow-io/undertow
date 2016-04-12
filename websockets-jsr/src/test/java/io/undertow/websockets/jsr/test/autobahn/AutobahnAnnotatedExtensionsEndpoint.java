@@ -21,10 +21,13 @@ package io.undertow.websockets.jsr.test.autobahn;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.util.List;
 
+import javax.websocket.Extension;
 import javax.websocket.OnMessage;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
+import javax.websocket.server.ServerEndpointConfig;
 
 /**
  * An Endpoint class to be used in Autobahn test suite.
@@ -34,8 +37,15 @@ import javax.websocket.server.ServerEndpoint;
  * @author Stuart Douglas
  * @author Lucas Ponce
  */
-@ServerEndpoint("/")
+@ServerEndpoint(value = "/", configurator = AutobahnAnnotatedExtensionsEndpoint.Config.class)
 public class AutobahnAnnotatedExtensionsEndpoint {
+
+    public static class Config extends ServerEndpointConfig.Configurator {
+        @Override
+        public List<Extension> getNegotiatedExtensions(List<Extension> installed, List<Extension> requested) {
+            return super.getNegotiatedExtensions(installed, requested);
+        }
+    }
 
     Writer writer;
     OutputStream stream;

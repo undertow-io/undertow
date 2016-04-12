@@ -74,8 +74,6 @@ public class AutobahnExtensionsServer {
         xnio = Xnio.getInstance();
         try {
             worker = xnio.createWorker(OptionMap.builder()
-                    .set(Options.WORKER_WRITE_THREADS, 4)
-                    .set(Options.WORKER_READ_THREADS, 4)
                     .set(Options.CONNECTION_HIGH_WATER, 1000000)
                     .set(Options.CONNECTION_LOW_WATER, 1000000)
                     .set(Options.WORKER_TASK_CORE_THREADS, 10)
@@ -85,7 +83,6 @@ public class AutobahnExtensionsServer {
                     .getMap());
 
             OptionMap serverOptions = OptionMap.builder()
-                    .set(Options.WORKER_ACCEPT_THREADS, 4)
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();

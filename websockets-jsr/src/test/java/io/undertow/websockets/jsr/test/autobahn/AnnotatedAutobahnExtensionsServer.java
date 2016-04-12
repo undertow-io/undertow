@@ -26,6 +26,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.testutils.DebuggingSlicePool;
 import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
@@ -80,7 +81,8 @@ public class AnnotatedAutobahnExtensionsServer implements Runnable {
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
-            HttpOpenListener openListener = new HttpOpenListener(new DefaultByteBufferPool(true, 8192));
+            DebuggingSlicePool pool = new DebuggingSlicePool( new DefaultByteBufferPool(true, 8192));
+            HttpOpenListener openListener = new HttpOpenListener(pool);
             ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
             AcceptingChannel<StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
@@ -95,8 +97,9 @@ public class AnnotatedAutobahnExtensionsServer implements Runnable {
                     .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                     .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                             new WebSocketDeploymentInfo()
-                                    .setBuffers(new DefaultByteBufferPool(true, 100))
+                                    .setBuffers(pool)
                                     .setWorker(worker)
+                                    .setDispatchToWorkerThread(true)
                                     .addEndpoint(AutobahnAnnotatedExtensionsEndpoint.class)
                                     .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                         @Override
