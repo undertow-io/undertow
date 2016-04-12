@@ -125,6 +125,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     private final List<WebsocketClientSslProvider> clientSslProviders;
     private final List<PauseListener> pauseListeners = new ArrayList<>();
+    private final List<Extension> installedExtensions;
 
     private volatile boolean closed = false;
 
@@ -137,12 +138,17 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, ByteBufferPool bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler) {
+        this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, clientBindAddress, reconnectHandler, Collections.emptyList());
+    }
+
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, ByteBufferPool bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler, List<Extension> installedExtensions) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
         this.threadSetupAction = threadSetupAction;
         this.dispatchToWorker = dispatchToWorker;
         this.clientBindAddress = clientBindAddress;
+        this.installedExtensions = new ArrayList<>(installedExtensions);
         List<WebsocketClientSslProvider> clientSslProviders = new ArrayList<>();
         for (WebsocketClientSslProvider provider : ServiceLoader.load(WebsocketClientSslProvider.class, classLoader)) {
             clientSslProviders.add(provider);
@@ -616,6 +622,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                     .decoders(Arrays.asList(serverEndpoint.decoders()))
                     .encoders(Arrays.asList(serverEndpoint.encoders()))
                     .subprotocols(Arrays.asList(serverEndpoint.subprotocols()))
+                    .extensions(installedExtensions)
                     .configurator(configurator)
                     .build();
 
