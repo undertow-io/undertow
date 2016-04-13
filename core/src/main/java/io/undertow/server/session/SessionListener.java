@@ -34,7 +34,8 @@ public interface SessionListener {
      * @param session The new session
      * @param exchange The {@link HttpServerExchange} that created the session
      */
-    void sessionCreated(final Session session, final HttpServerExchange exchange);
+    default void sessionCreated(final Session session, final HttpServerExchange exchange) {
+    }
 
     /**
      * Called when a session is destroyed
@@ -42,15 +43,20 @@ public interface SessionListener {
      * @param exchange  The {@link HttpServerExchange} that destroyed the session, or null if the session timed out
      * @param reason    The reason why the session was expired
      */
-    void sessionDestroyed(final Session session,  final HttpServerExchange exchange, SessionDestroyedReason reason);
+    default void sessionDestroyed(final Session session,  final HttpServerExchange exchange, SessionDestroyedReason reason) {
+    }
 
-    void attributeAdded(final Session session, final String name, final Object value);
+    default void attributeAdded(final Session session, final String name, final Object value) {
+    }
 
-    void attributeUpdated(final Session session, final String name, final Object newValue, final Object oldValue);
+    default void attributeUpdated(final Session session, final String name, final Object newValue, final Object oldValue) {
+    }
 
-    void attributeRemoved(final Session session, final String name,final Object oldValue);
+    default void attributeRemoved(final Session session, final String name,final Object oldValue) {
+    }
 
-    void sessionIdChanged(final Session session, final String oldSessionId);
+    default void sessionIdChanged(final Session session, final String oldSessionId) {
+    }
 
     enum SessionDestroyedReason {
         INVALIDATED,
