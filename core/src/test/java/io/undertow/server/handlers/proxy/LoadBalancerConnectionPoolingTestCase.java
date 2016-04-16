@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 @ProxyIgnore
 public class LoadBalancerConnectionPoolingTestCase {
 
+    public static final int TTL = 2000;
     private static Undertow undertow;
 
     private static final Set<ServerConnection> activeConnections = new ConcurrentHashSet<>();
@@ -45,7 +46,7 @@ public class LoadBalancerConnectionPoolingTestCase {
         ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
                 .setSoftMaxConnectionsPerThread(0)
-                .setTtl(1000)
+                .setTtl(TTL)
                 .addHost(new URI("http", null, host, port, null, null, null), "s1")
                 , 10000, ResponseCodeHandler.HANDLE_404);
 
@@ -87,6 +88,7 @@ public class LoadBalancerConnectionPoolingTestCase {
         final TestHttpClient client = new TestHttpClient(conman);
         int requests = 1000;
         final CountDownLatch latch = new CountDownLatch(requests);
+        long ttlStartExpire = TTL + System.currentTimeMillis();
         try {
             for (int i = 0; i < requests; ++i) {
                 executorService.submit(new Runnable() {
@@ -114,7 +116,13 @@ public class LoadBalancerConnectionPoolingTestCase {
             client.getConnectionManager().shutdown();
         }
 
-        Assert.assertEquals(1, activeConnections.size());
+        if(activeConnections.size() != 1) {
+            //if the test is slow this line could be hit after the expire time
+            //uncommon, but we guard against it to prevent intermittent failures
+            if(System.currentTimeMillis() < ttlStartExpire) {
+                Assert.fail("there should still be a connection");
+            }
+        }
         long end = System.currentTimeMillis() + 4000;
         while (!activeConnections.isEmpty() && System.currentTimeMillis() < end) {
             Thread.sleep(100);
