@@ -86,7 +86,7 @@ public class LoadBalancerConnectionPoolingTestCase {
         PoolingClientConnectionManager conman = new PoolingClientConnectionManager();
         conman.setDefaultMaxPerRoute(20);
         final TestHttpClient client = new TestHttpClient(conman);
-        int requests = 1000;
+        int requests = 20;
         final CountDownLatch latch = new CountDownLatch(requests);
         long ttlStartExpire = TTL + System.currentTimeMillis();
         try {
@@ -110,7 +110,9 @@ public class LoadBalancerConnectionPoolingTestCase {
                     }
                 });
             }
-            latch.await(2000, TimeUnit.MILLISECONDS);
+            if(!latch.await(2000, TimeUnit.MILLISECONDS)) {
+                Assert.fail();
+            }
         } finally {
             executorService.shutdownNow();
             client.getConnectionManager().shutdown();
@@ -123,7 +125,7 @@ public class LoadBalancerConnectionPoolingTestCase {
                 Assert.fail("there should still be a connection");
             }
         }
-        long end = System.currentTimeMillis() + 4000;
+        long end = System.currentTimeMillis() + (TTL * 3);
         while (!activeConnections.isEmpty() && System.currentTimeMillis() < end) {
             Thread.sleep(100);
         }
