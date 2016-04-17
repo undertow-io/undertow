@@ -729,7 +729,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                         }
                     } else {
                         final ArrayList<String> values = new ArrayList<>();
-                        int i = 0;
                         for (final FormData.FormValue v : val) {
                             if(!v.isFile()) {
                                 values.add(v.getValue());
