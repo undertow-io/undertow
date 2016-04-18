@@ -59,10 +59,10 @@ public final class HeaderValues extends AbstractCollection<String> implements De
     public void clear() {
         final byte size = this.size;
         if (size == 0) return;
-        clearInternal(size);
+        clearInternal();
     }
 
-    private void clearInternal(byte size) {
+    private void clearInternal() {
         final Object value = this.value;
         if (value instanceof String[]) {
             final String[] strings = (String[]) value;
