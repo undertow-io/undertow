@@ -6,14 +6,13 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
-import org.apache.mina.util.ConcurrentHashSet;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -22,7 +21,9 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,7 +36,7 @@ public class LoadBalancerConnectionPoolingTestCase {
     public static final int TTL = 2000;
     private static Undertow undertow;
 
-    private static final Set<ServerConnection> activeConnections = new ConcurrentHashSet<>();
+    private static final Set<ServerConnection> activeConnections = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     static final String host = DefaultServer.getHostAddress("default");
     static int port = DefaultServer.getHostPort("default");
@@ -47,6 +48,7 @@ public class LoadBalancerConnectionPoolingTestCase {
                 .setConnectionsPerThread(1)
                 .setSoftMaxConnectionsPerThread(0)
                 .setTtl(TTL)
+                .setMaxQueueSize(1000)
                 .addHost(new URI("http", null, host, port, null, null, null), "s1")
                 , 10000, ResponseCodeHandler.HANDLE_404);
 
@@ -63,10 +65,12 @@ public class LoadBalancerConnectionPoolingTestCase {
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 final ServerConnection con = exchange.getConnection();
                 if(!activeConnections.contains(con)) {
+                    System.out.println("added " + con);
                     activeConnections.add(con);
                     con.addCloseListener(new ServerConnection.CloseListener() {
                         @Override
                         public void closed(ServerConnection connection) {
+                            System.out.println("Closed " + connection);
                             activeConnections.remove(connection);
                         }
                     });
@@ -96,16 +100,13 @@ public class LoadBalancerConnectionPoolingTestCase {
                     public void run() {
                         HttpGet get = new HttpGet("http://" + host + ":" + (port + 1));
                         try {
-                            client.execute(get, new ResponseHandler<HttpResponse>() {
-                                @Override
-                                public HttpResponse handleResponse(HttpResponse response) throws IOException {
-                                    latch.countDown();
-                                    Assert.assertEquals(StatusCodes.OK, response.getStatusLine().getStatusCode());
-                                    return response;
-                                }
-                            });
+                            HttpResponse response = client.execute(get);
+                            Assert.assertEquals(StatusCodes.OK, response.getStatusLine().getStatusCode());
+                            HttpClientUtils.readResponse(response);
                         } catch (IOException e) {
                             throw new RuntimeException(e);
+                        } finally {
+                            latch.countDown();
                         }
                     }
                 });
@@ -114,8 +115,8 @@ public class LoadBalancerConnectionPoolingTestCase {
                 Assert.fail();
             }
         } finally {
-            executorService.shutdownNow();
             client.getConnectionManager().shutdown();
+            executorService.shutdown();
         }
 
         if(activeConnections.size() != 1) {
