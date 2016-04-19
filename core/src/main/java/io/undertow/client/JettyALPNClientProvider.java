@@ -60,7 +60,7 @@ public class JettyALPNClientProvider implements ALPNClientSelector.ClientSelecto
     }
 
     @Override
-    public void runAlpn(SslConnection connection, ChannelListener<SslConnection> fallback, ClientCallback<ClientConnection> failedListener, ALPNClientSelector.ALPNProtocol... details) {
+    public void runAlpn(final SslConnection connection, final ChannelListener<SslConnection> fallback, final ClientCallback<ClientConnection> failedListener, ALPNClientSelector.ALPNProtocol... details) {
 
         final SslConnection sslConnection = connection;
         final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(sslConnection);

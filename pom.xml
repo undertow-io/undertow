@@ -103,6 +103,8 @@
         <alpn-boot-string></alpn-boot-string>
 
         <jdk.min.version>1.7</jdk.min.version>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <maven.compiler.source>1.7</maven.compiler.source>
         <version.com.twitter.hpack>0.10.1</version.com.twitter.hpack>
     </properties>
 
