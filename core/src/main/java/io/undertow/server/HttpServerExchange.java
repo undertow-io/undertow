@@ -709,6 +709,16 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
+    /**
+     * Updates the number of response bytes sent. Used when compression is in use
+     * @param bytes The number of bytes to increase the response size by. May be negative
+     */
+    void updateBytesSent(long bytes) {
+        if(Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
+            responseBytesSent += bytes;
+        }
+    }
+
     public HttpServerExchange setPersistent(final boolean persistent) {
         if (persistent) {
             this.state = this.state | FLAG_PERSISTENT;
