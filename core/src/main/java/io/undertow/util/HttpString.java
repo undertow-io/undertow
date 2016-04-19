@@ -109,7 +109,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         for (int i = 0; i < len; i++) {
             char c = string.charAt(i);
             if (c > 0xff) {
-                throw new IllegalArgumentException("Invalid string contents");
+                throw new IllegalArgumentException("Invalid string contents " + string);
             }
             bytes[i] = (byte) c;
         }
