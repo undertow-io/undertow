@@ -21,10 +21,7 @@ package io.undertow.server.handlers.proxy;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
@@ -35,9 +32,6 @@ import org.xnio.Options;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
 
 /**
  * Tests the load balancing proxy
@@ -59,10 +53,6 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(getRootHandler("s1", "server1"))
                 .build();
-
-        final JvmRouteHandler handler = jvmRoute("JSESSIONID", "s2", path()
-                .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
-                .addPrefixPath("/name", new StringSendHandler("server2")));
         server2 = Undertow.builder()
                 .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_SPDY, false)
