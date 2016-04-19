@@ -28,6 +28,8 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
+
+import io.undertow.server.Connectors;
 import org.xnio.IoUtils;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioIoThread;
@@ -111,6 +113,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             src.get(data);
             preDeflate(data);
             deflater.setInput(data);
+            Connectors.updateResponseBytesSent(exchange, 0 - data.length);
             deflateData(false);
             return data.length;
         } catch (IOException e) {
@@ -311,6 +314,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                             state |= WRITTEN_TRAILER;
                             byte[] data = getTrailer();
                             if (data != null) {
+                                Connectors.updateResponseBytesSent(exchange, data.length);
                                 if(additionalBuffer != null) {
                                     byte[] newData = new byte[additionalBuffer.remaining() + data.length];
                                     int pos = 0;
@@ -461,6 +465,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             byte[] buffer = new byte[1024]; //TODO: we should pool this and make it configurable or something
             while (force || !deflater.needsInput() || (shutdown && !deflater.finished())) {
                 int count = deflater.deflate(buffer, 0, buffer.length, force ? Deflater.SYNC_FLUSH: Deflater.NO_FLUSH);
+                Connectors.updateResponseBytesSent(exchange, count);
                 if (count != 0) {
                     int remaining = outputBuffer.remaining();
                     if (remaining > count) {

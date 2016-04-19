@@ -318,4 +318,8 @@ public class Connectors {
         }
         return true;
     }
+
+    public static void updateResponseBytesSent(HttpServerExchange exchange, long bytes) {
+        exchange.updateBytesSent(bytes);
+    }
 }
