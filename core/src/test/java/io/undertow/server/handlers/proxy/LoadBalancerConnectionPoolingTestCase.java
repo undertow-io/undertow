@@ -36,7 +36,7 @@ public class LoadBalancerConnectionPoolingTestCase {
     public static final int TTL = 2000;
     private static Undertow undertow;
 
-    private static final Set<ServerConnection> activeConnections = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private static final Set<ServerConnection> activeConnections = Collections.newSetFromMap(new ConcurrentHashMap<ServerConnection, Boolean>());
 
     static final String host = DefaultServer.getHostAddress("default");
     static int port = DefaultServer.getHostPort("default");

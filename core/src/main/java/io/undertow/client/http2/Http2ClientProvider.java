@@ -133,7 +133,7 @@ public class Http2ClientProvider implements ClientProvider {
         };
     }
 
-    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, URI uri, ByteBufferPool bufferPool, OptionMap options) {
+    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, final URI uri, final ByteBufferPool bufferPool, final OptionMap options) {
         return new ALPNClientSelector.ALPNProtocol(new ChannelListener<SslConnection>() {
             @Override
             public void handleEvent(SslConnection connection) {

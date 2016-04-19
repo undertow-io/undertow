@@ -43,7 +43,7 @@ public class JDK9ALPNClientProvider implements ALPNClientSelector.ClientSelector
 
 
     @Override
-    public void runAlpn(SslConnection connection, ChannelListener<SslConnection> fallback,final ClientCallback<ClientConnection> failedListener, ALPNClientSelector.ALPNProtocol... details) {
+    public void runAlpn(final SslConnection connection, final ChannelListener<SslConnection> fallback, final ClientCallback<ClientConnection> failedListener, ALPNClientSelector.ALPNProtocol... details) {
 
         final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(connection);
         final Map<String, ALPNClientSelector.ALPNProtocol> protocolMap = new HashMap<>();

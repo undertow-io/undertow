@@ -170,7 +170,7 @@ public class SpdyClientProvider implements ClientProvider {
         }
     }
 
-    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, URI uri, ByteBufferPool bufferPool, OptionMap options , String protocol) {
+    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, URI uri, final ByteBufferPool bufferPool, final OptionMap options , String protocol) {
         return new ALPNClientSelector.ALPNProtocol(new ChannelListener<SslConnection>() {
             @Override
             public void handleEvent(SslConnection connection) {
