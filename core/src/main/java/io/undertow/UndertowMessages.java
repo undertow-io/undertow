@@ -443,4 +443,7 @@ public interface UndertowMessages {
 
     @Message(id = 138, value = "Server not started")
     IllegalStateException serverNotStarted();
+
+    @Message(id = 139, value = "Exchange already complete")
+    IllegalStateException exchangeAlreadyComplete();
 }
