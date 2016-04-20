@@ -17,6 +17,7 @@
  */
 package io.undertow.servlet.handlers.security;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.SingleConstraintMatch;
@@ -53,6 +54,8 @@ public class ServletSecurityConstraintHandler implements HttpHandler {
         if (type == null || type.ordinal() < securityMatch.getTransportGuaranteeType().ordinal()) {
             servletRequestContext.setTransportGuarenteeType(securityMatch.getTransportGuaranteeType());
         }
+
+        UndertowLogger.SECURITY_LOGGER.debugf("Security constraints for request %s are %s", exchange.getRequestURI(), list);
         next.handleRequest(exchange);
     }
 }
