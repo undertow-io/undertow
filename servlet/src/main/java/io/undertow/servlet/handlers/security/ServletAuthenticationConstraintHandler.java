@@ -19,6 +19,7 @@ package io.undertow.servlet.handlers.security;
 
 import java.util.List;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.security.handlers.AuthenticationConstraintHandler;
@@ -66,7 +67,9 @@ public class ServletAuthenticationConstraintHandler extends AuthenticationConstr
                 authenticationRequired = true;
             }
         }
-
+        if(authenticationRequired) {
+            UndertowLogger.SECURITY_LOGGER.debugf("Authenticating required for request %s", exchange);
+        }
         return authenticationRequired;
     }
 
