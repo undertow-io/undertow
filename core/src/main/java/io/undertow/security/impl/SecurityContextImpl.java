@@ -17,6 +17,7 @@
  */
 package io.undertow.security.impl;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome;
@@ -42,6 +43,7 @@ import java.util.List;
  * @author Stuart Douglas
  */
 public class SecurityContextImpl extends AbstractSecurityContext implements AuthenticationMechanismContext {
+
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("MODIFY_UNDERTOW_SECURITY_CONTEXT");
 
@@ -81,6 +83,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
 
     @Override
     public boolean authenticate() {
+        UndertowLogger.SECURITY_LOGGER.debugf("Attempting to authenticate %s, authentication required: %s", exchange, isAuthenticationRequired());
         if(authenticationState == AuthenticationState.ATTEMPTED || (authenticationState == AuthenticationState.CHALLENGE_SENT && !exchange.isResponseStarted())) {
             //we are re-attempted, so we just reset the state
             //see UNDERTOW-263
@@ -122,6 +125,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
     }
 
     private AuthenticationState sendChallenges() {
+        UndertowLogger.SECURITY_LOGGER.debugf("Sending authentication challenge for %s", exchange);
         return new ChallengeSender(authMechanisms, exchange).transition();
     }
 
@@ -186,6 +190,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
     @Override
     public boolean login(final String username, final String password) {
 
+        UndertowLogger.SECURITY_LOGGER.debugf("Attempting programatic login for user %s for request %s", username, exchange);
 
         final Account account;
         if(System.getSecurityManager() == null) {
@@ -211,6 +216,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
 
     @Override
     public void logout() {
+        UndertowLogger.SECURITY_LOGGER.debugf("Logging out user %s for %s", getAuthenticatedAccount() , exchange);
         super.logout();
         this.authenticationState = AuthenticationState.NOT_ATTEMPTED;
     }
@@ -231,6 +237,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
                 final AuthenticationMechanism mechanism = currentMethod.item;
                 currentMethod = currentMethod.next;
                 AuthenticationMechanismOutcome outcome = mechanism.authenticate(exchange, SecurityContextImpl.this);
+                UndertowLogger.SECURITY_LOGGER.debugf("Authentication outcome was %s with method %s for %s", outcome, mechanism, exchange);
 
                 if (outcome == null) {
                     throw UndertowMessages.MESSAGES.authMechanismOutcomeNull();

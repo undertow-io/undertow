@@ -45,4 +45,11 @@ public class SingleConstraintMatch {
         return requiredRoles;
     }
 
+    @Override
+    public String toString() {
+        return "SingleConstraintMatch{" +
+                "emptyRoleSemantic=" + emptyRoleSemantic +
+                ", requiredRoles=" + requiredRoles +
+                '}';
+    }
 }

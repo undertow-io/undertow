@@ -18,6 +18,8 @@
 package io.undertow.security.impl;
 
 import static io.undertow.UndertowMessages.MESSAGES;
+
+import io.undertow.UndertowLogger;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.api.SecurityNotification;
@@ -82,6 +84,7 @@ public abstract class AbstractSecurityContext implements SecurityContext {
         this.account = account;
         this.mechanismName = mechanism;
 
+        UndertowLogger.SECURITY_LOGGER.debugf("Authenticated as %s, roles %s", account.getPrincipal().getName(), account.getRoles());
         sendNoticiation(new SecurityNotification(exchange, EventType.AUTHENTICATED, account, mechanism, programatic,
                 MESSAGES.userAuthenticated(account.getPrincipal().getName()), cachingRequired));
     }
