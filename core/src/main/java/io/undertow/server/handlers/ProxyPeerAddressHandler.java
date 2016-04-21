@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -73,9 +74,13 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             } else {
                 value = forwardedHost.substring(0, index);
             }
-            int port = 0;
+            int port = 80;
             if(forwardedPort != null) {
-                port = Integer.parseInt(forwardedPort);
+                try {
+                    port = Integer.parseInt(forwardedPort);
+                } catch (NumberFormatException ignore) {
+                    UndertowLogger.REQUEST_LOGGER.debugf("Cannot parse port: %s", forwardedPort);
+                }
             }
             exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
         }
