@@ -36,6 +36,7 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.websocket.DeploymentException;
 import javax.websocket.Extension;
+import javax.websocket.Extension.Parameter;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
 import java.net.InetSocketAddress;
@@ -88,7 +89,7 @@ public class Bootstrap implements ServletExtension {
         }
         List<Extension> extensions = new ArrayList<>();
         for(ExtensionHandshake e: info.getExtensions()) {
-            extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
+            extensions.add(new ExtensionImpl(e.getName(), Collections.<Parameter>emptyList()));
         }
         ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, threadSetupAction, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
         try {
