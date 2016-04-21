@@ -24,8 +24,10 @@ import static io.undertow.util.Headers.TRANSFER_ENCODING;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.client.ClientStatistics;
 import io.undertow.protocols.http2.Http2GoAwayStreamSourceChannel;
@@ -80,6 +82,7 @@ public class Http2ClientConnection implements ClientConnection {
     private boolean initialUpgradeRequest;
     private final String defaultHost;
     private final ClientStatistics clientStatistics;
+    private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
 
     public Http2ClientConnection(Http2Channel http2Channel, boolean initialUpgradeRequest, String defaultHost, ClientStatistics clientStatistics) {
 
@@ -92,6 +95,9 @@ public class Http2ClientConnection implements ClientConnection {
             @Override
             public void handleEvent(Http2Channel channel) {
                 ChannelListeners.invokeChannelListener(Http2ClientConnection.this, closeSetter.get());
+                for(ChannelListener<ClientConnection> listener : closeListeners) {
+                    listener.handleEvent(Http2ClientConnection.this);
+                }
             }
         });
         this.initialUpgradeRequest = initialUpgradeRequest;
@@ -340,6 +346,11 @@ public class Http2ClientConnection implements ClientConnection {
     @Override
     public boolean isUpgradeSupported() {
         return false;
+    }
+
+    @Override
+    public void addCloseListener(ChannelListener<ClientConnection> listener) {
+        closeListeners.add(listener);
     }
 
     private class Http2ReceiveListener implements ChannelListener<Http2Channel> {

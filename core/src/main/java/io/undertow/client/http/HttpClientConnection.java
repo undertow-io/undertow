@@ -71,7 +71,9 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static io.undertow.client.UndertowClientMessages.MESSAGES;
 import static io.undertow.util.Headers.CLOSE;
@@ -134,6 +136,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
      * The actual connection if this has been upgraded to h2c
      */
     private ClientConnection http2Delegate;
+    private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
 
     HttpClientConnection(final StreamConnection connection, final OptionMap options, final ByteBufferPool bufferPool) {
 
@@ -172,6 +175,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                         pooledBuffer.close();
                     }
                 } catch (Throwable ignored){}
+
+                for(ChannelListener<ClientConnection> listener : closeListeners) {
+                    listener.handleEvent(HttpClientConnection.this);
+                }
             }
         });
     }
@@ -292,6 +299,11 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             return false;
         }
         return true;
+    }
+
+    @Override
+    public void addCloseListener(ChannelListener<ClientConnection> listener) {
+        closeListeners.add(listener);
     }
 
     @Override

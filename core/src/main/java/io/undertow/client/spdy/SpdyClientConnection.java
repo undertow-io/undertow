@@ -46,8 +46,10 @@ import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static io.undertow.util.Headers.CONTENT_LENGTH;
 import static io.undertow.util.Headers.TRANSFER_ENCODING;
@@ -71,6 +73,7 @@ public class SpdyClientConnection implements ClientConnection {
     private final Map<Integer, SpdyClientExchange> currentExchanges = new ConcurrentHashMap<>();
 
     private final ClientStatistics clientStatistics;
+    private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
     public SpdyClientConnection(SpdyChannel spdyChannel, ClientStatistics clientStatistics) {
         this.spdyChannel = spdyChannel;
         this.clientStatistics = clientStatistics;
@@ -80,6 +83,9 @@ public class SpdyClientConnection implements ClientConnection {
             @Override
             public void handleEvent(SpdyChannel channel) {
                 ChannelListeners.invokeChannelListener(SpdyClientConnection.this, closeSetter.get());
+                for(ChannelListener<ClientConnection> listener : closeListeners) {
+                    listener.handleEvent(SpdyClientConnection.this);
+                }
             }
         });
     }
@@ -269,6 +275,11 @@ public class SpdyClientConnection implements ClientConnection {
     @Override
     public boolean isUpgradeSupported() {
         return false;
+    }
+
+    @Override
+    public void addCloseListener(ChannelListener<ClientConnection> listener) {
+        closeListeners.add(listener);
     }
 
     private class SpdyReceiveListener implements ChannelListener<SpdyChannel> {
