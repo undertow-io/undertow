@@ -101,10 +101,6 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
             throw new ClosedChannelException();
         }
         expireTime = currentTime + timeout;
-        XnioExecutor.Key key = handle;
-        if (key == null) {
-            handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
-        }
     }
 
     @Override
@@ -182,8 +178,11 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
         }
     }
 
-    private Integer getTimeout() throws IOException {
-        Integer timeout = connection.getSourceChannel().getOption(Options.WRITE_TIMEOUT);
+    private Integer getTimeout() {
+        Integer timeout = 0;
+        try {
+            timeout = connection.getSourceChannel().getOption(Options.WRITE_TIMEOUT);
+        } catch (IOException ignore) {}
         Integer idleTimeout = openListener.getUndertowOptions().get(UndertowOptions.IDLE_TIMEOUT);
         if ((timeout == null || timeout <= 0) && idleTimeout != null) {
             timeout = idleTimeout;
@@ -191,6 +190,7 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
             timeout = Math.min(timeout, idleTimeout);
         }
         return timeout;
+
     }
 
     @Override
@@ -208,6 +208,41 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
         if(handle != null) {
             handle.remove();
             handle = null;
+        }
+    }
+
+    @Override
+    public void resumeWrites() {
+        super.resumeWrites();
+        handleResumeTimeout();
+    }
+
+    @Override
+    public void suspendWrites() {
+        super.suspendWrites();
+        XnioExecutor.Key handle = this.handle;
+        if(handle != null) {
+            handle.remove();
+            this.handle = null;
+        }
+    }
+
+    @Override
+    public void wakeupWrites() {
+        super.wakeupWrites();
+        handleResumeTimeout();
+    }
+
+    private void handleResumeTimeout() {
+        Integer timeout = getTimeout();
+        if (timeout == null || timeout <= 0) {
+            return;
+        }
+        long currentTime = System.currentTimeMillis();
+        expireTime = currentTime + timeout;
+        XnioExecutor.Key key = handle;
+        if (key == null) {
+            handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
         }
     }
 }

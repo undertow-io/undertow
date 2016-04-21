@@ -40,6 +40,7 @@ import org.xnio.channels.StreamSourceChannel;
  * @author Stuart Douglas
  * @see org.xnio.Options#WRITE_TIMEOUT
  */
+@Deprecated
 public final class WriteTimeoutStreamSinkChannel extends DelegatingStreamSinkChannel<WriteTimeoutStreamSinkChannel> {
 
     private int writeTimeout;
