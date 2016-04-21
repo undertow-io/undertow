@@ -125,10 +125,6 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
             throw new ClosedChannelException();
         }
         expireTime = currentTime + timeout;
-        XnioExecutor.Key key = handle;
-        if (key == null) {
-            handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
-        }
     }
 
     @Override
@@ -180,8 +176,11 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
         }
     }
 
-    private Integer getTimeout() throws IOException {
-        Integer timeout = connection.getSourceChannel().getOption(Options.READ_TIMEOUT);
+    private Integer getTimeout() {
+        Integer timeout = 0;
+        try {
+            timeout = connection.getSourceChannel().getOption(Options.READ_TIMEOUT);
+        } catch (IOException ignore) {}
         Integer idleTimeout = openListener.getUndertowOptions().get(UndertowOptions.IDLE_TIMEOUT);
         if ((timeout == null || timeout <= 0) && idleTimeout != null) {
             timeout = idleTimeout;
@@ -204,5 +203,38 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
         }
     }
 
+    @Override
+    public void resumeReads() {
+        super.resumeReads();
+        handleResumeTimeout();
+    }
 
+    @Override
+    public void suspendReads() {
+        super.suspendReads();
+        XnioExecutor.Key handle = this.handle;
+        if(handle != null) {
+            handle.remove();
+            this.handle = null;
+        }
+    }
+
+    @Override
+    public void wakeupReads() {
+        super.wakeupReads();
+        handleResumeTimeout();
+    }
+
+    private void handleResumeTimeout() {
+        Integer timeout = getTimeout();
+        if (timeout == null || timeout <= 0) {
+            return;
+        }
+        long currentTime = System.currentTimeMillis();
+        expireTime = currentTime + timeout;
+        XnioExecutor.Key key = handle;
+        if (key == null) {
+            handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
+        }
+    }
 }
