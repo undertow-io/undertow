@@ -113,4 +113,11 @@ public interface ClientConnection extends Channel {
     ClientStatistics getStatistics();
 
     boolean isUpgradeSupported();
+
+    /**
+     * Adds a close listener, than will be invoked with the connection is closed
+     *
+     * @param listener The close listener
+     */
+    void addCloseListener(ChannelListener<ClientConnection> listener);
 }

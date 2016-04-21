@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.client.ClientStatistics;
 import org.xnio.ChannelExceptionHandler;
@@ -95,6 +97,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     private final ChannelListener.SimpleSetter<AjpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
     private final ClientStatistics clientStatistics;
+    private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
 
     AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final ByteBufferPool bufferPool, ClientStatistics clientStatistics) {
         this.clientStatistics = clientStatistics;
@@ -106,6 +109,9 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             @Override
             public void handleEvent(AjpClientChannel channel) {
                 ChannelListeners.invokeChannelListener(AjpClientConnection.this, closeSetter.get());
+                for(ChannelListener<ClientConnection> listener : closeListeners) {
+                    listener.handleEvent(AjpClientConnection.this);
+                }
             }
         });
         connection.getReceiveSetter().set(new ClientReceiveListener());
@@ -197,6 +203,11 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     @Override
     public boolean isUpgradeSupported() {
         return false;
+    }
+
+    @Override
+    public void addCloseListener(ChannelListener<ClientConnection> listener) {
+        closeListeners.add(listener);
     }
 
     @Override
