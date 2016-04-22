@@ -24,6 +24,9 @@ import io.undertow.attribute.ReadOnlyAttributeException;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * An attribute in the servlet request
  *
@@ -45,6 +48,11 @@ public class ServletRequestAttribute implements ExchangeAttribute {
             if (result != null) {
                 return result.toString();
             }
+        } else {
+            Map<String, String> attrs = exchange.getAttachment(HttpServerExchange.REQUEST_ATTRIBUTES);
+            if(attrs != null) {
+                return attrs.get(attributeName);
+            }
         }
         return null;
     }
@@ -54,6 +62,12 @@ public class ServletRequestAttribute implements ExchangeAttribute {
         ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         if (context != null) {
             context.getServletRequest().setAttribute(attributeName, newValue);
+        } else {
+            Map<String, String> attrs = exchange.getAttachment(HttpServerExchange.REQUEST_ATTRIBUTES);
+            if(attrs == null) {
+                exchange.putAttachment(HttpServerExchange.REQUEST_ATTRIBUTES, attrs = new HashMap<>());
+            }
+            attrs.put(attributeName, newValue);
         }
     }
 
