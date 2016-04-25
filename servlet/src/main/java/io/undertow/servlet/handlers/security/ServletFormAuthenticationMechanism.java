@@ -100,7 +100,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         exchange.getResponseHeaders().add(Headers.PRAGMA, "no-cache");
         exchange.getResponseHeaders().add(Headers.EXPIRES, "0");
 
-        final FormResponseWrapper respWrapper = resp instanceof HttpServletResponse
+        final FormResponseWrapper respWrapper = exchange.getStatusCode() != OK && resp instanceof HttpServletResponse
                 ? new FormResponseWrapper((HttpServletResponse) resp) : null;
 
         try {
@@ -159,23 +159,17 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
         private int status = OK;
 
-        private FormResponseWrapper(HttpServletResponse response) {
-            super(response);
+        private FormResponseWrapper(final HttpServletResponse wrapped) {
+            super(wrapped);
         }
 
         @Override
         public void setStatus(int sc, String sm) {
-            if (super.getStatus() == OK) {
-                super.setStatus(sc, sm);
-            }
             status = sc;
         }
 
         @Override
         public void setStatus(int sc) {
-            if (super.getStatus() == OK) {
-                super.setStatus(sc);
-            }
             status = sc;
         }
 
