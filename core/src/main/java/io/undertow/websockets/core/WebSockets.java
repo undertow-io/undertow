@@ -425,9 +425,7 @@ public class WebSockets {
                             if (callback != null) {
                                 callback.onError(wsChannel, context, exception);
                             }
-                            if (type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
-                                IoUtils.safeClose(wsChannel);
-                            }
+                            IoUtils.safeClose(channel, wsChannel);
                         }
                     }
             ));
