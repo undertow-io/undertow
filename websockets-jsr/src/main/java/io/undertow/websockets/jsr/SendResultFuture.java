@@ -40,7 +40,7 @@ final class SendResultFuture<T> implements Future<Void>, WebSocketCallback<T> {
     @Override
     public synchronized void complete(WebSocketChannel channel, T context) {
         if (done) {
-            throw new IllegalStateException();
+            return;
         }
 
         if (waiters > 0) {
@@ -52,7 +52,7 @@ final class SendResultFuture<T> implements Future<Void>, WebSocketCallback<T> {
     @Override
     public synchronized void onError(WebSocketChannel channel, T context, Throwable throwable) {
         if (done) {
-            throw new IllegalStateException();
+            return;
         }
         exception = throwable;
         done = true;
