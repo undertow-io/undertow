@@ -81,6 +81,19 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         Assert.assertTrue(resultString.toString().contains("server2"));
     }
 
+    @Test
+    public void testUrlEncoding() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/url/foo=bar");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("/url/foo=bar", HttpClientUtils.readResponse(result));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 
     @Test
     public void testLoadSharedWithServerShutdown() throws Exception {
@@ -176,6 +189,12 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         return jvmRoute("JSESSIONID", s1, path()
                 .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                 .addPrefixPath("/name", new StringSendHandler(server1))
+                .addPrefixPath("/url", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send(exchange.getRequestURI());
+                    }
+                })
                 .addPrefixPath("/path", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {

@@ -72,14 +72,12 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -360,46 +358,25 @@ public final class ProxyHandler implements HttpHandler {
             final ClientRequest request = new ClientRequest();
 
             StringBuilder requestURI = new StringBuilder();
-            try {
-                if (exchange.getRelativePath().isEmpty()) {
-                    requestURI.append(encodeUrlPart(clientConnection.getTargetPath(), exchange));
-                } else {
-                    if (clientConnection.getTargetPath().endsWith("/")) {
-                        requestURI.append(clientConnection.getTargetPath().substring(0, clientConnection.getTargetPath().length() - 1));
-                        requestURI.append(encodeUrlPart(exchange.getRelativePath(), exchange));
-                    } else {
-                        requestURI = requestURI.append(clientConnection.getTargetPath());
-                        requestURI.append(encodeUrlPart(exchange.getRelativePath(), exchange));
-                    }
-                }
-                boolean first = true;
-                if (!exchange.getPathParameters().isEmpty()) {
-                    requestURI.append(';');
-                    for (Map.Entry<String, Deque<String>> entry : exchange.getPathParameters().entrySet()) {
-                        if (first) {
-                            first = false;
-                        } else {
-                            requestURI.append('&');
-                        }
-                        for (String val : entry.getValue()) {
-                            requestURI.append(URLEncoder.encode(entry.getKey(), UTF_8));
-                            requestURI.append('=');
-                            requestURI.append(URLEncoder.encode(val, UTF_8));
-                        }
-                    }
-                }
+            if(!clientConnection.getTargetPath().isEmpty() && !clientConnection.getTargetPath().equals("/")) {
+                requestURI.append(clientConnection.getTargetPath());
+            }
 
-                String qs = exchange.getQueryString();
-                if (qs != null && !qs.isEmpty()) {
-                    requestURI.append('?');
-                    requestURI.append(qs);
+            if(exchange.isHostIncludedInRequestURI()) {
+                int uriPart = exchange.getRequestURI().indexOf("//");
+                if(uriPart == -1) {
+                    requestURI.append(exchange.getRequestURI());
+                } else {
+                    uriPart = exchange.getRequestURI().indexOf("/", uriPart);
+                    requestURI.append(exchange.getRequestURI().substring(uriPart));
                 }
-            } catch (UnsupportedEncodingException e) {
-                //impossible
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                exchange.endExchange();
-                return;
+            } else {
+                requestURI.append(exchange.getRequestURI());
+            }
+            String qs = exchange.getQueryString();
+            if (qs != null && !qs.isEmpty()) {
+                requestURI.append('?');
+                requestURI.append(qs);
             }
             request.setPath(requestURI.toString())
                     .setMethod(exchange.getRequestMethod());
