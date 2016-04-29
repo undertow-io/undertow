@@ -103,6 +103,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private static final int STATE_CLOSED = 1;
     private static final int STATE_WRITES_SHUTDOWN = 1 << 1;
     private static final int STATE_FIRST_DATA_WRITTEN = 1 << 2;
+    private static final int STATE_PRE_WRITE_CALLED = 1 << 3;
 
     private volatile boolean writesResumed;
     @SuppressWarnings("unused")
@@ -170,6 +171,17 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected PooledByteBuffer createFrameFooter() {
         return null;
+    }
+
+    final void preWrite() {
+        if(allAreClear(state, STATE_PRE_WRITE_CALLED)) {
+            state |= STATE_PRE_WRITE_CALLED;
+            body = preWriteTransform(body);
+        }
+    }
+
+    protected PooledByteBuffer preWriteTransform(PooledByteBuffer body) {
+        return body;
     }
 
     @Override
@@ -607,16 +619,19 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 if(body != null) {
                     body.close();
                     body = null;
+                    state &= ~STATE_PRE_WRITE_CALLED;
                 }
             } else if(body != null){
                 body.close();
                 body = null;
+                state &= ~STATE_PRE_WRITE_CALLED;
             }
             if (channelClosed) {
                 fullyFlushed = true;
                 if(body != null) {
                     body.close();
                     body = null;
+                    state &= ~STATE_PRE_WRITE_CALLED;
                 }
             } else if (body != null) {
                 // We still have a body, but since we just flushed, we transfer it to the write buffer.
@@ -624,6 +639,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 body.getBuffer().compact();
                 writeBuffer = body;
                 body = null;
+                state &= ~STATE_PRE_WRITE_CALLED;
             }
 
             if (header.getByteBuffer() != null) {

@@ -575,6 +575,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             int toSend = 0;
             while (!newFrames.isEmpty()) {
                 S frame = newFrames.poll();
+                frame.preWrite();
                 if (framePriority.insertFrame(frame, pendingFrames)) {
                     if (!heldFrames.isEmpty()) {
                         framePriority.frameAdded(frame, pendingFrames, heldFrames);

@@ -60,11 +60,11 @@ public class CompositeExtensionFunction implements ExtensionFunction {
     }
 
     @Override
-    public PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, WebSocketChannel channel, boolean lastFragmentOfFrame) throws IOException {
+    public PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, WebSocketChannel channel, boolean lastFragementOfMessage) throws IOException {
         PooledByteBuffer result = pooledBuffer;
         // TODO do we iterate over functions in the opposite order when reading vs writing?
         for (ExtensionFunction delegate : delegates) {
-            result = delegate.transformForRead(result, channel, lastFragmentOfFrame);
+            result = delegate.transformForRead(result, channel, lastFragementOfMessage);
         }
         return result;
     }

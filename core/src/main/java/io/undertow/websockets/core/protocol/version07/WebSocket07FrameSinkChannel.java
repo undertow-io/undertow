@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
@@ -156,13 +157,17 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     }
 
     @Override
-    public boolean sendInternal(PooledByteBuffer pooled) throws IOException {
-        // Check that the underlying write will succeed prior to applying the function
-        // Could corrupt LZW stream if not
-        if(safeToSend()) {
-            return super.sendInternal(extensionFunction.transformForWrite(pooled, getWebSocketChannel()));
+    protected PooledByteBuffer preWriteTransform(PooledByteBuffer body) {
+        try {
+            getWebSocketChannel().setExtensionSinkChannel(this);
+            getWebSocketChannel().setExtensionSinkLastFrame(this.isFinalFrameQueued());
+            return super.preWriteTransform(extensionFunction.transformForWrite(body, this.getWebSocketChannel()));
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            markBroken();
+            throw new RuntimeException(e);
+        } finally {
+            getWebSocketChannel().setExtensionSinkChannel(null);
         }
-
-        return false;
     }
 }

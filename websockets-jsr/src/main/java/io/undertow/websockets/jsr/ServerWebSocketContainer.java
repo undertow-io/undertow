@@ -138,7 +138,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, ByteBufferPool bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler) {
-        this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, clientBindAddress, reconnectHandler, Collections.emptyList());
+        this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupAction, dispatchToWorker, clientBindAddress, reconnectHandler, Collections.<Extension>emptyList());
     }
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, ByteBufferPool bufferPool, ThreadSetupAction threadSetupAction, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler, List<Extension> installedExtensions) {

@@ -56,7 +56,7 @@ public class PerMessageDeflateHandshake implements ExtensionHandshake {
     /**
      * Default configuration for DEFLATE algorithm implementation
      */
-    public static final int DEFAULT_DEFLATER = Deflater.BEST_SPEED;
+    public static final int DEFAULT_DEFLATER = Deflater.DEFAULT_COMPRESSION;
 
     public PerMessageDeflateHandshake() {
         this(false);

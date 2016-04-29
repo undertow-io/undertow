@@ -79,6 +79,9 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * Represents all web socket channels that are attached to the same endpoint.
      */
     private final Set<WebSocketChannel> peerConnections;
+    private StreamSourceFrameChannel extensionSourceChannel;
+    private StreamSinkFrameChannel extensionSinkChannel;
+    private boolean extensionSinkLastFrame;
 
     /**
      * Create a new {@link WebSocketChannel}
@@ -395,6 +398,54 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      */
     public boolean isCloseInitiatedByRemotePeer() {
         return closeInitiatedByRemotePeer;
+    }
+
+    /**
+     * DO NOT USE, introduced to work around an API limitation in 1.3.x, will be removed in 1.4.x
+     */
+    @Deprecated
+    public StreamSourceFrameChannel getExtensionSourceChannel() {
+        return extensionSourceChannel;
+    }
+
+    /**
+     * DO NOT USE, introduced to work around an API limitation in 1.3.x, will be removed in 1.4.x
+     */
+    @Deprecated
+    public void setExtensionSourceChannel(StreamSourceFrameChannel extensionSourceChannel) {
+        this.extensionSourceChannel = extensionSourceChannel;
+    }
+
+    /**
+     * DO NOT USE, introduced to work around an API limitation in 1.3.x, will be removed in 1.4.x
+     */
+    @Deprecated
+    public StreamSinkFrameChannel getExtensionSinkChannel() {
+        return extensionSinkChannel;
+    }
+
+    /**
+     * DO NOT USE, introduced to work around an API limitation in 1.3.x, will be removed in 1.4.x
+     */
+    @Deprecated
+    public void setExtensionSinkChannel(StreamSinkFrameChannel extensionSinkChannel) {
+        this.extensionSinkChannel = extensionSinkChannel;
+    }
+
+    /**
+     * DO NOT USE, introduced to work around an API limitation in 1.3.x, will be removed in 1.4.x
+     */
+    @Deprecated
+    public boolean isExtensionSinkLastFrame() {
+        return extensionSinkLastFrame;
+    }
+
+    /**
+     * DO NOT USE, introduced to work around an API limitation in 1.3.x, will be removed in 1.4.x
+     */
+    @Deprecated
+    public void setExtensionSinkLastFrame(boolean extensionSinkLastFrame) {
+        this.extensionSinkLastFrame = extensionSinkLastFrame;
     }
 
     /**

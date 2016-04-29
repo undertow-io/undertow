@@ -88,7 +88,7 @@ public class Bootstrap implements ServletExtension {
         }
         List<Extension> extensions = new ArrayList<>();
         for(ExtensionHandshake e: info.getExtensions()) {
-            extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
+            extensions.add(new ExtensionImpl(e.getName(), Collections.<Extension.Parameter>emptyList()));
         }
         ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, threadSetupAction, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
         try {

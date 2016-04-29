@@ -20,6 +20,8 @@ package io.undertow.websockets.extensions;
 
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.util.ImmediatePooledByteBuffer;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
@@ -52,6 +54,7 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
     private final boolean decompressContextTakeover;
     private final Inflater decompress;
     private final Deflater compress;
+    private StreamSourceFrameChannel currentReadChannel;
 
     /**
      * Create a new {@code PerMessageDeflateExtension} instance.
@@ -79,7 +82,9 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
     }
 
     @Override
-    public synchronized PooledByteBuffer transformForWrite(PooledByteBuffer pooledBuffer, WebSocketChannel channel) throws IOException {
+    public synchronized PooledByteBuffer transformForWrite(PooledByteBuffer pooledBuffer, WebSocketChannel wsChannel) throws IOException {
+        StreamSinkFrameChannel channel = wsChannel.getExtensionSinkChannel();
+        boolean lastFrame = wsChannel.isExtensionSinkLastFrame();
         ByteBuffer buffer = pooledBuffer.getBuffer();
         if (buffer.hasArray()) {
             compress.setInput(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
@@ -87,21 +92,23 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
             compress.setInput(Buffers.take(buffer));
         }
 
-        PooledByteBuffer output = allocateBufferWithArray(channel, 0); // first pass
+        PooledByteBuffer output = allocateBufferWithArray(channel.getWebSocketChannel(), 0); // first pass
         ByteBuffer outputBuffer = output.getBuffer();
 
+        boolean onceOnly = true;
         try {
-            while (!compress.needsInput() && !compress.finished()) {
+            while ((!compress.needsInput() && !compress.finished()) || !outputBuffer.hasRemaining() || (onceOnly && lastFrame)) {
+                onceOnly = false;
+                //we need the hasRemaining check, because if the inflater fails to flush needsInput() will return false but it may have flushed an incomplete deflate block
                 if (!outputBuffer.hasRemaining()) {
-                    output = largerBuffer(output, channel, outputBuffer.capacity() * 2);
+                    output = largerBuffer(output, channel.getWebSocketChannel(), outputBuffer.capacity() * 2);
                     outputBuffer = output.getBuffer();
                 }
 
                 int n = compress.deflate(
                         outputBuffer.array(),
                         outputBuffer.arrayOffset() + outputBuffer.position(),
-                        outputBuffer.remaining(),
-                        Deflater.SYNC_FLUSH);
+                        outputBuffer.remaining(), lastFrame ?  Deflater.SYNC_FLUSH : Deflater.NO_FLUSH );
                 outputBuffer.position(outputBuffer.position() + n);
             }
         } finally {
@@ -109,18 +116,13 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
             pooledBuffer.close();
         }
 
-        if (!outputBuffer.hasRemaining()) {
-            output = largerBuffer(output, channel, outputBuffer.capacity() + 1);
-            outputBuffer = output.getBuffer();
+        if(lastFrame) {
+            outputBuffer.put((byte) 0);
+            if (!compressContextTakeover) {
+                compress.reset();
+            }
         }
-
-        outputBuffer.put((byte) 0);
         outputBuffer.flip();
-
-        if (!compressContextTakeover) {
-            compress.reset();
-        }
-
         return output;
     }
 
@@ -153,7 +155,19 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
     }
 
     @Override
-    public synchronized PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, WebSocketChannel channel, boolean lastFragmentOfFrame) throws IOException {
+    public synchronized PooledByteBuffer transformForRead(PooledByteBuffer pooledBuffer, WebSocketChannel wsChannel, boolean lastFragmentOfMessage) throws IOException {
+        StreamSourceFrameChannel channel = wsChannel.getExtensionSourceChannel();
+        if ((channel.getRsv() & 4) == 0) {
+            //rsv bit not set, this message is not compressed
+            return pooledBuffer;
+        }
+        PooledByteBuffer output = allocateBufferWithArray(channel.getWebSocketChannel(), 0); // first pass
+        if (currentReadChannel != null && currentReadChannel != channel) {
+            //new channel, we did not get a last fragment message which can happens sometimes
+
+            decompress.setInput(TAIL);
+            output = decompress(channel.getWebSocketChannel(), output);
+        }
         ByteBuffer buffer = pooledBuffer.getBuffer();
 
         if (buffer.hasArray()) {
@@ -161,27 +175,22 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
         } else {
             decompress.setInput(Buffers.take(buffer));
         }
-
-        PooledByteBuffer output = allocateBufferWithArray(channel, 0); // first pass
-
         try {
-            output = decompress(channel, output);
+            output = decompress(channel.getWebSocketChannel(), output);
         } finally {
             // Free the buffer AFTER decompression so it doesn't get re-used out from under us
             pooledBuffer.close();
         }
 
-        if (lastFragmentOfFrame) {
+        if (lastFragmentOfMessage) {
             decompress.setInput(TAIL);
-            output = decompress(channel, output);
+            output = decompress(channel.getWebSocketChannel(), output);
+            currentReadChannel = null;
+        } else {
+            currentReadChannel = channel;
         }
 
         output.getBuffer().flip();
-
-        if (lastFragmentOfFrame && !decompressContextTakeover) {
-            decompress.reset();
-        }
-
         return output;
     }
 
