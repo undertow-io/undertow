@@ -347,7 +347,9 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             } catch (Exception e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
                 safeClose(connection);
-                currentRequest.setFailed(e instanceof IOException ? (IOException) e : new IOException(e));
+                if(currentRequest != null) {
+                    currentRequest.setFailed(e instanceof IOException ? (IOException) e : new IOException(e));
+                }
             }
         }
     }
