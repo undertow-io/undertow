@@ -88,6 +88,8 @@ class MCMPAdvertiseTask implements Runnable {
             }
         }
         final MCMPAdvertiseTask task = new MCMPAdvertiseTask(container, config, channel);
+        //execute immediately, so there is no delay before load balancing starts working
+        channel.getIoThread().execute(task);
         channel.getIoThread().executeAtInterval(task, config.getAdvertiseFrequency(), TimeUnit.MILLISECONDS);
     }
 
