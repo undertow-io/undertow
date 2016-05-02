@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.handlers.security;
 
+import static io.undertow.util.StatusCodes.OK;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.idm.IdentityManager;
@@ -36,6 +38,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 import java.io.IOException;
 import java.security.AccessController;
@@ -97,15 +100,18 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         exchange.getResponseHeaders().add(Headers.PRAGMA, "no-cache");
         exchange.getResponseHeaders().add(Headers.EXPIRES, "0");
 
+        final FormResponseWrapper respWrapper = exchange.getStatusCode() != OK && resp instanceof HttpServletResponse
+                ? new FormResponseWrapper((HttpServletResponse) resp) : null;
 
         try {
-            disp.forward(req, resp);
+            disp.forward(req, respWrapper != null ? respWrapper : resp);
         } catch (ServletException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return null;
+
+        return respWrapper != null ? respWrapper.getStatus() : null;
     }
 
     @Override
@@ -145,6 +151,31 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
                     throw new RuntimeException(e);
                 }
             }
+        }
+
+    }
+
+    private static class FormResponseWrapper extends HttpServletResponseWrapper {
+
+        private int status = OK;
+
+        private FormResponseWrapper(final HttpServletResponse wrapped) {
+            super(wrapped);
+        }
+
+        @Override
+        public void setStatus(int sc, String sm) {
+            status = sc;
+        }
+
+        @Override
+        public void setStatus(int sc) {
+            status = sc;
+        }
+
+        @Override
+        public int getStatus() {
+            return status;
         }
 
     }
