@@ -52,6 +52,8 @@ public class ServerFixedLengthStreamSinkConduit extends AbstractFixedLengthStrea
 
     @Override
     protected void channelFinished() {
-        Connectors.terminateResponse(exchange);
+        if(exchange != null) {
+            Connectors.terminateResponse(exchange);
+        }
     }
 }
