@@ -22,6 +22,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 public class DefaultByteBufferPool implements ByteBufferPool {
 
     private final ThreadLocal<ThreadLocalData> threadLocalCache = new ThreadLocal<>();
-    private final List<ThreadLocalData> threadLocalDataList = Collections.synchronizedList(new ArrayList<ThreadLocalData>());
+    private final List<WeakReference<ThreadLocalData>> threadLocalDataList = Collections.synchronizedList(new ArrayList<WeakReference<ThreadLocalData>>());
     private final ConcurrentLinkedQueue<ByteBuffer> queue = new ConcurrentLinkedQueue<>();
 
     private final boolean direct;
@@ -111,7 +112,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             } else {
                 local = new ThreadLocalData();
                 threadLocalCache.set(local);
-                threadLocalDataList.add(local);
+                threadLocalDataList.add(new WeakReference<>(local));
             }
         }
         if (buffer == null) {
@@ -162,8 +163,13 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         }
         closed = true;
         queue.clear();
-        for(ThreadLocalData local : threadLocalDataList) {
-            local.buffers.clear();
+
+        for (WeakReference<ThreadLocalData> ref : threadLocalDataList) {
+            ThreadLocalData local = ref.get();
+            if (local != null) {
+                local.buffers.clear();
+            }
+            ref.clear();
         }
     }
 
