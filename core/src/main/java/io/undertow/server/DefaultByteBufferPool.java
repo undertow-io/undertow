@@ -178,6 +178,10 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                 }
             }
         }
+        queueIfUnderMax(buffer);
+    }
+
+    private void queueIfUnderMax(ByteBuffer buffer) {
         int size;
         do {
             size = currentQueueLength;
@@ -270,6 +274,13 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         protected void finalize() throws Throwable {
             super.finalize();
             reclaimedThreadLocalsUpdater.incrementAndGet(DefaultByteBufferPool.this);
+            if (buffers != null) {
+                // Recycle them
+                ByteBuffer buffer;
+                while ((buffer = buffers.poll()) != null) {
+                    queueIfUnderMax(buffer);
+                }
+            }
         }
     }
 
