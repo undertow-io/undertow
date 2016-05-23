@@ -290,7 +290,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
 
                 if (result.isChallengeSent()) {
                     Integer desiredCode = result.getDesiredResponseCode();
-                    if (desiredCode != null && chosenStatusCode == null || chosenStatusCode.equals(StatusCodes.OK)) {
+                    if (desiredCode != null && (chosenStatusCode == null || chosenStatusCode.equals(StatusCodes.OK))) {
                         chosenStatusCode = desiredCode;
                         if (chosenStatusCode.equals(StatusCodes.OK) == false) {
                             if(!exchange.isResponseStarted()) {
