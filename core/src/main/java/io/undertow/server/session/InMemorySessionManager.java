@@ -478,6 +478,9 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
         @Override
         public Object setAttribute(final String name, final Object value) {
+            if (value == null) {
+                return removeAttribute(name);
+            }
             if (invalid) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
