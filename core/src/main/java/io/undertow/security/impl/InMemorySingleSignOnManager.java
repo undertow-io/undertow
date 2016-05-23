@@ -28,12 +28,15 @@ import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
 import io.undertow.util.CopyOnWriteMap;
+import org.jboss.logging.Logger;
 
 /**
  * @author Stuart Douglas
  * @author Paul Ferraro
  */
 public class InMemorySingleSignOnManager implements SingleSignOnManager {
+
+    private static final Logger log = Logger.getLogger(InMemorySingleSignOnManager.class);
 
     private static final SecureRandomSessionIdGenerator SECURE_RANDOM_SESSION_ID_GENERATOR = new SecureRandomSessionIdGenerator();
 
@@ -49,11 +52,17 @@ public class InMemorySingleSignOnManager implements SingleSignOnManager {
         String id = SECURE_RANDOM_SESSION_ID_GENERATOR.createSessionId();
         SingleSignOn entry = new SimpleSingleSignOnEntry(id, account, mechanism);
         this.ssoEntries.put(id, entry);
+        if(log.isTraceEnabled()) {
+            log.tracef("Creating SSO ID %s for Principal %s and Roles %s.", id, account.getPrincipal().getName(), account.getRoles().toString());
+        }
         return entry;
     }
 
     @Override
     public void removeSingleSignOn(SingleSignOn sso) {
+        if(log.isTraceEnabled()) {
+            log.tracef("Removing SSO ID %s.", sso.getId());
+        }
         this.ssoEntries.remove(sso.getId());
     }
 
