@@ -276,6 +276,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
         private final HttpServerExchange exchange;
 
         private Integer chosenStatusCode = null;
+        private boolean challengeSent = false;
 
         private ChallengeSender(Node<AuthenticationMechanism> currentMethod, final HttpServerExchange exchange) {
             this.exchange = exchange;
@@ -289,8 +290,9 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
                 ChallengeResult result = mechanism.sendChallenge(exchange, SecurityContextImpl.this);
 
                 if (result.isChallengeSent()) {
+                    challengeSent = true;
                     Integer desiredCode = result.getDesiredResponseCode();
-                    if (desiredCode != null && chosenStatusCode == null || chosenStatusCode.equals(StatusCodes.OK)) {
+                    if (desiredCode != null && (chosenStatusCode == null || chosenStatusCode.equals(StatusCodes.OK))) {
                         chosenStatusCode = desiredCode;
                         if (chosenStatusCode.equals(StatusCodes.OK) == false) {
                             if(!exchange.isResponseStarted()) {
@@ -307,8 +309,10 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
                 if(!exchange.isResponseStarted()) {
                     // Iterated all mechanisms, if OK it will not be set yet.
                     if (chosenStatusCode == null) {
-                        // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
-                        exchange.setStatusCode(StatusCodes.FORBIDDEN);
+                        if (challengeSent == false) {
+                            // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
+                            exchange.setStatusCode(StatusCodes.FORBIDDEN);
+                        }
                     } else if (chosenStatusCode.equals(StatusCodes.OK)) {
                         exchange.setStatusCode(chosenStatusCode);
                     }
