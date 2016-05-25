@@ -44,7 +44,8 @@ public class ChannelFunctionFileChannel extends FileChannel  {
 
     @Override
     public FileChannel position(long newPosition) throws IOException {
-        return new ChannelFunctionFileChannel(channel.position(newPosition), functions);
+        channel.position(newPosition);
+        return this;
     }
 
     @Override
@@ -54,7 +55,8 @@ public class ChannelFunctionFileChannel extends FileChannel  {
 
     @Override
     public  FileChannel truncate(long size) throws IOException {
-        return new ChannelFunctionFileChannel(channel.truncate(size), functions);
+        channel.truncate(size);
+        return this;
     }
 
     @Override
