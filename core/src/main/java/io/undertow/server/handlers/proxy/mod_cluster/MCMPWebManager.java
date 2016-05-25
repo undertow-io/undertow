@@ -18,6 +18,14 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import io.undertow.io.Sender;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
+
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -26,14 +34,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
-import io.undertow.io.Sender;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
-import io.undertow.util.StatusCodes;
 
 /**
  * The mod cluster manager web frontend.
@@ -114,7 +114,7 @@ class MCMPWebManager extends MCMPHandler {
                             String srange = params.get("Range").getFirst();
                             final RequestData data = buildRequestData(exchange, params);
                             if (srange.equals("NODE")) {
-                                processNodeCommand(exchange, data, MCMPAction.DISABLE);
+                                processNodeCommand(exchange, data, MCMPAction.ENABLE);
                             }
                             if (srange.equals("DOMAIN")) {
                                 boolean domain = params.containsKey("Domain");
