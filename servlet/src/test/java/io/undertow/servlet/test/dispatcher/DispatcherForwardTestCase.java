@@ -36,6 +36,7 @@ import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -127,7 +128,8 @@ public class DispatcherForwardTestCase {
             Assert.assertEquals("Path!Name!forwarded", response);
             latch.await(30, TimeUnit.SECONDS);
             //UNDERTOW-327 make sure that the access log includes the original path
-            Assert.assertEquals("GET /servletContext/dispatch HTTP/1.1 /servletContext/dispatch /dispatch", message);
+            String protocol = DefaultServer.isH2() ? Protocols.HTTP_2_0_STRING : Protocols.HTTP_1_1_STRING;
+            Assert.assertEquals("GET /servletContext/dispatch " + protocol + " /servletContext/dispatch /dispatch", message);
         } finally {
             client.getConnectionManager().shutdown();
         }
