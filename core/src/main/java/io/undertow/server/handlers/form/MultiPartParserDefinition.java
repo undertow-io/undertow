@@ -62,7 +62,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
     private Path tempFileLocation;
 
-    private String defaultEncoding = StandardCharsets.ISO_8859_1.displayName();
+    private String defaultEncoding = StandardCharsets.UTF_8.name(); // default to UTF-8 as per RFC7578
 
     private long maxIndividualFileSize = -1;
 

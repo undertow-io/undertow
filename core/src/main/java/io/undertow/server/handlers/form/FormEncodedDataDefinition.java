@@ -21,6 +21,7 @@ package io.undertow.server.handlers.form;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -44,7 +45,7 @@ import org.xnio.channels.StreamSourceChannel;
 public class FormEncodedDataDefinition implements FormParserFactory.ParserDefinition<FormEncodedDataDefinition> {
 
     public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
-    private String defaultEncoding = "ISO-8859-1";
+    private String defaultEncoding = StandardCharsets.UTF_8.name(); // default to UTF-8 as per HTML5 spec
     private boolean forceCreation = false; //if the parser should be created even if the correct headers are missing
 
     public FormEncodedDataDefinition() {
