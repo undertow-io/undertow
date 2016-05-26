@@ -21,6 +21,7 @@ package io.undertow.server;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -58,22 +59,22 @@ public class HttpServerExchangeTestCase {
     public void testHttpServerExchange() throws IOException {
 
         String port = DefaultServer.isAjp() && !DefaultServer.isProxy() ? "9080" : "7777";
-
+        String protocol = DefaultServer.isH2() ? Protocols.HTTP_2_0_STRING : Protocols.HTTP_1_1_STRING;
         final TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("localhost:HTTP/1.1:GET:" + port + ":/somepath:/somepath:", HttpClientUtils.readResponse(result));
+            Assert.assertEquals("localhost:" + protocol + ":GET:" + port + ":/somepath:/somepath:", HttpClientUtils.readResponse(result));
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath?a=b");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("localhost:HTTP/1.1:GET:" + port + ":/somepath:/somepath:a=b", HttpClientUtils.readResponse(result));
+            Assert.assertEquals("localhost:" + protocol + ":GET:" + port + ":/somepath:/somepath:a=b", HttpClientUtils.readResponse(result));
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath?a=b");
             get.addHeader("Host", "[::1]:8080");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("::1:HTTP/1.1:GET:8080:/somepath:/somepath:a=b", HttpClientUtils.readResponse(result));
+            Assert.assertEquals("::1:" + protocol + ":GET:8080:/somepath:/somepath:a=b", HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
         }
