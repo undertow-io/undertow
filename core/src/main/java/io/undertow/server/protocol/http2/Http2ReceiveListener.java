@@ -139,7 +139,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         connection.setExchange(exchange);
         dataChannel.setMaxStreamSize(maxEntitySize);
         exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
-        exchange.setProtocol(Protocols.HTTP_1_1);
+        exchange.setProtocol(Protocols.HTTP_2_0);
         exchange.setRequestMethod(Methods.fromString(exchange.getRequestHeaders().getFirst(METHOD)));
         exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
 
