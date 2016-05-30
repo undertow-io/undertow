@@ -47,10 +47,16 @@ import java.util.Set;
 public class LearningPushHandler implements HttpHandler {
 
     private static final String SESSION_ATTRIBUTE = "io.undertow.PUSHED_RESOURCES";
+    private static final int DEFAULT_MAX_CACHE_ENTRIES = 1000;
+    private static final int DEFAULT_MAX_CACHE_AGE = -1;
 
     private final LRUCache<String, Map<String, PushedRequest>> cache;
 
     private final HttpHandler next;
+
+    public LearningPushHandler(final HttpHandler next) {
+        this(DEFAULT_MAX_CACHE_ENTRIES, DEFAULT_MAX_CACHE_AGE, next);
+    }
 
     public LearningPushHandler(int maxEntries, int maxAge, HttpHandler next) {
         this.next = next;
@@ -233,8 +239,8 @@ public class LearningPushHandler implements HttpHandler {
 
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
-            final int maxAge = config.containsKey("max-age") ? (Integer)config.get("max-age") : -1;
-            final int maxEntries = config.containsKey("max-entries") ? (Integer)config.get("max-entries") : 1000;
+            final int maxAge = config.containsKey("max-age") ? (Integer)config.get("max-age") : DEFAULT_MAX_CACHE_AGE;
+            final int maxEntries = config.containsKey("max-entries") ? (Integer)config.get("max-entries") : DEFAULT_MAX_CACHE_ENTRIES;
 
             return new HandlerWrapper() {
                 @Override
