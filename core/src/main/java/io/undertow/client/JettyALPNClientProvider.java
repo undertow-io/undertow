@@ -31,6 +31,7 @@ import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -97,6 +98,8 @@ public class JettyALPNClientProvider implements ALPNClientSelector.ClientSelecto
                                 PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
                                 pb.pushBack(new ImmediatePooled<>(buf));
                                 connection.getSourceChannel().setConduit(pb);
+                            } else if (read == -1) {
+                                failedListener.failed(new ClosedChannelException());
                             }
                             if (selectionProvider.selected == null) {
                                 selectionProvider.selected = (String) sslEngine.getSession().getValue(PROTOCOL_KEY);

@@ -18,63 +18,58 @@
 
 package io.undertow.client;
 
+import io.undertow.protocols.ssl.ALPNHackSSLEngine;
+import io.undertow.protocols.ssl.SslConduit;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.util.ALPN;
 import io.undertow.util.ImmediatePooled;
 import org.xnio.ChannelListener;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.PushBackStreamSourceConduit;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Plaintext HTTP2 client provider that works using HTTP upgrade
+ * JDK8 hack based ALPN client provider
  *
  * @author Stuart Douglas
  */
-public class JDK9ALPNClientProvider implements ALPNClientSelector.ClientSelector {
+public class JDK8HackALPNClientProvider implements ALPNClientSelector.ClientSelector {
 
 
     @Override
-    public void runAlpn(SslConnection connection, ChannelListener<SslConnection> fallback,final ClientCallback<ClientConnection> failedListener, ALPNClientSelector.ALPNProtocol... details) {
+    public void runAlpn(SslConnection connection, ChannelListener<SslConnection> fallback, ClientCallback<ClientConnection> failedListener, ALPNClientSelector.ALPNProtocol... details) {
 
-        final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(connection);
+        final SslConnection sslConnection = connection;
+        final SslConduit conduit = UndertowXnioSsl.getSslConduit(sslConnection);
+        final ALPNHackSSLEngine sslEngine = new ALPNHackSSLEngine(conduit.getSSLEngine());
+        conduit.setSslEngine(sslEngine);
+
         final Map<String, ALPNClientSelector.ALPNProtocol> protocolMap = new HashMap<>();
-        String[] protocols = new String[details.length];
+        List<String> protocols = new ArrayList<>(details.length);
         for(int i = 0; i < details.length; ++i) {
-            protocols[i] = details[i].getProtocol();
+            protocols.add(details[i].getProtocol());
             protocolMap.put(details[i].getProtocol(), details[i]);
         }
+        sslEngine.setApplicationProtocols(protocols);
 
         try {
-            SSLParameters sslParameters = sslEngine.getSSLParameters();
-            ALPN.JDK_9_ALPN_METHODS.setApplicationProtocols().invoke(sslParameters, (Object) protocols);
-            sslEngine.setSSLParameters(sslParameters);
-        } catch (Exception e) {
-            fallback.handleEvent(connection);
-            return;
-        }
-
-        try {
-            connection.startHandshake();
-            connection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+            sslConnection.startHandshake();
+            sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                 @Override
                 public void handleEvent(StreamSourceChannel channel) {
-                    try {
-                        String selected = (String) ALPN.JDK_9_ALPN_METHODS.getApplicationProtocol().invoke(sslEngine);
 
-                        if (selected != null) {
-                            handleSelected(selected);
-                        } else {
-                            ByteBuffer buf = ByteBuffer.allocate(100);
+                    if (sslEngine.getSelectedApplicationProtocol() != null) {
+                        handleSelected(sslEngine.getSelectedApplicationProtocol());
+                    } else {
+                        ByteBuffer buf = ByteBuffer.allocate(100);
+                        try {
                             int read = channel.read(buf);
                             if (read > 0) {
                                 buf.flip();
@@ -84,19 +79,16 @@ public class JDK9ALPNClientProvider implements ALPNClientSelector.ClientSelector
                             } else if (read == -1) {
                                 failedListener.failed(new ClosedChannelException());
                             }
-                            selected = (String) ALPN.JDK_9_ALPN_METHODS.getApplicationProtocol().invoke(sslEngine);
-                            if(selected != null) {
-                                handleSelected(selected);
+                            if(sslEngine.getSelectedApplicationProtocol() != null) {
+                                handleSelected(sslEngine.getSelectedApplicationProtocol());
                             } else if(read > 0) {
-                                connection.getSourceChannel().suspendReads();
-                                fallback.handleEvent(connection);
+                                sslConnection.getSourceChannel().suspendReads();
+                                fallback.handleEvent(sslConnection);
                                 return;
                             }
+                        } catch (IOException e) {
+                            failedListener.failed(e);
                         }
-                    } catch (IOException e) {
-                        failedListener.failed(e);
-                    } catch (InvocationTargetException|IllegalAccessException e) {
-                        failedListener.failed(new IOException(e));
                     }
                 }
 
@@ -118,9 +110,8 @@ public class JDK9ALPNClientProvider implements ALPNClientSelector.ClientSelector
                         }
                     }
                 }
-
             });
-            connection.getSourceChannel().resumeReads();
+            sslConnection.getSourceChannel().resumeReads();
         } catch (IOException e) {
             failedListener.failed(e);
         } catch (Throwable e) {
@@ -129,8 +120,8 @@ public class JDK9ALPNClientProvider implements ALPNClientSelector.ClientSelector
 
     }
 
-    @Override
     public boolean isEnabled() {
-        return ALPN.JDK_9_ALPN_METHODS != null;
+        return ALPNHackSSLEngine.ENABLED;
     }
+
 }
