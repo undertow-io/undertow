@@ -30,7 +30,9 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLProtocolException;
 
 /**
  * @author Stuart Douglas
@@ -446,4 +448,34 @@ public interface UndertowMessages {
 
     @Message(id = 139, value = "Exchange already complete")
     IllegalStateException exchangeAlreadyComplete();
+
+    @Message(id = 140, value = "Initial SSL/TLS data is not a handshake record")
+    SSLHandshakeException notHandshakeRecord();
+
+    @Message(id = 141, value = "Initial SSL/TLS handshake record is invalid")
+    SSLHandshakeException invalidHandshakeRecord();
+
+    @Message(id = 4010, value = "Initial SSL/TLS handshake spans multiple records")
+    SSLHandshakeException multiRecordSSLHandshake();
+
+    @Message(id = 142, value = "Expected \"client hello\" record")
+    SSLHandshakeException expectedClientHello();
+
+    @Message(id = 143, value = "Unsupported SSL/TLS record")
+    SSLHandshakeException unsupportedSslRecord();
+
+    @Message(id = 144, value = "Invalid SNI extension")
+    SSLProtocolException invalidSniExt();
+
+    @Message(id = 145, value = "Not enough data in record to fill declared item size")
+    SSLProtocolException notEnoughData();
+
+    @Message(id = 146, value = "Empty host name in SNI record data")
+    SSLProtocolException emptyHostNameSni();
+
+    @Message(id = 147, value = "Duplicated SNI server name of type %d")
+    SSLProtocolException duplicatedSniServerName(int type);
+
+    @Message(id = 148, value = "Expected server hello")
+    SSLHandshakeException expectedServerHello();
 }

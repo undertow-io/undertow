@@ -72,6 +72,8 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
     public AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions, String fallbackProtocol, DelegateOpenListener fallbackListener) {
         if(ALPN.JDK_9_ALPN_METHODS != null) {
             delegate = new JDK9AlpnOpenListener(bufferPool, undertowOptions, fallbackProtocol, fallbackListener);
+        } else if (JDK8HackAlpnOpenListener.ENABLED) {
+            delegate = new JDK8HackAlpnOpenListener(bufferPool, undertowOptions, fallbackProtocol, fallbackListener);
         } else {
             delegate = new JettyAlpnOpenListener(bufferPool, undertowOptions, fallbackProtocol, fallbackListener);
         }

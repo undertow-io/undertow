@@ -23,12 +23,13 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.protocols.ssl.ALPNHackSSLEngine;
+import io.undertow.protocols.ssl.SslConduit;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.AggregateConnectorStatistics;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.util.ALPN;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -36,10 +37,7 @@ import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -47,13 +45,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Open listener adaptor for ALPN connections that use the JDK9 API
- *
- * Not a proper open listener as such, but more a mechanism for selecting between them
+ * Open listener adaptor for ALPN connections that uses the SSLExplorer based approach and hack into the JDK8
+ * SSLEngine via reflection.
  *
  * @author Stuart Douglas
  */
-class JDK9AlpnOpenListener implements ChannelListener<StreamConnection>, AlpnOpenListener.AlpnDelegateListener {
+public class JDK8HackAlpnOpenListener implements ChannelListener<StreamConnection>, AlpnOpenListener.AlpnDelegateListener {
 
     private final ByteBufferPool bufferPool;
 
@@ -63,14 +60,16 @@ class JDK9AlpnOpenListener implements ChannelListener<StreamConnection>, AlpnOpe
     private volatile OptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
 
+    public static boolean ENABLED = ALPNHackSSLEngine.ENABLED;
 
-    JDK9AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions, String fallbackProtocol, DelegateOpenListener fallbackListener) {
+
+    public JDK8HackAlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions, String fallbackProtocol, DelegateOpenListener fallbackListener) {
         this.bufferPool = bufferPool;
         this.fallbackProtocol = fallbackProtocol;
         if(fallbackProtocol != null && fallbackListener != null) {
             addProtocol(fallbackProtocol, fallbackListener, 0);
         }
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
         this.undertowOptions = undertowOptions;
     }
 
@@ -151,34 +150,30 @@ class JDK9AlpnOpenListener implements ChannelListener<StreamConnection>, AlpnOpe
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
-        final SSLEngine sslEngine = UndertowXnioSsl.getSslEngine((SslConnection) channel);
-        final AlpnConnectionListener potentialConnection = new AlpnConnectionListener(channel, sslEngine);
+        final SslConduit sslConduit = UndertowXnioSsl.getSslConduit((SslConnection) channel);
+        ALPNHackSSLEngine engine = new ALPNHackSSLEngine(sslConduit.getSSLEngine());
+        sslConduit.setSslEngine(engine);
+
+        final AlpnConnectionListener potentialConnection = new AlpnConnectionListener(channel, engine);
         channel.getSourceChannel().setReadListener(potentialConnection);
-        String[] protocols = new String[listeners.size()];
+        List<String> protocols = new ArrayList<>();
         List<ListenerEntry> entries = new ArrayList<>(listeners.values());
         Collections.sort(entries);
         for(int i = 0; i < entries.size(); ++i) {
-            protocols[i] = entries.get(i).protocol;
+            protocols.add(entries.get(i).protocol);
         }
-        try {
-            SSLParameters sslParameters = sslEngine.getSSLParameters();
-            ALPN.JDK_9_ALPN_METHODS.setApplicationProtocols().invoke(sslParameters, (Object) protocols);
-            sslEngine.setSSLParameters(sslParameters);
-        } catch (IllegalAccessException|InvocationTargetException e) {
-            UndertowLogger.ROOT_LOGGER.alpnConnectionFailed(e);
-            IoUtils.safeClose(channel);
-        }
+        engine.setApplicationProtocols(protocols);
         potentialConnection.handleEvent(channel.getSourceChannel());
 
     }
 
     private class AlpnConnectionListener implements ChannelListener<StreamSourceChannel> {
         private final StreamConnection channel;
-        private final SSLEngine sslEngine;
+        private final ALPNHackSSLEngine alpnsslEngine;
 
-        private AlpnConnectionListener(StreamConnection channel, SSLEngine sslEngine) {
+        private AlpnConnectionListener(StreamConnection channel, ALPNHackSSLEngine alpnsslEngine) {
             this.channel = channel;
-            this.sslEngine = sslEngine;
+            this.alpnsslEngine = alpnsslEngine;
         }
 
         @Override
@@ -193,7 +188,7 @@ class JDK9AlpnOpenListener implements ChannelListener<StreamConnection>, AlpnOpe
                         return;
                     }
                     buffer.getBuffer().flip();
-                    String selected = (String)ALPN.JDK_9_ALPN_METHODS.getApplicationProtocol().invoke(sslEngine);
+                    final String selected = alpnsslEngine.getSelectedApplicationProtocol();
                     if(selected != null) {
                         DelegateOpenListener listener;
                         if(selected.isEmpty()) {
@@ -231,10 +226,7 @@ class JDK9AlpnOpenListener implements ChannelListener<StreamConnection>, AlpnOpe
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 IoUtils.safeClose(channel);
-            }  catch (IllegalAccessException|InvocationTargetException e) {
-                UndertowLogger.ROOT_LOGGER.alpnConnectionFailed(e);
-                IoUtils.safeClose(channel);
-            } finally {
+            }  finally {
                 if (free) {
                     buffer.close();
                 }

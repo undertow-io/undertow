@@ -18,6 +18,7 @@
 
 package io.undertow.client;
 
+import io.undertow.protocols.ssl.ALPNHackSSLEngine;
 import io.undertow.util.ALPN;
 import org.xnio.ChannelListener;
 import org.xnio.ssl.SslConnection;
@@ -29,10 +30,12 @@ public class ALPNClientSelector {
 
     private static final ClientSelector SELECTOR;
     static {
-        if(ALPN.JDK_9_ALPN_METHODS == null) {
-            SELECTOR = new JettyALPNClientProvider();
-        } else {
+        if(ALPN.JDK_9_ALPN_METHODS != null) {
             SELECTOR = new JDK9ALPNClientProvider();
+        } else if(ALPNHackSSLEngine.ENABLED) {
+            SELECTOR = new JDK8HackALPNClientProvider();
+        } else {
+            SELECTOR = new JettyALPNClientProvider();
         }
     }
 

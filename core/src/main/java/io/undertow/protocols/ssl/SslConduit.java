@@ -120,7 +120,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private final UndertowSslConnection connection;
     private final StreamConnection delegate;
-    private final SSLEngine engine;
+    private SSLEngine engine;
     private final StreamSinkConduit sink;
     private final StreamSourceConduit source;
     private final ByteBufferPool bufferPool;
@@ -157,6 +157,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private int readListenerInvocationCount;
 
     private boolean invokingReadListenerHandshake = false;
+
+
 
     private final Runnable runReadListenerCommand = new Runnable() {
         @Override
@@ -778,7 +780,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             } else {
                 long res = original - Buffers.remaining(userBuffers);
                 if(res > 0) {
-                    //if data has been sucessfully returned this is not a read loop
+                    //if data has been successfully returned this is not a read loop
                     readListenerInvocationCount = 0;
                 }
                 return res;
@@ -1216,6 +1218,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 delegate.getSinkChannel().suspendWrites();
             }
         }
+    }
+
+    public void setSslEngine(SSLEngine engine) {
+        this.engine = engine;
     }
 
     @Override

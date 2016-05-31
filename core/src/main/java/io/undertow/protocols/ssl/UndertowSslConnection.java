@@ -98,6 +98,9 @@ class UndertowSslConnection extends SslConnection {
         return sslConduit.getSSLEngine();
     }
 
+    SslConduit getSslConduit() {
+        return sslConduit;
+    }
 
     /** {@inheritDoc} */
     @Override
