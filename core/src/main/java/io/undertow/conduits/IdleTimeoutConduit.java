@@ -221,7 +221,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public void suspendReads() {
         source.suspendReads();
         XnioExecutor.Key handle = this.handle;
-        if(handle != null) {
+        if(handle != null && !isWriteResumed()) {
             handle.remove();
             this.handle = null;
         }
@@ -320,7 +320,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public void suspendWrites() {
         sink.suspendWrites();
         XnioExecutor.Key handle = this.handle;
-        if(handle != null) {
+        if(handle != null && !isReadResumed()) {
             handle.remove();
             this.handle = null;
         }
@@ -339,7 +339,13 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
             return;
         }
         long currentTime = System.currentTimeMillis();
-        expireTime = currentTime + timeout;
+        long newExpireTime = currentTime + timeout;
+        boolean shorter = newExpireTime < expireTime;
+        if(shorter && handle != null) {
+            handle.remove();
+            handle = null;
+        }
+        expireTime = newExpireTime;
         XnioExecutor.Key key = handle;
         if (key == null) {
             handle = getWriteThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
@@ -402,6 +408,9 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
         this.idleTimeout = idleTimeout;
         if(idleTimeout > 0) {
             expireTime = System.currentTimeMillis() + idleTimeout;
+            if(isReadResumed() || isWriteResumed()) {
+                handleResumeTimeout();
+            }
         } else {
             expireTime = -1;
         }
