@@ -19,10 +19,13 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
+import javax.websocket.OnClose;
 import javax.websocket.Session;
 
 import java.net.URI;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -143,6 +146,19 @@ public class AnnotatedEndpointTest {
         Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
     }
 
+
+    @Test
+    public void testIdleTimeout() throws Exception {
+        AnnotatedClientEndpoint.reset();
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Bob"));
+
+        Assert.assertEquals("hi Bob (protocol=foo)", AnnotatedClientEndpoint.message());
+
+        session.close();
+        Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
+    }
+
+
     @Test
     public void testCloseReason() throws Exception {
         MessageEndpoint.reset();
@@ -196,6 +212,18 @@ public class AnnotatedEndpointTest {
 
     }
 
+    @Test
+    public void testClientSideIdleTimeout() throws Exception {
+        //make a sub class
+        CountDownLatch latch = new CountDownLatch(1);
+        CloseCountdownEndpoint c = new CloseCountdownEndpoint(latch);
+
+        Session session = deployment.connectToServer(c, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Bob"));
+        session.setMaxIdleTimeout(100);
+        Assert.assertTrue(latch.await(2000, TimeUnit.MILLISECONDS));
+        Assert.assertFalse(session.isOpen());
+
+    }
 
     @Test
     public void testGenericMessageHandling() throws Exception {
@@ -295,4 +323,21 @@ public class AnnotatedEndpointTest {
 
     @ClientEndpoint
     public static class DoNothingEndpoint {}
+
+
+    @ClientEndpoint
+    public static class CloseCountdownEndpoint {
+
+        private final CountDownLatch latch;
+
+        public CloseCountdownEndpoint(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        @OnClose
+        public void close() {
+            latch.countDown();
+        }
+
+    }
 }
