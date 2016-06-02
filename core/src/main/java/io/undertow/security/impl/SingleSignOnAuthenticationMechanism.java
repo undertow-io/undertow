@@ -34,6 +34,7 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Sessions;
 
+import org.jboss.logging.Logger;
 import org.xnio.conduits.StreamSinkConduit;
 
 import java.util.Collections;
@@ -49,6 +50,8 @@ import java.util.WeakHashMap;
  * @author Paul Ferraro
  */
 public class SingleSignOnAuthenticationMechanism implements AuthenticationMechanism {
+
+    private static final Logger log = Logger.getLogger(SingleSignOnAuthenticationMechanism.class);
 
     private static final String SSO_SESSION_ATTRIBUTE = SingleSignOnAuthenticationMechanism.class.getName() + ".SSOID";
 
@@ -86,8 +89,14 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
             final String ssoId = cookie.getValue();
             try (final SingleSignOn sso = this.singleSignOnManager.findSingleSignOn(ssoId)) {
                 if (sso != null) {
+                    if(log.isTraceEnabled()) {
+                        log.tracef("SSO session with ID: %s found.", ssoId);
+                    }
                     Account verified = getIdentityManager(securityContext).verify(sso.getAccount());
                     if (verified == null) {
+                        if(log.isTraceEnabled()) {
+                            log.tracef("Account not found. Returning 'not attempted' here.");
+                        }
                         //we return not attempted here to allow other mechanisms to proceed as normal
                         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
                     }
@@ -113,9 +122,15 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
 
     private void registerSessionIfRequired(SingleSignOn sso, Session session) {
         if (!sso.contains(session)) {
+            if(log.isTraceEnabled()) {
+                log.tracef("Session %s added to SSO %s", session.getId(), sso.getId());
+            }
             sso.add(session);
         }
         if(session.getAttribute(SSO_SESSION_ATTRIBUTE) == null) {
+            if(log.isTraceEnabled()) {
+                log.tracef("SSO_SESSION_ATTRIBUTE not found. Creating it with SSO ID %s as value.", sso.getId());
+            }
             session.setAttribute(SSO_SESSION_ATTRIBUTE, sso.getId());
             SessionManager manager = session.getSessionManager();
             if (seenSessionManagers.add(manager)) {
@@ -165,6 +180,9 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         public void sessionDestroyed(Session session, HttpServerExchange exchange, SessionDestroyedReason reason) {
             String ssoId = (String) session.getAttribute(SSO_SESSION_ATTRIBUTE);
             if (ssoId != null) {
+                if(log.isTraceEnabled()) {
+                    log.tracef("Removing SSO ID %s from destroyed session %s.", ssoId, session.getId());
+                }
                 List<Session> sessionsToRemove = new LinkedList<>();
                 try (SingleSignOn sso = singleSignOnManager.findSingleSignOn(ssoId)) {
                     if (sso != null) {
