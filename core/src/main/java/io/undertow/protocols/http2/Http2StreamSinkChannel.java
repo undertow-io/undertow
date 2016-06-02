@@ -71,10 +71,10 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
         if (streamId % 2 == (getChannel().isClient() ? 1 : 0)) {
             //we initiated the stream
             //we only actually reset if we have sent something to the other endpoint
-            if (isFirstDataWritten()) {
+            if (isFirstDataWritten() && !getChannel().isThisGoneAway()) {
                 getChannel().sendRstStream(streamId, Http2Channel.ERROR_CANCEL);
             }
-        } else {
+        } else if(!getChannel().isThisGoneAway()) {
             getChannel().sendRstStream(streamId, Http2Channel.ERROR_STREAM_CLOSED);
         }
         markBroken();

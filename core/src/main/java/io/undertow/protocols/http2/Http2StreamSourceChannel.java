@@ -133,7 +133,7 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
         return read;
     }
 
-    private void updateFlowControlWindow(final int read) {
+    private void updateFlowControlWindow(final int read) throws IOException {
         if (read <= 0) {
             return;
         }

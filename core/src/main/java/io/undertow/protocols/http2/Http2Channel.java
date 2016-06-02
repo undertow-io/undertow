@@ -221,7 +221,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         settings.add(new Http2Setting(Http2Setting.SETTINGS_MAX_FRAME_SIZE, receiveMaxFrameSize));
         settings.add(new Http2Setting(Http2Setting.SETTINGS_INITIAL_WINDOW_SIZE, initialReceiveWindowSize));
         Http2SettingsStreamSinkChannel stream = new Http2SettingsStreamSinkChannel(this, settings);
-        flushChannel(stream);
+        flushChannelIgnoreFailure(stream);
     }
 
     private void sendSettingsAck() {
@@ -230,25 +230,30 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             initialSettingsSent = true;
         }
         Http2SettingsStreamSinkChannel stream = new Http2SettingsStreamSinkChannel(this);
-        flushChannel(stream);
+        flushChannelIgnoreFailure(stream);
     }
 
-    private void flushChannel(StreamSinkChannel stream) {
+    private void flushChannelIgnoreFailure(StreamSinkChannel stream) {
         try {
-            stream.shutdownWrites();
-            if (!stream.flush()) {
-                stream.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, writeExceptionHandler()));
-                stream.resumeWrites();
-            }
+            flushChannel(stream);
         } catch (IOException e) {
-            //the channel excption handling will close the channel
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         }
     }
 
+    private void flushChannel(StreamSinkChannel stream) throws IOException {
+        stream.shutdownWrites();
+        if (!stream.flush()) {
+            stream.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, writeExceptionHandler()));
+            stream.resumeWrites();
+        }
+    }
+
+
+
     private void sendPreface() {
         Http2PrefaceStreamSinkChannel preface = new Http2PrefaceStreamSinkChannel(this);
-        flushChannel(preface);
+        flushChannelIgnoreFailure(preface);
     }
 
 
@@ -622,7 +627,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
     }
 
-    public void sendUpdateWindowSize(int streamId, int delta) {
+    public void sendUpdateWindowSize(int streamId, int delta) throws IOException {
         Http2WindowUpdateStreamSinkChannel windowUpdateStreamSinkChannel = new Http2WindowUpdateStreamSinkChannel(this, streamId, delta);
         flushChannel(windowUpdateStreamSinkChannel);
 
@@ -636,7 +641,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         return null;
     }
 
-    public synchronized void updateReceiveFlowControlWindow(int read) {
+    public synchronized void updateReceiveFlowControlWindow(int read) throws IOException {
         if (read <= 0) {
             return;
         }
@@ -784,7 +789,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     public void sendRstStream(int streamId, int statusCode) {
         handleRstStream(streamId);
         Http2RstStreamSinkChannel channel = new Http2RstStreamSinkChannel(this, streamId, statusCode);
-        flushChannel(channel);
+        flushChannelIgnoreFailure(channel);
     }
 
     private void handleRstStream(int streamId) {
