@@ -25,6 +25,8 @@ import java.util.TreeSet;
  */
 public class PathResourceManager implements ResourceManager  {
 
+    private static final boolean DEFAULT_CHANGE_LISTENERS_ALLOWED = !Boolean.getBoolean("io.undertow.disable-file-system-watcher");
+
     private final List<ResourceChangeListener> listeners = new ArrayList<>();
 
     private FileSystemWatcher fileSystemWatcher;
@@ -53,6 +55,8 @@ public class PathResourceManager implements ResourceManager  {
      */
     private final TreeSet<String> safePaths = new TreeSet<>();
 
+    private final boolean allowResourceChangeListeners;
+
     public PathResourceManager(final Path base, long transferMinSize) {
         this(base, transferMinSize, true, false, null);
     }
@@ -66,9 +70,14 @@ public class PathResourceManager implements ResourceManager  {
     }
 
     protected PathResourceManager(long transferMinSize, boolean caseSensitive, boolean followLinks, final String... safePaths) {
+        this(transferMinSize, caseSensitive, followLinks, DEFAULT_CHANGE_LISTENERS_ALLOWED, safePaths);
+    }
+
+    protected PathResourceManager(long transferMinSize, boolean caseSensitive, boolean followLinks, boolean allowResourceChangeListeners, final String... safePaths) {
         this.caseSensitive = caseSensitive;
         this.followLinks = followLinks;
         this.transferMinSize = transferMinSize;
+        this.allowResourceChangeListeners = allowResourceChangeListeners;
         if (this.followLinks) {
             if (safePaths == null) {
                 throw UndertowMessages.MESSAGES.argumentCannotBeNull("safePaths");
@@ -83,6 +92,11 @@ public class PathResourceManager implements ResourceManager  {
     }
 
     public PathResourceManager(final Path base, long transferMinSize, boolean caseSensitive, boolean followLinks, final String... safePaths) {
+        this(base, transferMinSize, caseSensitive, followLinks, DEFAULT_CHANGE_LISTENERS_ALLOWED, safePaths);
+    }
+
+    public PathResourceManager(final Path base, long transferMinSize, boolean caseSensitive, boolean followLinks, boolean allowResourceChangeListeners, final String... safePaths) {
+        this.allowResourceChangeListeners = allowResourceChangeListeners;
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
@@ -180,11 +194,16 @@ public class PathResourceManager implements ResourceManager  {
 
     @Override
     public boolean isResourceChangeListenerSupported() {
-        return true;
+        return allowResourceChangeListeners;
     }
 
     @Override
     public synchronized void registerResourceChangeListener(ResourceChangeListener listener) {
+        if(!allowResourceChangeListeners) {
+            //by rights we should throw an exception here, but this works around a bug in Wildfly where it just assumes
+            //PathResourceManager supports this. This will be fixed in a later version
+            return;
+        }
         listeners.add(listener);
         if (fileSystemWatcher == null) {
             fileSystemWatcher = Xnio.getInstance().createFileSystemWatcher("Watcher for " + base, OptionMap.EMPTY);
@@ -211,6 +230,9 @@ public class PathResourceManager implements ResourceManager  {
 
     @Override
     public synchronized void removeResourceChangeListener(ResourceChangeListener listener) {
+        if(!allowResourceChangeListeners) {
+            return;
+        }
         listeners.remove(listener);
     }
 
