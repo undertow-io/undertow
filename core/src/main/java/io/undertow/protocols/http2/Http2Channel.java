@@ -349,10 +349,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 //the peer is going away
                 //everything is broken
                 for(Http2StreamSourceChannel stream : incomingStreams.values()) {
-                    stream.close();
+                    stream.rstStream();
                 }
                 for(Http2StreamSinkChannel stream : outgoingStreams.values()) {
-                    stream.close();
+                    stream.rstStream();
                 }
                 break;
             }

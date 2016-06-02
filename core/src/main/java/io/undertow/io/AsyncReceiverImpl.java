@@ -439,11 +439,11 @@ public class AsyncReceiverImpl implements Receiver {
                                                     return;
                                                 }
                                             }
-                                        } catch (final IOException e) {
+                                        } catch (final Exception e) {
                                             Connectors.executeRootHandler(new HttpHandler() {
                                                 @Override
                                                 public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                                    error.error(exchange, e);
+                                                    error.error(exchange, new IOException(e));
                                                 }
                                             }, exchange);
                                             return;

@@ -178,10 +178,10 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
                 //the peer is going away
                 //everything is broken
                 for(SpdyStreamStreamSourceChannel stream : incomingStreams.values()) {
-                    stream.close();
+                    stream.rstStream();
                 }
                 for(SpdyStreamStreamSinkChannel stream : outgoingStreams.values()) {
-                    stream.close();
+                    stream.rstStream();
                 }
                 break;
             }
