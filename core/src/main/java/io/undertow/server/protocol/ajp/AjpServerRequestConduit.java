@@ -20,6 +20,7 @@ package io.undertow.server.protocol.ajp;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
@@ -224,7 +225,7 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
                 if (finishListener != null) {
                     finishListener.handleEvent(this);
                 }
-                return read;
+                throw new ClosedChannelException();
             } else if (headerBuffer.hasRemaining()) {
                 return 0;
             } else {
