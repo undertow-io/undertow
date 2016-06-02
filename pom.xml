@@ -723,6 +723,32 @@
             </dependencies>
         </profile>
         <profile>
+            <id>jdk9</id>
+            <activation>
+                <jdk>9</jdk>
+            </activation>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-compiler-plugin</artifactId>
+                            <version>${version.compiler.plugin}</version>
+                            <configuration>
+                                <!-- fork is needed so compiler args can be used -->
+                                <fork>true</fork>
+                                <compilerArgs>
+                                    <arg>-J-addmods</arg>
+                                    <arg>-Jjava.annotations.common</arg>
+                                </compilerArgs>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+
+        <profile>
             <id>dist</id>
             <activation>
                 <property>
