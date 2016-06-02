@@ -375,4 +375,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5079, value = "ALPN negotiation on %s failed")
     void alpnConnectionFailed(SslConnection connection);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5080, value = "HttpServerExchange cannot have both async IO resumed and dispatch() called in the same cycle")
+    void resumedAndDispatched();
 }
