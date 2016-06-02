@@ -204,7 +204,10 @@ public class Connectors {
             boolean resumed = exchange.runResumeReadWrite();
             if (exchange.isDispatched()) {
                 if (resumed) {
-                    throw new RuntimeException("resumed and dispatched");
+                    UndertowLogger.REQUEST_LOGGER.resumedAndDispatched();
+                    exchange.setStatusCode(500);
+                    exchange.endExchange();
+                    return;
                 }
                 final Runnable dispatchTask = exchange.getDispatchTask();
                 Executor executor = exchange.getDispatchExecutor();
