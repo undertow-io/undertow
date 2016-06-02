@@ -481,13 +481,13 @@ public class ServerSentEventConnection implements Channel, Attachable {
                         if (!channel.flush()) {
                             return;
                         }
-                        ByteBuffer buffer = pooled.getBuffer();
                         for (SSEData data : flushingMessages) {
                             if (data.callback != null && data.leftOverData == null) {
                                 data.callback.done(ServerSentEventConnection.this, data.data, data.event, data.id);
                             }
                         }
                         flushingMessages.clear();
+                        ByteBuffer buffer = pooled.getBuffer();
                         if (!buffer.hasRemaining()) {
                             fillBuffer();
                             if (pooled == null) {
@@ -535,14 +535,14 @@ public class ServerSentEventConnection implements Channel, Attachable {
                             return;
                         }
 
-                        if (res == 0) {
-                            sink.resumeWrites();
-                            return;
-                        } else if (!buffer.hasRemaining()) {
+                        if (!buffer.hasRemaining()) {
                             fillBuffer();
                             if (pooled == null) {
                                 return;
                             }
+                        } else if (res == 0) {
+                            sink.resumeWrites();
+                            return;
                         }
 
                     } while (res > 0);
