@@ -36,8 +36,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Deque;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Stuart Douglas
@@ -46,6 +50,15 @@ import java.util.Deque;
 public class ReceiverTestCase {
 
     public static final String HELLO_WORLD = "Hello World";
+
+    private static final LinkedBlockingDeque<IOException> EXCEPTIONS = new LinkedBlockingDeque<>();
+    public static final Receiver.ErrorCallback ERROR_CALLBACK = new Receiver.ErrorCallback() {
+        @Override
+        public void error(HttpServerExchange exchange, IOException e) {
+            EXCEPTIONS.add(e);
+            exchange.endExchange();
+        }
+    };
 
     @BeforeClass
     public static void setup() {
@@ -58,7 +71,7 @@ public class ReceiverTestCase {
                     public void handle(HttpServerExchange exchange, String message) {
                         exchange.getResponseSender().send(message);
                     }
-                });
+                }, ERROR_CALLBACK);
             }
         };
 
@@ -74,7 +87,7 @@ public class ReceiverTestCase {
                             exchange.getResponseSender().send(sb.toString());
                         }
                     }
-                });
+                }, ERROR_CALLBACK);
             }
         };
 
@@ -86,7 +99,7 @@ public class ReceiverTestCase {
                     public void handle(HttpServerExchange exchange, byte[] message) {
                         exchange.getResponseSender().send(ByteBuffer.wrap(message));
                     }
-                });
+                }, ERROR_CALLBACK);
             }
         };
 
@@ -157,6 +170,29 @@ public class ReceiverTestCase {
     @Test
     public void testAsyncReceiveWholeBytes() {
         doTest("/fullbytes");
+    }
+
+    @Test
+    public void testAsyncReceiveWholeBytesFailed() throws Exception {
+        EXCEPTIONS.clear();
+        Socket socket = new Socket();
+        socket.connect(DefaultServer.getDefaultServerAddress());
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 10000; ++i) {
+            sb.append("hello world\r\n");
+        }
+        //send a large request that is too small, then kill the socket
+        String request = "POST /fullbytes HTTP/1.1\r\nHost:localhost\r\nContent-Length:" + sb.length() + 100 + "\r\n\r\n" + sb.toString();
+        OutputStream outputStream = socket.getOutputStream();
+
+        outputStream.write(request.getBytes("US-ASCII"));
+        socket.getInputStream().close();
+        outputStream.close();
+
+        IOException e = EXCEPTIONS.poll(2, TimeUnit.SECONDS);
+        Assert.assertNotNull(e);
+
     }
 
     @Test
