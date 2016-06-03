@@ -297,8 +297,11 @@ public class ManagedServlet implements Lifecycle {
         }
 
         @Override
-        public void start() {
-
+        public void start() throws ServletException {
+            if(servletInfo.getLoadOnStartup() != null) {
+                //see UNDERTOW-734, make sure init method is called for load on startup
+                getServlet().release();
+            }
         }
 
         @Override
