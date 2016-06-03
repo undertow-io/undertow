@@ -478,4 +478,7 @@ public interface UndertowMessages {
 
     @Message(id = 148, value = "Expected server hello")
     SSLHandshakeException expectedServerHello();
+
+    @Message(id = 149, value = "Middleware Function cannot be null")
+    IllegalArgumentException middlewareFunctionCannotBeNull();
 }
