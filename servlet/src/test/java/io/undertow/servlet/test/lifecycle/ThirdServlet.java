@@ -18,32 +18,45 @@
 
 package io.undertow.servlet.test.lifecycle;
 
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+
+import javax.servlet.Servlet;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.SingleThreadModel;
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas
  */
-public class InitializeInOrderTestCase {
+public class ThirdServlet implements Servlet, SingleThreadModel {
 
+    public static volatile boolean init;
 
-    @BeforeClass
-    public static void setup() {
-        DeploymentUtils.setupServlet(new ServletInfo("s1", FirstServlet.class)
-                .setLoadOnStartup(1),
-                new ServletInfo("s2", SecondServlet.class)
-                        .setLoadOnStartup(2)
-                ,new ServletInfo("s3", ThirdServlet.class)
-                .setLoadOnStartup(3));
-    }
-
-    @Test
-    public void testInitializeInOrder() throws Exception {
+    @Override
+    public void init(ServletConfig config) throws ServletException {
         Assert.assertTrue(FirstServlet.init);
         Assert.assertTrue(SecondServlet.init);
-        Assert.assertTrue(ThirdServlet.init);
+        init = true;
+    }
+
+    @Override
+    public ServletConfig getServletConfig() {
+        return null;
+    }
+
+    @Override
+    public void service(ServletRequest req, ServletResponse res) throws ServletException, IOException {
+    }
+
+    @Override
+    public String getServletInfo() {
+        return null;
+    }
+
+    @Override
+    public void destroy() {
     }
 }
