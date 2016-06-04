@@ -74,8 +74,7 @@ final class ALPNHackClientHelloExplorer {
             // looks like a V2ClientHello, we ignore it.
             return null;
         } else if (firstByte == 22) {   // 22: handshake record
-            if(secondByte == 3 && thirdByte == 3) {
-                //TLS1.2 is the only one we care about. Previous versions can't use HTTP/2, newer versions won't be backported to JDK8
+            if(secondByte == 3 && thirdByte >= 1 && thirdByte <= 3) {
                 exploreTLSRecord(input,
                         firstByte, secondByte, thirdByte, alpnProtocols, null);
                 return alpnProtocols;
@@ -278,6 +277,11 @@ final class ALPNHackClientHelloExplorer {
             out.write(helloMajorVersion & 0xFF);
             out.write(helloMinorVersion & 0xFF);
         }
+        if(helloMajorVersion != 3 && helloMinorVersion != 3) {
+            //we only care about TLS 1.2
+            return;
+        }
+
 
         // ignore random
         for(int i = 0; i < 32; ++i) {// 32: the length of Random
