@@ -361,18 +361,20 @@ public final class ProxyHandler implements HttpHandler {
             if(!clientConnection.getTargetPath().isEmpty() && !clientConnection.getTargetPath().equals("/")) {
                 requestURI.append(clientConnection.getTargetPath());
             }
-
+            String targetURI = exchange.getRequestURI();
             if(exchange.isHostIncludedInRequestURI()) {
-                int uriPart = exchange.getRequestURI().indexOf("//");
-                if(uriPart == -1) {
-                    requestURI.append(exchange.getRequestURI());
-                } else {
-                    uriPart = exchange.getRequestURI().indexOf("/", uriPart);
-                    requestURI.append(exchange.getRequestURI().substring(uriPart));
+                int uriPart = targetURI.indexOf("//");
+                if(uriPart != -1) {
+                    uriPart = targetURI.indexOf("/", uriPart);
+                    targetURI = targetURI.substring(uriPart);
                 }
-            } else {
-                requestURI.append(exchange.getRequestURI());
             }
+
+            if(!exchange.getResolvedPath().isEmpty() && targetURI.startsWith(exchange.getResolvedPath())) {
+                targetURI = targetURI.substring(exchange.getResolvedPath().length());
+            }
+            requestURI.append(targetURI);
+
             String qs = exchange.getQueryString();
             if (qs != null && !qs.isEmpty()) {
                 requestURI.append('?');
