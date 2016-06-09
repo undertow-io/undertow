@@ -100,7 +100,7 @@ public class PathResourceManager implements ResourceManager  {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
-        String basePath = base.toAbsolutePath().toString();
+        String basePath = base.normalize().toAbsolutePath().toString();
         if (!basePath.endsWith(File.separator)) {
             basePath = basePath + File.separatorChar;
         }
