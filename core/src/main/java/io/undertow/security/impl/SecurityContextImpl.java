@@ -216,7 +216,12 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
 
     @Override
     public void logout() {
-        UndertowLogger.SECURITY_LOGGER.debugf("Logging out user %s for %s", getAuthenticatedAccount() , exchange);
+        Account authenticatedAccount = getAuthenticatedAccount();
+        if(authenticatedAccount != null) {
+            UndertowLogger.SECURITY_LOGGER.debugf("Logging out user %s for %s", authenticatedAccount.getPrincipal().getName(), exchange);
+        } else {
+            UndertowLogger.SECURITY_LOGGER.debugf("Logout called with no authenticated user in exchange %s", exchange);
+        }
         super.logout();
         this.authenticationState = AuthenticationState.NOT_ATTEMPTED;
     }
