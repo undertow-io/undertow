@@ -18,6 +18,7 @@
 
 package io.undertow.conduits;
 
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import org.xnio.conduits.StreamSinkConduit;
@@ -34,6 +35,18 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
      * GZIP header magic number.
      */
     private static final  int GZIP_MAGIC = 0x8b1f;
+    public static final byte[] HEADER = new byte[]{
+            (byte) GZIP_MAGIC,        // Magic number (short)
+            (byte) (GZIP_MAGIC >> 8),  // Magic number (short)
+            Deflater.DEFLATED,        // Compression method (CM)
+            0,                        // Flags (FLG)
+            0,                        // Modification time MTIME (int)
+            0,                        // Modification time MTIME (int)
+            0,                        // Modification time MTIME (int)
+            0,                        // Modification time MTIME (int)
+            0,                        // Extra flags (XFLG)
+            0                         // Operating system (OS)
+    };
 
     /**
      * CRC-32 of uncompressed data.
@@ -43,21 +56,11 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
     public GzipStreamSinkConduit(ConduitFactory<StreamSinkConduit> conduitFactory, HttpServerExchange exchange) {
         super(conduitFactory, exchange, Deflater.DEFAULT_COMPRESSION);
         writeHeader();
+        Connectors.updateResponseBytesSent(exchange, HEADER.length);
     }
 
     private void writeHeader() {
-        currentBuffer.getBuffer().put(new byte[]{
-                (byte) GZIP_MAGIC,        // Magic number (short)
-                (byte) (GZIP_MAGIC >> 8),  // Magic number (short)
-                Deflater.DEFLATED,        // Compression method (CM)
-                0,                        // Flags (FLG)
-                0,                        // Modification time MTIME (int)
-                0,                        // Modification time MTIME (int)
-                0,                        // Modification time MTIME (int)
-                0,                        // Modification time MTIME (int)
-                0,                        // Extra flags (XFLG)
-                0                         // Operating system (OS)
-        });
+        currentBuffer.getBuffer().put(HEADER);
     }
 
     @Override
