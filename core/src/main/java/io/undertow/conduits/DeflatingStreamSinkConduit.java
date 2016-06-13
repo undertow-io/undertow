@@ -52,7 +52,6 @@ import io.undertow.util.Headers;
  */
 public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
-    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
     protected final Deflater deflater;
     private final ConduitFactory<StreamSinkConduit> conduitFactory;
     private final HttpServerExchange exchange;
