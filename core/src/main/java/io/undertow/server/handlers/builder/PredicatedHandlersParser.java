@@ -704,7 +704,7 @@ public class PredicatedHandlersParser {
         return ret;
     }
 
-    public static IllegalStateException error(final String string, int pos, String reason) {
+    private static IllegalStateException error(final String string, int pos, String reason) {
         StringBuilder b = new StringBuilder();
         int linePos = 0;
         for (int i = 0; i < string.length(); ++i) {
