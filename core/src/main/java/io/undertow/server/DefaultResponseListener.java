@@ -18,6 +18,8 @@
 
 package io.undertow.server;
 
+import io.undertow.util.AttachmentKey;
+
 /**
  * Listener interface for default response handlers. These are handlers that generate default content
  * such as error pages.
@@ -25,6 +27,12 @@ package io.undertow.server;
  * @author Stuart Douglas
  */
 public interface DefaultResponseListener {
+
+    /**
+     * If the default response listener was invoked as a result of an exception being thrown
+     * then the exception will be available under this attachment key.
+     */
+    AttachmentKey<Throwable> EXCEPTION = AttachmentKey.create(Throwable.class);
 
     /**
      *
