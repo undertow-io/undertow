@@ -221,6 +221,7 @@ public class Connectors {
                 exchange.endExchange();
             }
         } catch (Throwable t) {
+            exchange.putAttachment(DefaultResponseListener.EXCEPTION, t);
             exchange.setInCall(false);
             if (!exchange.isResponseStarted()) {
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
