@@ -92,6 +92,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             handshakeHashFinMd.setAccessible(true);
 
         } catch (Exception e) {
+            UndertowLogger.ROOT_LOGGER.debug("JDK8 ALPN Hack failed ", e);
             enabled = false;
             handshaker = null;
             handshakeHash = null;

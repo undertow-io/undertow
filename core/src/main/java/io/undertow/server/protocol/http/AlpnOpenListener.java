@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.http;
 
+import io.undertow.UndertowLogger;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.DelegateOpenListener;
@@ -73,7 +74,14 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         if(ALPN.JDK_9_ALPN_METHODS != null) {
             delegate = new JDK9AlpnOpenListener(bufferPool, undertowOptions, fallbackProtocol, fallbackListener);
         } else if (JDK8HackAlpnOpenListener.ENABLED) {
-            delegate = new JDK8HackAlpnOpenListener(bufferPool, undertowOptions, fallbackProtocol, fallbackListener);
+            AlpnDelegateListener delegate;
+            try {
+                delegate = new JDK8HackAlpnOpenListener(bufferPool, undertowOptions, fallbackProtocol, fallbackListener);
+            } catch (Throwable e) {
+                UndertowLogger.ROOT_LOGGER.debug("JDK8 ALPN Hack failed ", e);
+                delegate = new JettyAlpnOpenListener(bufferPool, undertowOptions, fallbackProtocol, fallbackListener);
+            }
+            this.delegate = delegate;
         } else {
             delegate = new JettyAlpnOpenListener(bufferPool, undertowOptions, fallbackProtocol, fallbackListener);
         }
