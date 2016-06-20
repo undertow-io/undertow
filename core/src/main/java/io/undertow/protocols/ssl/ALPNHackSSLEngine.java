@@ -19,8 +19,6 @@
 package io.undertow.protocols.ssl;
 
 import io.undertow.UndertowLogger;
-import sun.security.ssl.ProtocolVersion;
-import sun.security.ssl.SSLEngineImpl;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -74,7 +72,9 @@ public class ALPNHackSSLEngine extends SSLEngine {
         Method handshakeHashUpdate;
         Method handshakeHashProtocolDetermined;
         try {
-            handshaker = SSLEngineImpl.class.getDeclaredField("handshaker");
+            Class<?> protocolVersionClass = Class.forName("sun.security.ssl.ProtocolVersion", true, ClassLoader.getSystemClassLoader());
+            Class<?> sslEngineImpleClass = Class.forName("sun.security.ssl.SSLEngineImpl", true, ClassLoader.getSystemClassLoader());
+            handshaker = sslEngineImpleClass.getDeclaredField("handshaker");
             handshaker.setAccessible(true);
             handshakeHash = handshaker.getType().getDeclaredField("handshakeHash");
             handshakeHash.setAccessible(true);
@@ -84,7 +84,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             handshakeHashVersion.setAccessible(true);
             handshakeHashUpdate = handshakeHash.getType().getDeclaredMethod("update", byte[].class, int.class, int.class);
             handshakeHashUpdate.setAccessible(true);
-            handshakeHashProtocolDetermined = handshakeHash.getType().getDeclaredMethod("protocolDetermined", ProtocolVersion.class);
+            handshakeHashProtocolDetermined = handshakeHash.getType().getDeclaredMethod("protocolDetermined", protocolVersionClass);
             handshakeHashProtocolDetermined.setAccessible(true);
             handshakeHashData = handshakeHash.getType().getDeclaredField("data");
             handshakeHashData.setAccessible(true);
@@ -432,7 +432,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             Object handshaker = HANDSHAKER.get(sslEngineToHack);
             Object hash = HANDSHAKE_HASH.get(handshaker);
             data.reset();
-            ProtocolVersion protocolVersion = (ProtocolVersion) HANDSHAKER_PROTOCOL_VERSION.get(handshaker);
+            Object protocolVersion = HANDSHAKER_PROTOCOL_VERSION.get(handshaker);
             HANDSHAKE_HASH_VERSION.set(hash, -1);
             HANDSHAKE_HASH_PROTOCOL_DETERMINED.invoke(hash, protocolVersion);
             MessageDigest digest = (MessageDigest) HANDSHAKE_HASH_FIN_MD.get(hash);
