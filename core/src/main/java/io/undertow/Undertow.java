@@ -27,7 +27,6 @@ import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
-import io.undertow.server.protocol.spdy.SpdyOpenListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -169,15 +168,9 @@ public final class Undertow {
                         HttpOpenListener httpOpenListener = new HttpOpenListener(buffers, undertowOptions);
                         httpOpenListener.setRootHandler(rootHandler);
 
-                        boolean spdy = serverOptions.get(UndertowOptions.ENABLE_SPDY, false);
                         boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, false);
-                        if(spdy || http2) {
+                        if(http2) {
                             AlpnOpenListener alpn = new AlpnOpenListener(buffers, undertowOptions, httpOpenListener);
-                            if(spdy) {
-                                SpdyOpenListener spdyListener = new SpdyOpenListener(buffers, new DefaultByteBufferPool(false, 1024, -1, 2, 0), undertowOptions);
-                                spdyListener.setRootHandler(rootHandler);
-                                alpn.addProtocol(SpdyOpenListener.SPDY_3_1, spdyListener, 5);
-                            }
                             if(http2) {
                                 Http2OpenListener http2Listener = new Http2OpenListener(buffers, undertowOptions);
                                 http2Listener.setRootHandler(rootHandler);

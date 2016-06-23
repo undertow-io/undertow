@@ -1,6 +1,5 @@
 io.undertow.client.http.HttpClientProvider
 io.undertow.client.ajp.AjpClientProvider
-io.undertow.client.spdy.SpdyClientProvider
 io.undertow.client.http2.Http2ClientProvider
 io.undertow.client.http2.Http2ClearClientProvider
 io.undertow.client.http2.Http2PriorKnowledgeClientProvider

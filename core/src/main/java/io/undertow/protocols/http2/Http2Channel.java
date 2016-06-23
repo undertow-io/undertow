@@ -348,8 +348,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 break;
             }
             case FRAME_TYPE_GOAWAY: {
-                Http2GoAwayParser spdyGoAwayParser = (Http2GoAwayParser) frameParser.parser;
-                channel = new Http2GoAwayStreamSourceChannel(this, frameData, frameParser.getFrameLength(), spdyGoAwayParser.getStatusCode(), spdyGoAwayParser.getLastGoodStreamId());
+                Http2GoAwayParser http2GoAwayParser = (Http2GoAwayParser) frameParser.parser;
+                channel = new Http2GoAwayStreamSourceChannel(this, frameData, frameParser.getFrameLength(), http2GoAwayParser.getStatusCode(), http2GoAwayParser.getLastGoodStreamId());
                 peerGoneAway = true;
                 //the peer is going away
                 //everything is broken
@@ -671,9 +671,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
         int streamId = streamIdCounter;
         streamIdCounter += 2;
-        Http2HeadersStreamSinkChannel spdySynStreamStreamSinkChannel = new Http2HeadersStreamSinkChannel(this, streamId, requestHeaders);
-        outgoingStreams.put(streamId, spdySynStreamStreamSinkChannel);
-        return spdySynStreamStreamSinkChannel;
+        Http2HeadersStreamSinkChannel http2SynStreamStreamSinkChannel = new Http2HeadersStreamSinkChannel(this, streamId, requestHeaders);
+        outgoingStreams.put(streamId, http2SynStreamStreamSinkChannel);
+        return http2SynStreamStreamSinkChannel;
     }
 
     public synchronized Http2HeadersStreamSinkChannel sendPushPromise(int associatedStreamId, HeaderMap requestHeaders, HeaderMap responseHeaders) throws IOException {
@@ -688,9 +688,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         Http2PushPromiseStreamSinkChannel pushPromise = new Http2PushPromiseStreamSinkChannel(this, requestHeaders, associatedStreamId, streamId);
         flushChannel(pushPromise);
 
-        Http2HeadersStreamSinkChannel spdySynStreamStreamSinkChannel = new Http2HeadersStreamSinkChannel(this, streamId, responseHeaders);
-        outgoingStreams.put(streamId, spdySynStreamStreamSinkChannel);
-        return spdySynStreamStreamSinkChannel;
+        Http2HeadersStreamSinkChannel http2SynStreamStreamSinkChannel = new Http2HeadersStreamSinkChannel(this, streamId, responseHeaders);
+        outgoingStreams.put(streamId, http2SynStreamStreamSinkChannel);
+        return http2SynStreamStreamSinkChannel;
     }
 
     /**

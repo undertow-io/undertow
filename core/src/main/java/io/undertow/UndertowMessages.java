@@ -295,8 +295,8 @@ public interface UndertowMessages {
     @Message(id = 88, value = "SPDY control frames cannot have body content")
     IOException controlFrameCannotHaveBodyContent();
 
-    @Message(id = 89, value = "SPDY not supported")
-    IOException spdyNotSupported();
+//    @Message(id = 89, value = "SPDY not supported")
+//    IOException spdyNotSupported();
 
     @Message(id = 90, value = "No ALPN implementation available (tried Jetty ALPN and JDK9)")
     IOException alpnNotAvailable();
@@ -307,8 +307,8 @@ public interface UndertowMessages {
     @Message(id = 92, value = "A SPDY header was too large to fit in a response buffer, if you want to support larger headers please increase the buffer size")
     IllegalStateException headersTooLargeToFitInHeapBuffer();
 
-    @Message(id = 93, value = "A SPDY stream was reset by the remote endpoint")
-    IOException spdyStreamWasReset();
+//    @Message(id = 93, value = "A SPDY stream was reset by the remote endpoint")
+//    IOException spdyStreamWasReset();
 
     @Message(id = 94, value = "Blocking await method called from IO thread. Blocking IO must be dispatched to a worker thread or deadlocks will result.")
     IOException awaitCalledFromIoThread();

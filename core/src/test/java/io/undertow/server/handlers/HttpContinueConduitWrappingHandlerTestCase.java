@@ -82,7 +82,7 @@ public class HttpContinueConduitWrappingHandlerTestCase {
 
     @Before
     public void before() {
-        Assume.assumeFalse(DefaultServer.isAjp() || DefaultServer.isSpdy());
+        Assume.assumeFalse(DefaultServer.isAjp());
     }
 
     @Test

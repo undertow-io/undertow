@@ -36,8 +36,6 @@ import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.server.protocol.http2.Http2UpgradeHandler;
-import io.undertow.server.protocol.spdy.SpdyOpenListener;
-import io.undertow.server.protocol.spdy.SpdyPlainOpenListener;
 import io.undertow.util.ALPN;
 import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
@@ -123,11 +121,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final char[] STORE_PASSWORD = "password".toCharArray();
 
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
-    private static final boolean spdy = Boolean.getBoolean("test.spdy");
     private static final boolean h2 = Boolean.getBoolean("test.h2");
     private static final boolean h2c = Boolean.getBoolean("test.h2c");
     private static final boolean h2cUpgrade = Boolean.getBoolean("test.h2c-upgrade");
-    private static final boolean spdyPlain = Boolean.getBoolean("test.spdy-plain");
     private static final boolean https = Boolean.getBoolean("test.https");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
     private static final boolean apache = Boolean.getBoolean("test.apache");
@@ -294,25 +290,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         proxyServer.resumeAccepts();
 
                     }
-                } else if (spdy && isAlpnEnabled()) {
-                    openListener = new SpdyOpenListener(pool, new DebuggingSlicePool(new DefaultByteBufferPool(false, 8192)), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
-                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(SpdyOpenListener.SPDY_3_1, (io.undertow.server.DelegateOpenListener) openListener, 5)));
-
-                    SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
-
-                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
-                    server.getAcceptSetter().set(acceptListener);
-                    server.resumeAccepts();
-
-                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
-                    proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
-                    proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, clientContext), OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404);
-                    setupProxyHandlerForSSL(proxyHandler);
-                    proxyOpenListener.setRootHandler(proxyHandler);
-                    proxyServer.resumeAccepts();
-
-
                 } else if (h2 && isAlpnEnabled()) {
                     openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10)));
@@ -345,22 +322,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyOpenListener.setRootHandler(proxyHandler);
                     proxyServer.resumeAccepts();
 
-                } else if (spdyPlain) {
-                    openListener = new SpdyPlainOpenListener(pool, new DebuggingSlicePool(new DefaultByteBufferPool(false, 8192)), OptionMap.create(UndertowOptions.ENABLE_SPDY, true));
-                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
-
-                    server = worker.createStreamConnectionServer(new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, OptionMap.EMPTY);
-                    server.resumeAccepts();
-
-                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
-                    proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
-                    proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("spdy-plain", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, null, OptionMap.create(UndertowOptions.ENABLE_SPDY, true)), 120000, HANDLE_404);
-                    setupProxyHandlerForSSL(proxyHandler);
-                    proxyOpenListener.setRootHandler(proxyHandler);
-                    proxyServer.resumeAccepts();
-
-
                 } else if (https) {
 
                     XnioSsl clientSsl = new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, createClientSslContext());
@@ -382,9 +343,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 } else {
                     if(h2) {
                         UndertowLogger.ROOT_LOGGER.error("HTTP2 selected but Netty ALPN was not on the boot class path");
-                    }
-                    if(spdy) {
-                        UndertowLogger.ROOT_LOGGER.error("SPDY selected but Netty ALPN was not on the boot class path");
                     }
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true, UndertowOptions.ENABLE_CONNECTOR_STATISTICS, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
@@ -473,7 +431,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        if(spdy || spdyPlain || h2 || h2c || ajp) {
+        if(h2 || h2c || ajp) {
             //h2c-upgrade we still allow HTTP1
             HttpOneOnly httpOneOnly = method.getAnnotation(HttpOneOnly.class);
             if(httpOneOnly == null) {
@@ -483,7 +441,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
             }
-            if(h2 || spdy) {
+            if(h2) {
                 assumeAlpnEnabled();
             }
         }
@@ -531,12 +489,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             }
             if (ajp) {
                 sb.append("{ajp}");
-            }
-            if(spdy) {
-                sb.append("{spdy}");
-            }
-            if(spdyPlain) {
-                sb.append("{spdy-plain}");
             }
             if(https) {
                 sb.append("{https}");
@@ -754,11 +706,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static boolean isProxy() {
-        return proxy || spdy || https || h2 || h2c|| spdyPlain || ajp || h2cUpgrade;
-    }
-
-    public static boolean isSpdy() {
-        return spdy || spdyPlain;
+        return proxy || https || h2 || h2c || ajp || h2cUpgrade;
     }
 
     public static boolean isHttps() {

@@ -140,13 +140,13 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
         flowControlWindow -= read;
         //TODO: RST stream if flow control limits are exceeded?
         //TODO: make this configurable, we should be able to set the policy that is used to determine when to update the window size
-        Http2Channel spdyChannel = getHttp2Channel();
-        spdyChannel.updateReceiveFlowControlWindow(read);
-        int initialWindowSize = spdyChannel.getInitialReceiveWindowSize();
+        Http2Channel http2Channel = getHttp2Channel();
+        http2Channel.updateReceiveFlowControlWindow(read);
+        int initialWindowSize = http2Channel.getInitialReceiveWindowSize();
         if (flowControlWindow < (initialWindowSize / 2)) {
             int delta = initialWindowSize - flowControlWindow;
             flowControlWindow += delta;
-            spdyChannel.sendUpdateWindowSize(streamId, delta);
+            http2Channel.sendUpdateWindowSize(streamId, delta);
         }
     }
 
