@@ -177,7 +177,10 @@ public class UndertowOptions {
 
     /**
      * If we should attempt to use SPDY for HTTPS connections.
+     *
+     * SPDY is no longer supported, use HTTP/2 instead
      */
+    @Deprecated
     public static final Option<Boolean> ENABLE_SPDY = Option.simple(UndertowOptions.class, "ENABLE_SPDY", Boolean.class);
 
     /**

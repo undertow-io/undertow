@@ -25,7 +25,6 @@ import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
 import io.undertow.client.http2.Http2ClientProvider;
-import io.undertow.client.spdy.SpdyClientProvider;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
@@ -133,16 +132,11 @@ public class HttpClientProvider implements ClientProvider {
 
     private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, URI uri) {
 
-        boolean spdy = options.get(UndertowOptions.ENABLE_SPDY, false);
         boolean h2 = options.get(UndertowOptions.ENABLE_HTTP2, false);
-        if(connection instanceof SslConnection && (h2 | spdy)) {
+        if(connection instanceof SslConnection && (h2)) {
             List<ALPNClientSelector.ALPNProtocol> protocolList = new ArrayList<>();
             if(h2) {
                 protocolList.add(Http2ClientProvider.alpnProtocol(listener, uri, bufferPool, options));
-            }
-            if(spdy) {
-                protocolList.add(SpdyClientProvider.alpnProtocol(listener, uri, bufferPool, options, SpdyClientProvider.SPDY_3_1));
-                protocolList.add(SpdyClientProvider.alpnProtocol(listener, uri, bufferPool, options, SpdyClientProvider.SPDY_3));
             }
 
             ALPNClientSelector.runAlpn((SslConnection) connection, new ChannelListener<SslConnection>() {

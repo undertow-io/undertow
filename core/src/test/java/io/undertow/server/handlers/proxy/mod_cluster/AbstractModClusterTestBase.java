@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
 import io.undertow.client.UndertowClient;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
@@ -100,8 +99,6 @@ public abstract class AbstractModClusterTestBase {
     static String getType() {
         if (DefaultServer.isAjp()) {
             return "ajp";
-        } else if (DefaultServer.isSpdy()) {
-            return "spdy";
         } else if (DefaultServer.isHttps()) {
             return "https";
         } else {
@@ -292,8 +289,6 @@ public abstract class AbstractModClusterTestBase {
             case "http":
                 builder.addHttpListener(config.getPort(), config.getHostname());
                 break;
-            case "spdy":
-                builder.setServerOption(UndertowOptions.ENABLE_SPDY, true);
             case "https":
                 builder.addHttpsListener(config.getPort(), config.getHostname(), DefaultServer.getServerSslContext());
                 break;
