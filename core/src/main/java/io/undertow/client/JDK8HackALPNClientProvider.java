@@ -44,7 +44,7 @@ public class JDK8HackALPNClientProvider implements ALPNClientSelector.ClientSele
 
 
     @Override
-    public void runAlpn(SslConnection connection, ChannelListener<SslConnection> fallback, ClientCallback<ClientConnection> failedListener, ALPNClientSelector.ALPNProtocol... details) {
+    public void runAlpn(final SslConnection connection, final ChannelListener<SslConnection> fallback, final ClientCallback<ClientConnection> failedListener, final ALPNClientSelector.ALPNProtocol... details) {
 
         final SslConnection sslConnection = connection;
         final SslConduit conduit = UndertowXnioSsl.getSslConduit(sslConnection);
