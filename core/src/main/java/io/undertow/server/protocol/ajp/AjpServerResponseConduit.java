@@ -151,7 +151,12 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         final int length = value.length();
         putInt(buf, length);
         for (int i = 0; i < length; ++i) {
-            buf.put((byte) value.charAt(i));
+            char c = value.charAt(i);
+            if(c != '\r' && c != '\n'){
+                buf.put((byte) c);
+            } else {
+                buf.put((byte)' ');
+            }
         }
         buf.put((byte) 0);
     }

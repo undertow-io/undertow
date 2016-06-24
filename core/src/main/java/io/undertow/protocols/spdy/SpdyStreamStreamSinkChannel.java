@@ -140,7 +140,12 @@ public abstract class SpdyStreamStreamSinkChannel extends SpdyStreamSinkChannel 
                 for (int i = 0; i < headerValues.size(); ++i) {
                     String val = headerValues.get(i);
                     for (int j = 0; j < val.length(); ++j) {
-                        inputBuffer.put((byte) val.charAt(j));
+                        char c = val.charAt(j);
+                        if(c != '\r' && c != '\n') {
+                            inputBuffer.put((byte) c);
+                        } else {
+                            inputBuffer.put((byte)' ');
+                        }
                     }
                     if (i != headerValues.size() - 1) {
                         inputBuffer.put((byte) 0);

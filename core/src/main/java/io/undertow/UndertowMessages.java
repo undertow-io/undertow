@@ -443,4 +443,7 @@ public interface UndertowMessages {
 
     @Message(id = 139, value = "Exchange already complete")
     IllegalStateException exchangeAlreadyComplete();
+
+    @Message(id = 149, value = "HttpString is not allowed to contain newlines. value: %s")
+    IllegalArgumentException newlineNotSupportedInHttpString(String value);
 }
