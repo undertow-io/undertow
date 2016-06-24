@@ -155,6 +155,13 @@ public class HpackEncoder {
                     int required = 11 + headerName.length(); //we use 11 to make sure we have enough room for the variable length itegers
 
                     String val = values.get(i);
+                    for(int v = 0; v < val.length(); ++v) {
+                        char c = val.charAt(v);
+                        if(c == '\r' || c == '\n') {
+                            val = val.replace('\r', ' ').replace('\n', ' ');
+                            break;
+                        }
+                    }
                     TableEntry tableEntry = findInTable(headerName, val);
 
                     required += (1 + val.length());

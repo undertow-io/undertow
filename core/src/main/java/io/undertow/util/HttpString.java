@@ -30,6 +30,8 @@ import static java.lang.Integer.signum;
 import static java.lang.System.arraycopy;
 import static java.util.Arrays.copyOfRange;
 
+import io.undertow.UndertowMessages;
+
 /**
  * An HTTP case-insensitive Latin-1 string.
  *
@@ -116,6 +118,15 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         this.bytes = bytes;
         this.hashCode = calcHashCode(bytes);
         this.string = string;
+        checkForNewlines();
+    }
+
+    private void checkForNewlines() {
+        for(byte b : bytes) {
+            if(b == '\r' || b == '\n') {
+                throw UndertowMessages.MESSAGES.newlineNotSupportedInHttpString(string);
+            }
+        }
     }
 
     private HttpString(final byte[] bytes, final String string) {
@@ -123,6 +134,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         this.hashCode = calcHashCode(bytes);
         this.string = string;
         this.orderInt = 0;
+        checkForNewlines();
     }
 
     /**
