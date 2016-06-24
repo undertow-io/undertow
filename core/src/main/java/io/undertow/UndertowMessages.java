@@ -476,6 +476,10 @@ public interface UndertowMessages {
     @Message(id = 148, value = "Invalid HPack encoding. First byte: %s")
     HpackException invalidHpackEncoding(byte b);
 
-    @Message(id = 149, value = "Pseudo header %s received after receiving normal headers. Pseudo headers must be the first headers in a HTTP/2 header block.")
+    @Message(id = 149, value = "HttpString is not allowed to contain newlines. value: %s")
+    IllegalArgumentException newlineNotSupportedInHttpString(String value);
+
+    @Message(id = 150, value = "Pseudo header %s received after receiving normal headers. Pseudo headers must be the first headers in a HTTP/2 header block.")
     IllegalArgumentException pseudoHeaderInWrongOrder(HttpString header);
+
 }
