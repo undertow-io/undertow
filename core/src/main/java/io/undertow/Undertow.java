@@ -221,6 +221,14 @@ public final class Undertow {
         listenerInfo = null;
     }
 
+    public Xnio getXnio() {
+        return xnio;
+    }
+
+    public XnioWorker getWorker() {
+        return worker;
+    }
+
     public List<ListenerInfo> getListenerInfo() {
         if(listenerInfo == null) {
             throw UndertowMessages.MESSAGES.serverNotStarted();
