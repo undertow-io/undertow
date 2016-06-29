@@ -186,6 +186,13 @@ public class AnnotatedEndpoint extends Endpoint {
             } else {
                 session.getAsyncRemote().sendObject(result, new ErrorReportingSendHandler(session));
             }
+            if(session.getAsyncRemote().getBatchingAllowed()) {
+                try {
+                    session.getAsyncRemote().flushBatch();
+                } catch (IOException e) {
+                    onError(session, e);
+                }
+            }
         }
     }
 
