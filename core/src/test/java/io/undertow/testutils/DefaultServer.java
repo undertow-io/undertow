@@ -20,6 +20,7 @@ package io.undertow.testutils;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.protocols.ssl.ALPNHackSSLEngine;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.DefaultByteBufferPool;
@@ -734,7 +735,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     private static boolean isAlpnEnabled() {
-        return !System.getProperty("alpn-boot-string", "").isEmpty() || ALPN.JDK_9_ALPN_METHODS != null;
+        return !System.getProperty("alpn-boot-string", "").isEmpty() || ALPN.JDK_9_ALPN_METHODS != null || ALPNHackSSLEngine.ENABLED;
     }
 
     public static void assumeAlpnEnabled() {
