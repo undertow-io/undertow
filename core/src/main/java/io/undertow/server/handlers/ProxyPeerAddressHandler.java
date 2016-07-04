@@ -68,11 +68,16 @@ public class ProxyPeerAddressHandler implements HttpHandler {
         String forwardedPort = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PORT);
         if (forwardedHost != null) {
             int index = forwardedHost.indexOf(',');
-            final String value;
+            String value;
             if (index == -1) {
                 value = forwardedHost;
             } else {
                 value = forwardedHost.substring(0, index);
+            }
+            index = value.indexOf(":");
+            if(index != -1) {
+                forwardedPort = value.substring(index + 1);
+                value = value.substring(0, index);
             }
             int port = 80;
             if(forwardedPort != null) {
@@ -83,6 +88,7 @@ public class ProxyPeerAddressHandler implements HttpHandler {
                 }
             }
             exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
+            exchange.getRequestHeaders().put(Headers.HOST, value + ":" + port);
         }
         next.handleRequest(exchange);
     }
