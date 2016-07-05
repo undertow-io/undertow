@@ -24,6 +24,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
+import io.undertow.util.NetworkUtils;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -74,10 +75,22 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             } else {
                 value = forwardedHost.substring(0, index);
             }
-            index = value.indexOf(":");
-            if(index != -1) {
-                forwardedPort = value.substring(index + 1);
-                value = value.substring(0, index);
+            if(value.startsWith("[")) {
+                int end = value.lastIndexOf("]");
+                if(end == -1 ) {
+                    end = 0;
+                }
+                index = value.indexOf(":", end);
+                if(index != -1) {
+                    forwardedPort = value.substring(index + 1);
+                    value = value.substring(0, index);
+                }
+            } else {
+                index = value.lastIndexOf(":");
+                if(index != -1) {
+                    forwardedPort = value.substring(index + 1);
+                    value = value.substring(0, index);
+                }
             }
             int port = 80;
             if(forwardedPort != null) {
@@ -88,7 +101,7 @@ public class ProxyPeerAddressHandler implements HttpHandler {
                 }
             }
             exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
-            exchange.getRequestHeaders().put(Headers.HOST, value + ":" + port);
+            exchange.getRequestHeaders().put(Headers.HOST, NetworkUtils.formatPossibleIpv6Address(value) + ":" + port);
         }
         next.handleRequest(exchange);
     }
