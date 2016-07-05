@@ -41,6 +41,7 @@ import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioWorker;
 import org.xnio.http.HttpUpgrade;
+import org.xnio.http.RedirectException;
 import org.xnio.ssl.XnioSsl;
 
 import java.io.IOException;
@@ -205,7 +206,9 @@ public class WebSocketClient {
         }
 
         public IoFuture<WebSocketChannel> connect() {
-            final FutureResult<WebSocketChannel> ioFuture = new FutureResult<>();
+            return connectImpl(uri, new FutureResult<WebSocketChannel>());
+        }
+        private IoFuture<WebSocketChannel> connectImpl(final URI uri, final FutureResult<WebSocketChannel> ioFuture) {
             final String scheme = uri.getScheme().equals("wss") ? "https" : "http";
             final URI newUri;
             try {
@@ -315,7 +318,17 @@ public class WebSocketClient {
                     @Override
                     public void notify(IoFuture<?> res, Object attachment) {
                         if (res.getStatus() == IoFuture.Status.FAILED) {
-                            ioFuture.setException(res.getException());
+                            IOException exception = res.getException();
+                            if(exception instanceof RedirectException) {
+                                String path = ((RedirectException) exception).getLocation();
+                                try {
+                                    connectImpl(new URI(path), ioFuture);
+                                } catch (URISyntaxException e) {
+                                    ioFuture.setException(new IOException(e));
+                                }
+                            } else {
+                                ioFuture.setException(exception);
+                            }
                         }
                     }
                 }, null);

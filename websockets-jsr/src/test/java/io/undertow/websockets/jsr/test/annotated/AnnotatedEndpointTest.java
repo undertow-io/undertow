@@ -17,11 +17,16 @@
  */
 package io.undertow.websockets.jsr.test.annotated;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
 import javax.websocket.OnClose;
 import javax.websocket.Session;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -42,6 +47,7 @@ import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
@@ -94,6 +100,8 @@ public class AnnotatedEndpointTest {
                                     }
                                 })
                 )
+                .addServlet(new ServletInfo("redirect", RedirectServlet.class)
+                .addMapping("/redirect"))
                 .setDeploymentName("servletContext.war");
 
 
@@ -119,6 +127,17 @@ public class AnnotatedEndpointTest {
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
+    }
+
+    @Test
+    public void testRedirectHandling() throws Exception {
+        AnnotatedClientEndpoint.reset();
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/redirect"));
+
+        Assert.assertEquals("hi Stuart (protocol=foo)", AnnotatedClientEndpoint.message());
+
+        session.close();
+        Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
     }
 
 
@@ -339,5 +358,12 @@ public class AnnotatedEndpointTest {
             latch.countDown();
         }
 
+    }
+
+    public static final class RedirectServlet extends HttpServlet{
+        @Override
+        protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            resp.sendRedirect("/ws/chat/Stuart");
+        }
     }
 }
