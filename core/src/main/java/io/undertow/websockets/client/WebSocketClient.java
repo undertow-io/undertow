@@ -63,6 +63,7 @@ public class WebSocketClient {
 
     public static final String BIND_PROPERTY = "io.undertow.websockets.BIND_ADDRESS";
 
+    private static final int MAX_REDIRECTS = Integer.getInteger("io.undertow.websockets.max-redirects", 5);
 
     @Deprecated
     public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
@@ -206,9 +207,9 @@ public class WebSocketClient {
         }
 
         public IoFuture<WebSocketChannel> connect() {
-            return connectImpl(uri, new FutureResult<WebSocketChannel>());
+            return connectImpl(uri, new FutureResult<WebSocketChannel>(), 0);
         }
-        private IoFuture<WebSocketChannel> connectImpl(final URI uri, final FutureResult<WebSocketChannel> ioFuture) {
+        private IoFuture<WebSocketChannel> connectImpl(final URI uri, final FutureResult<WebSocketChannel> ioFuture, final int redirectCount) {
             final String scheme = uri.getScheme().equals("wss") ? "https" : "http";
             final URI newUri;
             try {
@@ -320,11 +321,15 @@ public class WebSocketClient {
                         if (res.getStatus() == IoFuture.Status.FAILED) {
                             IOException exception = res.getException();
                             if(exception instanceof RedirectException) {
-                                String path = ((RedirectException) exception).getLocation();
-                                try {
-                                    connectImpl(new URI(path), ioFuture);
-                                } catch (URISyntaxException e) {
-                                    ioFuture.setException(new IOException(e));
+                                if(redirectCount == MAX_REDIRECTS) {
+                                    ioFuture.setException(UndertowMessages.MESSAGES.tooManyRedirects(exception));
+                                } else {
+                                    String path = ((RedirectException) exception).getLocation();
+                                    try {
+                                        connectImpl(new URI(path), ioFuture, redirectCount + 1);
+                                    } catch (URISyntaxException e) {
+                                        ioFuture.setException(new IOException(e));
+                                    }
                                 }
                             } else {
                                 ioFuture.setException(exception);
