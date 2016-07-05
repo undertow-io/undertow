@@ -103,7 +103,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             handshakeHashFinMd = null;
             protocolVersion = null;
         }
-        ENABLED = enabled && !Boolean.getBoolean("io.undertow.disable-jdk8-alpn");
+        ENABLED = enabled && !Boolean.getBoolean("io.undertow.disable-jdk8-alpn") && System.getProperty("java.version").startsWith("1.8");
         HANDSHAKER = handshaker;
         HANDSHAKE_HASH = handshakeHash;
         HANDSHAKE_HASH_PROTOCOL_DETERMINED = handshakeHashProtocolDetermined;
