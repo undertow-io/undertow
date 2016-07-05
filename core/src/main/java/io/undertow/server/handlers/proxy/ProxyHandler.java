@@ -50,6 +50,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.NetworkUtils;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.Transfer;
@@ -476,7 +477,7 @@ public final class ProxyHandler implements HttpHandler {
             if(!exchange.getRequestHeaders().contains(Headers.X_FORWARDED_HOST)) {
                 final String hostName = exchange.getHostName();
                 if(hostName != null) {
-                    request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, hostName);
+                    request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, NetworkUtils.formatPossibleIpv6Address(hostName));
                 }
             }
 
@@ -491,7 +492,7 @@ public final class ProxyHandler implements HttpHandler {
                     request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, port);
                 }
             } else {
-                int port = exchange.getConnection().getLocalAddress(InetSocketAddress.class).getPort();
+                int port = exchange.getHostPort();
                 request.getRequestHeaders().put(Headers.X_FORWARDED_PORT, port);
                 request.putAttachment(ProxiedRequestAttachments.SERVER_PORT, port);
             }

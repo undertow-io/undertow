@@ -31,6 +31,7 @@ import io.undertow.client.ClientStatistics;
 import io.undertow.protocols.http2.Http2GoAwayStreamSourceChannel;
 import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -164,7 +165,7 @@ public class Http2ClientConnection implements ClientConnection {
         }
         String hn = request.getAttachment(ProxiedRequestAttachments.SERVER_NAME);
         if(hn != null) {
-            request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, hn);
+            request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, NetworkUtils.formatPossibleIpv6Address(hn));
         }
         Integer port = request.getAttachment(ProxiedRequestAttachments.SERVER_PORT);
         if(port != null) {
