@@ -735,7 +735,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     private static boolean isAlpnEnabled() {
-        return !System.getProperty("alpn-boot-string", "").isEmpty() || ALPN.JDK_9_ALPN_METHODS != null || ALPNHackSSLEngine.ENABLED;
+        return ALPN.JDK_9_ALPN_METHODS != null || ALPNHackSSLEngine.ENABLED;
     }
 
     public static void assumeAlpnEnabled() {

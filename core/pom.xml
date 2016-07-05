@@ -200,10 +200,9 @@
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                     </systemPropertyVariables>
-                    <argLine>${alpn-boot-string} ${jacoco.agent.argLine} ${surefire.system.args}</argLine>
+                    <argLine>${jacoco.agent.argLine} ${surefire.system.args}</argLine>
                 </configuration>
             </plugin>
         </plugins>
@@ -236,7 +235,6 @@
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
@@ -261,7 +259,6 @@
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-ajp-reports</reportsDirectory>
@@ -286,7 +283,6 @@
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-https-reports</reportsDirectory>
@@ -311,7 +307,6 @@
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-h2-reports</reportsDirectory>
@@ -336,7 +331,6 @@
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-h2c-reports</reportsDirectory>
@@ -362,7 +356,6 @@
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                        <alpn-boot-string>${alpn-boot-string}</alpn-boot-string>
                                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-h2c-upgrade-reports</reportsDirectory>
