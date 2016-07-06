@@ -131,7 +131,11 @@ public class Cookies {
             }
         } else {
             if (current != headerValue.length()) {
-                handleValue(cookie, key, headerValue.substring(current, headerValue.length()));
+                if(cookie == null) {
+                    cookie = new CookieImpl(key, headerValue.substring(current, headerValue.length()));
+                } else {
+                    handleValue(cookie, key, headerValue.substring(current, headerValue.length()));
+                }
             } else {
                 handleValue(cookie, key, null);
             }

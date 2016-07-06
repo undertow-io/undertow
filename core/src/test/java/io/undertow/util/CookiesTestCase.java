@@ -36,6 +36,7 @@ public class CookiesTestCase {
 
     @Test
     public void testParsingSetCookieHeaderV0() {
+
         Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=WILE_E_COYOTE; path=/; expires=Wednesday, 09-Nov-99 23:12:40 GMT");
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
@@ -48,6 +49,10 @@ public class CookiesTestCase {
         Assert.assertEquals("FEDEX", cookie.getValue());
         Assert.assertEquals("/foo", cookie.getPath());
         Assert.assertTrue(cookie.isSecure());
+
+        cookie = Cookies.parseSetCookieHeader("SHIPPING=FEDEX");
+        Assert.assertEquals("SHIPPING", cookie.getName());
+        Assert.assertEquals("FEDEX", cookie.getValue());
     }
 
     @Test
