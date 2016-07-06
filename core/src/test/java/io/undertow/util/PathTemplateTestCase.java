@@ -67,6 +67,19 @@ public class PathTemplateTestCase {
         testMatch("/{value}", "/{value}", "value", "{value}");
     }
 
+    @Test
+    public void wildCardTests() {
+        // wildcard matches
+        testMatch("/*", "/docs/mydoc/test","*","docs/mydoc/test");
+        testMatch("/docs/*", "/docs/mydoc/test","*","mydoc/test");
+        testMatch("/docs*", "/docs/mydoc/test","*","/mydoc/test");
+        testMatch("/docs/*", "/docs/mydoc/test/test2","*","mydoc/test/test2");
+        testMatch("/docs/{docId}/*", "/docs/mydoc/test", "docId", "mydoc", "*","test");
+        testMatch("/docs/{docId}/*", "/docs/mydoc/", "docId", "mydoc", "*","");
+        testMatch("/docs/{docId}/*", "/docs/mydoc/test/test2/test3/test4", "docId", "mydoc", "*","test/test2/test3/test4");
+        testMatch("/docs/{docId}/{docId2}/*", "/docs/mydoc/test/test2/test3/test4", "docId", "mydoc","docId2", "test", "*","test2/test3/test4");
+    }
+
     @Test(expected=IllegalArgumentException.class)
     public void testNullPath() {
         PathTemplate.create(null);

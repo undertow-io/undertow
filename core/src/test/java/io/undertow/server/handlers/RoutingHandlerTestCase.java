@@ -90,6 +90,12 @@ public class RoutingHandlerTestCase {
                 });
 
         DefaultServer.setRootHandler(Handlers.routing()
+                .add(Methods.GET, "/wild/{test}/*", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("wild:" + exchange.getQueryParameters().get("test") + ":" + exchange.getQueryParameters().get("*"));
+                    }
+                })
                 .add(Methods.GET, "/foo", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -184,6 +190,21 @@ public class RoutingHandlerTestCase {
             result = client.execute(delete);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("DELETE bar", HttpClientUtils.readResponse(result));
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testWildCardRoutingTemplateHandler() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/wild/test/card");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("wild:[test]:[card]", HttpClientUtils.readResponse(result));
 
         } finally {
             client.getConnectionManager().shutdown();
