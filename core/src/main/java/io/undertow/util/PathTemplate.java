@@ -177,6 +177,18 @@ public class PathTemplate implements Comparable<PathTemplate> {
      * @return true if the URI is a match
      */
     public boolean matches(final String path, final Map<String, String> pathParameters) {
+
+        if (!template && base.contains("*")) {
+            final int indexOf = base.indexOf("*");
+            final String startBase = base.substring(0, indexOf);
+            if (!path.startsWith(startBase)) {
+                return false;
+            }
+            pathParameters.put("*", path.substring(indexOf,path.length()));
+            return true;
+        }
+
+
         if (!path.startsWith(base)) {
             return false;
         }
@@ -185,16 +197,15 @@ public class PathTemplate implements Comparable<PathTemplate> {
             return path.length() == baseLength;
         }
 
-
-        int cp = 0;
-        Part current = parts.get(cp);
+        int currentPartPosition = 0;
+        PathTemplate.Part current = parts.get(currentPartPosition);
         int stringStart = baseLength;
         int i;
         for (i = baseLength; i < path.length(); ++i) {
-            final char c = path.charAt(i);
-            if (c == '?') {
+            final char currentChar = path.charAt(i);
+            if (currentChar == '?' || current.part.equals("*")) {
                 break;
-            } else if (c == '/') {
+            } else if (currentChar == '/') {
                 String result = path.substring(stringStart, i);
                 if (current.template) {
                     pathParameters.put(current.part, result);
@@ -202,20 +213,25 @@ public class PathTemplate implements Comparable<PathTemplate> {
                     pathParameters.clear();
                     return false;
                 }
-                ++cp;
-                if (cp == parts.size()) {
+                ++currentPartPosition;
+                if (currentPartPosition == parts.size()) {
                     //this is a match if this is the last character
                     return i == (path.length() - 1);
                 }
-                current = parts.get(cp);
+                current = parts.get(currentPartPosition);
                 stringStart = i + 1;
             }
         }
-        if (cp + 1 != parts.size()) {
+        if (currentPartPosition + 1 != parts.size()) {
             pathParameters.clear();
             return false;
         }
+
         String result = path.substring(stringStart, i);
+        if (current.part.equals("*")) {
+            pathParameters.put(current.part, path.substring(stringStart,path.length()));
+            return true;
+        }
         if (current.template) {
             pathParameters.put(current.part, result);
         } else if (!result.equals(current.part)) {
