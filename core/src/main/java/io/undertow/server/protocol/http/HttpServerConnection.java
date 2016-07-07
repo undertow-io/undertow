@@ -23,6 +23,7 @@ import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ConnectionSSLSessionInfo;
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
@@ -65,7 +66,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
     private HttpUpgradeListener upgradeListener;
     private boolean connectHandled;
 
-    public HttpServerConnection(StreamConnection channel, final ByteBufferPool bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
+    public HttpServerConnection(StreamConnection channel, final ByteBufferPool bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize, final ConnectorStatisticsImpl connectorStatistics) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         if (channel instanceof SslChannel) {
             sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel), this);
@@ -78,6 +79,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
         addCloseListener(new CloseListener() {
             @Override
             public void closed(ServerConnection connection) {
+                if(connectorStatistics != null) {
+                    connectorStatistics.decrementConnectionCount();
+                }
                 responseConduit.freeBuffers();
             }
         });

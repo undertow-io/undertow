@@ -34,6 +34,10 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
     private static final AtomicLongFieldUpdater<ConnectorStatisticsImpl> errorCountUpdater = AtomicLongFieldUpdater.newUpdater(ConnectorStatisticsImpl.class, "errorCount");
     private static final AtomicLongFieldUpdater<ConnectorStatisticsImpl> processingTimeUpdater = AtomicLongFieldUpdater.newUpdater(ConnectorStatisticsImpl.class, "processingTime");
     private static final AtomicLongFieldUpdater<ConnectorStatisticsImpl> maxProcessingTimeUpdater = AtomicLongFieldUpdater.newUpdater(ConnectorStatisticsImpl.class, "maxProcessingTime");
+    private static final AtomicLongFieldUpdater<ConnectorStatisticsImpl> activeConnectionsUpdater = AtomicLongFieldUpdater.newUpdater(ConnectorStatisticsImpl.class, "activeConnections");
+    private static final AtomicLongFieldUpdater<ConnectorStatisticsImpl> maxActiveConnectionsUpdater = AtomicLongFieldUpdater.newUpdater(ConnectorStatisticsImpl.class, "maxActiveConnections");
+    private static final AtomicLongFieldUpdater<ConnectorStatisticsImpl> activeRequestsUpdater = AtomicLongFieldUpdater.newUpdater(ConnectorStatisticsImpl.class, "activeRequests");
+    private static final AtomicLongFieldUpdater<ConnectorStatisticsImpl> maxActiveRequestsUpdater = AtomicLongFieldUpdater.newUpdater(ConnectorStatisticsImpl.class, "maxActiveRequests");
 
     private volatile long requestCount;
     private volatile long bytesSent;
@@ -41,14 +45,18 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
     private volatile long errorCount;
     private volatile long processingTime;
     private volatile long maxProcessingTime;
+    private volatile long activeConnections;
+    private volatile long maxActiveConnections;
+    private volatile long activeRequests;
+    private volatile long maxActiveRequests;
 
     private final ExchangeCompletionListener completionListener = new ExchangeCompletionListener() {
         @Override
         public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
             try {
+                activeRequestsUpdater.decrementAndGet(ConnectorStatisticsImpl.this);
                 if (exchange.getStatusCode() == StatusCodes.INTERNAL_SERVER_ERROR) {
                     errorCountUpdater.incrementAndGet(ConnectorStatisticsImpl.this);
-
                 }
                 long start = exchange.getRequestStartTime();
                 if (start > 0) {
@@ -107,6 +115,9 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
         errorCountUpdater.set(this, 0);
         maxProcessingTimeUpdater.set(this, 0);
         processingTimeUpdater.set(this, 0);
+        maxActiveConnectionsUpdater.set(this, 0);
+        maxActiveRequestsUpdater.set(this, 0);
+        //we don't update active requests or connections, as these will still be live
     }
 
     public void requestFinished(long bytesSent, long bytesReceived, boolean error) {
@@ -127,6 +138,14 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
 
     public void setup(HttpServerExchange exchange) {
         requestCountUpdater.incrementAndGet(this);
+        long current = activeRequestsUpdater.incrementAndGet(this);
+        long maxActiveRequests;
+        do {
+            maxActiveRequests = this.maxActiveRequests;
+            if(current <= maxActiveRequests) {
+                return;
+            }
+        } while (!maxActiveRequestsUpdater.compareAndSet(this, maxActiveRequests, current));
         exchange.addExchangeCompleteListener(completionListener);
     }
 
@@ -151,5 +170,39 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
         public void activity(long bytes) {
             bytesReceivedUpdater.addAndGet(ConnectorStatisticsImpl.this, bytes);
         }
+    }
+
+    @Override
+    public long getActiveConnections() {
+        return activeConnections;
+    }
+
+    @Override
+    public long getMaxActiveConnections() {
+        return maxActiveConnections;
+    }
+
+    public void incrementConnectionCount() {
+        long current = activeConnectionsUpdater.incrementAndGet(this);
+        long maxActiveConnections;
+        do {
+            maxActiveConnections = this.maxActiveConnections;
+            if(current <= maxActiveConnections) {
+                return;
+            }
+        } while (!maxActiveConnectionsUpdater.compareAndSet(this, maxActiveConnections, current));
+    }
+
+    public void decrementConnectionCount() {
+        activeConnectionsUpdater.decrementAndGet(this);
+    }
+    @Override
+    public long getActiveRequests() {
+        return activeRequests;
+    }
+
+    @Override
+    public long getMaxActiveRequests() {
+        return maxActiveRequests;
     }
 }
