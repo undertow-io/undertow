@@ -76,11 +76,11 @@ public class AggregateConnectorStatistics implements ConnectorStatistics {
 
     @Override
     public long getMaxProcessingTime() {
-        long count = 0;
+        long max = 0;
         for(ConnectorStatistics c : connectorStatistics) {
-            count += c.getMaxProcessingTime();
+            max = Math.max(c.getMaxProcessingTime(), max);
         }
-        return count;
+        return max;
     }
 
     @Override
@@ -88,5 +88,41 @@ public class AggregateConnectorStatistics implements ConnectorStatistics {
         for(ConnectorStatistics c : connectorStatistics) {
             c.reset();
         }
+    }
+
+    @Override
+    public long getActiveConnections() {
+        long count = 0;
+        for(ConnectorStatistics c : connectorStatistics) {
+            count += c.getActiveConnections();
+        }
+        return count;
+    }
+
+    @Override
+    public long getMaxActiveConnections() {
+        long count = 0;
+        for(ConnectorStatistics c : connectorStatistics) {
+            count += c.getMaxActiveConnections(); //not 100% accurate, but the best we can do
+        }
+        return count;
+    }
+
+    @Override
+    public long getActiveRequests() {
+        long count = 0;
+        for(ConnectorStatistics c : connectorStatistics) {
+            count += c.getActiveRequests();
+        }
+        return count;
+    }
+
+    @Override
+    public long getMaxActiveRequests() {
+        long count = 0;
+        for(ConnectorStatistics c : connectorStatistics) {
+            count += c.getMaxActiveRequests(); //not 100% accurate, but the best we can do
+        }
+        return count;
     }
 }

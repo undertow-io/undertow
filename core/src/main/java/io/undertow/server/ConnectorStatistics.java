@@ -69,4 +69,28 @@ public interface ConnectorStatistics {
      */
     void reset();
 
+    /**
+     *
+     * @return The current number of active connections
+     */
+    long getActiveConnections();
+
+    /**
+     *
+     * @return The maximum number of active connections that have every been active on this connector
+     */
+    long getMaxActiveConnections();
+
+    /**
+     *
+     * @return The current number of active requests
+     */
+    long getActiveRequests();
+
+    /**
+     *
+     * @return The maximum number of active requests
+     */
+    long getMaxActiveRequests();
+
 }

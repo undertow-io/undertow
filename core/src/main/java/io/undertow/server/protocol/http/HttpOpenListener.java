@@ -127,7 +127,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
         }
 
-        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
+        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize, statisticsEnabled ? connectorStatistics : null);
         HttpReadListener readListener = new HttpReadListener(connection, parser, statisticsEnabled ? connectorStatistics : null);
 
 
@@ -137,6 +137,9 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             } else {
                 buffer.close();
             }
+        }
+        if(connectorStatistics != null && statisticsEnabled) {
+            connectorStatistics.incrementConnectionCount();
         }
 
         connection.setReadListener(readListener);

@@ -29,6 +29,7 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
+import io.undertow.server.ServerConnection;
 import io.undertow.server.XnioByteBufferPool;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -63,6 +64,13 @@ public class AjpOpenListener implements OpenListener {
 
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
+
+    private final ServerConnection.CloseListener closeListener = new ServerConnection.CloseListener() {
+        @Override
+        public void closed(ServerConnection connection) {
+            connectorStatistics.decrementConnectionCount();
+        }
+    };
 
     public AjpOpenListener(final Pool<ByteBuffer> pool) {
         this(pool, OptionMap.EMPTY);
@@ -121,10 +129,14 @@ public class AjpOpenListener implements OpenListener {
         if(statisticsEnabled) {
             channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
             channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
+            connectorStatistics.incrementConnectionCount();
         }
 
         AjpServerConnection connection = new AjpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         AjpReadListener readListener = new AjpReadListener(connection, scheme, parser, statisticsEnabled ? connectorStatistics : null);
+        if(statisticsEnabled) {
+            connection.addCloseListener(closeListener);
+        }
         connection.setAjpReadListener(readListener);
         readListener.startRequest();
         channel.getSourceChannel().setReadListener(readListener);

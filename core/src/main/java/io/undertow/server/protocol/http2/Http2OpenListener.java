@@ -51,6 +51,12 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
 
     private final ByteBufferPool bufferPool;
     private final int bufferSize;
+    private final ChannelListener<Http2Channel> closeTask = new ChannelListener<Http2Channel>() {
+        @Override
+        public void handleEvent(Http2Channel channel) {
+            connectorStatistics.decrementConnectionCount();
+        }
+    };
 
     private volatile HttpHandler rootHandler;
 
@@ -89,13 +95,13 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         this.bufferSize = buf.getBuffer().remaining();
         buf.close();
         connectorStatistics = new ConnectorStatisticsImpl();
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
         this.protocol = protocol;
     }
 
     public void handleEvent(final StreamConnection channel, PooledByteBuffer buffer) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
-            UndertowLogger.REQUEST_LOGGER.tracef("Opened HTTP1 connection with %s", channel.getPeerAddress());
+            UndertowLogger.REQUEST_LOGGER.tracef("Opened HTTP/2 connection with %s", channel.getPeerAddress());
         }
 
         //cool, we have a Http2 connection.
@@ -107,6 +113,8 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         if(statisticsEnabled) {
             channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
             channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
+            connectorStatistics.incrementConnectionCount();
+            http2Channel.addCloseTask(closeTask);
         }
         http2Channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics));
         http2Channel.resumeReceives();
