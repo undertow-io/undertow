@@ -907,7 +907,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
 
     public HttpServerExchange addExchangeCompleteListener(final ExchangeCompletionListener listener) {
-        if(isComplete()) {
+        if(isComplete() || this.exchangeCompletionListenersCount == -1) {
             throw UndertowMessages.MESSAGES.exchangeAlreadyComplete();
         }
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
