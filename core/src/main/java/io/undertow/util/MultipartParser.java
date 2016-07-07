@@ -74,7 +74,7 @@ public class MultipartParser {
     public static class ParseState {
         private final ByteBufferPool bufferPool;
         private final PartHandler partHandler;
-        private final String requestCharset;
+        private String requestCharset;
         /**
          * The boundary, complete with the initial CRLF--
          */
@@ -94,6 +94,10 @@ public class MultipartParser {
             this.partHandler = partHandler;
             this.requestCharset = requestCharset;
             this.boundary = boundary;
+        }
+
+        public void setCharacterEncoding(String encoding) {
+            requestCharset = encoding;
         }
 
         public void parse(ByteBuffer buffer) throws IOException {

@@ -330,6 +330,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         @Override
         public void setCharacterEncoding(final String encoding) {
             this.defaultEncoding = encoding;
+            parser.setCharacterEncoding(encoding);
         }
 
         private final class NonBlockingParseTask implements Runnable {
