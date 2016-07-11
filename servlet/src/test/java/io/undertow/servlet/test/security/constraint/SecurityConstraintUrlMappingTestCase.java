@@ -71,6 +71,7 @@ public class SecurityConstraintUrlMappingTestCase {
                 .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
                 .addMapping("/role1")
                 .addMapping("/role2")
+                .addMapping("/starstar")
                 .addMapping("/secured/role2/*")
                 .addMapping("/secured/1/2/*")
                 .addMapping("/public/*")
@@ -78,7 +79,7 @@ public class SecurityConstraintUrlMappingTestCase {
 
         ServletIdentityManager identityManager = new ServletIdentityManager();
         identityManager.addUser("user1", "password1", "role1");
-        identityManager.addUser("user2", "password2", "role2");
+        identityManager.addUser("user2", "password2", "role2", "**");
         identityManager.addUser("user3", "password3", "role1", "role2");
         identityManager.addUser("user4", "password4", "badRole");
 
@@ -95,6 +96,11 @@ public class SecurityConstraintUrlMappingTestCase {
                 .addWebResourceCollection(new WebResourceCollection()
                         .addUrlPattern("/role1"))
                 .addRoleAllowed("role1"));
+
+        builder.addSecurityConstraint(new SecurityConstraint()
+                .addWebResourceCollection(new WebResourceCollection()
+                        .addUrlPattern("/starstar"))
+                .addRoleAllowed("**"));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection()
                         .addUrlPattern("/secured/*"))
@@ -128,6 +134,24 @@ public class SecurityConstraintUrlMappingTestCase {
         manager.deploy();
         root.addPrefixPath(builder.getContextPath(), manager.start());
 
+        builder = new DeploymentInfo()
+                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
+                .setContextPath("/star")
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setDeploymentName("servletContext.war")
+                .setIdentityManager(identityManager)
+                .setLoginConfig(new LoginConfig("BASIC", "Test Realm"))
+                .addSecurityRole("**")
+                .addServlet(s);
+
+        builder.addSecurityConstraint(new SecurityConstraint()
+                .addWebResourceCollection(new WebResourceCollection()
+                        .addUrlPattern("/starstar"))
+                .addRoleAllowed("**"));
+
+        manager = container.addDeployment(builder);
+        manager.deploy();
+        root.addPrefixPath(builder.getContextPath(), manager.start());
         DefaultServer.setRootHandler(root);
     }
 
@@ -141,6 +165,15 @@ public class SecurityConstraintUrlMappingTestCase {
         runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/role2/aa", "user1:password1", "user2:password2");
     }
 
+    @Test
+    public void testStartStar() throws IOException {
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/starstar", null, "user2:password2");
+    }
+
+    @Test
+    public void testStartStar2() throws IOException {
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/star/starstar", "user1:password1", "user2:password2");
+    }
     @Test
     public void testExtensionMatch() throws IOException {
         runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/extension/a.html", "user1:password1", "user2:password2");
@@ -213,13 +246,13 @@ public class SecurityConstraintUrlMappingTestCase {
             assertEquals(1, values.length);
             assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
             HttpClientUtils.readResponse(result);
-
-            get = new HttpGet(url);
-            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(badUser.getBytes(), false));
-            result = client.execute(get);
-            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
+            if(badUser != null) {
+                get = new HttpGet(url);
+                get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(badUser.getBytes(), false));
+                result = client.execute(get);
+                assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+                HttpClientUtils.readResponse(result);
+            }
             get = new HttpGet(url);
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(goodUser.getBytes(), false));
             get.addHeader("ExpectedMechanism", "BASIC");

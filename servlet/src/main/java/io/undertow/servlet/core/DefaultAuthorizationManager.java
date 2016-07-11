@@ -80,7 +80,7 @@ public class DefaultAuthorizationManager implements AuthorizationManager {
                      */
                 found = true;
             } else if (account != null) {
-                if(roleSet.contains("**")) {
+                if(roleSet.contains("**") && !deployment.getDeploymentInfo().getSecurityRoles().contains("**")) {
                     found = true;
                 } else {
                     final Set<String> roles = deployment.getDeploymentInfo().getPrincipalVersusRolesMap().get(account.getPrincipal().getName());
