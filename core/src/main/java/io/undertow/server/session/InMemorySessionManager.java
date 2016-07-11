@@ -428,7 +428,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public long getCreationTime() {
             if (invalid) {
-                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             return creationTime;
         }
@@ -436,7 +436,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public long getLastAccessedTime() {
             if (invalid) {
-                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             return lastAccessed;
         }
@@ -444,7 +444,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public void setMaxInactiveInterval(final int interval) {
             if (invalid) {
-                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             maxInactiveInterval = interval;
             bumpTimeout();
@@ -453,7 +453,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public int getMaxInactiveInterval() {
             if (invalid) {
-                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             return maxInactiveInterval;
         }
@@ -461,7 +461,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public Object getAttribute(final String name) {
             if (invalid) {
-                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             bumpTimeout();
             return attributes.get(name);
@@ -470,7 +470,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public Set<String> getAttributeNames() {
             if (invalid) {
-                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             bumpTimeout();
             return attributes.keySet();
@@ -482,7 +482,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 return removeAttribute(name);
             }
             if (invalid) {
-                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             final Object existing = attributes.put(name, value);
             if (existing == null) {
@@ -497,7 +497,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public Object removeAttribute(final String name) {
             if (invalid) {
-                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             final Object existing = attributes.remove(name);
             sessionManager.sessionListeners.attributeRemoved(this, name, existing);
