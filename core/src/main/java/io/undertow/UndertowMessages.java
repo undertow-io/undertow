@@ -65,8 +65,8 @@ public interface UndertowMessages {
     @Message(id = 9, value = "Path must be specified")
     IllegalArgumentException pathMustBeSpecified();
 
-    @Message(id = 10, value = "Session not found %s")
-    IllegalStateException sessionNotFound(final String session);
+    @Message(id = 10, value = "Session is invalid %s")
+    IllegalStateException sessionIsInvalid(String sessionId);
 
     @Message(id = 11, value = "Session manager must not be null")
     IllegalStateException sessionManagerMustNotBeNull();
