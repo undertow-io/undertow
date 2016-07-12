@@ -24,7 +24,7 @@ import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 
 /**
- * SPDY stream source channel
+ * HTTP2 stream source channel
  *
  * @author Stuart Douglas
  */
