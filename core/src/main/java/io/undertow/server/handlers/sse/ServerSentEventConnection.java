@@ -316,7 +316,14 @@ public class ServerSentEventConnection implements Channel, Attachable {
                 }
                 if (data.data != null) {
                     message.append("data:");
-                    message.append(data.data);
+                    for(int i = 0; i < data.data.length(); ++i) {
+                        char c = data.data.charAt(i);
+                        if(c == '\n') {
+                            message.append("\ndata:");
+                        } else {
+                            message.append(c);
+                        }
+                    }
                     message.append('\n');
                 }
                 message.append('\n');
