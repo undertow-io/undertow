@@ -60,7 +60,7 @@ public class ServerSentEventTestCase {
                     connection.send("msg 1", new ServerSentEventConnection.EventCallback() {
                         @Override
                         public void done(ServerSentEventConnection connection, String data, String event, String id) {
-                            connection.send("msg 2", new ServerSentEventConnection.EventCallback() {
+                            connection.send("msg\n2", new ServerSentEventConnection.EventCallback() {
                                 @Override
                                 public void done(ServerSentEventConnection connection, String data, String event, String id) {
                                     connection.shutdown();
@@ -88,7 +88,7 @@ public class ServerSentEventTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
 
-            Assert.assertEquals("data:msg 1\n\ndata:msg 2\n\n", response);
+            Assert.assertEquals("data:msg 1\n\ndata:msg\ndata:2\n\n", response);
 
         } finally {
             client.getConnectionManager().shutdown();
