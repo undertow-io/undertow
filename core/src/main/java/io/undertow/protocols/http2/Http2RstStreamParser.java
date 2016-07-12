@@ -21,7 +21,7 @@ package io.undertow.protocols.http2;
 import java.nio.ByteBuffer;
 
 /**
- * Parser for SPDY ping frames.
+ * Parser for HTTP2 ping frames.
  *
  * @author Stuart Douglas
  */

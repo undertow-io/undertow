@@ -53,7 +53,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * SPDY channel.
+ * HTTP2 channel.
  *
  * @author Stuart Douglas
  */
