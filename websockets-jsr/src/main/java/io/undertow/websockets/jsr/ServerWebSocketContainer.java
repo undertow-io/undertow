@@ -377,6 +377,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                     .decoders(sec.getDecoders())
                     .encoders(sec.getEncoders())
                     .subprotocols(sec.getSubprotocols())
+                    .extensions(sec.getExtensions())
                     .configurator(configurator)
                     .build();
 
@@ -387,7 +388,12 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
 
 
-            ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory);
+            ConfiguredServerEndpoint confguredServerEndpoint;
+            if(annotatedEndpointFactory == null) {
+                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory);
+            } else {
+                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory, installedExtensions);
+            }
             WebSocketHandshakeHolder hand;
 
             WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)request.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
@@ -622,12 +628,12 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                     .decoders(Arrays.asList(serverEndpoint.decoders()))
                     .encoders(Arrays.asList(serverEndpoint.encoders()))
                     .subprotocols(Arrays.asList(serverEndpoint.subprotocols()))
-                    .extensions(installedExtensions)
+                    .extensions(Collections.<Extension>emptyList())
                     .configurator(configurator)
                     .build();
 
 
-            ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, template, encodingFactory, annotatedEndpointFactory);
+            ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, template, encodingFactory, annotatedEndpointFactory, installedExtensions);
             configuredServerEndpoints.add(confguredServerEndpoint);
             handleAddingFilterMapping();
         } else if (clientEndpoint != null) {
@@ -702,7 +708,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         seenPaths.add(template);
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, endpoint.getDecoders(), endpoint.getEncoders());
-        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory, null);
+        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory);
         configuredServerEndpoints.add(confguredServerEndpoint);
         handleAddingFilterMapping();
     }

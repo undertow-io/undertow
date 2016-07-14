@@ -18,10 +18,13 @@
 
 package io.undertow.websockets.jsr;
 
+import java.util.List;
+
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.util.PathTemplate;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 
+import javax.websocket.Extension;
 import javax.websocket.server.ServerEndpointConfig;
 
 /**
@@ -34,16 +37,25 @@ public class ConfiguredServerEndpoint extends SessionContainer {
     private final InstanceFactory<?> endpointFactory;
     private final PathTemplate pathTemplate;
     private final EncodingFactory encodingFactory;
+    private final List<Extension> extensions;
 
-
-    public ConfiguredServerEndpoint(final ServerEndpointConfig endpointConfiguration, final InstanceFactory<?> endpointFactory, final PathTemplate pathTemplate, final EncodingFactory encodingFactory, AnnotatedEndpointFactory annotatedEndpointFactory) {
+    public ConfiguredServerEndpoint(final ServerEndpointConfig endpointConfiguration, final InstanceFactory<?> endpointFactory, final PathTemplate pathTemplate, final EncodingFactory encodingFactory, AnnotatedEndpointFactory annotatedEndpointFactory, List<Extension> installed) {
         this.endpointConfiguration = endpointConfiguration;
         this.endpointFactory = endpointFactory;
         this.pathTemplate = pathTemplate;
         this.encodingFactory = encodingFactory;
         this.annotatedEndpointFactory = annotatedEndpointFactory;
+        this.extensions = installed;
     }
 
+    public ConfiguredServerEndpoint(final ServerEndpointConfig endpointConfiguration, final InstanceFactory<?> endpointFactory, final PathTemplate pathTemplate, final EncodingFactory encodingFactory) {
+        this.endpointConfiguration = endpointConfiguration;
+        this.endpointFactory = endpointFactory;
+        this.pathTemplate = pathTemplate;
+        this.encodingFactory = encodingFactory;
+        this.annotatedEndpointFactory = null;
+        this.extensions = endpointConfiguration.getExtensions();
+    }
     public ServerEndpointConfig getEndpointConfiguration() {
         return endpointConfiguration;
     }
@@ -63,6 +75,15 @@ public class ConfiguredServerEndpoint extends SessionContainer {
 
     public AnnotatedEndpointFactory getAnnotatedEndpointFactory() {
         return annotatedEndpointFactory;
+    }
+
+    /**
+     * Return the websocket extensions configured.
+     *
+     * @return the list of extensions, the empty list if none.
+     */
+    public List<Extension> getExtensions() {
+        return extensions;
     }
 
 }
