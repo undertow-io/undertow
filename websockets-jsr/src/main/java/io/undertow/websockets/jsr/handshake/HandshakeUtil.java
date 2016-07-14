@@ -98,7 +98,7 @@ public final class HandshakeUtil {
 
     static List<Extension> selectExtensions(final ConfiguredServerEndpoint config, final List<Extension> requestedExtensions) {
         if (config.getEndpointConfiguration().getConfigurator() != null) {
-            return config.getEndpointConfiguration().getConfigurator().getNegotiatedExtensions(config.getEndpointConfiguration().getExtensions(), requestedExtensions);
+            return config.getEndpointConfiguration().getConfigurator().getNegotiatedExtensions(config.getExtensions(), requestedExtensions);
         } else {
             return Collections.emptyList();
         }
