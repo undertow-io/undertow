@@ -44,8 +44,8 @@ public class ResponseParserGenerator extends AbstractParserGenerator {
     public static final int PARSE_COMPLETE = 6;
 
 
-    public ResponseParserGenerator() {
-        super(PARSE_STATE_CLASS, HTTP_RESPONSE_CLASS, "()V");
+    public ResponseParserGenerator(String existingClassName) {
+        super(PARSE_STATE_CLASS, HTTP_RESPONSE_CLASS, "()V", existingClassName);
     }
 
 
