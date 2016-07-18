@@ -53,14 +53,14 @@ public class HttpParserAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(final Set<? extends TypeElement> annotations, final RoundEnvironment roundEnv) {
-        final RequestParserGenerator requestGenerator = new RequestParserGenerator();
         for (Element element : roundEnv.getElementsAnnotatedWith(HttpParserConfig.class)) {
             final HttpParserConfig parser = element.getAnnotation(HttpParserConfig.class);
             if (parser == null) {
                 continue;
             }
 
-            final byte[] newClass = requestGenerator.createTokenizer(((TypeElement) element).getQualifiedName().toString(), parser.methods(), parser.protocols(), parser.headers());
+            final RequestParserGenerator requestGenerator = new RequestParserGenerator(((TypeElement) element).getQualifiedName().toString());
+            final byte[] newClass = requestGenerator.createTokenizer(parser.methods(), parser.protocols(), parser.headers());
             try {
                 JavaFileObject file = filer.createClassFile(((TypeElement) element).getQualifiedName() + AbstractParserGenerator.CLASS_NAME_SUFFIX, element);
                 final OutputStream out = file.openOutputStream();
@@ -77,13 +77,13 @@ public class HttpParserAnnotationProcessor extends AbstractProcessor {
                 throw new RuntimeException(e);
             }
         }
-        ResponseParserGenerator responseGenerator = new ResponseParserGenerator();
         for (Element element : roundEnv.getElementsAnnotatedWith(HttpResponseParserConfig.class)) {
+            ResponseParserGenerator responseGenerator = new ResponseParserGenerator(((TypeElement) element).getQualifiedName().toString());
             final HttpResponseParserConfig parser = element.getAnnotation(HttpResponseParserConfig.class);
             if (parser == null) {
                 continue;
             }
-            final byte[] newClass = responseGenerator.createTokenizer(((TypeElement) element).getQualifiedName().toString(), new String[0], parser.protocols(), parser.headers());
+            final byte[] newClass = responseGenerator.createTokenizer(new String[0], parser.protocols(), parser.headers());
             try {
                 JavaFileObject file = filer.createClassFile(((TypeElement) element).getQualifiedName() + AbstractParserGenerator.CLASS_NAME_SUFFIX, element);
                 final OutputStream out = file.openOutputStream();

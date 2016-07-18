@@ -52,6 +52,7 @@ public abstract class AbstractParserGenerator {
 
     private final String parseStateDescriptor;
     private final String httpExchangeDescriptor;
+    private final String existingClassName;
 
     public static final String HTTP_STRING_CLASS = "io.undertow.util.HttpString";
     public static final String HTTP_STRING_DESCRIPTOR = DescriptorUtils.makeDescriptor(HTTP_STRING_CLASS);
@@ -80,15 +81,16 @@ public abstract class AbstractParserGenerator {
     public static final String HANDLE_HEADER_VALUE = "handleHeaderValue";
     public static final String CLASS_NAME_SUFFIX = "$$generated";
 
-    public AbstractParserGenerator(final String parseStateClass, final String resultClass, final String constructorDescriptor) {
+    public AbstractParserGenerator(final String parseStateClass, final String resultClass, final String constructorDescriptor, String existingClassName) {
         this.parseStateClass = parseStateClass;
         this.resultClass = resultClass;
+        this.existingClassName = existingClassName;
         parseStateDescriptor = DescriptorUtils.makeDescriptor(parseStateClass);
         httpExchangeDescriptor = DescriptorUtils.makeDescriptor(resultClass);
         this.constructorDescriptor = constructorDescriptor;
     }
 
-    public byte[] createTokenizer(final String existingClassName, final String[] httpVerbs, String[] httpVersions, String[] standardHeaders) {
+    public byte[] createTokenizer(final String[] httpVerbs, String[] httpVersions, String[] standardHeaders) {
         final String className = existingClassName + CLASS_NAME_SUFFIX;
         final ClassFile file = new ClassFile(className, existingClassName);
 
@@ -482,13 +484,13 @@ public abstract class AbstractParserGenerator {
     }
 
     private void setupLocalVariables(final CodeAttribute c) {
-        c.setupFrame(DescriptorUtils.makeDescriptor("fakeclass"),
+        c.setupFrame(DescriptorUtils.makeDescriptor(existingClassName + CLASS_NAME_SUFFIX),
                 DescriptorUtils.makeDescriptor(ByteBuffer.class),
                 parseStateDescriptor,
                 httpExchangeDescriptor,
                 "I",
                 "I",
-                DescriptorUtils.makeDescriptor(String.class),
+                HTTP_STRING_DESCRIPTOR,
                 DescriptorUtils.makeDescriptor(StringBuilder.class),
                 "[B");
     }
