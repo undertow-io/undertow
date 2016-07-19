@@ -779,6 +779,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         if (isInCall()) {
             state |= FLAG_DISPATCHED;
+            if(anyAreSet(state, FLAG_SHOULD_RESUME_READS | FLAG_SHOULD_RESUME_WRITES)) {
+                throw UndertowMessages.MESSAGES.resumedAndDispatched();
+            }
             this.dispatchTask = runnable;
         } else {
             if (executor == null) {
@@ -1896,6 +1899,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void resumeWrites() {
             if (isInCall()) {
                 state |= FLAG_SHOULD_RESUME_WRITES;
+                if(anyAreSet(state, FLAG_DISPATCHED)) {
+                    throw UndertowMessages.MESSAGES.resumedAndDispatched();
+                }
             } else if(!isFinished()){
                 delegate.resumeWrites();
             }
@@ -1909,6 +1915,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (isInCall()) {
                 wakeup = true;
                 state |= FLAG_SHOULD_RESUME_WRITES;
+                if(anyAreSet(state, FLAG_DISPATCHED)) {
+                    throw UndertowMessages.MESSAGES.resumedAndDispatched();
+                }
             } else {
                 delegate.wakeupWrites();
             }
@@ -2055,6 +2064,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             readsResumed = true;
             if (isInCall()) {
                 state |= FLAG_SHOULD_RESUME_READS;
+                if(anyAreSet(state, FLAG_DISPATCHED)) {
+                    throw UndertowMessages.MESSAGES.resumedAndDispatched();
+                }
             } else if (!isFinished()) {
                 delegate.resumeReads();
             }
@@ -2065,6 +2077,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (isInCall()) {
                 wakeup = true;
                 state |= FLAG_SHOULD_RESUME_READS;
+                if(anyAreSet(state, FLAG_DISPATCHED)) {
+                    throw UndertowMessages.MESSAGES.resumedAndDispatched();
+                }
             } else {
                 if(isFinished()) {
                     invokeListener();
