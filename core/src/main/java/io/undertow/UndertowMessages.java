@@ -465,4 +465,7 @@ public interface UndertowMessages {
 
     @Message(id = 145, value = "Too many redirects")
     IOException tooManyRedirects(@Cause IOException exception);
+
+    @Message(id = 146, value = "HttpServerExchange cannot have both async IO resumed and dispatch() called in the same cycle")
+    IllegalStateException resumedAndDispatched();
 }
