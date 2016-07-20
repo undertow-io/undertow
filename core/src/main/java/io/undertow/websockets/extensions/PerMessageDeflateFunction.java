@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.extensions;
 
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
@@ -26,6 +27,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
 import org.xnio.Buffers;
+import org.xnio.IoUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -84,10 +86,12 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
     @Override
     public synchronized PooledByteBuffer transformForWrite(PooledByteBuffer pooledBuffer, StreamSinkFrameChannel channel, boolean lastFrame) throws IOException {
         ByteBuffer buffer = pooledBuffer.getBuffer();
+        PooledByteBuffer inputBuffer = null;
         if (buffer.hasArray()) {
             compress.setInput(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
         } else {
-            compress.setInput(Buffers.take(buffer));
+            inputBuffer = toArrayBacked(buffer, channel.getWebSocketChannel().getBufferPool());
+            compress.setInput(inputBuffer.getBuffer().array(), inputBuffer.getBuffer().arrayOffset() + inputBuffer.getBuffer().position(), inputBuffer.getBuffer().remaining());
         }
 
         PooledByteBuffer output = allocateBufferWithArray(channel.getWebSocketChannel(), 0); // first pass
@@ -111,7 +115,7 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
             }
         } finally {
             // Free the buffer AFTER compression so it doesn't get re-used out from under us
-            pooledBuffer.close();
+            IoUtils.safeClose(pooledBuffer, inputBuffer);
         }
 
         if(lastFrame) {
@@ -122,6 +126,16 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
         }
         outputBuffer.flip();
         return output;
+    }
+
+    private PooledByteBuffer toArrayBacked(ByteBuffer buffer, ByteBufferPool pool) {
+        if(pool.getBufferSize() < buffer.remaining()) {
+            return new ImmediatePooledByteBuffer(ByteBuffer.wrap(Buffers.take(buffer)));
+        }
+        PooledByteBuffer newBuf = pool.getArrayBackedPool().allocate();
+        newBuf.getBuffer().put(buffer);
+        newBuf.getBuffer().flip();
+        return newBuf;
     }
 
     private PooledByteBuffer largerBuffer(PooledByteBuffer smaller, WebSocketChannel channel, int newSize) {
@@ -138,18 +152,13 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
 
     private PooledByteBuffer allocateBufferWithArray(WebSocketChannel channel, int size) {
         if (size > 0) {
-            // TODO use newer XNIO sized pool thingies smartly
-            return new ImmediatePooledByteBuffer(ByteBuffer.allocate(size));
+            if(size > channel.getBufferPool().getBufferSize()) {
+                // TODO use newer XNIO sized pool thingies smartly
+                return new ImmediatePooledByteBuffer(ByteBuffer.allocate(size));
+            }
         }
 
-        PooledByteBuffer pooled = channel.getBufferPool().allocate();
-        if (pooled.getBuffer().hasArray()) {
-            return pooled;
-        } else {
-            int pooledSize = pooled.getBuffer().remaining();
-            pooled.close();
-            return allocateBufferWithArray(channel, pooledSize);
-        }
+        return channel.getBufferPool().getArrayBackedPool().allocate();
     }
 
     @Override
@@ -159,6 +168,7 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
             return pooledBuffer;
         }
         PooledByteBuffer output = allocateBufferWithArray(channel.getWebSocketChannel(), 0); // first pass
+        PooledByteBuffer inputBuffer = null;
         if (currentReadChannel != null && currentReadChannel != channel) {
             //new channel, we did not get a last fragment message which can happens sometimes
 
@@ -170,13 +180,14 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
         if (buffer.hasArray()) {
             decompress.setInput(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
         } else {
-            decompress.setInput(Buffers.take(buffer));
+            inputBuffer = toArrayBacked(buffer, channel.getWebSocketChannel().getBufferPool());
+            decompress.setInput(inputBuffer.getBuffer().array(), inputBuffer.getBuffer().arrayOffset() + inputBuffer.getBuffer().position(), inputBuffer.getBuffer().remaining());
         }
         try {
             output = decompress(channel.getWebSocketChannel(), output);
         } finally {
             // Free the buffer AFTER decompression so it doesn't get re-used out from under us
-            pooledBuffer.close();
+            IoUtils.safeClose(inputBuffer, pooledBuffer);
         }
 
         if (lastFragmentOfMessage) {

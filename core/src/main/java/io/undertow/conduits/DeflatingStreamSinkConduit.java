@@ -455,26 +455,27 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         //we don't need to flush here, as this should have been called already by the time we get to
         //this point
         boolean nextCreated = false;
-        try {
+        try (PooledByteBuffer arrayPooled = this.exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
             PooledByteBuffer pooled = this.currentBuffer;
             final ByteBuffer outputBuffer = pooled.getBuffer();
 
             final boolean shutdown = anyAreSet(state, SHUTDOWN);
-
-            byte[] buffer = new byte[1024]; //TODO: we should pool this and make it configurable or something
+            ByteBuffer buf = arrayPooled.getBuffer();
             while (force || !deflater.needsInput() || (shutdown && !deflater.finished())) {
-                int count = deflater.deflate(buffer, 0, buffer.length, force ? Deflater.SYNC_FLUSH: Deflater.NO_FLUSH);
+                int count = deflater.deflate(buf.array(), buf.arrayOffset(), buf.remaining(), force ? Deflater.SYNC_FLUSH: Deflater.NO_FLUSH);
                 Connectors.updateResponseBytesSent(exchange, count);
                 if (count != 0) {
                     int remaining = outputBuffer.remaining();
                     if (remaining > count) {
-                        outputBuffer.put(buffer, 0, count);
+                        outputBuffer.put(buf.array(), buf.arrayOffset(), count);
                     } else {
                         if (remaining == count) {
-                            outputBuffer.put(buffer, 0, count);
+                            outputBuffer.put(buf.array(), buf.arrayOffset(), count);
                         } else {
-                            outputBuffer.put(buffer, 0, remaining);
-                            additionalBuffer = ByteBuffer.wrap(buffer, remaining, count - remaining);
+                            outputBuffer.put(buf.array(), buf.arrayOffset(), remaining);
+                            additionalBuffer = ByteBuffer.allocate(count - remaining);
+                            additionalBuffer.put(buf.array(), buf.arrayOffset() + remaining, count - remaining);
+                            additionalBuffer.flip();
                         }
                         outputBuffer.flip();
                         this.state |= FLUSHING_BUFFER;

@@ -21,13 +21,26 @@ package io.undertow.connector;
 import java.io.Closeable;
 
 /**
+ * A pool of byte buffers
+ *
  * @author Stuart Douglas
  */
 public interface ByteBufferPool extends Closeable {
 
     PooledByteBuffer allocate();
 
+    /**
+     * If this byte buffer pool corresponds to an array backed pool then this will return itself.
+     *
+     * Otherwise it will return an array backed pool that contains buffers of the same size.
+     *
+     * @return An array backed pool of the same size
+     */
+    ByteBufferPool getArrayBackedPool();
+
     void close();
 
     int getBufferSize();
+
+    boolean isDirect();
 }

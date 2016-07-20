@@ -18,20 +18,20 @@
 
 package io.undertow.io;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.StatusCodes;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas
@@ -54,7 +54,6 @@ public class BlockingReceiverImpl implements Receiver {
     private final InputStream inputStream;
 
     private int maxBufferSize = -1;
-    private boolean paused = false;
     private boolean done = false;
 
     public BlockingReceiverImpl(HttpServerExchange exchange, InputStream inputStream) {
@@ -120,11 +119,10 @@ public class BlockingReceiverImpl implements Receiver {
                 return;
             }
         }
-        byte[] buffer = new byte[1024];
         int s;
-        try {
-            while ((s = inputStream.read(buffer)) > 0) {
-                sb.write(buffer, 0, s);
+        try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
+            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
             }
             callback.handle(exchange, sb.toString(charset.name()));
         } catch (IOException e) {
@@ -169,12 +167,13 @@ public class BlockingReceiverImpl implements Receiver {
             }
         }
         CharsetDecoder decoder = charset.newDecoder();
-        byte[] buffer = new byte[1024];
         int s;
-        try {
-            while ((s = inputStream.read(buffer)) > 0) {
-                CharBuffer res = decoder.decode(ByteBuffer.wrap(buffer, 0, s));
+        try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
+            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                pooled.getBuffer().limit(s);
+                CharBuffer res = decoder.decode(pooled.getBuffer());
                 callback.handle(exchange, res.toString(), false);
+                pooled.getBuffer().clear();
             }
             callback.handle(exchange, "", true);
         } catch (IOException e) {
@@ -221,11 +220,10 @@ public class BlockingReceiverImpl implements Receiver {
                 return;
             }
         }
-        byte[] buffer = new byte[1024];
         int s;
-        try {
-            while ((s = inputStream.read(buffer)) > 0) {
-                sb.write(buffer, 0, s);
+        try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
+            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
             }
             callback.handle(exchange, sb.toByteArray());
         } catch (IOException e) {
@@ -269,12 +267,11 @@ public class BlockingReceiverImpl implements Receiver {
                 return;
             }
         }
-        byte[] buffer = new byte[1024];
         int s;
-        try {
-            while ((s = inputStream.read(buffer)) > 0) {
+        try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
+            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
                 byte[] newData = new byte[s];
-                System.arraycopy(buffer, 0, newData, 0, s);
+                System.arraycopy(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), newData, 0, s);
                 callback.handle(exchange, newData, false);
             }
             callback.handle(exchange, EMPTY_BYTE_ARRAY, true);
@@ -290,11 +287,11 @@ public class BlockingReceiverImpl implements Receiver {
 
     @Override
     public void pause() {
-        this.paused = true;
+        //noop for blocking receiver
     }
 
     @Override
     public void resume() {
-        this.paused = false;
+        //noop for blocking receiver
     }
 }
