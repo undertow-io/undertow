@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1">
+
+    <display-name>test</display-name>
+    <description>Test file for web.xml parser in Undertow.</description>
+
+    <servlet>
+        <servlet-name>TestServlet1</servlet-name>
+        <servlet-class>io.undertow.servlet.test.xml.TestServlet</servlet-class>
+        <enabled>false</enabled>
+    </servlet>
+    <servlet>
+        <servlet-name>TestServlet2</servlet-name>
+        <servlet-class>io.undertow.servlet.test.xml.TestServlet</servlet-class>
+        <async-supported>true</async-supported>
+        <multipart-config>
+            <location>/tmp/foo</location>
+            <max-file-size>100</max-file-size>
+            <max-request-size>200</max-request-size>
+            <file-size-threshold>10</file-size-threshold>
+        </multipart-config>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>TestServlet1</servlet-name>
+        <url-pattern>/test1</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>TestServlet2</servlet-name>
+        <url-pattern>/test2</url-pattern>
+    </servlet-mapping>
+
+    <filter>
+        <filter-name>TestFilter2</filter-name>
+        <filter-class>io.undertow.servlet.test.xml.TestFilter</filter-class>
+    </filter>
+    <filter>
+        <filter-name>TestFilter1</filter-name>
+        <filter-class>io.undertow.servlet.test.xml.TestFilter</filter-class>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>TestFilter1</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+    <filter-mapping>
+        <filter-name>TestFilter2</filter-name>
+        <servlet-name>TestServlet2</servlet-name>
+    </filter-mapping>
+
+    <servlet-mapping>
+        <servlet-name>TestServlet3</servlet-name>
+        <url-pattern>/test3</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>TestServlet3</servlet-name>
+        <servlet-class>io.undertow.servlet.test.xml.TestServlet</servlet-class>
+        <async-supported>false</async-supported>
+        <multipart-config>
+            <max-file-size>100</max-file-size>
+        </multipart-config>
+    </servlet>
+    <servlet>
+        <servlet-name>TestServlet4</servlet-name>
+        <jsp-file>test.jsp</jsp-file>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>TestServlet4</servlet-name>
+        <url-pattern>/test4</url-pattern>
+    </servlet-mapping>
+
+    <filter-mapping>
+        <filter-name>TestFilter3</filter-name>
+        <url-pattern>/test3</url-pattern>
+    </filter-mapping>
+    <filter>
+        <filter-name>TestFilter3</filter-name>
+        <filter-class>io.undertow.servlet.test.xml.TestFilter</filter-class>
+    </filter>
+
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>test</web-resource-name>
+            <url-pattern>/*</url-pattern>
+            <http-method>GET</http-method>
+            <http-method>POST</http-method>
+        </web-resource-collection>
+        <user-data-constraint>
+            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+        </user-data-constraint>
+    </security-constraint>
+</web-app>

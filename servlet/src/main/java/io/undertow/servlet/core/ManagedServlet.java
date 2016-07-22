@@ -24,6 +24,7 @@ import java.util.List;
 
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.SingleThreadModel;
 import javax.servlet.UnavailableException;
@@ -178,6 +179,10 @@ public class ManagedServlet implements Lifecycle {
 
     public ServletInfo getServletInfo() {
         return servletInfo;
+    }
+
+    public ServletConfig getServletConfig() {
+        return new ServletConfigImpl(servletInfo, servletContext);
     }
 
     public long getMaxRequestSize() {
