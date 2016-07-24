@@ -37,15 +37,15 @@ import java.util.List;
 public class AuthenticationMechanismsHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
-    private final List<AuthenticationMechanism> authenticationMechanisms;
+    private final AuthenticationMechanism[] authenticationMechanisms;
 
     public AuthenticationMechanismsHandler(final HttpHandler next, final List<AuthenticationMechanism> authenticationMechanisms) {
         this.next = next;
-        this.authenticationMechanisms = authenticationMechanisms;
+        this.authenticationMechanisms = authenticationMechanisms.toArray(new AuthenticationMechanism[authenticationMechanisms.size()]);
     }
 
     public AuthenticationMechanismsHandler(final List<AuthenticationMechanism> authenticationHandlers) {
-        this.authenticationMechanisms = authenticationHandlers;
+        this.authenticationMechanisms = authenticationHandlers.toArray(new AuthenticationMechanism[authenticationHandlers.size()]);
     }
 
     @Override
@@ -53,8 +53,8 @@ public class AuthenticationMechanismsHandler implements HttpHandler {
         final SecurityContext sc = exchange.getSecurityContext();
         if(sc != null && sc instanceof AuthenticationMechanismContext) {
             AuthenticationMechanismContext amc = (AuthenticationMechanismContext) sc;
-            for(AuthenticationMechanism mechanism : authenticationMechanisms) {
-                amc.addAuthenticationMechanism(mechanism);
+            for(int i = 0; i < authenticationMechanisms.length; ++i) {
+                amc.addAuthenticationMechanism(authenticationMechanisms[i]);
             }
         }
         next.handleRequest(exchange);

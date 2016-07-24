@@ -133,6 +133,10 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @return the HTTP string, or {@code null} if the string is not in a compatible encoding
      */
     public static HttpString tryFromString(String string) {
+        HttpString cached = Headers.fromCache(string);
+        if(cached != null) {
+            return cached;
+        }
         final int len = string.length();
         final byte[] bytes = new byte[len];
         for (int i = 0; i < len; i++) {

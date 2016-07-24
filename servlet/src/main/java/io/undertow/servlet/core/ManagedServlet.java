@@ -222,6 +222,17 @@ public class ManagedServlet implements Lifecycle {
         private volatile InstanceHandle<? extends Servlet> handle;
         private volatile Servlet instance;
         private ResourceChangeListener changeListener;
+        private final InstanceHandle<Servlet> instanceHandle = new InstanceHandle<Servlet>() {
+            @Override
+            public Servlet getInstance() {
+                return instance;
+            }
+
+            @Override
+            public void release() {
+
+            }
+        };
 
         DefaultInstanceStrategy(final InstanceFactory<? extends Servlet> factory, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
             this.factory = factory;
@@ -266,17 +277,7 @@ public class ManagedServlet implements Lifecycle {
         }
 
         public InstanceHandle<? extends Servlet> getServlet() {
-            return new InstanceHandle<Servlet>() {
-                @Override
-                public Servlet getInstance() {
-                    return instance;
-                }
-
-                @Override
-                public void release() {
-
-                }
-            };
+            return instanceHandle;
         }
     }
 

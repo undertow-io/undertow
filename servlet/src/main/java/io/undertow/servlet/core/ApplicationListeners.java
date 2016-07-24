@@ -240,9 +240,11 @@ public class ApplicationListeners implements Lifecycle {
         if(!started) {
             return;
         }
-        final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
-        for (int i = 0; i < servletRequestListeners.length; ++i) {
-            this.<ServletRequestListener>get(servletRequestListeners[i]).requestInitialized(sre);
+        if(servletRequestListeners.length > 0) {
+            final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
+            for (int i = 0; i < servletRequestListeners.length; ++i) {
+                this.<ServletRequestListener>get(servletRequestListeners[i]).requestInitialized(sre);
+            }
         }
     }
 
@@ -250,13 +252,15 @@ public class ApplicationListeners implements Lifecycle {
         if(!started) {
             return;
         }
-        final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
-        for (int i = servletRequestListeners.length - 1; i >= 0; --i) {
-            ManagedListener listener = servletRequestListeners[i];
-            try {
-                this.<ServletRequestListener>get(listener).requestDestroyed(sre);
-            } catch (Exception e) {
-                UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("requestDestroyed", listener.getListenerInfo().getListenerClass(), e);
+        if(servletRequestListeners.length > 0) {
+            final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
+            for (int i = servletRequestListeners.length - 1; i >= 0; --i) {
+                ManagedListener listener = servletRequestListeners[i];
+                try {
+                    this.<ServletRequestListener>get(listener).requestDestroyed(sre);
+                } catch (Exception e) {
+                    UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("requestDestroyed", listener.getListenerInfo().getListenerClass(), e);
+                }
             }
         }
     }

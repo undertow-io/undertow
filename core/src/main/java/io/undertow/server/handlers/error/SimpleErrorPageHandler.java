@@ -53,26 +53,28 @@ public class SimpleErrorPageHandler implements HttpHandler {
     public SimpleErrorPageHandler() {
     }
 
-    @Override
-    public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.addDefaultResponseListener(new DefaultResponseListener() {
-            @Override
-            public boolean handleDefaultResponse(final HttpServerExchange exchange) {
-                if (!exchange.isResponseChannelAvailable()) {
-                    return false;
-                }
-                Set<Integer> codes = responseCodes;
-                if (codes == null ? exchange.getStatusCode() >= StatusCodes.BAD_REQUEST : codes.contains(Integer.valueOf(exchange.getStatusCode()))) {
-                    final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getStatusCode() + " - " + StatusCodes.getReason(exchange.getStatusCode()) + "</body></html>";
-                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
-                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
-                    Sender sender = exchange.getResponseSender();
-                    sender.send(errorPage);
-                    return true;
-                }
+    private final DefaultResponseListener responseListener = new DefaultResponseListener() {
+        @Override
+        public boolean handleDefaultResponse(final HttpServerExchange exchange) {
+            if (!exchange.isResponseChannelAvailable()) {
                 return false;
             }
-        });
+            Set<Integer> codes = responseCodes;
+            if (codes == null ? exchange.getStatusCode() >= StatusCodes.BAD_REQUEST : codes.contains(Integer.valueOf(exchange.getStatusCode()))) {
+                final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getStatusCode() + " - " + StatusCodes.getReason(exchange.getStatusCode()) + "</body></html>";
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
+                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
+                Sender sender = exchange.getResponseSender();
+                sender.send(errorPage);
+                return true;
+            }
+            return false;
+        }
+    };
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        exchange.addDefaultResponseListener(responseListener);
         next.handleRequest(exchange);
     }
 
