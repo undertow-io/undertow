@@ -418,6 +418,9 @@ public class WebSockets {
                             if (type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
                                 IoUtils.safeClose(wsChannel);
                             }
+                            //we explicitly set the channel to null, as in some situations this
+                            //listener may get invoked twice
+                            channel.getWriteSetter().set(null);
                         }
                     }, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
                         @Override
@@ -426,6 +429,9 @@ public class WebSockets {
                                 callback.onError(wsChannel, context, exception);
                             }
                             IoUtils.safeClose(channel, wsChannel);
+                            //we explicitly set the channel to null, as in some situations this
+                            //listener may get invoked twice
+                            channel.getWriteSetter().set(null);
                         }
                     }
             ));
