@@ -96,6 +96,24 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     private final ServletPathMatches paths;
 
     private final ExceptionHandler exceptionHandler;
+    private final HttpHandler dispatchHandler = new HttpHandler() {
+        @Override
+        public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+            if (System.getSecurityManager() == null) {
+                dispatchRequest(exchange, servletRequestContext, servletRequestContext.getOriginalServletPathMatch().getServletChain(), DispatcherType.REQUEST);
+            } else {
+                //sometimes thread pools inherit some random
+                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
+                    @Override
+                    public Object run() throws Exception {
+                        dispatchRequest(exchange, servletRequestContext, servletRequestContext.getOriginalServletPathMatch().getServletChain(), DispatcherType.REQUEST);
+                        return null;
+                    }
+                });
+            }
+        }
+    };
 
     public ServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
         this.next = next;
@@ -168,23 +186,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         if (exchange.isInIoThread() || executor != null) {
             //either the exchange has not been dispatched yet, or we need to use a special executor
-            exchange.dispatch(executor, new HttpHandler() {
-                @Override
-                public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                    if(System.getSecurityManager() == null) {
-                        dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
-                    } else {
-                        //sometimes thread pools inherit some random
-                        AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                            @Override
-                            public Object run() throws Exception{
-                                dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
-                                return null;
-                            }
-                        });
-                    }
-                }
-            });
+            exchange.dispatch(executor, dispatchHandler);
         } else {
             dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
         }

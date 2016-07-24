@@ -46,7 +46,7 @@ public class HeaderOrderTestCase {
         final List<HttpString> headers = new ArrayList<>();
         for(final Field field : fields) {
             // skip transient field for jacoco
-            if(Modifier.isTransient(field.getModifiers())) {
+            if(Modifier.isTransient(field.getModifiers()) || !Modifier.isPublic(field.getModifiers())) {
                 continue;
             }
 
