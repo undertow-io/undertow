@@ -19,12 +19,12 @@
 package io.undertow.servlet.core;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.api.ThreadSetupHandler;
 
 /**
  * @author Stuart Douglas
  */
-public class ContextClassLoaderSetupAction implements ThreadSetupAction {
+public class ContextClassLoaderSetupAction implements ThreadSetupHandler {
 
     private final ClassLoader classLoader;
 
@@ -33,13 +33,17 @@ public class ContextClassLoaderSetupAction implements ThreadSetupAction {
     }
 
     @Override
-    public Handle setup(final HttpServerExchange exchange) {
-        final ClassLoader old = SecurityActions.getContextClassLoader();
-        SecurityActions.setContextClassLoader(classLoader);
-        return new Handle() {
+    public <T, C> Action<T, C> create(final Action<T, C> action) {
+        return new Action<T, C>() {
             @Override
-            public void tearDown() {
-                SecurityActions.setContextClassLoader(old);
+            public T call(HttpServerExchange exchange, C context) throws Exception {
+                final ClassLoader old = SecurityActions.getContextClassLoader();
+                SecurityActions.setContextClassLoader(classLoader);
+                try {
+                    return action.call(exchange, context);
+                } finally {
+                    SecurityActions.setContextClassLoader(old);
+                }
             }
         };
     }

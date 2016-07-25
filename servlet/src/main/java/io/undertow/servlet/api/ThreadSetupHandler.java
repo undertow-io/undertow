@@ -21,24 +21,14 @@ package io.undertow.servlet.api;
 import io.undertow.server.HttpServerExchange;
 
 /**
- * Interface that can be implemented by classes that need to setup
- * and thread local context before a request is processed.
- *
  * @author Stuart Douglas
  */
-@Deprecated
-public interface ThreadSetupAction {
+public interface ThreadSetupHandler {
 
-    /**
-     * Setup any thread local context
-     *
-     * @param exchange The exchange, this may be null
-     * @return A handle to tear down the request when the invocation is finished, or null
-     */
-    Handle setup(final HttpServerExchange exchange);
+    <T, C> Action<T, C> create(Action<T, C> action);
 
-    public interface Handle {
-        void tearDown();
+    interface Action<T, C> {
+        T call(HttpServerExchange exchange, C context) throws Exception;
     }
 
 }

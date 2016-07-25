@@ -37,6 +37,7 @@ import io.undertow.security.impl.GenericHeaderAuthenticationMechanism;
 import io.undertow.security.impl.SecurityContextFactoryImpl;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.form.FormEncodedDataDefinition;
@@ -67,7 +68,7 @@ import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.ServletSessionConfig;
 import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.SessionPersistenceManager;
-import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.handlers.CrawlerSessionManagerHandler;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
@@ -137,7 +138,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void deploy() {
-        DeploymentInfo deploymentInfo = originalDeployment.clone();
+        final DeploymentInfo deploymentInfo = originalDeployment.clone();
 
         if (deploymentInfo.getServletStackTraces() == ServletStackTraces.ALL) {
             UndertowServletLogger.REQUEST_LOGGER.servletStackTracesAll(deploymentInfo.getDeploymentName());
@@ -146,6 +147,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
         deploymentInfo.validate();
         final DeploymentImpl deployment = new DeploymentImpl(this, deploymentInfo, servletContainer);
         this.deployment = deployment;
+
+        final List<ThreadSetupHandler> setup = new ArrayList<>();
+        setup.add(ServletRequestContextThreadSetupAction.INSTANCE);
+        setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
+        setup.addAll(deploymentInfo.getThreadSetupActions());
+        deployment.setThreadSetupActions(setup);
 
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         deployment.setServletContext(servletContext);
@@ -159,78 +166,74 @@ public class DeploymentManagerImpl implements DeploymentManager {
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
         deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
 
-        final List<ThreadSetupAction> setup = new ArrayList<>();
-        setup.add(ServletRequestContextThreadSetupAction.INSTANCE);
-        setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
-        setup.addAll(deploymentInfo.getThreadSetupActions());
-        final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
-        deployment.setThreadSetupAction(threadSetupAction);
 
-        ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
         try {
+            deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
+                @Override
+                public Void call(HttpServerExchange exchange, Object ignore) throws Exception {
+                    final ApplicationListeners listeners = createListeners();
+                    listeners.start();
 
-            final ApplicationListeners listeners = createListeners();
-            listeners.start();
+                    deployment.setApplicationListeners(listeners);
 
-            deployment.setApplicationListeners(listeners);
+                    //now create the servlets and filters that we know about. We can still get more later
+                    createServletsAndFilters(deployment, deploymentInfo);
 
-            //now create the servlets and filters that we know about. We can still get more later
-            createServletsAndFilters(deployment, deploymentInfo);
+                    //first run the SCI's
+                    for (final ServletContainerInitializerInfo sci : deploymentInfo.getServletContainerInitializers()) {
+                        final InstanceHandle<? extends ServletContainerInitializer> instance = sci.getInstanceFactory().createInstance();
+                        try {
+                            instance.getInstance().onStartup(sci.getHandlesTypes(), servletContext);
+                        } finally {
+                            instance.release();
+                        }
+                    }
 
-            //first run the SCI's
-            for (final ServletContainerInitializerInfo sci : deploymentInfo.getServletContainerInitializers()) {
-                final InstanceHandle<? extends ServletContainerInitializer> instance = sci.getInstanceFactory().createInstance();
-                try {
-                    instance.getInstance().onStartup(sci.getHandlesTypes(), servletContext);
-                } finally {
-                    instance.release();
+                    deployment.getSessionManager().registerSessionListener(new SessionListenerBridge(deployment, listeners, servletContext));
+                    for(SessionListener listener : deploymentInfo.getSessionListeners()) {
+                        deployment.getSessionManager().registerSessionListener(listener);
+                    }
+
+                    initializeErrorPages(deployment, deploymentInfo);
+                    initializeMimeMappings(deployment, deploymentInfo);
+                    initializeTempDir(servletContext, deploymentInfo);
+                    listeners.contextInitialized();
+                    //run
+
+                    HttpHandler wrappedHandlers = ServletDispatchingHandler.INSTANCE;
+                    wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
+                    if(!deploymentInfo.isSecurityDisabled()) {
+                        HttpHandler securityHandler = setupSecurityHandlers(wrappedHandlers);
+                        wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, securityHandler, wrappedHandlers);
+                    }
+                    HttpHandler outerHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
+                    wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, outerHandlers, wrappedHandlers);
+                    wrappedHandlers = handleDevelopmentModePersistentSessions(wrappedHandlers, deploymentInfo, deployment.getSessionManager(), servletContext);
+
+                    MetricsCollector metrics = deploymentInfo.getMetricsCollector();
+                    if(metrics != null) {
+                        wrappedHandlers = new MetricsChainHandler(wrappedHandlers, metrics, deployment);
+                    }
+                    if( deploymentInfo.getCrawlerSessionManagerConfig() != null ) {
+                        wrappedHandlers = new CrawlerSessionManagerHandler(deploymentInfo.getCrawlerSessionManagerConfig(), wrappedHandlers);
+                    }
+
+                    final ServletInitialHandler servletInitialHandler = SecurityActions.createServletInitialHandler(deployment.getServletPaths(), wrappedHandlers, deployment, servletContext);
+
+                    HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
+                    initialHandler = new HttpContinueReadHandler(initialHandler);
+                    if(deploymentInfo.getUrlEncoding() != null) {
+                        initialHandler = Handlers.urlDecodingHandler(deploymentInfo.getUrlEncoding(), initialHandler);
+                    }
+                    deployment.setInitialHandler(initialHandler);
+                    deployment.setServletHandler(servletInitialHandler);
+                    deployment.getServletPaths().invalidate(); //make sure we have a fresh set of servlet paths
+                    servletContext.initDone();
+                    return null;
                 }
-            }
-
-            deployment.getSessionManager().registerSessionListener(new SessionListenerBridge(threadSetupAction, listeners, servletContext));
-            for(SessionListener listener : deploymentInfo.getSessionListeners()) {
-                deployment.getSessionManager().registerSessionListener(listener);
-            }
-
-            initializeErrorPages(deployment, deploymentInfo);
-            initializeMimeMappings(deployment, deploymentInfo);
-            initializeTempDir(servletContext, deploymentInfo);
-            listeners.contextInitialized();
-            //run
-
-            HttpHandler wrappedHandlers = ServletDispatchingHandler.INSTANCE;
-            wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
-            if(!deploymentInfo.isSecurityDisabled()) {
-                HttpHandler securityHandler = setupSecurityHandlers(wrappedHandlers);
-                wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, securityHandler, wrappedHandlers);
-            }
-            HttpHandler outerHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
-            wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, outerHandlers, wrappedHandlers);
-            wrappedHandlers = handleDevelopmentModePersistentSessions(wrappedHandlers, deploymentInfo, deployment.getSessionManager(), servletContext);
-
-            MetricsCollector metrics = deploymentInfo.getMetricsCollector();
-            if(metrics != null) {
-                wrappedHandlers = new MetricsChainHandler(wrappedHandlers, metrics, deployment);
-            }
-            if( deploymentInfo.getCrawlerSessionManagerConfig() != null ) {
-                wrappedHandlers = new CrawlerSessionManagerHandler(deploymentInfo.getCrawlerSessionManagerConfig(), wrappedHandlers);
-            }
-
-            final ServletInitialHandler servletInitialHandler = SecurityActions.createServletInitialHandler(deployment.getServletPaths(), wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
-
-            HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
-            initialHandler = new HttpContinueReadHandler(initialHandler);
-            if(deploymentInfo.getUrlEncoding() != null) {
-                initialHandler = Handlers.urlDecodingHandler(deploymentInfo.getUrlEncoding(), initialHandler);
-            }
-            deployment.setInitialHandler(initialHandler);
-            deployment.setServletHandler(servletInitialHandler);
-            deployment.getServletPaths().invalidate(); //make sure we have a fresh set of servlet paths
-            servletContext.initDone();
+            }).call(null, null);
         } catch (Exception e) {
             throw new RuntimeException(e);
-        } finally {
-            handle.tearDown();
         }
         state = State.DEPLOYED;
     }
@@ -510,67 +513,80 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public HttpHandler start() throws ServletException {
-        ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
-            deployment.getSessionManager().start();
+            return deployment.createThreadSetupAction(new ThreadSetupHandler.Action<HttpHandler, Object>() {
+                @Override
+                public HttpHandler call(HttpServerExchange exchange, Object ignore) throws ServletException {
+                    deployment.getSessionManager().start();
 
-            //we need to copy before iterating
-            //because listeners can add other listeners
-            ArrayList<Lifecycle> lifecycles = new ArrayList<>(deployment.getLifecycleObjects());
-            for (Lifecycle object : lifecycles) {
-                object.start();
-            }
-            HttpHandler root = deployment.getHandler();
-            final TreeMap<Integer, List<ManagedServlet>> loadOnStartup = new TreeMap<>();
-            for(Map.Entry<String, ServletHandler> entry: deployment.getServlets().getServletHandlers().entrySet()) {
-                ManagedServlet servlet = entry.getValue().getManagedServlet();
-                Integer loadOnStartupNumber = servlet.getServletInfo().getLoadOnStartup();
-                if(loadOnStartupNumber != null) {
-                    if(loadOnStartupNumber < 0) {
-                        continue;
+                    //we need to copy before iterating
+                    //because listeners can add other listeners
+                    ArrayList<Lifecycle> lifecycles = new ArrayList<>(deployment.getLifecycleObjects());
+                    for (Lifecycle object : lifecycles) {
+                        object.start();
                     }
-                    List<ManagedServlet> list = loadOnStartup.get(loadOnStartupNumber);
-                    if(list == null) {
-                        loadOnStartup.put(loadOnStartupNumber, list = new ArrayList<>());
+                    HttpHandler root = deployment.getHandler();
+                    final TreeMap<Integer, List<ManagedServlet>> loadOnStartup = new TreeMap<>();
+                    for (Map.Entry<String, ServletHandler> entry : deployment.getServlets().getServletHandlers().entrySet()) {
+                        ManagedServlet servlet = entry.getValue().getManagedServlet();
+                        Integer loadOnStartupNumber = servlet.getServletInfo().getLoadOnStartup();
+                        if (loadOnStartupNumber != null) {
+                            if (loadOnStartupNumber < 0) {
+                                continue;
+                            }
+                            List<ManagedServlet> list = loadOnStartup.get(loadOnStartupNumber);
+                            if (list == null) {
+                                loadOnStartup.put(loadOnStartupNumber, list = new ArrayList<>());
+                            }
+                            list.add(servlet);
+                        }
                     }
-                    list.add(servlet);
-                }
-            }
-            for(Map.Entry<Integer, List<ManagedServlet>> load : loadOnStartup.entrySet()) {
-                for(ManagedServlet servlet : load.getValue()) {
-                    servlet.createServlet();
-                }
-            }
+                    for (Map.Entry<Integer, List<ManagedServlet>> load : loadOnStartup.entrySet()) {
+                        for (ManagedServlet servlet : load.getValue()) {
+                            servlet.createServlet();
+                        }
+                    }
 
-            if (deployment.getDeploymentInfo().isEagerFilterInit()){
-                for(ManagedFilter filter: deployment.getFilters().getFilters().values()) {
-                    filter.createFilter();
-                }
-            }
+                    if (deployment.getDeploymentInfo().isEagerFilterInit()) {
+                        for (ManagedFilter filter : deployment.getFilters().getFilters().values()) {
+                            filter.createFilter();
+                        }
+                    }
 
-            state = State.STARTED;
-            return root;
-        } finally {
-            handle.tearDown();
+                    state = State.STARTED;
+                    return root;
+                }
+            }).call(null, null);
+        } catch (ServletException|RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     public void stop() throws ServletException {
-        ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
-            for (Lifecycle object : deployment.getLifecycleObjects()) {
-                try {
-                    object.stop();
-                } catch (Exception e) {
-                    UndertowServletLogger.ROOT_LOGGER.failedToDestroy(object, e);
+            deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
+                @Override
+                public Void call(HttpServerExchange exchange, Object ignore) throws ServletException {
+                    for (Lifecycle object : deployment.getLifecycleObjects()) {
+                        try {
+                            object.stop();
+                        } catch (Exception e) {
+                            UndertowServletLogger.ROOT_LOGGER.failedToDestroy(object, e);
+                        }
+                    }
+                    deployment.getSessionManager().stop();
+                    state = State.DEPLOYED;
+                    return null;
                 }
-            }
-            deployment.getSessionManager().stop();
-        } finally {
-            handle.tearDown();
+            }).call(null, null);
+        } catch (ServletException|RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        state = State.DEPLOYED;
     }
 
     private HttpHandler handleDevelopmentModePersistentSessions(HttpHandler next, final DeploymentInfo deploymentInfo, final SessionManager sessionManager, final ServletContextImpl servletContext) {
@@ -607,14 +623,20 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void undeploy() {
-        ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
-            deployment.destroy();
-            deployment = null;
-        } finally {
-            handle.tearDown();
+            deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
+                @Override
+                public Void call(HttpServerExchange exchange, Object ignore) throws ServletException {
+                    deployment.destroy();
+                    deployment = null;
+                    state = State.UNDEPLOYED;
+                    return null;
+                }
+            }).call(null, null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        state = State.UNDEPLOYED;
+
     }
 
     @Override

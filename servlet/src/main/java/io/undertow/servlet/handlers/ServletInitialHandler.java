@@ -27,12 +27,12 @@ import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.XnioBufferPoolAdaptor;
+import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ExceptionHandler;
 import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.api.ServletDispatcher;
-import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.core.ApplicationListeners;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ServletBlockingHttpExchange;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -87,7 +87,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     private final HttpHandler next;
     //private final HttpHandler asyncPath;
 
-    private final CompositeThreadSetupAction setupAction;
+    private final ThreadSetupHandler.Action<Object, ServletRequestContext> firstRequestHandler;
 
     private final ServletContextImpl servletContext;
 
@@ -115,9 +115,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
     };
 
-    public ServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
+    public ServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final Deployment deployment, final ServletContextImpl servletContext) {
         this.next = next;
-        this.setupAction = setupAction;
         this.servletContext = servletContext;
         this.paths = paths;
         this.listeners = servletContext.getDeployment().getApplicationListeners();
@@ -133,6 +132,13 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         } else {
             this.exceptionHandler = LoggingExceptionHandler.DEFAULT;
         }
+        this.firstRequestHandler = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Object, ServletRequestContext>() {
+            @Override
+            public Object call(HttpServerExchange exchange, ServletRequestContext context) throws Exception {
+                handleFirstRequest(exchange, context);
+                return null;
+            }
+        });
     }
 
     @Override
@@ -263,85 +269,81 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         servletRequestContext.setDispatcherType(dispatcherType);
         servletRequestContext.setCurrentServlet(servletChain);
         if (dispatcherType == DispatcherType.REQUEST || dispatcherType == DispatcherType.ASYNC) {
-            handleFirstRequest(exchange, servletChain, servletRequestContext, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse());
+            firstRequestHandler.call(exchange, servletRequestContext);
         } else {
             next.handleRequest(exchange);
         }
     }
 
-    public void handleFirstRequest(final HttpServerExchange exchange, final ServletChain servletChain, final ServletRequestContext servletRequestContext, final ServletRequest request, final ServletResponse response) throws Exception {
-
-        ThreadSetupAction.Handle handle = setupAction.setup(exchange);
-        try {
-            //set request attributes from the connector
-            //generally this is only applicable if apache is sending AJP_ prefixed environment variables
-            Map<String, String> attrs = exchange.getAttachment(HttpServerExchange.REQUEST_ATTRIBUTES);
-            if(attrs != null) {
-                for(Map.Entry<String, String> entry : attrs.entrySet()) {
-                    request.setAttribute(entry.getKey(), entry.getValue());
-                }
+    private void handleFirstRequest(final HttpServerExchange exchange, ServletRequestContext servletRequestContext) throws Exception {
+        ServletRequest request = servletRequestContext.getServletRequest();
+        ServletResponse response = servletRequestContext.getServletResponse();
+        //set request attributes from the connector
+        //generally this is only applicable if apache is sending AJP_ prefixed environment variables
+        Map<String, String> attrs = exchange.getAttachment(HttpServerExchange.REQUEST_ATTRIBUTES);
+        if(attrs != null) {
+            for(Map.Entry<String, String> entry : attrs.entrySet()) {
+                request.setAttribute(entry.getKey(), entry.getValue());
             }
-            servletRequestContext.setRunningInsideHandler(true);
-            try {
-                listeners.requestInitialized(request);
-                next.handleRequest(exchange);
-                //
-                if(servletRequestContext.getErrorCode() > 0) {
-                    servletRequestContext.getOriginalResponse().doErrorDispatch(servletRequestContext.getErrorCode(), servletRequestContext.getErrorMessage());
-                }
-            } catch (Throwable t) {
+        }
+        servletRequestContext.setRunningInsideHandler(true);
+        try {
+            listeners.requestInitialized(request);
+            next.handleRequest(exchange);
+            //
+            if(servletRequestContext.getErrorCode() > 0) {
+                servletRequestContext.getOriginalResponse().doErrorDispatch(servletRequestContext.getErrorCode(), servletRequestContext.getErrorMessage());
+            }
+        } catch (Throwable t) {
 
-                //by default this will just log the exception
-                boolean handled = exceptionHandler.handleThrowable(exchange, request, response, t);
+            //by default this will just log the exception
+            boolean handled = exceptionHandler.handleThrowable(exchange, request, response, t);
 
-                if(handled) {
-                    exchange.endExchange();
-                } else if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
-                    exchange.unDispatch();
-                    servletRequestContext.getOriginalRequest().getAsyncContextInternal().handleError(t);
-                } else {
-                    if (!exchange.isResponseStarted()) {
-                        response.reset();                       //reset the response
-                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                        exchange.getResponseHeaders().clear();
-                        String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
-                        if (location == null) {
-                            location = servletContext.getDeployment().getErrorPages().getErrorLocation(StatusCodes.INTERNAL_SERVER_ERROR);
+            if(handled) {
+                exchange.endExchange();
+            } else if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
+                exchange.unDispatch();
+                servletRequestContext.getOriginalRequest().getAsyncContextInternal().handleError(t);
+            } else {
+                if (!exchange.isResponseStarted()) {
+                    response.reset();                       //reset the response
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.getResponseHeaders().clear();
+                    String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
+                    if (location == null) {
+                        location = servletContext.getDeployment().getErrorPages().getErrorLocation(StatusCodes.INTERNAL_SERVER_ERROR);
+                    }
+                    if (location != null) {
+                        RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
+                        try {
+                            dispatcher.error(servletRequestContext, request, response, servletRequestContext.getOriginalServletPathMatch().getServletChain().getManagedServlet().getServletInfo().getName(), t);
+                        } catch (Exception e) {
+                            UndertowLogger.REQUEST_LOGGER.exceptionGeneratingErrorPage(e, location);
                         }
-                        if (location != null) {
-                            RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
-                            try {
-                                dispatcher.error(servletRequestContext, request, response, servletChain.getManagedServlet().getServletInfo().getName(), t);
-                            } catch (Exception e) {
-                                UndertowLogger.REQUEST_LOGGER.exceptionGeneratingErrorPage(e, location);
-                            }
+                    } else {
+                        if (servletRequestContext.displayStackTraces()) {
+                            ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, t);
                         } else {
-                            if (servletRequestContext.displayStackTraces()) {
-                                ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, t);
-                            } else {
-                                servletRequestContext.getOriginalResponse().doErrorDispatch(StatusCodes.INTERNAL_SERVER_ERROR, StatusCodes.INTERNAL_SERVER_ERROR_STRING);
-                            }
+                            servletRequestContext.getOriginalResponse().doErrorDispatch(StatusCodes.INTERNAL_SERVER_ERROR, StatusCodes.INTERNAL_SERVER_ERROR_STRING);
                         }
                     }
                 }
+            }
 
-            } finally {
-                servletRequestContext.setRunningInsideHandler(false);
-                listeners.requestDestroyed(request);
-            }
-            //if it is not dispatched and is not a mock request
-            if (!exchange.isDispatched() && !(exchange.getConnection() instanceof MockServerConnection)) {
-                servletRequestContext.getOriginalResponse().responseDone();
-                servletRequestContext.getOriginalRequest().clearAttributes();
-            }
-            if(!exchange.isDispatched()) {
-                AsyncContextImpl ctx = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
-                if(ctx != null) {
-                    ctx.complete();
-                }
-            }
         } finally {
-            handle.tearDown();
+            servletRequestContext.setRunningInsideHandler(false);
+            listeners.requestDestroyed(request);
+        }
+        //if it is not dispatched and is not a mock request
+        if (!exchange.isDispatched() && !(exchange.getConnection() instanceof MockServerConnection)) {
+            servletRequestContext.getOriginalResponse().responseDone();
+            servletRequestContext.getOriginalRequest().clearAttributes();
+        }
+        if(!exchange.isDispatched()) {
+            AsyncContextImpl ctx = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
+            if(ctx != null) {
+                ctx.complete();
+            }
         }
     }
 

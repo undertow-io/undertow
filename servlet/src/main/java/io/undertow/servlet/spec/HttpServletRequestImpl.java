@@ -518,7 +518,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         try {
             InstanceFactory<T> factory = servletContext.getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(handlerClass);
             final InstanceHandle<T> instance = factory.createInstance();
-            exchange.upgradeChannel(new ServletUpgradeListener<>(instance, servletContext.getDeployment().getThreadSetupAction(), exchange));
+            exchange.upgradeChannel(new ServletUpgradeListener<>(instance, servletContext.getDeployment(), exchange));
             return instance.getInstance();
         } catch (InstantiationException e) {
             throw new RuntimeException(e);

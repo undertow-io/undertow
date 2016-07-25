@@ -26,6 +26,7 @@ import javax.servlet.ServletContext;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.Session;
+import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -151,14 +152,14 @@ final class SecurityActions {
             });
         }
     }
-    static ServletInitialHandler createServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
+    static ServletInitialHandler createServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final Deployment deployment, final ServletContextImpl servletContext) {
         if (System.getSecurityManager() == null) {
-            return new ServletInitialHandler(paths, next, setupAction, servletContext);
+            return new ServletInitialHandler(paths, next, deployment, servletContext);
         } else {
             return AccessController.doPrivileged(new PrivilegedAction<ServletInitialHandler>() {
                 @Override
                 public ServletInitialHandler run() {
-                    return new ServletInitialHandler(paths, next, setupAction, servletContext);
+                    return new ServletInitialHandler(paths, next, deployment, servletContext);
                 }
             });
         }
