@@ -58,6 +58,9 @@ public interface Deployment {
 
     <T, C> ThreadSetupHandler.Action<T, C> createThreadSetupAction(ThreadSetupHandler.Action<T, C> target);
 
+    @Deprecated
+    ThreadSetupAction getThreadSetupAction();
+
     ErrorPages getErrorPages();
 
     Map<String, String> getMimeExtensionMappings();
