@@ -18,26 +18,24 @@
 
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.DefaultByteBufferPool;
-import io.undertow.servlet.api.ClassIntrospecter;
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.ThreadSetupAction;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
-import io.undertow.servlet.util.DefaultClassIntrospector;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
-
-import javax.websocket.ContainerProvider;
-import javax.websocket.WebSocketContainer;
 import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.websocket.ContainerProvider;
+import javax.websocket.WebSocketContainer;
+
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.servlet.api.ClassIntrospecter;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.util.DefaultClassIntrospector;
 
 /**
  * @author Stuart Douglas
@@ -59,7 +57,7 @@ public class UndertowContainerProvider extends ContainerProvider {
     @Override
     protected WebSocketContainer getContainer() {
         ClassLoader tccl;
-        if(System.getSecurityManager() == null) {
+        if (System.getSecurityManager() == null) {
             tccl = Thread.currentThread().getContextClassLoader();
         } else {
             tccl = AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
@@ -70,28 +68,28 @@ public class UndertowContainerProvider extends ContainerProvider {
             });
         }
         WebSocketContainer webSocketContainer = webSocketContainers.get(tccl);
-        if(webSocketContainer == null) {
+        if (webSocketContainer == null) {
             return getDefaultContainer();
         }
         return webSocketContainer;
     }
 
     static ServerWebSocketContainer getDefaultContainer() {
-        if(defaultContainerDisabled) {
+        if (defaultContainerDisabled) {
             return null;
         }
-        if(defaultContainer != null) {
+        if (defaultContainer != null) {
             return defaultContainer;
         }
         synchronized (UndertowContainerProvider.class) {
-            if(defaultContainer == null) {
+            if (defaultContainer == null) {
                 try {
                     //this is not great, as we have no way to control the lifecycle
                     //but there is not much we can do
                     //todo: what options should we use here?
                     XnioWorker worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
                     ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, 1024, 100, 12);
-                    defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), worker, buffers, new CompositeThreadSetupAction(Collections.<ThreadSetupAction>emptyList()), !invokeInIoThread);
+                    defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), worker, buffers, Collections.EMPTY_LIST, !invokeInIoThread);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -102,7 +100,7 @@ public class UndertowContainerProvider extends ContainerProvider {
 
     public static void addContainer(final ClassLoader classLoader, final WebSocketContainer webSocketContainer) {
         SecurityManager sm = System.getSecurityManager();
-        if(sm != null) {
+        if (sm != null) {
             sm.checkPermission(PERMISSION);
         }
         webSocketContainers.put(classLoader, webSocketContainer);
@@ -110,14 +108,14 @@ public class UndertowContainerProvider extends ContainerProvider {
 
     public static void removeContainer(final ClassLoader classLoader) {
         SecurityManager sm = System.getSecurityManager();
-        if(sm != null) {
+        if (sm != null) {
             sm.checkPermission(PERMISSION);
         }
         webSocketContainers.remove(classLoader);
     }
 
     public void setDefaultClassIntrospector(ClassIntrospecter classIntrospector) {
-        if(classIntrospector == null) {
+        if (classIntrospector == null) {
             throw new IllegalArgumentException();
         }
         defaultIntrospector.setIntrospecter(classIntrospector);
@@ -125,7 +123,7 @@ public class UndertowContainerProvider extends ContainerProvider {
 
     public static void disableDefaultContainer() {
         SecurityManager sm = System.getSecurityManager();
-        if(sm != null) {
+        if (sm != null) {
             sm.checkPermission(PERMISSION);
         }
         defaultContainerDisabled = true;

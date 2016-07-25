@@ -38,9 +38,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.UndertowLogger;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
@@ -90,7 +92,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
                     @Override
                     public Object run() throws Exception {
-                        forwardImpl(request, response);
+                        forwardImplSetup(request, response);
                         return null;
                     }
                 });
@@ -106,11 +108,11 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 }
             }
         } else {
-            forwardImpl(request, response);
+            forwardImplSetup(request, response);
         }
     }
 
-    private void forwardImpl(ServletRequest request, ServletResponse response) throws ServletException, IOException {
+    private void forwardImplSetup(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
         final ServletRequestContext servletRequestContext = SecurityActions.currentServletRequestContext();
         if(servletRequestContext == null) {
             UndertowLogger.REQUEST_LOGGER.debugf("No servlet request context for %s, dispatching mock request", request);
@@ -122,119 +124,129 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         ServletContextImpl oldServletContext = null;
         HttpSessionImpl oldSession = null;
         if (servletRequestContext.getCurrentServletContext() != this.servletContext) {
-            //cross context request, we need to run the thread setup actions
-            oldServletContext = servletRequestContext.getCurrentServletContext();
-            oldSession = servletRequestContext.getSession();
-            servletRequestContext.setSession(null);
-            handle = this.servletContext.getDeployment().getThreadSetupAction().setup(servletRequestContext.getExchange());
-            servletRequestContext.setCurrentServletContext(this.servletContext);
+
+            try {
+                //cross context request, we need to run the thread setup actions
+                oldServletContext = servletRequestContext.getCurrentServletContext();
+                oldSession = servletRequestContext.getSession();
+                servletRequestContext.setSession(null);
+                servletRequestContext.setCurrentServletContext(this.servletContext);
+                this.servletContext.invokeAction(servletRequestContext.getExchange(), new ThreadSetupHandler.Action<Void, Object>() {
+                    @Override
+                    public Void call(HttpServerExchange exchange, Object context) throws Exception {
+                        forwardImpl(request, response, servletRequestContext);
+                        return null;
+                    }
+                });
+
+            } finally {
+                    servletRequestContext.setSession(oldSession);
+                    servletRequestContext.setCurrentServletContext(oldServletContext);
+            }
+        } else {
+            forwardImpl(request, response, servletRequestContext);
+        }
+
+    }
+
+    private void forwardImpl(ServletRequest request, ServletResponse response, ServletRequestContext servletRequestContext) throws ServletException, IOException {
+        final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
+        final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
+        if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
+            if (servletRequestContext.getOriginalRequest() != request) {
+                if (!(request instanceof ServletRequestWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
+                }
+            }
+            if (servletRequestContext.getOriginalResponse() != response) {
+                if (!(response instanceof ServletResponseWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
+                }
+            }
+        }
+        response.resetBuffer();
+
+        final ServletRequest oldRequest = servletRequestContext.getServletRequest();
+        final ServletResponse oldResponse = servletRequestContext.getServletResponse();
+
+        Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
+
+        request.removeAttribute(INCLUDE_REQUEST_URI);
+        request.removeAttribute(INCLUDE_CONTEXT_PATH);
+        request.removeAttribute(INCLUDE_SERVLET_PATH);
+        request.removeAttribute(INCLUDE_PATH_INFO);
+        request.removeAttribute(INCLUDE_QUERY_STRING);
+
+        if (!named) {
+
+            //only update if this is the first forward
+            if (request.getAttribute(FORWARD_REQUEST_URI) == null) {
+                requestImpl.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
+                requestImpl.setAttribute(FORWARD_CONTEXT_PATH, requestImpl.getContextPath());
+                requestImpl.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
+                requestImpl.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
+                requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
+            }
+
+            int qsPos = path.indexOf("?");
+            String newServletPath = path;
+            if (qsPos != -1) {
+                String newQueryString = newServletPath.substring(qsPos + 1);
+                newServletPath = newServletPath.substring(0, qsPos);
+
+                String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
+                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
+                requestImpl.getExchange().setQueryString(newQueryString);
+                requestImpl.setQueryParameters(newQueryParameters);
+            }
+            String newRequestUri = servletContext.getContextPath() + newServletPath;
+
+
+
+            requestImpl.getExchange().setRelativePath(newServletPath);
+            requestImpl.getExchange().setRequestPath(newRequestUri);
+            requestImpl.getExchange().setRequestURI(newRequestUri);
+            requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
+            requestImpl.setServletContext(servletContext);
+            responseImpl.setServletContext(servletContext);
         }
 
         try {
-            final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
-            final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
-            if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
-                if (servletRequestContext.getOriginalRequest() != request) {
-                    if (!(request instanceof ServletRequestWrapper)) {
-                        throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
-                    }
-                }
-                if (servletRequestContext.getOriginalResponse() != response) {
-                    if (!(response instanceof ServletResponseWrapper)) {
-                        throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
-                    }
-                }
-            }
-            response.resetBuffer();
-
-            final ServletRequest oldRequest = servletRequestContext.getServletRequest();
-            final ServletResponse oldResponse = servletRequestContext.getServletResponse();
-
-            Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
-
-            request.removeAttribute(INCLUDE_REQUEST_URI);
-            request.removeAttribute(INCLUDE_CONTEXT_PATH);
-            request.removeAttribute(INCLUDE_SERVLET_PATH);
-            request.removeAttribute(INCLUDE_PATH_INFO);
-            request.removeAttribute(INCLUDE_QUERY_STRING);
-
-            if (!named) {
-
-                //only update if this is the first forward
-                if (request.getAttribute(FORWARD_REQUEST_URI) == null) {
-                    requestImpl.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
-                    requestImpl.setAttribute(FORWARD_CONTEXT_PATH, requestImpl.getContextPath());
-                    requestImpl.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
-                    requestImpl.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
-                    requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
-                }
-
-                int qsPos = path.indexOf("?");
-                String newServletPath = path;
-                if (qsPos != -1) {
-                    String newQueryString = newServletPath.substring(qsPos + 1);
-                    newServletPath = newServletPath.substring(0, qsPos);
-
-                    String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
-                    Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
-                    requestImpl.getExchange().setQueryString(newQueryString);
-                    requestImpl.setQueryParameters(newQueryParameters);
-                }
-                String newRequestUri = servletContext.getContextPath() + newServletPath;
-
-
-
-                requestImpl.getExchange().setRelativePath(newServletPath);
-                requestImpl.getExchange().setRequestPath(newRequestUri);
-                requestImpl.getExchange().setRequestURI(newRequestUri);
-                requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
-                requestImpl.setServletContext(servletContext);
-                responseImpl.setServletContext(servletContext);
-            }
-
             try {
-                try {
-                    servletRequestContext.setServletRequest(request);
-                    servletRequestContext.setServletResponse(response);
-                    if (named) {
-                        servletContext.getDeployment().getServletDispatcher().dispatchToServlet(requestImpl.getExchange(), chain, DispatcherType.FORWARD);
-                    } else {
-                        servletContext.getDeployment().getServletDispatcher().dispatchToPath(requestImpl.getExchange(), pathMatch, DispatcherType.FORWARD);
-                    }
+                servletRequestContext.setServletRequest(request);
+                servletRequestContext.setServletResponse(response);
+                if (named) {
+                    servletContext.getDeployment().getServletDispatcher().dispatchToServlet(requestImpl.getExchange(), chain, DispatcherType.FORWARD);
+                } else {
+                    servletContext.getDeployment().getServletDispatcher().dispatchToPath(requestImpl.getExchange(), pathMatch, DispatcherType.FORWARD);
+                }
 
-                    //if we are not in an async or error dispatch then we close the response
-                    if (!request.isAsyncStarted()) {
-                        if (response instanceof HttpServletResponseImpl) {
-                            responseImpl.closeStreamAndWriter();
-                        } else {
-                            try {
-                                final PrintWriter writer = response.getWriter();
-                                writer.flush();
-                                writer.close();
-                            } catch (IllegalStateException e) {
-                                final ServletOutputStream outputStream = response.getOutputStream();
-                                outputStream.flush();
-                                outputStream.close();
-                            }
+                //if we are not in an async or error dispatch then we close the response
+                if (!request.isAsyncStarted()) {
+                    if (response instanceof HttpServletResponseImpl) {
+                        responseImpl.closeStreamAndWriter();
+                    } else {
+                        try {
+                            final PrintWriter writer = response.getWriter();
+                            writer.flush();
+                            writer.close();
+                        } catch (IllegalStateException e) {
+                            final ServletOutputStream outputStream = response.getOutputStream();
+                            outputStream.flush();
+                            outputStream.close();
                         }
                     }
-                } catch (ServletException e) {
-                    throw e;
-                } catch (IOException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
                 }
-            } finally {
-                servletRequestContext.setServletRequest(oldRequest);
-                servletRequestContext.setServletResponse(oldResponse);
+            } catch (ServletException e) {
+                throw e;
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         } finally {
-            if (handle != null) {
-                servletRequestContext.setSession(oldSession);
-                servletRequestContext.setCurrentServletContext(oldServletContext);
-                handle.tearDown();
-            }
+            servletRequestContext.setServletRequest(oldRequest);
+            servletRequestContext.setServletResponse(oldResponse);
         }
     }
 
@@ -246,7 +258,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
                     @Override
                     public Object run() throws Exception {
-                        includeImpl(request, response);
+                        setupIncludeImpl(request, response);
                         return null;
                     }
                 });
@@ -262,11 +274,11 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 }
             }
         } else {
-            includeImpl(request, response);
+            setupIncludeImpl(request, response);
         }
     }
 
-    private void includeImpl(ServletRequest request, ServletResponse response) throws ServletException, IOException {
+    private void setupIncludeImpl(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
         final ServletRequestContext servletRequestContext = SecurityActions.currentServletRequestContext();
         if(servletRequestContext == null) {
             UndertowLogger.REQUEST_LOGGER.debugf("No servlet request context for %s, dispatching mock request", request);
@@ -275,7 +287,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         }
         final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
-        ThreadSetupAction.Handle handle = null;
         ServletContextImpl oldServletContext = null;
         HttpSessionImpl oldSession = null;
         if (servletRequestContext.getCurrentServletContext() != this.servletContext) {
@@ -283,102 +294,109 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             oldServletContext = servletRequestContext.getCurrentServletContext();
             oldSession = servletRequestContext.getSession();
             servletRequestContext.setSession(null);
-            handle = this.servletContext.getDeployment().getThreadSetupAction().setup(servletRequestContext.getExchange());
             servletRequestContext.setCurrentServletContext(this.servletContext);
-        }
-
-        try {
-            if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
-                if (servletRequestContext.getOriginalRequest() != request) {
-                    if (!(request instanceof ServletRequestWrapper)) {
-                        throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
-                    }
-                }
-                if (servletRequestContext.getOriginalResponse() != response) {
-                    if (!(response instanceof ServletResponseWrapper)) {
-                        throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
-                    }
-                }
-            }
-
-            final ServletRequest oldRequest = servletRequestContext.getServletRequest();
-            final ServletResponse oldResponse = servletRequestContext.getServletResponse();
-
-            Object requestUri = null;
-            Object contextPath = null;
-            Object servletPath = null;
-            Object pathInfo = null;
-            Object queryString = null;
-            Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
-
-            if (!named) {
-                requestUri = request.getAttribute(INCLUDE_REQUEST_URI);
-                contextPath = request.getAttribute(INCLUDE_CONTEXT_PATH);
-                servletPath = request.getAttribute(INCLUDE_SERVLET_PATH);
-                pathInfo = request.getAttribute(INCLUDE_PATH_INFO);
-                queryString = request.getAttribute(INCLUDE_QUERY_STRING);
-
-                int qsPos = path.indexOf("?");
-                String newServletPath = path;
-                if (qsPos != -1) {
-                    String newQueryString = newServletPath.substring(qsPos + 1);
-                    newServletPath = newServletPath.substring(0, qsPos);
-
-                    String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
-                    Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
-                    requestImpl.setQueryParameters(newQueryParameters);
-                    requestImpl.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
-                } else {
-                    requestImpl.setAttribute(INCLUDE_QUERY_STRING, "");
-                }
-                String newRequestUri = servletContext.getContextPath() + newServletPath;
-
-                requestImpl.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
-                requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
-                requestImpl.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
-                requestImpl.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
-            }
-            boolean inInclude = responseImpl.isInsideInclude();
-            responseImpl.setInsideInclude(true);
-            DispatcherType oldDispatcherType = servletRequestContext.getDispatcherType();
-
-            ServletContextImpl oldContext = requestImpl.getServletContext();
             try {
-                requestImpl.setServletContext(servletContext);
-                responseImpl.setServletContext(servletContext);
-                try {
-                    servletRequestContext.setServletRequest(request);
-                    servletRequestContext.setServletResponse(response);
-                    servletContext.getDeployment().getServletDispatcher().dispatchToServlet(requestImpl.getExchange(), chain, DispatcherType.INCLUDE);
-                } catch (ServletException e) {
-                    throw e;
-                } catch (IOException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                servletRequestContext.getCurrentServletContext().invokeAction(servletRequestContext.getExchange(), new ThreadSetupHandler.Action<Void, Object>() {
+                    @Override
+                    public Void call(HttpServerExchange exchange, Object context) throws Exception {
+                        includeImpl(request, response, servletRequestContext, requestImpl, responseImpl);
+                        return null;
+                    }
+                });
             } finally {
-                responseImpl.setInsideInclude(inInclude);
-                requestImpl.setServletContext(oldContext);
-                responseImpl.setServletContext(oldContext);
-
-                servletRequestContext.setServletRequest(oldRequest);
-                servletRequestContext.setServletResponse(oldResponse);
-                servletRequestContext.setDispatcherType(oldDispatcherType);
-                if (!named) {
-                    requestImpl.setAttribute(INCLUDE_REQUEST_URI, requestUri);
-                    requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, contextPath);
-                    requestImpl.setAttribute(INCLUDE_SERVLET_PATH, servletPath);
-                    requestImpl.setAttribute(INCLUDE_PATH_INFO, pathInfo);
-                    requestImpl.setAttribute(INCLUDE_QUERY_STRING, queryString);
-                    requestImpl.setQueryParameters(queryParameters);
-                }
-            }
-        } finally {
-            if(handle != null) {
                 servletRequestContext.setSession(oldSession);
                 servletRequestContext.setCurrentServletContext(oldServletContext);
-                handle.tearDown();
+            }
+        } else {
+            includeImpl(request, response, servletRequestContext, requestImpl, responseImpl);
+        }
+    }
+
+    private void includeImpl(ServletRequest request, ServletResponse response, ServletRequestContext servletRequestContext, HttpServletRequestImpl requestImpl, HttpServletResponseImpl responseImpl) throws ServletException, IOException {
+        if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
+            if (servletRequestContext.getOriginalRequest() != request) {
+                if (!(request instanceof ServletRequestWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
+                }
+            }
+            if (servletRequestContext.getOriginalResponse() != response) {
+                if (!(response instanceof ServletResponseWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
+                }
+            }
+        }
+
+        final ServletRequest oldRequest = servletRequestContext.getServletRequest();
+        final ServletResponse oldResponse = servletRequestContext.getServletResponse();
+
+        Object requestUri = null;
+        Object contextPath = null;
+        Object servletPath = null;
+        Object pathInfo = null;
+        Object queryString = null;
+        Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
+
+        if (!named) {
+            requestUri = request.getAttribute(INCLUDE_REQUEST_URI);
+            contextPath = request.getAttribute(INCLUDE_CONTEXT_PATH);
+            servletPath = request.getAttribute(INCLUDE_SERVLET_PATH);
+            pathInfo = request.getAttribute(INCLUDE_PATH_INFO);
+            queryString = request.getAttribute(INCLUDE_QUERY_STRING);
+
+            int qsPos = path.indexOf("?");
+            String newServletPath = path;
+            if (qsPos != -1) {
+                String newQueryString = newServletPath.substring(qsPos + 1);
+                newServletPath = newServletPath.substring(0, qsPos);
+
+                String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
+                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
+                requestImpl.setQueryParameters(newQueryParameters);
+                requestImpl.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
+            } else {
+                requestImpl.setAttribute(INCLUDE_QUERY_STRING, "");
+            }
+            String newRequestUri = servletContext.getContextPath() + newServletPath;
+
+            requestImpl.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
+            requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
+            requestImpl.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
+            requestImpl.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
+        }
+        boolean inInclude = responseImpl.isInsideInclude();
+        responseImpl.setInsideInclude(true);
+        DispatcherType oldDispatcherType = servletRequestContext.getDispatcherType();
+
+        ServletContextImpl oldContext = requestImpl.getServletContext();
+        try {
+            requestImpl.setServletContext(servletContext);
+            responseImpl.setServletContext(servletContext);
+            try {
+                servletRequestContext.setServletRequest(request);
+                servletRequestContext.setServletResponse(response);
+                servletContext.getDeployment().getServletDispatcher().dispatchToServlet(requestImpl.getExchange(), chain, DispatcherType.INCLUDE);
+            } catch (ServletException e) {
+                throw e;
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } finally {
+            responseImpl.setInsideInclude(inInclude);
+            requestImpl.setServletContext(oldContext);
+            responseImpl.setServletContext(oldContext);
+
+            servletRequestContext.setServletRequest(oldRequest);
+            servletRequestContext.setServletResponse(oldResponse);
+            servletRequestContext.setDispatcherType(oldDispatcherType);
+            if (!named) {
+                requestImpl.setAttribute(INCLUDE_REQUEST_URI, requestUri);
+                requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, contextPath);
+                requestImpl.setAttribute(INCLUDE_SERVLET_PATH, servletPath);
+                requestImpl.setAttribute(INCLUDE_PATH_INFO, pathInfo);
+                requestImpl.setAttribute(INCLUDE_QUERY_STRING, queryString);
+                requestImpl.setQueryParameters(queryParameters);
             }
         }
     }

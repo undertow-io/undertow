@@ -16,21 +16,22 @@
  *  limitations under the License.
  */
 
-package io.undertow.servlet.core;
+package io.undertow.servlet.api;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.api.ThreadSetupHandler;
-import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
+ * Class that allows legacy thread setup actions to still be used
+ *
  * @author Stuart Douglas
  */
-class ServletRequestContextThreadSetupAction implements ThreadSetupHandler {
+@SuppressWarnings("deprecation")
+class LegacyThreadSetupActionWrapper implements ThreadSetupHandler {
 
-    static final ServletRequestContextThreadSetupAction INSTANCE = new ServletRequestContextThreadSetupAction();
+    private final ThreadSetupAction setupAction;
 
-    private ServletRequestContextThreadSetupAction() {
-
+    LegacyThreadSetupActionWrapper(ThreadSetupAction setupAction) {
+        this.setupAction = setupAction;
     }
 
     @Override
@@ -38,16 +39,12 @@ class ServletRequestContextThreadSetupAction implements ThreadSetupHandler {
         return new Action<T, C>() {
             @Override
             public T call(HttpServerExchange exchange, C context) throws Exception {
-                if (exchange == null) {
-                    return action.call(null, context);
-                } else {
-                    ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-                    final ServletRequestContext old = ServletRequestContext.current();
-                    SecurityActions.setCurrentRequestContext(servletRequestContext);
-                    try {
-                        return action.call(exchange, context);
-                    } finally {
-                        ServletRequestContext.setCurrentRequestContext(old);
+                ThreadSetupAction.Handle handle = setupAction.setup(exchange);
+                try {
+                    return action.call(exchange, context);
+                } finally {
+                    if (handle != null) {
+                        handle.tearDown();
                     }
                 }
             }

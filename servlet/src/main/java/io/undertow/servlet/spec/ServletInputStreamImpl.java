@@ -18,26 +18,24 @@
 
 package io.undertow.servlet.spec;
 
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.ThreadSetupAction;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
-import org.xnio.Buffers;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.Channels;
-import org.xnio.channels.EmptyStreamSourceChannel;
-import org.xnio.channels.StreamSourceChannel;
-
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
+
+import org.xnio.Buffers;
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.channels.Channels;
+import org.xnio.channels.EmptyStreamSourceChannel;
+import org.xnio.channels.StreamSourceChannel;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.servlet.UndertowServletMessages;
 
 /**
  * Servlet input stream implementation. This stream is non-buffered, and is used for both
@@ -210,7 +208,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     channel.getIoThread().execute(new Runnable() {
                         @Override
                         public void run() {
-                            if(!channel.isReadResumed()) {
+                            if (!channel.isReadResumed()) {
                                 channel.resumeReads();
                             }
                         }
@@ -279,27 +277,20 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 if (pooled != null) {
                     state |= FLAG_READY;
                     if (!anyAreSet(state, FLAG_FINISHED)) {
-                        CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
-                        ThreadSetupAction.Handle handle = action.setup(request.getExchange());
-                        try {
-                            listener.onDataAvailable();
-                        } finally {
-                            handle.tearDown();
-                        }
-                        if(pooled != null) {
+                        request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
+                        if (pooled != null) {
                             //they did not consume all the data
                             channel.suspendReads();
                         }
                     }
                 }
-            } catch (Exception e) {
-                CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
-                ThreadSetupAction.Handle handle = action.setup(request.getExchange());
-                try {
-                    listener.onError(e);
-                } finally {
-                    handle.tearDown();
-                }
+            } catch (final Exception e) {
+                request.getServletContext().invokeRunnable(request.getExchange(), new Runnable() {
+                    @Override
+                    public void run() {
+                        listener.onError(e);
+                    }
+                });
                 IoUtils.safeClose(channel);
             }
             if (anyAreSet(state, FLAG_FINISHED)) {
@@ -307,13 +298,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     try {
                         state |= FLAG_ON_DATA_READ_CALLED;
                         channel.shutdownReads();
-                        CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
-                        ThreadSetupAction.Handle handle = action.setup(request.getExchange());
-                        try {
-                            listener.onAllDataRead();
-                        } finally {
-                            handle.tearDown();
-                        }
+                        request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
                     } catch (IOException e) {
                         listener.onError(e);
                         IoUtils.safeClose(channel);
