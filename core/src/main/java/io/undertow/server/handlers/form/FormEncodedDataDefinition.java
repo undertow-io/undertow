@@ -63,6 +63,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                     charset = cs;
                 }
             }
+            UndertowLogger.REQUEST_LOGGER.tracef("Created form encoded parser for %s", exchange);
             return new FormEncodedDataParser(charset, exchange);
         }
         return null;

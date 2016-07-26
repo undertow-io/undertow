@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.sse;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -83,6 +84,7 @@ public class ServerSentEventHandler implements HttpHandler {
     }
 
     private void handleConnect(StreamSinkChannel channel, HttpServerExchange exchange) {
+        UndertowLogger.REQUEST_LOGGER.debugf("Opened SSE connection to %s", exchange);
         final ServerSentEventConnection connection = new ServerSentEventConnection(exchange, channel);
         PathTemplateMatch pt = exchange.getAttachment(PathTemplateMatch.ATTACHMENT_KEY);
         if(pt != null) {

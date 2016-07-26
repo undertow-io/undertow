@@ -868,6 +868,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if(!getRequestHeaders().contains(Headers.UPGRADE)) {
             throw UndertowMessages.MESSAGES.notAnUpgradeRequest();
         }
+        UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
         connection.setUpgradeListener(listener);
         setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
         getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
@@ -887,6 +888,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
+        UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
         connection.setUpgradeListener(listener);
         setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
         final HeaderMap headers = getResponseHeaders();

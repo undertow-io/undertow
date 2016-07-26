@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.encoding;
 
+import io.undertow.UndertowLogger;
 import io.undertow.conduits.DeflatingStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
@@ -36,6 +37,7 @@ public class DeflateEncodingProvider implements ContentEncodingProvider {
         return new ConduitWrapper<StreamSinkConduit>() {
             @Override
             public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
+                UndertowLogger.REQUEST_LOGGER.tracef("Created DEFLATE response conduit for %s", exchange);
                 return new DeflatingStreamSinkConduit(factory, exchange);
             }
         };

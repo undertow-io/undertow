@@ -28,6 +28,7 @@ import java.util.List;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 
+import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
 import io.undertow.security.api.SecurityContext;
@@ -127,14 +128,18 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         ServerConnection connection = exchange.getConnection();
         NegotiationContext negContext = connection.getAttachment(NegotiationContext.ATTACHMENT_KEY);
         if (negContext != null) {
+
+            UndertowLogger.SECURITY_LOGGER.debugf("Existing negotiation context found for %s", exchange);
             exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, negContext);
             if (negContext.isEstablished()) {
                 IdentityManager identityManager = getIdentityManager(securityContext);
                 final Account account = identityManager.verify(new GSSContextCredential(negContext.getGssContext()));
                 if (account != null) {
                     securityContext.authenticationComplete(account, name, false);
+                    UndertowLogger.SECURITY_LOGGER.debugf("Authenticated as user %s with existing GSSAPI negotiation context for %s", account.getPrincipal().getName(), exchange);
                     return AuthenticationMechanismOutcome.AUTHENTICATED;
                 } else {
+                    UndertowLogger.SECURITY_LOGGER.debugf("Failed to authenticate with existing GSSAPI negotiation context for %s", exchange);
                     return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
                 }
             }
@@ -187,6 +192,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
         exchange.getResponseHeaders().add(WWW_AUTHENTICATE, header);
 
+        UndertowLogger.SECURITY_LOGGER.debugf("Sending GSSAPI challenge for %s", exchange);
         return new ChallengeResult(true, UNAUTHORIZED);
     }
 

@@ -21,6 +21,7 @@ package io.undertow.server.session;
 import java.util.Deque;
 import java.util.Locale;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -44,10 +45,12 @@ public class PathParameterSessionConfig implements SessionConfig {
     public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
         exchange.getPathParameters().remove(name);
         exchange.addPathParam(name, sessionId);
+        UndertowLogger.SESSION_LOGGER.tracef("Setting path parameter session id %s on %s", sessionId, exchange);
     }
 
     @Override
     public void clearSession(final HttpServerExchange exchange, final String sessionId) {
+        UndertowLogger.SESSION_LOGGER.tracef("Clearing path parameter session id %s on %s", sessionId, exchange);
         exchange.getPathParameters().remove(name);
     }
 
@@ -57,6 +60,7 @@ public class PathParameterSessionConfig implements SessionConfig {
         if (stringDeque == null) {
             return null;
         }
+        UndertowLogger.SESSION_LOGGER.tracef("Found path parameter session id %s on %s", stringDeque.getFirst(), exchange);
         return stringDeque.getFirst();
     }
 
@@ -111,6 +115,7 @@ public class PathParameterSessionConfig implements SessionConfig {
         }
         sb.append(anchor);
         sb.append(query);
+        UndertowLogger.SESSION_LOGGER.tracef("Rewrote URL from %s to %s", url, sessionId);
         return (sb.toString());
     }
 }

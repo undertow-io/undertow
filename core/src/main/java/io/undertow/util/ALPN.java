@@ -24,6 +24,8 @@ import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import io.undertow.UndertowLogger;
+
 /**
  * @author Stuart Douglas
  */
@@ -40,8 +42,10 @@ public class ALPN {
                 try {
                     Method setApplicationProtocols = SSLParameters.class.getMethod("setApplicationProtocols", String[].class);
                     Method getApplicationProtocol = SSLEngine.class.getMethod("getApplicationProtocol");
+                    UndertowLogger.ROOT_LOGGER.debug("Using JDK9 ALPN");
                     return new JDK9ALPNMethods(setApplicationProtocols, getApplicationProtocol);
                 } catch (Exception e) {
+                    UndertowLogger.ROOT_LOGGER.debug("JDK9 ALPN not supported", e);
                     return null;
                 }
             }

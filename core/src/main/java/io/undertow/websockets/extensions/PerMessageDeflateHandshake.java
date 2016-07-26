@@ -151,6 +151,7 @@ public class PerMessageDeflateHandshake implements ExtensionHandshake {
                 return null;
             }
         }
+        WebSocketLogger.EXTENSION_LOGGER.debugf("Negotiated extension %s for handshake %s", negotiated, extension);
         return negotiated;
     }
 

@@ -87,6 +87,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         Cookie cookie = exchange.getRequestCookies().get(cookieName);
         if (cookie != null) {
             final String ssoId = cookie.getValue();
+            log.tracef("Found SSO cookie %s", ssoId);
             try (final SingleSignOn sso = this.singleSignOnManager.findSingleSignOn(ssoId)) {
                 if (sso != null) {
                     if(log.isTraceEnabled()) {
@@ -111,6 +112,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                             }
                         }
                     });
+                    log.tracef("Authenticated account %s using SSO", verified.getPrincipal().getName());
                     return AuthenticationMechanismOutcome.AUTHENTICATED;
                 }
             }
