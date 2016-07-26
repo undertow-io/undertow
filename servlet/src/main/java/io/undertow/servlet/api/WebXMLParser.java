@@ -512,7 +512,7 @@ public class WebXMLParser {
 		}
 	}
 
-	public static class WelcomePageParser implements WebXMLParserFactory {
+	protected class WelcomePageParser implements WebXMLParserFactory {
 		@Override
 		public void parse(DeploymentInfo deploymentInfo, Element element) {
 			NodeList pages = element.getElementsByTagName("welcome-file");
@@ -524,7 +524,7 @@ public class WebXMLParser {
 
 	protected HashMap<String,WebXMLParserFactory> elementTypes = new HashMap<>();
 	protected boolean jspEnabled;
-	
+
 	public WebXMLParser() {
 		elementTypes.put("context-param", new UnimplementedFieldParser()); //todo Undertow-specific configurations?
 		elementTypes.put("description", new UnimplementedFieldParser());
@@ -558,6 +558,13 @@ public class WebXMLParser {
 		}
 	}
 
+	/**
+	 * Parses the supplied web.xml file into a DeploymentInfo instance.
+	 * @param webXMLInputStream InputStream for web.xml file
+	 * @return DeploymentInfo instance corresponding to the supplied web.xml
+	 * @throws ClassNotFoundException a class referenced in web.xml did not exist
+	 * @throws WebXMLException format of web.xml was incorrect
+	 */
 	public DeploymentInfo parse(InputStream webXMLInputStream) throws ClassNotFoundException, WebXMLException {
 		try {
 			DeploymentInfo deploymentInfo = new DeploymentInfo();
@@ -598,10 +605,20 @@ public class WebXMLParser {
 		deploymentInfo.setMinorVersion(Integer.parseInt(version[1]));
 	}
 
+	/**
+	 * Indicates whether or not JSP is enabled for this deployment (i.e. whether or not Jastow is in the classpath.
+	 * @return true if JSP is enabled (Jastow is present), false otherwise
+	 */
 	public boolean isJspEnabled() {
 		return jspEnabled;
 	}
 
+	/**
+	 * Finalizes Jastow setup for deployment.
+	 * @param deploymentInfo fully parsed DeploymentInfo instance from web.xml
+	 * @param deploymentManager initialized DeploymentManager instance
+	 * @throws ClassNotFoundException a class referenced in web.xml did not exist
+	 */
 	public void setupJsp(DeploymentInfo deploymentInfo, DeploymentManager deploymentManager) throws ClassNotFoundException {
 		if(!jspEnabled)
 			throw new UnsupportedOperationException("Attempted to set up JSP context without having Jastow present in classpath.");
