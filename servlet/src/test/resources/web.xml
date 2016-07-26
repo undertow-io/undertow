@@ -36,10 +36,15 @@
     <filter>
         <filter-name>TestFilter2</filter-name>
         <filter-class>io.undertow.servlet.test.xml.TestFilter</filter-class>
+        <async-supported>true</async-supported>
     </filter>
     <filter>
         <filter-name>TestFilter1</filter-name>
         <filter-class>io.undertow.servlet.test.xml.TestFilter</filter-class>
+        <init-param>
+            <param-name>foo</param-name>
+            <param-value>bar</param-value>
+        </init-param>
     </filter>
 
     <filter-mapping>
@@ -93,4 +98,93 @@
             <transport-guarantee>CONFIDENTIAL</transport-guarantee>
         </user-data-constraint>
     </security-constraint>
+
+    <error-page>
+        <error-code>404</error-code>
+        <location>/404.html</location>
+    </error-page>
+    <error-page>
+        <location>/error.html</location>
+    </error-page>
+
+    <jsp-config>
+        <taglib>
+            <taglib-uri>foo</taglib-uri>
+            <taglib-location>WEB-INF/foo.tld</taglib-location>
+        </taglib>
+        <jsp-property-group>
+            <url-pattern>*.jsp</url-pattern>
+            <page-encoding>UTF-8</page-encoding>
+        </jsp-property-group>
+        <taglib>
+            <taglib-uri>bar</taglib-uri>
+            <taglib-location>WEB-INF/bar.tld</taglib-location>
+        </taglib>
+        <jsp-property-group>
+            <url-pattern>test1.jsp</url-pattern>
+            <include-prelude>foo</include-prelude>
+            <include-prelude>bar</include-prelude>
+            <include-coda>baz</include-coda>
+            <default-content-type>text/plain</default-content-type>
+            <buffer>buf</buffer>
+        </jsp-property-group>
+        <jsp-property-group>
+            <url-pattern>test2.jsp</url-pattern>
+            <el-ignored>true</el-ignored>
+            <scripting-invalid>true</scripting-invalid>
+            <is-xml>true</is-xml>
+            <deferred-syntax-allowed-as-literal>true</deferred-syntax-allowed-as-literal>
+            <trim-directive-whitespaces>true</trim-directive-whitespaces>
+            <error-on-undeclared-namespace>true</error-on-undeclared-namespace>
+        </jsp-property-group>
+    </jsp-config>
+
+    <error-page>
+        <location>/npe.html</location>
+        <exception-type>java.lang.NullPointerException</exception-type>
+    </error-page>
+
+    <listener>
+        <listener-class>io.undertow.servlet.test.xml.TestListener</listener-class>
+    </listener>
+
+    <login-config>
+        <realm-name>login_form</realm-name>
+        <auth-method>FORM,BASIC</auth-method>
+        <form-login-config>
+            <form-login-page>login.html</form-login-page>
+            <form-error-page>fail_login.html</form-error-page>
+        </form-login-config>
+    </login-config>
+
+    <mime-mapping>
+        <extension>txt</extension>
+        <mime-type>text/plain</mime-type>
+    </mime-mapping>
+    <mime-mapping>
+        <extension>css</extension>
+        <mime-type>text/css</mime-type>
+    </mime-mapping>
+    
+    <security-role>
+        <role-name>test_role</role-name>
+    </security-role>
+
+    <session-config>
+        <session-timeout>100</session-timeout>
+    </session-config>
+
+    <security-role>
+        <role-name>default</role-name>
+    </security-role>
+    
+    <mime-mapping>
+        <extension>exe</extension>
+        <mime-type>application/x-dosexec</mime-type>
+    </mime-mapping>
+
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
 </web-app>

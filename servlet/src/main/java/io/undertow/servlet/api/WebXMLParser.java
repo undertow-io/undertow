@@ -51,8 +51,11 @@ public class WebXMLParser {
 			if(element.getElementsByTagName("error-code").getLength() > 0) {
 				deploymentInfo.addErrorPage(new ErrorPage(location, Integer.parseInt(element.getElementsByTagName("error-code").item(0).getTextContent())));
 			}
-			else {
+			else if(element.getElementsByTagName("exception-type").getLength() > 0) {
 				deploymentInfo.addErrorPage(new ErrorPage(location, Class.forName(element.getElementsByTagName("exception-type").item(0).getTextContent()).asSubclass(Throwable.class)));
+			}
+			else {
+				deploymentInfo.addErrorPage(new ErrorPage(location));
 			}
 		}
 	}
@@ -113,8 +116,8 @@ public class WebXMLParser {
 	protected class JSPConfigParser implements WebXMLParserFactory {
 		@Override
 		public void parse(DeploymentInfo deploymentInfo, Element element) {
-			NodeList nodeList = element.getElementsByTagName("taglib");
 			JspConfigDescriptorImpl jspConfig = new JspConfigDescriptorImpl();
+			NodeList nodeList = element.getElementsByTagName("taglib");
 			for(int i = 0; i < nodeList.getLength(); i++) {
 				Element temp = (Element)nodeList.item(i);
 				TaglibDescriptorImpl descriptor = new TaglibDescriptorImpl();
@@ -186,6 +189,7 @@ public class WebXMLParser {
 				}
 				jspConfig.jspPropertyGroups.add(descriptor);
 			}
+			deploymentInfo.setJspConfigDescriptor(jspConfig);
 		}
 
 		protected class JspConfigDescriptorImpl implements JspConfigDescriptor {
@@ -337,7 +341,7 @@ public class WebXMLParser {
 		@Override
 		public void parse(DeploymentInfo deploymentInfo, Element element) {
 			String extension = element.getElementsByTagName("extension").item(0).getTextContent(),
-					mimeType = element.getElementsByTagName("mimeType").item(0).getTextContent();
+					mimeType = element.getElementsByTagName("mime-type").item(0).getTextContent();
 			deploymentInfo.addMimeMapping(new MimeMapping(extension, mimeType));
 		}
 	}
