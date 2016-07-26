@@ -17,6 +17,7 @@
  */
 package io.undertow.security.handlers;
 
+import io.undertow.UndertowLogger;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -45,6 +46,7 @@ public class AuthenticationConstraintHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         if (isAuthenticationRequired(exchange)) {
             SecurityContext context = exchange.getSecurityContext();
+            UndertowLogger.SECURITY_LOGGER.debugf("Setting authentication required for exchange %s", exchange);
             context.setAuthenticationRequired();
         }
 

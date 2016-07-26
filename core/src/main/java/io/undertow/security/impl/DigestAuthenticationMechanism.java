@@ -26,6 +26,8 @@ import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.NEXT_NONCE;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.UNAUTHORIZED;
+
+import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.NonceManager;
@@ -158,6 +160,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                         context.setParsedHeader(parsedHeader);
                         // Some form of Digest authentication is going to occur so get the DigestContext set on the exchange.
                         exchange.putAttachment(DigestContext.ATTACHMENT_KEY, context);
+
+                        UndertowLogger.SECURITY_LOGGER.debugf("Found digest header %s in %s", current, exchange);
 
                         return handleDigestHeader(exchange, securityContext);
                     } catch (Exception e) {

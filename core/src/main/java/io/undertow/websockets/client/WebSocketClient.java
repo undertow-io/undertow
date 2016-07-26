@@ -29,6 +29,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketVersion;
 
 import io.undertow.websockets.extensions.ExtensionHandshake;
@@ -210,6 +211,7 @@ public class WebSocketClient {
             return connectImpl(uri, new FutureResult<WebSocketChannel>(), 0);
         }
         private IoFuture<WebSocketChannel> connectImpl(final URI uri, final FutureResult<WebSocketChannel> ioFuture, final int redirectCount) {
+            WebSocketLogger.REQUEST_LOGGER.debugf("Opening websocket connection to %s", uri);
             final String scheme = uri.getScheme().equals("wss") ? "https" : "http";
             final URI newUri;
             try {
@@ -253,6 +255,7 @@ public class WebSocketClient {
                                         if (response.getResponse().getResponseCode() == 200) {
                                             try {
                                                 StreamConnection targetConnection = connection.performUpgrade();
+                                                WebSocketLogger.REQUEST_LOGGER.debugf("Established websocket connection to %s", uri);
                                                 if(uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
                                                     handleConnectionWithExistingConnection(((UndertowXnioSsl)ssl).wrapExistingConnection(targetConnection, optionMap));
                                                 } else {

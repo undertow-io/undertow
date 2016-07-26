@@ -24,13 +24,12 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.Transfer;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
@@ -230,209 +229,9 @@ public final class WebSocketUtils {
      * @param writeExceptionHandler the write exception handler to call if an error occurs during a write operation
      * @param pool                  the pool from which the transfer buffer should be allocated
      */
+    @Deprecated
     public static <I extends StreamSourceChannel, O extends StreamSinkChannel> void initiateTransfer(final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super I> readExceptionHandler, final ChannelExceptionHandler<? super O> writeExceptionHandler, ByteBufferPool pool) {
-        if (pool == null) {
-            throw new IllegalArgumentException("pool is null");
-        }
-        final PooledByteBuffer allocated = pool.allocate();
-        boolean free = true;
-        try {
-            final ByteBuffer buffer = allocated.getBuffer();
-            buffer.clear();
-            long transferred;
-            do {
-                try {
-                    transferred = source.transferTo(Long.MAX_VALUE, buffer, sink);
-                } catch (IOException e) {
-                    ChannelListeners.invokeChannelExceptionHandler(source, readExceptionHandler, e);
-                    return;
-                }
-                if (transferred == -1) {
-                    source.suspendReads();
-                    sink.suspendWrites();
-                    ChannelListeners.invokeChannelListener(source, sourceListener);
-                    ChannelListeners.invokeChannelListener(sink, sinkListener);
-                    return;
-                }
-                while (buffer.hasRemaining()) {
-                    final int res;
-                    try {
-                        res = sink.write(buffer);
-                    } catch (IOException e) {
-                        ChannelListeners.invokeChannelExceptionHandler(sink, writeExceptionHandler, e);
-                        return;
-                    }
-                    if (res == 0) {
-                        // write first listener
-                        final TransferListener<I, O> listener = new TransferListener<>(allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 1);
-                        source.suspendReads();
-                        source.getReadSetter().set(listener);
-                        sink.getWriteSetter().set(listener);
-                        sink.resumeWrites();
-                        free = false;
-                        return;
-                    } else if (res == -1) {
-                        source.suspendReads();
-                        sink.suspendWrites();
-                        ChannelListeners.invokeChannelListener(source, sourceListener);
-                        ChannelListeners.invokeChannelListener(sink, sinkListener);
-                        return;
-                    }
-                }
-            } while (transferred > 0L);
-            final TransferListener<I, O> listener = new TransferListener<>(allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 0);
-            sink.suspendWrites();
-            sink.getWriteSetter().set(listener);
-            source.getReadSetter().set(listener);
-            // read first listener
-            sink.suspendWrites();
-            source.resumeReads();
-            free = false;
-        } finally {
-            if (free) {
-                allocated.close();
-            }
-        }
-    }
-
-
-    static final class TransferListener<I extends StreamSourceChannel, O extends StreamSinkChannel> implements ChannelListener<Channel> {
-        private final PooledByteBuffer pooledBuffer;
-        private final I source;
-        private final O sink;
-        private final ChannelListener<? super I> sourceListener;
-        private final ChannelListener<? super O> sinkListener;
-        private final ChannelExceptionHandler<? super O> writeExceptionHandler;
-        private final ChannelExceptionHandler<? super I> readExceptionHandler;
-        private volatile int state;
-
-        TransferListener(final PooledByteBuffer pooledBuffer, final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super O> writeExceptionHandler, final ChannelExceptionHandler<? super I> readExceptionHandler, final int state) {
-            this.pooledBuffer = pooledBuffer;
-            this.source = source;
-            this.sink = sink;
-            this.sourceListener = sourceListener;
-            this.sinkListener = sinkListener;
-            this.writeExceptionHandler = writeExceptionHandler;
-            this.readExceptionHandler = readExceptionHandler;
-            this.state = state;
-        }
-
-        @Override
-        public void handleEvent(final Channel channel) {
-            final ByteBuffer buffer = pooledBuffer.getBuffer();
-            int state = this.state;
-            long lres;
-            int ires;
-
-            switch (state) {
-                case 0: {
-                    // read listener
-                    for (; ; ) {
-                        try {
-                            lres = source.transferTo(Long.MAX_VALUE, buffer, sink);
-                        } catch (IOException e) {
-                            readFailed(e);
-                            return;
-                        }
-                        if (lres == 0 && !buffer.hasRemaining()) {
-                            return;
-                        }
-                        if (lres == -1) {
-                            // possibly unexpected EOF
-                            // it's OK; just be done
-                            done();
-                            return;
-                        }
-                        while (buffer.hasRemaining()) {
-                            try {
-                                ires = sink.write(buffer);
-                            } catch (IOException e) {
-                                writeFailed(e);
-                                return;
-                            }
-                            if (ires == 0) {
-                                this.state = 1;
-                                source.suspendReads();
-                                sink.resumeWrites();
-                                return;
-                            }
-                        }
-                    }
-                }
-                case 1: {
-                    // write listener
-                    for (; ; ) {
-                        while (buffer.hasRemaining()) {
-                            try {
-                                ires = sink.write(buffer);
-                            } catch (IOException e) {
-                                writeFailed(e);
-                                return;
-                            }
-                            if (ires == 0) {
-                                return;
-                            }
-                        }
-                        try {
-                            lres = source.transferTo(Long.MAX_VALUE, buffer, sink);
-                        } catch (IOException e) {
-                            readFailed(e);
-                            return;
-                        }
-                        if (lres == 0 && !buffer.hasRemaining()) {
-                            this.state = 0;
-                            sink.suspendWrites();
-                            source.resumeReads();
-                            return;
-                        }
-                        if (lres == -1) {
-                            done();
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-
-        private void writeFailed(final IOException e) {
-            try {
-                source.suspendReads();
-                sink.suspendWrites();
-                ChannelListeners.invokeChannelExceptionHandler(sink, writeExceptionHandler, e);
-            } finally {
-                pooledBuffer.close();
-            }
-        }
-
-        private void readFailed(final IOException e) {
-            try {
-                source.suspendReads();
-                sink.suspendWrites();
-                ChannelListeners.invokeChannelExceptionHandler(source, readExceptionHandler, e);
-            } finally {
-                pooledBuffer.close();
-            }
-        }
-
-        private void done() {
-            try {
-                final ChannelListener<? super I> sourceListener = this.sourceListener;
-                final ChannelListener<? super O> sinkListener = this.sinkListener;
-                final I source = this.source;
-                final O sink = this.sink;
-                source.suspendReads();
-                sink.suspendWrites();
-
-                ChannelListeners.invokeChannelListener(source, sourceListener);
-                ChannelListeners.invokeChannelListener(sink, sinkListener);
-            } finally {
-                pooledBuffer.close();
-            }
-        }
-
-        public String toString() {
-            return "Transfer channel listener (" + source + " to " + sink + ") -> (" + sourceListener + " and " + sinkListener + ')';
-        }
+        Transfer.initiateTransfer(source, sink, sourceListener, sinkListener, readExceptionHandler, writeExceptionHandler, pool);
     }
 
     private WebSocketUtils() {

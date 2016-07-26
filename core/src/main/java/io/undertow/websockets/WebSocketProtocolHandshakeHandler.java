@@ -25,6 +25,7 @@ import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Methods;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
@@ -186,6 +187,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         if (handshaker == null) {
             next.handleRequest(exchange);
         } else {
+            WebSocketLogger.REQUEST_LOGGER.debugf("Attempting websocket handshake with %s on %s", handshaker, exchange);
             final Handshake selected = handshaker;
             if (upgradeListener == null) {
                 exchange.upgradeChannel(new HttpUpgradeListener() {

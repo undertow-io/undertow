@@ -91,6 +91,7 @@ public abstract class AbstractSecurityContext implements SecurityContext {
 
     @Override
     public void authenticationFailed(String message, String mechanism) {
+        UndertowLogger.SECURITY_LOGGER.debugf("Authentication failed with message %s and mechanism %s for %s", message, mechanism, exchange);
         sendNoticiation(new SecurityNotification(exchange, EventType.FAILED_AUTHENTICATION, null, mechanism, false, message, true));
     }
 
@@ -137,6 +138,7 @@ public abstract class AbstractSecurityContext implements SecurityContext {
         if (!isAuthenticated()) {
             return;
         }
+        UndertowLogger.SECURITY_LOGGER.debugf("Logged out %s", exchange);
         sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName, true,
                 MESSAGES.userLoggedOut(account.getPrincipal().getName()), true));
 

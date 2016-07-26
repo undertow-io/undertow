@@ -47,7 +47,7 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
         } else {
             try {
                 URI redirectUri = getRedirectURI(exchange);
-
+                UndertowLogger.SECURITY_LOGGER.debugf("Redirecting request %s to %s to meet confidentiality requirements", exchange, redirectUri);
                 exchange.setStatusCode(StatusCodes.FOUND);
                 exchange.getResponseHeaders().put(Headers.LOCATION, redirectUri.toString());
             } catch (Exception e) {

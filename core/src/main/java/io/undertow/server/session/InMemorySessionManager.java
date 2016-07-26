@@ -176,6 +176,8 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             createdSessionCount.incrementAndGet();
         }
         final SessionImpl session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken, defaultSessionTimeout);
+
+        UndertowLogger.SESSION_LOGGER.debugf("Created session with id %s for exchange %s", sessionID, serverExchange);
         sessions.put(sessionID, session);
         config.setSessionId(serverExchange, session.getId());
         session.lastAccessed = System.currentTimeMillis();
@@ -213,16 +215,19 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public synchronized void registerSessionListener(final SessionListener listener) {
+        UndertowLogger.SESSION_LOGGER.debugf("Registered session listener %s", listener);
         sessionListeners.addSessionListener(listener);
     }
 
     @Override
     public synchronized void removeSessionListener(final SessionListener listener) {
+        UndertowLogger.SESSION_LOGGER.debugf("Removed session listener %s", listener);
         sessionListeners.removeSessionListener(listener);
     }
 
     @Override
     public void setDefaultSessionTimeout(final int timeout) {
+        UndertowLogger.SESSION_LOGGER.debugf("Setting default session timeout to %s", timeout);
         defaultSessionTimeout = timeout;
     }
 
@@ -390,6 +395,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                     timerCancelKey = null;
                 }
                 expireTime = newExpireTime;
+                UndertowLogger.SESSION_LOGGER.tracef("Bumping timeout for session %s to %s", sessionId, expireTime);
                 if(timerCancelKey == null) {
                     //+500ms, to make sure that the time has actually expired
                     //we don't re-schedule every time, as it is expensive
@@ -446,6 +452,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             if (invalid) {
                 throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
+            UndertowLogger.SESSION_LOGGER.debugf("Setting max inactive interval for %s to %s", sessionId, interval);
             maxInactiveInterval = interval;
             bumpTimeout();
         }
@@ -491,6 +498,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                sessionManager.sessionListeners.attributeUpdated(this, name, value, existing);
             }
             bumpTimeout();
+            UndertowLogger.SESSION_LOGGER.tracef("Setting session attribute %s to %s for session %s", name, value, sessionId);
             return existing;
         }
 
@@ -502,6 +510,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             final Object existing = attributes.remove(name);
             sessionManager.sessionListeners.attributeRemoved(this, name, existing);
             bumpTimeout();
+            UndertowLogger.SESSION_LOGGER.tracef("Removing session attribute %s for session %s", name, sessionId);
             return existing;
         }
 
@@ -527,6 +536,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 }
                 invalidationStarted = true;
             }
+            UndertowLogger.SESSION_LOGGER.debugf("Invalidating session %s for exchange %s", sessionId, exchange);
 
             sessionManager.sessionListeners.sessionDestroyed(this, exchange, reason);
             invalid = true;
@@ -572,6 +582,8 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
             sessionManager.sessions.remove(oldId);
             sessionManager.sessionListeners.sessionIdChanged(this, oldId);
+            UndertowLogger.SESSION_LOGGER.debugf("Changing session id %s to %s", oldId, newId);
+
             return newId;
         }
 

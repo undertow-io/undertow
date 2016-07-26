@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
  *
  * @author Stuart Douglas
  */
+@Deprecated
 public class PipeliningExecutor implements Executor {
 
     private final Executor executor;

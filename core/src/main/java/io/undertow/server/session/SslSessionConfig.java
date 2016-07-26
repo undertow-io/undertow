@@ -18,6 +18,7 @@
 
 package io.undertow.server.session;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import java.util.Arrays;
@@ -84,6 +85,7 @@ public class SslSessionConfig implements SessionConfig {
 
     @Override
     public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
+        UndertowLogger.SESSION_LOGGER.tracef("Setting SSL session id %s on %s", sessionId, exchange);
         SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
@@ -100,6 +102,7 @@ public class SslSessionConfig implements SessionConfig {
 
     @Override
     public void clearSession(final HttpServerExchange exchange, final String sessionId) {
+        UndertowLogger.SESSION_LOGGER.tracef("Clearing SSL session id %s on %s", sessionId, exchange);
         SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
@@ -124,7 +127,11 @@ public class SslSessionConfig implements SessionConfig {
             }
         } else {
             synchronized (this) {
-                return sessions.get(new Key(sslSession.getSessionId()));
+                String sessionId = sessions.get(new Key(sslSession.getSessionId()));
+                if(sessionId != null) {
+                    UndertowLogger.SESSION_LOGGER.tracef("Found SSL session id %s on %s", sessionId, exchange);
+                }
+                return sessionId;
             }
         }
         return null;

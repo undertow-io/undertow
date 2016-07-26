@@ -95,6 +95,8 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             if(sizeLimit != null) {
                 exchange.setMaxEntitySize(sizeLimit);
             }
+            UndertowLogger.REQUEST_LOGGER.tracef("Created multipart parser for %s", exchange);
+
             return parser;
 
         }
