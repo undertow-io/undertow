@@ -270,6 +270,11 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_AJP_PACKET_SIZE = Option.simple(UndertowOptions.class, "MAX_AJP_PACKET_SIZE", Integer.class);
 
+    /**
+     * If this is true then HTTP/1.1 requests will be failed if no host header is present.
+     */
+    public static final Option<Boolean> REQUIRE_HOST_HTTP11 = Option.simple(UndertowOptions.class, "REQUIRE_HOST_HTTP11", Boolean.class);
+
     private UndertowOptions() {
 
     }

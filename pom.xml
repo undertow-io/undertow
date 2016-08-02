@@ -64,7 +64,7 @@
         <version.easymock>3.2</version.easymock>
         <version.io.undertow.jastow>2.0.0.Beta2</version.io.undertow.jastow>
         <version.junit>4.12</version.junit>
-        <version.netty>4.1.0.CR5</version.netty>
+        <version.netty>4.1.4.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpmime>4.2.6</version.org.apache.httpmime>
         <version.org.apache.httpcomponents>4.2.6</version.org.apache.httpcomponents>
