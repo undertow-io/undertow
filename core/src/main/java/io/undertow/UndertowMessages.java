@@ -468,4 +468,7 @@ public interface UndertowMessages {
 
     @Message(id = 146, value = "HttpServerExchange cannot have both async IO resumed and dispatch() called in the same cycle")
     IllegalStateException resumedAndDispatched();
+
+    @Message(id = 147, value = "No host header in a HTTP/1.1 request")
+    IOException noHostInHttp11Request();
 }

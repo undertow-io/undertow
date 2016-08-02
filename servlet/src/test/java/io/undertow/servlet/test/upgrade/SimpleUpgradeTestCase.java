@@ -66,7 +66,7 @@ public class SimpleUpgradeTestCase {
 
         InputStream in = socket.getInputStream();
         OutputStream out = socket.getOutputStream();
-        out.write(("GET " + url + " HTTP/1.1\r\nConnection: upgrade\r\nUpgrade: servlet\r\n\r\n").getBytes());
+        out.write(("GET " + url + " HTTP/1.1\r\nHost:default\r\nConnection: upgrade\r\nUpgrade: servlet\r\n\r\n").getBytes());
         out.flush();
         Assert.assertTrue(readBytes(in).startsWith("HTTP/1.1 101 Switching Protocols\r\n"));
 

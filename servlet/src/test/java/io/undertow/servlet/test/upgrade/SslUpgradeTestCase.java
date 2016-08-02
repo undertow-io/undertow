@@ -75,7 +75,7 @@ public class SslUpgradeTestCase {
 
             InputStream in = socket.getInputStream();
             OutputStream out = socket.getOutputStream();
-            out.write(("GET " + url + " HTTP/1.1\r\nConnection: upgrade\r\nUpgrade:servlet\r\n\r\n").getBytes());
+            out.write(("GET " + url + " HTTP/1.1\r\nHost: default\r\nConnection: upgrade\r\nUpgrade:servlet\r\n\r\n").getBytes());
             out.flush();
             String bytes = readBytes(in);
             Assert.assertTrue(bytes, bytes.startsWith("HTTP/1.1 101 Switching Protocols\r\n"));
