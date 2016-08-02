@@ -49,7 +49,7 @@ public class ResponseTimeAttribute implements ExchangeAttribute {
         final long nanos = System.nanoTime() - requestStartTime;
         if(timeUnit == TimeUnit.SECONDS) {
             StringBuilder buf = new StringBuilder();
-            long milis = timeUnit.convert(nanos, TimeUnit.NANOSECONDS);
+            long milis = TimeUnit.MILLISECONDS.convert(nanos, TimeUnit.NANOSECONDS);
             buf.append(Long.toString(milis / 1000));
             buf.append('.');
             int remains = (int) (milis % 1000);
