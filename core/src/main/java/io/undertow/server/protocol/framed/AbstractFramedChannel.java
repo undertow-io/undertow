@@ -952,6 +952,18 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
         @Override
         public void handleEvent(final CloseableChannel c) {
+
+            if (Thread.currentThread() != c.getIoThread() && !c.getWorker().isShutdown()) {
+                runInIoThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ChannelListeners.invokeChannelListener(c, FrameCloseListener.this);
+                    }
+                });
+                return;
+            }
+
+
             if(c instanceof  StreamSinkChannel) {
                 sinkClosed = true;
             } else if(c instanceof StreamSourceChannel) {
@@ -982,16 +994,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                 });
 
-                return;
-            }
-
-            if (Thread.currentThread() != c.getIoThread()) {
-                runInIoThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelListeners.invokeChannelListener(c, FrameCloseListener.this);
-                    }
-                });
                 return;
             }
             R receiver = AbstractFramedChannel.this.receiver;
