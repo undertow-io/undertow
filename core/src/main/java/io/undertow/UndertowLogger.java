@@ -383,4 +383,7 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5081, value = "Response has already been started, cannot proxy request %s")
     void cannotProxyStartedRequest(HttpServerExchange exchange);
+
+    @Message(id = 5082, value = "Configured mod_cluster management host address cannot be a wildcard address (%s)!")
+    IllegalArgumentException cannotUseWildcardAddressAsModClusterManagementHost(String providedAddress);
 }

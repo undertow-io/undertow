@@ -43,6 +43,9 @@ public class MCMPConfig {
 
     public MCMPConfig(Builder builder) {
         this.managementSocketAddress = new InetSocketAddress(builder.managementHost, builder.managementPort);
+        if (managementSocketAddress.getAddress().isAnyLocalAddress()) {
+            throw UndertowLogger.PROXY_REQUEST_LOGGER.cannotUseWildcardAddressAsModClusterManagementHost(builder.managementHost);
+        }
         if (managementSocketAddress.isUnresolved()) {
             throw UndertowLogger.PROXY_REQUEST_LOGGER.unableToResolveModClusterManagementHost(builder.managementHost);
         }
