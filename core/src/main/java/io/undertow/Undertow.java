@@ -135,7 +135,7 @@ public final class Undertow {
                     .getMap();
 
             OptionMap serverOptions = OptionMap.builder()
-                    .set(UndertowOptions.NO_REQUEST_TIMEOUT, 60000000)
+                    .set(UndertowOptions.NO_REQUEST_TIMEOUT, 60 * 1000)
                     .addAll(this.serverOptions)
                     .getMap();
 
