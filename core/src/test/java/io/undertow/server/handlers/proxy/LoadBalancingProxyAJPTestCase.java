@@ -18,16 +18,15 @@
 
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
-import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.testutils.DefaultServer;
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.Options;
-
-import java.net.URI;
-import java.net.URISyntaxException;
+import io.undertow.Undertow;
+import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.testutils.DefaultServer;
 
 /**
  * Tests the load balancing proxy
@@ -43,13 +42,11 @@ public class LoadBalancingProxyAJPTestCase extends AbstractLoadBalancingProxyTes
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addAjpListener(port + 1, DefaultServer.getHostAddress("default"))
-                .setServerOption(UndertowOptions.ENABLE_SPDY, false)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(getRootHandler("s1", "server1"))
                 .build();
         server2 = Undertow.builder()
                 .addAjpListener(port + 2, DefaultServer.getHostAddress("default"))
-                .setServerOption(UndertowOptions.ENABLE_SPDY, false)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(getRootHandler("s2", "server2"))
                 .build();
@@ -60,7 +57,7 @@ public class LoadBalancingProxyAJPTestCase extends AbstractLoadBalancingProxyTes
                 .setConnectionsPerThread(16)
                 .addHost(new URI("ajp", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
                 .addHost(new URI("ajp", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
-                , 10000, ResponseCodeHandler.HANDLE_404, false, false , 2));
+                , 10000, ResponseCodeHandler.HANDLE_404, false, false, 2));
     }
 
 }

@@ -762,6 +762,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return 0;
             }
             if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
+                if(dataToUnwrap != null) {
+                    dataToUnwrap.close();
+                    dataToUnwrap = null;
+                }
                 notifyReadClosed();
                 return -1;
             }

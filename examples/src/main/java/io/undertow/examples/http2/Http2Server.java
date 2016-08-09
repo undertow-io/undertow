@@ -76,7 +76,6 @@ public class Http2Server {
         SSLContext sslContext = createSSLContext(loadKeyStore("server.keystore"), loadKeyStore("server.truststore"));
         Undertow server = Undertow.builder()
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
-                .setServerOption(UndertowOptions.ENABLE_SPDY, true)
                 .addHttpListener(8080, bindAddress)
                 .addHttpsListener(8443, bindAddress, sslContext)
                 .setHandler(new SessionAttachmentHandler(new LearningPushHandler(100, -1, Handlers.header(predicate(secure(), resource(new PathResourceManager(Paths.get(System.getProperty("example.directory", System.getProperty("user.home"))), 100))
@@ -97,7 +96,6 @@ public class Http2Server {
 
         Undertow reverseProxy = Undertow.builder()
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
-                .setServerOption(UndertowOptions.ENABLE_SPDY, true)
                 .addHttpListener(8081, bindAddress)
                 .addHttpsListener(8444, bindAddress, sslContext)
                 .setHandler(new ProxyHandler(proxy, 30000, ResponseCodeHandler.HANDLE_404))

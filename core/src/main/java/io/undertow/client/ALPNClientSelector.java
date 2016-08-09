@@ -18,37 +18,121 @@
 
 package io.undertow.client;
 
-import io.undertow.protocols.ssl.ALPNHackSSLEngine;
-import io.undertow.util.ALPN;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.SSLEngine;
+
 import org.xnio.ChannelListener;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.PushBackStreamSourceConduit;
 import org.xnio.ssl.SslConnection;
+import io.undertow.protocols.alpn.ALPNManager;
+import io.undertow.protocols.alpn.ALPNProvider;
+import io.undertow.protocols.ssl.SslConduit;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.util.ImmediatePooled;
 
 /**
  * @author Stuart Douglas
  */
 public class ALPNClientSelector {
 
-    private static final ClientSelector SELECTOR;
-    static {
-        if(ALPN.JDK_9_ALPN_METHODS != null) {
-            SELECTOR = new JDK9ALPNClientProvider();
-        } else if(ALPNHackSSLEngine.ENABLED) {
-            SELECTOR = new JDK8HackALPNClientProvider();
-        } else {
-            SELECTOR = new JettyALPNClientProvider();
-        }
-    }
-
     private ALPNClientSelector() {
 
     }
 
-    public static void runAlpn(SslConnection connection, ChannelListener<SslConnection> fallback, ClientCallback<ClientConnection> failedListener, ALPNProtocol... details) {
-        SELECTOR.runAlpn(connection, fallback, failedListener, details);
-    }
+    public static void runAlpn(final SslConnection sslConnection, final ChannelListener<SslConnection> fallback, final ClientCallback<ClientConnection> failedListener, final ALPNProtocol... details) {
+        SslConduit conduit = UndertowXnioSsl.getSslConduit(sslConnection);
 
-    public static boolean isEnabled() {
-        return SELECTOR.isEnabled();
+        final ALPNProvider provider = ALPNManager.INSTANCE.getProvider(conduit.getSSLEngine());
+        if (provider == null) {
+            fallback.handleEvent(sslConnection);
+            return;
+        }
+        String[] protocols = new String[details.length];
+        final Map<String, ALPNProtocol> protocolMap = new HashMap<>();
+        for (int i = 0; i < protocols.length; ++i) {
+            protocols[i] = details[i].getProtocol();
+            protocolMap.put(details[i].getProtocol(), details[i]);
+        }
+        final SSLEngine sslEngine = provider.setProtocols(conduit.getSSLEngine(), protocols);
+        conduit.setSslEngine(sslEngine);
+        final AtomicReference<Boolean> handshakeDone = new AtomicReference<>(false);
+
+        try {
+            sslConnection.startHandshake();
+            sslConnection.getHandshakeSetter().set(new ChannelListener<SslConnection>() {
+                @Override
+                public void handleEvent(SslConnection channel) {
+                    if(handshakeDone.get()) {
+                        return;
+                    }
+                    handshakeDone.set(true);
+                }
+            });
+            sslConnection.getSourceChannel().getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+                @Override
+                public void handleEvent(StreamSourceChannel channel) {
+
+                    String selectedProtocol = provider.getSelectedProtocol(sslEngine);
+                    if (selectedProtocol != null) {
+                        handleSelected(selectedProtocol);
+                    } else {
+                        ByteBuffer buf = ByteBuffer.allocate(100);
+                        try {
+                            int read = channel.read(buf);
+                            if (read > 0) {
+                                buf.flip();
+                                PushBackStreamSourceConduit pb = new PushBackStreamSourceConduit(sslConnection.getSourceChannel().getConduit());
+                                pb.pushBack(new ImmediatePooled<>(buf));
+                                sslConnection.getSourceChannel().setConduit(pb);
+                            } else if (read == -1) {
+                                failedListener.failed(new ClosedChannelException());
+                            }
+                            selectedProtocol = provider.getSelectedProtocol(sslEngine);
+                            if (selectedProtocol != null) {
+                                handleSelected(selectedProtocol);
+                            } else if (read > 0 || handshakeDone.get()) {
+                                sslConnection.getSourceChannel().suspendReads();
+                                fallback.handleEvent(sslConnection);
+                                return;
+                            }
+                        } catch (IOException e) {
+                            failedListener.failed(e);
+                        }
+                    }
+                }
+
+                private void handleSelected(String selected) {
+                    if (selected.isEmpty()) {
+                        sslConnection.getSourceChannel().suspendReads();
+                        fallback.handleEvent(sslConnection);
+                        return;
+                    } else {
+                        ALPNClientSelector.ALPNProtocol details = protocolMap.get(selected);
+                        if (details == null) {
+                            //should never happen
+                            sslConnection.getSourceChannel().suspendReads();
+                            fallback.handleEvent(sslConnection);
+                            return;
+                        } else {
+                            sslConnection.getSourceChannel().suspendReads();
+                            details.getSelected().handleEvent(sslConnection);
+                        }
+                    }
+                }
+            });
+            sslConnection.getSourceChannel().resumeReads();
+        } catch (IOException e) {
+            failedListener.failed(e);
+        } catch (Throwable e) {
+            failedListener.failed(new IOException(e));
+        }
+
     }
 
     public static class ALPNProtocol {
@@ -67,12 +151,5 @@ public class ALPNClientSelector {
         public String getProtocol() {
             return protocol;
         }
-    }
-
-    interface ClientSelector {
-
-        void runAlpn(SslConnection connection, ChannelListener<SslConnection> fallback,ClientCallback<ClientConnection> failedListener, ALPNProtocol... details);
-
-        boolean isEnabled();
     }
 }
