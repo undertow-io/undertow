@@ -267,12 +267,6 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-proxy</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
                 <artifactId>undertow-websockets-jsr</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -378,23 +372,10 @@
                 <version>${version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec}</version>
             </dependency>
 
-
-            <dependency>
-                <groupId>org.jboss.spec.javax.servlet.jsp</groupId>
-                <artifactId>jboss-jsp-api_2.3_spec</artifactId>
-                <version>${version.org.jboss.spec.javax.servlet.jsp}</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.jboss.spec.javax.websocket</groupId>
                 <artifactId>jboss-websocket-api_1.1_spec</artifactId>
                 <version>${version.org.jboss.spec.javax.websockets}</version>
-            </dependency>
-
-             <dependency>
-                <groupId>io.undertow.jastow</groupId>
-                <artifactId>jastow</artifactId>
-                <version>${version.io.undertow.jastow}</version>
             </dependency>
 
             <dependency>
@@ -407,13 +388,6 @@
                 <groupId>org.jboss.xnio</groupId>
                 <artifactId>xnio-nio</artifactId>
                 <version>${version.xnio}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.glassfish</groupId>
-                <artifactId>javax.el</artifactId>
-                <version>${version.org.glassfish.el}</version>
-                <scope>test</scope>
             </dependency>
 
             <dependency>
