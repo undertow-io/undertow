@@ -249,12 +249,6 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-proxy</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
                 <artifactId>undertow-websockets-jsr</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -371,12 +365,6 @@
                 <version>${version.org.jboss.spec.javax.websockets}</version>
             </dependency>
 
-             <dependency>
-                <groupId>io.undertow.jastow</groupId>
-                <artifactId>jastow</artifactId>
-                <version>${version.io.undertow.jastow}</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.jboss.xnio</groupId>
                 <artifactId>xnio-api</artifactId>
@@ -393,13 +381,6 @@
                 <groupId>org.mortbay.jetty.alpn</groupId>
                 <artifactId>alpn-boot</artifactId>
                 <version>${version.org.mortbay.jetty.alpn}</version>
-                <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.glassfish</groupId>
-                <artifactId>javax.el</artifactId>
-                <version>${version.org.glassfish.el}</version>
                 <scope>test</scope>
             </dependency>
 
