@@ -254,22 +254,26 @@ public class WebSocketClient {
                                 result.setResponseListener(new ClientCallback<ClientExchange>() {
                                     @Override
                                     public void completed(ClientExchange response) {
-                                        if (response.getResponse().getResponseCode() == 200) {
-                                            try {
-                                                StreamConnection targetConnection = connection.performUpgrade();
-                                                WebSocketLogger.REQUEST_LOGGER.debugf("Established websocket connection to %s", uri);
-                                                if(uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
-                                                    handleConnectionWithExistingConnection(((UndertowXnioSsl)ssl).wrapExistingConnection(targetConnection, optionMap));
-                                                } else {
-                                                    handleConnectionWithExistingConnection(targetConnection);
+                                        try {
+                                            if (response.getResponse().getResponseCode() == 200) {
+                                                try {
+                                                    StreamConnection targetConnection = connection.performUpgrade();
+                                                    WebSocketLogger.REQUEST_LOGGER.debugf("Established websocket connection to %s", uri);
+                                                    if (uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
+                                                        handleConnectionWithExistingConnection(((UndertowXnioSsl) ssl).wrapExistingConnection(targetConnection, optionMap));
+                                                    } else {
+                                                        handleConnectionWithExistingConnection(targetConnection);
+                                                    }
+                                                } catch (IOException e) {
+                                                    ioFuture.setException(e);
+                                                } catch (Exception e) {
+                                                    ioFuture.setException(new IOException(e));
                                                 }
-                                            } catch (IOException e) {
-                                                ioFuture.setException(e);
-                                            } catch (Exception e) {
-                                                ioFuture.setException(new IOException(e));
+                                            } else {
+                                                ioFuture.setException(UndertowMessages.MESSAGES.proxyConnectionFailed(response.getResponse().getResponseCode()));
                                             }
-                                        } else {
-                                            ioFuture.setException(UndertowMessages.MESSAGES.proxyConnectionFailed(response.getResponse().getResponseCode()));
+                                        } catch (Exception e) {
+                                            ioFuture.setException(new IOException(e));
                                         }
                                     }
 

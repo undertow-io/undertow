@@ -1,7 +1,20 @@
 package io.undertow.server.handlers.proxy;
 
+import static io.undertow.Handlers.jvmRoute;
+import static io.undertow.Handlers.path;
+
+import java.net.URI;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
+import org.xnio.Options;
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -12,20 +25,6 @@ import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-
-import java.net.URI;
-
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
 
 /**
  * Created by ivannagy on 8/26/14.
@@ -52,11 +51,10 @@ public class ProxyHandlerXForwardedForTestCase {
         ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, DefaultServer.getClientSSLContext());
 
         server = Undertow.builder()
-            .addHttpsListener(handlerPort, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
-            .setServerOption(UndertowOptions.ENABLE_SPDY, false)
-            .setSocketOption(Options.REUSE_ADDRESSES, true)
-            .setHandler(jvmRoute("JSESSIONID", "s1", path().addPrefixPath("/x-forwarded", new XForwardedHandler())))
-            .build();
+                .addHttpsListener(handlerPort, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
+                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setHandler(jvmRoute("JSESSIONID", "s1", path().addPrefixPath("/x-forwarded", new XForwardedHandler())))
+                .build();
 
         server.start();
 
@@ -71,9 +69,9 @@ public class ProxyHandlerXForwardedForTestCase {
     private static void setProxyHandler(boolean rewriteHostHeader, boolean reuseXForwarded) throws Exception {
 
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
-            .setConnectionsPerThread(4)
-            .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), handlerPort, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, false))
-            , 10000, ResponseCodeHandler.HANDLE_404, rewriteHostHeader, reuseXForwarded));
+                .setConnectionsPerThread(4)
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), handlerPort, null, null, null), "s1", ssl)
+                , 10000, ResponseCodeHandler.HANDLE_404, rewriteHostHeader, reuseXForwarded));
 
     }
 
@@ -116,7 +114,7 @@ public class ProxyHandlerXForwardedForTestCase {
             Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
 
         } finally {
-          client.getConnectionManager().shutdown();
+            client.getConnectionManager().shutdown();
         }
     }
 

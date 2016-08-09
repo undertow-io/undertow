@@ -1,0 +1,59 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2014 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package io.undertow.protocols.alpn;
+
+import javax.net.ssl.SSLEngine;
+
+/**
+ * Interface that allows for ALPN providers to be dynamically selected.
+ *
+ * THIS API IS TECH PREVIEW
+ *
+ * It will not be finalised until JDK9 has been released and the JDK9 ALPN API is 100% confirmed
+ *
+ * @author Stuart Douglas
+ */
+public interface ALPNProvider {
+
+    boolean isEnabled(SSLEngine sslEngine);
+
+    /**
+     * Sets the SSL protocols, and potentially wraps the SSLEngine
+     * @param engine The original engine
+     * @param protocols The protocols
+     * @return The new SSLEngine
+     */
+    SSLEngine setProtocols(SSLEngine engine, String[] protocols);
+
+    /**
+     * Gets the selected ALPN protocol, of null if none was selected.
+     *
+     *
+     * @param engine The SSL Engine
+     * @return The selected protocol
+     */
+    String getSelectedProtocol(SSLEngine engine);
+
+    /**
+     *
+     * @return The priority of this provider, higher priority providers will be tried first
+     */
+    int getPriority();
+
+}

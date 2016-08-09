@@ -104,6 +104,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.wildfly.openssl</groupId>
+            <artifactId>wildfly-openssl</artifactId>
+            <version>${version.org.wildfly.openssl}</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
@@ -138,6 +144,7 @@
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
+                        <org.wildfly.openssl.path>${org.wildfly.openssl.path}</org.wildfly.openssl.path>
                     </systemPropertyVariables>
                     <argLine>${surefire.system.args} ${jacoco.agent.argLine}</argLine>
                 </configuration>
@@ -146,6 +153,17 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <org.wildfly.openssl.path>/usr/local/opt/openssl/lib</org.wildfly.openssl.path>
+            </properties>
+        </profile>
         <profile>
             <id>spdy-no-tests</id>
             <activation>

@@ -49,7 +49,6 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
-                .setServerOption(UndertowOptions.ENABLE_SPDY, false)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(getRootHandler("s1", "server1"))
                 .build();
@@ -65,8 +64,8 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
         UndertowXnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, DefaultServer.createClientSslContext());
         DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(4)
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, false))
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl, OptionMap.create(UndertowOptions.ENABLE_SPDY, false))
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl)
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl)
                 , 10000, ResponseCodeHandler.HANDLE_404, false, false , 2));
     }
 
