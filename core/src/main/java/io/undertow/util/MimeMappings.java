@@ -125,7 +125,7 @@ public class MimeMappings {
         defaultMappings.put("avx", "video/x-rad-screenplay");
         defaultMappings.put("wrl", "x-world/x-vrml");
         defaultMappings.put("mpv2", "video/mpeg2");
-        
+
         defaultMappings.put("eot", "application/vnd.ms-fontobject");
         defaultMappings.put("woff", "application/font-woff");
         defaultMappings.put("woff2", "application/font-woff2");
