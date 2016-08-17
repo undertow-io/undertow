@@ -73,7 +73,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     /**
      * The backing data for the current frame.
      */
-    private PooledByteBuffer data;
+    private volatile PooledByteBuffer data;
     private int currentDataOriginalSize;
 
     /**
@@ -522,27 +522,29 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         if (data == null) {
             synchronized (lock) {
-                FrameData pending = pendingFrameData.poll();
-                if (pending != null) {
-                    PooledByteBuffer frameData = pending.getFrameData();
-                    boolean hasData = true;
-                    if(!frameData.getBuffer().hasRemaining()) {
-                        frameData.close();
-                        hasData = false;
-                    }
-                    if (pending.getFrameHeaderData() != null) {
-                        this.frameDataRemaining = pending.getFrameHeaderData().getFrameLength();
-                        handleHeaderData(pending.getFrameHeaderData());
-                    }
-                    if(hasData) {
-                        this.frameDataRemaining = updateFrameDataRemaining(frameData, frameDataRemaining);
-                        this.currentDataOriginalSize = frameData.getBuffer().remaining();
-                        try {
-                            this.data = processFrameData(frameData, frameDataRemaining - currentDataOriginalSize == 0);
-                        } catch (Exception e) {
+                if (data == null) {
+                    FrameData pending = pendingFrameData.poll();
+                    if (pending != null) {
+                        PooledByteBuffer frameData = pending.getFrameData();
+                        boolean hasData = true;
+                        if (!frameData.getBuffer().hasRemaining()) {
                             frameData.close();
-                            UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
-                            markStreamBroken();
+                            hasData = false;
+                        }
+                        if (pending.getFrameHeaderData() != null) {
+                            this.frameDataRemaining = pending.getFrameHeaderData().getFrameLength();
+                            handleHeaderData(pending.getFrameHeaderData());
+                        }
+                        if (hasData) {
+                            this.frameDataRemaining = updateFrameDataRemaining(frameData, frameDataRemaining);
+                            this.currentDataOriginalSize = frameData.getBuffer().remaining();
+                            try {
+                                this.data = processFrameData(frameData, frameDataRemaining - currentDataOriginalSize == 0);
+                            } catch (Exception e) {
+                                frameData.close();
+                                UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
+                                markStreamBroken();
+                            }
                         }
                     }
                 }
