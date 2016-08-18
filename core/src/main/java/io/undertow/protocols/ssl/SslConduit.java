@@ -789,7 +789,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
             //we always need to re-invoke if bytes have been produced, as the engine may have buffered some data
-            if (bytesProduced || (unwrappedData != null && unwrappedData.getBuffer().hasRemaining())) {
+            if (bytesProduced || (unwrappedData != null && unwrappedData.isOpen() && unwrappedData.getBuffer().hasRemaining())) {
                 requiresListenerInvocation = true;
             }
             if (dataToUnwrap != null) {
