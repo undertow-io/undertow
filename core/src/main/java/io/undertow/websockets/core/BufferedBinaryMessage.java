@@ -42,7 +42,7 @@ public class BufferedBinaryMessage {
     private final long maxMessageSize;
     private long currentSize;
     private boolean complete;
-    private int frameCount;
+//    private int frameCount; // was used only in handleNewFrame() which is marked for removal => commenting out
 
 
     public BufferedBinaryMessage(long maxMessageSize, boolean bufferFullMessage) {

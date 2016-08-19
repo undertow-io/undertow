@@ -392,8 +392,9 @@ public class AjpRequestParser {
                     }
                     //query string.
                     if (state.currentAttribute.equals(QUERY_STRING)) {
-                        exchange.setQueryString(result == null ? "" : result);
-                        URLUtils.parseQueryString(result, exchange, encoding, doDecode);
+                        String resultAsQueryString = result == null ? "" : result;
+                        exchange.setQueryString(resultAsQueryString);
+                        URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode);
                     } else if (state.currentAttribute.equals(REMOTE_USER)) {
                         exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_PRINCIPAL, result);
                     } else if (state.currentAttribute.equals(AUTH_TYPE)) {

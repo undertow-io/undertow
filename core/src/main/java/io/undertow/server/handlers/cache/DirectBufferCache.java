@@ -146,7 +146,7 @@ public class DirectBufferCache {
 
     private void bumpAccess(CacheEntry cacheEntry) {
         Object prevToken = cacheEntry.claimToken();
-        if (prevToken != Boolean.FALSE) {
+        if (!Boolean.FALSE.equals(prevToken)) {
             if (prevToken != null) {
                 accessQueue.removeToken(prevToken);
             }

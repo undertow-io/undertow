@@ -17,6 +17,7 @@
  */
 package io.undertow.security.idm;
 
+import java.io.Serializable;
 import java.security.Principal;
 import java.util.Set;
 
@@ -25,7 +26,7 @@ import java.util.Set;
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public interface Account {
+public interface Account extends Serializable {
 
     Principal getPrincipal();
 

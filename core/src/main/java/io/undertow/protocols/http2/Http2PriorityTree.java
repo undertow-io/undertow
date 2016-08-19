@@ -83,7 +83,6 @@ public class Http2PriorityTree {
         if(node == null) {
             return;
         }
-        node.dead = true;
         if(!node.hasDependents()) {
             //add to eviction queue
             int toEvict = evictionQueue[evictionQueuePosition];
@@ -185,12 +184,6 @@ public class Http2PriorityTree {
          * streams that depend on this stream, in weighted order. May contains null at the end of the list
          */
         private Http2PriorityNode[] dependents = null;
-        /**
-         * The stream this node depends on
-         */
-        private int dependency;
-
-        boolean dead = false;
 
         Http2PriorityNode(int streamId, int weighting) {
             this.streamId = streamId;

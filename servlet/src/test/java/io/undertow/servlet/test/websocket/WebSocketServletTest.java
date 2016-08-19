@@ -40,11 +40,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.FutureResult;
 
-import javax.servlet.Servlet;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.servlet.Servlet;
 
 /**
  * @author Stuart Douglas
@@ -52,7 +53,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @HttpOneOnly
 @RunWith(DefaultServer.class)
 public class WebSocketServletTest {
-    public static final Charset US_ASCII = Charset.forName("US-ASCII");
+    public static final Charset US_ASCII = StandardCharsets.US_ASCII;
 
     @Test
     public void testText() throws Exception {

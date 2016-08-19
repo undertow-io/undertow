@@ -17,11 +17,6 @@
  */
 package io.undertow.server.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.DIGEST;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.idm.DigestAlgorithm;
@@ -35,19 +30,25 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HexConverter;
 import io.undertow.util.StatusCodes;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.DIGEST;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test case for Digest authentication based on RFC2617 with QOP of auth.
@@ -57,7 +58,7 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
 
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
+    private static final Charset UTF_8 = StandardCharsets.UTF_8;
     private static final String REALM_NAME = "Digest_Realm";
     private static final String ZERO = "00000000";
 

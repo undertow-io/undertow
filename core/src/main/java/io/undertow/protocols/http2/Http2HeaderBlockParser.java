@@ -18,15 +18,14 @@
 
 package io.undertow.protocols.http2;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import io.undertow.UndertowLogger;
-import org.xnio.Bits;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Parser for HTTP2 headers
@@ -50,7 +49,6 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
 
     @Override
     protected void handleData(ByteBuffer resource, Http2FrameHeaderParser header) throws IOException {
-        boolean continuationFramesComing = Bits.anyAreClear(header.flags, Http2Channel.HEADERS_FLAG_END_HEADERS);
         if (frameRemaining == -1) {
             frameRemaining = header.length;
         }

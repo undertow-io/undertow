@@ -101,12 +101,12 @@ public class SimpleNonceManager implements SessionNonceManager {
     /**
      * After a nonce is issued the first authentication response MUST be received within 5 minutes.
      */
-    private final long firstUseTimeOut = 5 * 60 * 1000;
+    private static final long firstUseTimeOut = 5 * 60 * 1000;
 
     /**
      * Overall a nonce is valid from 15 minutes from first being issued, if used after this then a new nonce will be issued.
      */
-    private final long overallTimeOut = 15 * 60 * 1000;
+    private static final long overallTimeOut = 15 * 60 * 1000;
 
     /**
      * A previously used nonce will be allowed to remain in the knownNonces list for up to 5 minutes.
@@ -116,7 +116,7 @@ public class SimpleNonceManager implements SessionNonceManager {
      *
      * This is primarily for session based digests where loosing the cached session key would be bad.
      */
-    private final long cacheTimePostExpiry = 5 * 60 * 1000;
+    private static final long cacheTimePostExpiry = 5 * 60 * 1000;
 
     public SimpleNonceManager() {
         this(DEFAULT_HASH_ALG);
@@ -428,7 +428,7 @@ public class SimpleNonceManager implements SessionNonceManager {
     /**
      * A simple wrapper around a nonce to allow it to be used as a key in a weak map.
      */
-    private class NonceHolder {
+    private static class NonceHolder {
         private final String nonce;
 
         private NonceHolder(final String nonce) {
@@ -455,14 +455,14 @@ public class SimpleNonceManager implements SessionNonceManager {
      * A NonceKey for a preciously valid nonce is also referenced, this is so that a WeakHashMap can be used to maintain a
      * mapping from the original NonceKey to the new nonce value.
      */
-    private class Nonce {
+    private static class Nonce {
 
         private final String nonce;
 
         private final long timeStamp;
         // TODO we will also add a mechanism to track the gaps as the only restriction is that a NC can only be used one.
         private int maxNonceCount;
-        // We keep this as it is used in the wek hash map as a forward mapping as long as the nonce to map to is still alive.
+        // We keep this as it is used in the weak hash map as a forward mapping as long as the nonce to map to is still alive.
         @SuppressWarnings("unused")
         private final NonceHolder previousNonce;
         private byte[] sessionKey;

@@ -18,18 +18,6 @@
 
 package io.undertow.server.protocol.http2;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import javax.net.ssl.SSLSession;
-
-import io.undertow.server.ConnectorStatisticsImpl;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.http2.AbstractHttp2StreamSourceChannel;
@@ -37,6 +25,7 @@ import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.protocols.http2.Http2StreamSourceChannel;
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -44,7 +33,17 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
 import org.xnio.channels.Channels;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import javax.net.ssl.SSLSession;
 
 /**
  * The recieve listener for a Http2 connection.

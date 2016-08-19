@@ -149,6 +149,24 @@ public class QValueParser {
         }
 
         @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof QValueResult)) return false;
+
+            QValueResult that = (QValueResult) o;
+
+            if (getValue() != null ? !getValue().equals(that.getValue()) : that.getValue() != null) return false;
+            return getQvalue() != null ? getQvalue().equals(that.getQvalue()) : that.getQvalue() == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = getValue() != null ? getValue().hashCode() : 0;
+            result = 31 * result + (getQvalue() != null ? getQvalue().hashCode() : 0);
+            return result;
+        }
+
+        @Override
         public int compareTo(final QValueResult other) {
             //we compare the strings as if they were decimal values.
             //we know they can only be

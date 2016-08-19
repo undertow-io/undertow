@@ -22,6 +22,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,13 +51,16 @@ public class FileUtils {
         }
     }
 
+    /**
+     * Reads the {@link InputStream file} and converting it to {@link String using UTF-8 encoding.
+     */
     public static String readFile(InputStream file) {
         try (BufferedInputStream stream = new BufferedInputStream(file)) {
             byte[] buff = new byte[1024];
             StringBuilder builder = new StringBuilder();
             int read;
             while ((read = stream.read(buff)) != -1) {
-                builder.append(new String(buff, 0, read));
+                builder.append(new String(buff, 0, read, StandardCharsets.UTF_8));
             }
             return builder.toString();
         } catch (IOException e) {
