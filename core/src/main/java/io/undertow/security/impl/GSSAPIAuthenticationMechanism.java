@@ -17,17 +17,6 @@
  */
 package io.undertow.security.impl;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.security.GeneralSecurityException;
-import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.util.List;
-
-import javax.security.auth.Subject;
-import javax.security.auth.kerberos.KerberosPrincipal;
-
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
@@ -40,12 +29,21 @@ import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.proxy.ExclusivityChecker;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.FlexBase64;
-
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.Oid;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
+import java.security.Principal;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.List;
+import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
 
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.HOST;
@@ -98,7 +96,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         }
     }
 
-    private final String name = "SPNEGO";
+    private static final String name = "SPNEGO";
     private final IdentityManager identityManager;
     private final GSSAPIServerSubjectFactory subjectFactory;
     private final Oid[] mechanisms;

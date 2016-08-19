@@ -386,7 +386,7 @@ public class ExtendedAccessLogParser {
             throws IOException {
         String token = null;
         if (tokenizer.hasSubToken()) {
-            token = tokenizer.getToken();
+            tokenizer.getToken();
             return new ConstantExchangeAttribute("-");
         } else if (tokenizer.hasParameter()) {
             tokenizer.getParameter();

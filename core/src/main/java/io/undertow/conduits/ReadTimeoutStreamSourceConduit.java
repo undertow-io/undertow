@@ -180,7 +180,9 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
         Integer timeout = 0;
         try {
             timeout = connection.getSourceChannel().getOption(Options.READ_TIMEOUT);
-        } catch (IOException ignore) {}
+        } catch (IOException ignore) {
+            // should never happen
+        }
         Integer idleTimeout = openListener.getUndertowOptions().get(UndertowOptions.IDLE_TIMEOUT);
         if ((timeout == null || timeout <= 0) && idleTimeout != null) {
             timeout = idleTimeout;

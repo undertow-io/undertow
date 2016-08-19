@@ -138,6 +138,6 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
         final String status = result.getHeaders().getFirst(Http2ClientConnection.STATUS);
         int statusCode = Integer.parseInt(status);
         headers.remove(Http2ClientConnection.STATUS);
-        return new ClientResponse(statusCode, status != null ? status.substring(3) : "", clientRequest.getProtocol(), headers);
+        return new ClientResponse(statusCode, status.substring(3), clientRequest.getProtocol(), headers);
     }
 }

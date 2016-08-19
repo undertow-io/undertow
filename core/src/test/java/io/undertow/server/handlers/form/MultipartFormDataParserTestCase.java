@@ -18,10 +18,6 @@
 
 package io.undertow.server.handlers.form;
 
-import java.io.File;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
@@ -41,6 +37,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 /**
  * @author Stuart Douglas
@@ -91,7 +91,7 @@ public class MultipartFormDataParserTestCase {
             //post.setHeader(Headers.CONTENT_TYPE, MultiPartHandler.MULTIPART_FORM_DATA);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 
-            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
 
             post.setEntity(entity);
@@ -148,7 +148,7 @@ public class MultipartFormDataParserTestCase {
             //post.setHeader(Headers.CONTENT_TYPE, MultiPartHandler.MULTIPART_FORM_DATA);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 
-            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
 
             post.setEntity(entity);

@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Array;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
@@ -69,7 +70,7 @@ public class PredicatedHandlersParser {
 
     public static List<PredicatedHandler> parse(final Path file, final ClassLoader classLoader) {
         try {
-            return parse(new String(Files.readAllBytes(file)), classLoader);
+            return parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8), classLoader);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

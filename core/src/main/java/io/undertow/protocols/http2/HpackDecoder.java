@@ -66,8 +66,6 @@ public class HpackDecoder {
      */
     private int maxMemorySize;
 
-    private boolean resuming;
-
     private final StringBuilder stringBuilder = new StringBuilder();
 
     public HpackDecoder(int maxMemorySize) {

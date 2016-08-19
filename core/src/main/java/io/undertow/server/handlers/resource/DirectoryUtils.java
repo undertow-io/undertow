@@ -18,16 +18,6 @@
 
 package io.undertow.server.handlers.resource;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
@@ -39,6 +29,16 @@ import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 import org.xnio.channels.Channels;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * @author Stuart Douglas
@@ -400,7 +400,7 @@ public class DirectoryUtils {
             MessageDigest md = MessageDigest.getInstance("MD5");
             md.update(buffer);
             byte[] digest = md.digest();
-            return new String(FlexBase64.encodeBytes(digest, 0, digest.length, false));
+            return new String(FlexBase64.encodeBytes(digest, 0, digest.length, false), StandardCharsets.US_ASCII);
         } catch (NoSuchAlgorithmException e) {
             // Should never happen
             throw new InternalError("MD5 not supported on this platform");

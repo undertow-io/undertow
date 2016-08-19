@@ -24,6 +24,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.channels.DetachableStreamSinkChannel;
 import io.undertow.channels.DetachableStreamSourceChannel;
 import io.undertow.conduits.EmptyStreamSourceConduit;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.AsyncReceiverImpl;
 import io.undertow.io.AsyncSenderImpl;
 import io.undertow.io.BlockingReceiverImpl;
@@ -51,7 +52,6 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioIoThread;
 import org.xnio.channels.Channels;
 import org.xnio.channels.Configurable;
@@ -1950,7 +1950,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         private void invokeListener() {
             if(writeSetter != null) {
-                getIoThread().execute(new Runnable() {
+                super.getIoThread().execute(new Runnable() {
                     @Override
                     public void run() {
                         ChannelListeners.invokeChannelListener(WriteDispatchChannel.this, writeSetter.get());
@@ -1961,7 +1961,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void awaitWritable() throws IOException {
-            if(Thread.currentThread() == getIoThread()) {
+            if(Thread.currentThread() == super.getIoThread()) {
                 throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
             }
             super.awaitWritable();
@@ -1969,7 +1969,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-            if(Thread.currentThread() == getIoThread()) {
+            if(Thread.currentThread() == super.getIoThread()) {
                 throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
             }
             super.awaitWritable(time, timeUnit);
@@ -2093,7 +2093,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         private void invokeListener() {
             if(readSetter != null) {
-                getIoThread().execute(new Runnable() {
+                super.getIoThread().execute(new Runnable() {
                     @Override
                     public void run() {
                         ChannelListeners.invokeChannelListener(ReadDispatchChannel.this, readSetter.get());
@@ -2123,7 +2123,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void awaitReadable() throws IOException {
-            if(Thread.currentThread() == getIoThread()) {
+            if(Thread.currentThread() == super.getIoThread()) {
                 throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
             }
             PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
@@ -2180,7 +2180,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
-            if(Thread.currentThread() == getIoThread()) {
+            if(Thread.currentThread() == super.getIoThread()) {
                 throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
             }
             PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);

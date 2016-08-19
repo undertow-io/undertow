@@ -22,6 +22,7 @@ package io.undertow.util;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * A string keyed map that can be accessed as a substring, eliminating the need to allocate a new string
@@ -202,6 +203,9 @@ public class SubstringMap<V> {
 
                     @Override
                     public String next() {
+                        if (!hasNext()) {
+                            throw new NoSuchElementException();
+                        }
                         String ret = (String) map[pos];
 
                         pos += 2;

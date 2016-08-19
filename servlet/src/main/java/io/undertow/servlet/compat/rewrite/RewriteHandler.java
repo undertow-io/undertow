@@ -28,10 +28,9 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.QueryParameterUtils;
 
+import java.nio.charset.StandardCharsets;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 /**
  * @author Remy Maucherat
@@ -54,13 +53,12 @@ public class RewriteHandler implements HttpHandler {
 
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         RewriteRule[] rules = config.getRules();
-        Map<String, RewriteMap> maps = config.getMaps();
         if (rules == null || rules.length == 0) {
             next.handleRequest(exchange);
             return;
         }
 
-        if (invoked.get() == Boolean.TRUE) {
+        if (Boolean.TRUE.equals(invoked.get())) {
             next.handleRequest(exchange);
             invoked.set(null);
             return;

@@ -90,6 +90,8 @@
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.1.Final</version.io.undertow.build.checkstyle-config>
+        <version.org.codehaus.mojo.findbugs-maven-plugin>2.5.5</version.org.codehaus.mojo.findbugs-maven-plugin>
+        <version.org.codehaus.mojo.findbugs-maven-plugin_java8>3.0.4</version.org.codehaus.mojo.findbugs-maven-plugin_java8>
         <version.org.mortbay.jetty.alpn.jdk7>7.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk7>
         <version.org.mortbay.jetty.alpn.jdk8>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8>
         <version.org.mortbay.jetty.alpn.jdk8.25>8.1.2.v20141202</version.org.mortbay.jetty.alpn.jdk8.25>
@@ -125,6 +127,22 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
+
+            <!-- Zanata translations -->
+            <plugin>
+                <groupId>org.zanata</groupId>
+                <artifactId>zanata-maven-plugin</artifactId>
+                <version>${version.org.zanata.plugin}</version>
+                <configuration>
+                    <!-- Process sub-modules separately, sharing parent config -->
+                    <enableModules>true</enableModules>
+                    <projectConfig>${session.executionRootDirectory}/zanata.xml</projectConfig>
+                    <!-- Generated English i18n.properties are written here: -->
+                    <srcDir>target/classes</srcDir>
+                    <transDir>src/main/resources</transDir>
+                    <includes>**/*.i18n.properties,**/LocalDescriptions.properties</includes>
+                </configuration>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -155,6 +173,25 @@
                             <phase>compile</phase>
                             <goals>
                                 <goal>checkstyle</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <!-- FindBugs -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>findbugs-maven-plugin</artifactId>
+                    <version>${version.org.codehaus.mojo.findbugs-maven-plugin}</version>
+                    <configuration>
+                        <excludeFilterFile>../findbugs-exclude.xml</excludeFilterFile>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>find-bugs</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>check</goal>
                             </goals>
                         </execution>
                     </executions>
@@ -431,6 +468,17 @@
 
     <profiles>
         <profile>
+            <id>findbugs</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>findbugs-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>jdk9</id>
             <activation>
                 <jdk>9</jdk>
@@ -454,6 +502,16 @@
                     </plugins>
                 </pluginManagement>
             </build>
+        </profile>
+
+        <profile>
+            <id>jdk8</id>
+            <activation>
+                <jdk>[1.8,)</jdk>
+            </activation>
+            <properties>
+                <version.org.codehaus.mojo.findbugs-maven-plugin>${version.org.codehaus.mojo.findbugs-maven-plugin_java8}</version.org.codehaus.mojo.findbugs-maven-plugin>
+            </properties>
         </profile>
 
         <profile>

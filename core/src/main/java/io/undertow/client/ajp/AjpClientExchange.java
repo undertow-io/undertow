@@ -27,7 +27,6 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
 import io.undertow.client.PushCallback;
-import io.undertow.protocols.ajp.AjpClientChannel;
 import io.undertow.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
 import io.undertow.protocols.ajp.AjpClientResponseStreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
@@ -51,7 +50,6 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
     private ClientCallback<ClientExchange> responseCallback;
     private ClientCallback<ClientExchange> readyCallback;
     private ContinueNotification continueNotification;
-    private AjpClientChannel ajpClientChannel;
 
     private ClientResponse response;
     private ClientResponse continueResponse;

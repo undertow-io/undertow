@@ -239,6 +239,21 @@ public class PathTemplateMatcher<T> {
         }
 
         @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null) return false;
+            if (!PathTemplateHolder.class.equals(o.getClass())) return false;
+
+            PathTemplateHolder that = (PathTemplateHolder) o;
+            return template.equals(that.template);
+        }
+
+        @Override
+        public int hashCode() {
+            return template.hashCode();
+        }
+
+        @Override
         public int compareTo(PathTemplateHolder o) {
             return template.compareTo(o.template);
         }

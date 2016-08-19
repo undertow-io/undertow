@@ -804,7 +804,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         return ret;
     }
 
-    private class ClientNegotiation extends WebSocketClientNegotiation {
+    private static class ClientNegotiation extends WebSocketClientNegotiation {
 
         private final ClientEndpointConfig config;
 

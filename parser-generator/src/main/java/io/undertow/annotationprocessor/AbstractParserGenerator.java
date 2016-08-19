@@ -18,8 +18,18 @@
 
 package io.undertow.annotationprocessor;
 
+import org.jboss.classfilewriter.AccessFlag;
+import org.jboss.classfilewriter.ClassFile;
+import org.jboss.classfilewriter.ClassMethod;
+import org.jboss.classfilewriter.code.BranchEnd;
+import org.jboss.classfilewriter.code.CodeAttribute;
+import org.jboss.classfilewriter.code.CodeLocation;
+import org.jboss.classfilewriter.code.TableSwitchBuilder;
+import org.jboss.classfilewriter.util.DescriptorUtils;
+
 import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,15 +40,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.jboss.classfilewriter.AccessFlag;
-import org.jboss.classfilewriter.ClassFile;
-import org.jboss.classfilewriter.ClassMethod;
-import org.jboss.classfilewriter.code.BranchEnd;
-import org.jboss.classfilewriter.code.CodeAttribute;
-import org.jboss.classfilewriter.code.CodeLocation;
-import org.jboss.classfilewriter.code.TableSwitchBuilder;
-import org.jboss.classfilewriter.util.DescriptorUtils;
 
 /**
  * @author Stuart Douglas
@@ -649,10 +650,9 @@ public abstract class AbstractParserGenerator {
 
     private static void addStates(final State current, final String value, final int i, final List<State> allStates) {
         if (i == value.length()) {
-            current.finalState = true;
             return;
         }
-        byte[] bytes = value.getBytes();
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
         final byte currentByte = bytes[i];
         State newState = current.next.get(currentByte);
         if (newState == null) {
@@ -668,10 +668,6 @@ public abstract class AbstractParserGenerator {
         String terminalState;
         String fieldName;
         String httpStringFieldName;
-        /**
-         * If this state represents a possible final state
-         */
-        boolean finalState;
         final byte value;
         final String soFar;
         final Map<Byte, State> next = new HashMap<Byte, State>();
@@ -681,6 +677,23 @@ public abstract class AbstractParserGenerator {
         private State(final byte value, final String soFar) {
             this.value = value;
             this.soFar = soFar;
+        }
+
+        @Override
+        public int hashCode() {
+            return stateno.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (!(obj instanceof State)) {
+              return false;
+            }
+            State other = (State) obj;
+            return stateno.equals(other.stateno);
         }
 
         @Override

@@ -34,8 +34,8 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
     /*
      * GZIP header magic number.
      */
-    private static final  int GZIP_MAGIC = 0x8b1f;
-    public static final byte[] HEADER = new byte[]{
+    private static final int GZIP_MAGIC = 0x8b1f;
+    private static final byte[] HEADER = new byte[]{
             (byte) GZIP_MAGIC,        // Magic number (short)
             (byte) (GZIP_MAGIC >> 8),  // Magic number (short)
             Deflater.DEFLATED,        // Compression method (CM)

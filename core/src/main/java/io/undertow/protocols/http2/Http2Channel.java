@@ -21,6 +21,8 @@ package io.undertow.protocols.http2;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.server.protocol.http2.Http2OpenListener;
@@ -34,13 +36,10 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
@@ -51,6 +50,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.net.ssl.SSLSession;
 
 /**
  * HTTP2 channel.
@@ -106,7 +106,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     static final int DEFAULT_INITIAL_WINDOW_SIZE = 65535;
 
-    public static final byte[] PREFACE_BYTES = {
+    static final byte[] PREFACE_BYTES = {
             0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,
             0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
             0x0d, 0x0a, 0x53, 0x4d, 0x0d, 0x0a, 0x0d, 0x0a};
@@ -124,11 +124,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private boolean pushEnabled;
     private volatile int initialSendWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
     private volatile int initialReceiveWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
-    private int maxConcurrentStreams = -1;
     private int sendMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int receiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int unackedReceiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE; //the old max frame size, this gets updated when our setting frame is acked
-    private int maxHeaderListSize = -1;
 
     /**
      * How much data we have told the remote endpoint we are prepared to accept.

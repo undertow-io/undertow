@@ -763,6 +763,7 @@ public class FlexBase64 {
                     return STRING_CONSTRUCTOR.newInstance(target, Boolean.TRUE);
                 }
             } catch (Exception e) {
+                // Ignoring on purpose
             }
 
             return new String(target);
@@ -867,6 +868,7 @@ public class FlexBase64 {
                     return STRING_CONSTRUCTOR.newInstance(target, Boolean.TRUE);
                 }
             } catch (Exception e) {
+                // Ignoring on purpose
             }
 
             return new String(target);

@@ -167,6 +167,25 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
             this.protocol = protocol;
         }
 
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ListenerEntry)) return false;
+
+            ListenerEntry that = (ListenerEntry) o;
+
+            if (weight != that.weight) return false;
+            if (!listener.equals(that.listener)) return false;
+            return protocol.equals(that.protocol);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = listener.hashCode();
+            result = 31 * result + weight;
+            result = 31 * result + protocol.hashCode();
+            return result;
+        }
 
         @Override
         public int compareTo(ListenerEntry o) {
