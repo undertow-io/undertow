@@ -38,6 +38,8 @@ import io.undertow.UndertowMessages;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class HttpString implements Comparable<HttpString>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final byte[] bytes;
     private final transient int hashCode;
     /**

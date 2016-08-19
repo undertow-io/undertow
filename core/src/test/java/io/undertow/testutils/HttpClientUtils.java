@@ -18,13 +18,13 @@
 
 package io.undertow.testutils;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
-
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Stuart Douglas
@@ -51,7 +51,7 @@ public class HttpClientUtils {
         while ((read = stream.read(data)) != -1) {
             out.write(data, 0, read);
         }
-        return new String(out.toByteArray(), Charset.forName("UTF-8"));
+        return new String(out.toByteArray(), StandardCharsets.UTF_8);
     }
 
     public static byte[] readRawResponse(final HttpResponse response) throws IOException {

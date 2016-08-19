@@ -761,6 +761,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         }
         if (headerValues == null || headerValues.isEmpty()) {
             remove(headerName);
+            return this;
         }
         final HeaderValues entry = getOrCreateEntry(headerName);
         entry.clear();

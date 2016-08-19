@@ -29,7 +29,7 @@ import java.util.Set;
  */
 public class SecurePredicate implements Predicate {
 
-    public static SecurePredicate INSTANCE = new SecurePredicate();
+    public static final SecurePredicate INSTANCE = new SecurePredicate();
 
     @Override
     public boolean resolve(HttpServerExchange value) {

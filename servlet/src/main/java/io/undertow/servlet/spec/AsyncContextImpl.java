@@ -18,29 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-import javax.servlet.AsyncContext;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
-import javax.servlet.DispatcherType;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.xnio.IoUtils;
-import org.xnio.XnioExecutor;
 import io.undertow.UndertowLogger;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
@@ -61,6 +38,29 @@ import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
+import org.xnio.IoUtils;
+import org.xnio.XnioExecutor;
+
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import javax.servlet.AsyncContext;
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
+import javax.servlet.DispatcherType;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author Stuart Douglas
@@ -669,7 +669,7 @@ public class AsyncContextImpl implements AsyncContext {
         }
     }
 
-    private final class BoundAsyncListener {
+    private static final class BoundAsyncListener {
         final AsyncListener asyncListener;
         final ServletRequest servletRequest;
         final ServletResponse servletResponse;

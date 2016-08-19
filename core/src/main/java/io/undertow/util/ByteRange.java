@@ -176,7 +176,7 @@ public class ByteRange {
         return new RangeResponseResult(start, end, rangeLength,  "bytes " + start + "-" + end + "/" + resourceContentLength, StatusCodes.PARTIAL_CONTENT);
     }
 
-    public class RangeResponseResult {
+    public static class RangeResponseResult {
         private final long start;
         private final long end;
         private final long contentLength;

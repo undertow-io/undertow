@@ -135,7 +135,7 @@ public class AjpClientProvider implements ClientProvider {
     }
 
 
-    private class ClientStatisticsImpl implements ClientStatistics {
+    private static class ClientStatisticsImpl implements ClientStatistics {
         private long requestCount, read, written;
         @Override
         public long getRequests() {

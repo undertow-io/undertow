@@ -18,16 +18,16 @@
 
 package io.undertow.protocols.ajp;
 
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
 
 /**
  * Parser used for the client (i.e. load balancer) side of the AJP connection.
@@ -56,7 +56,6 @@ class AjpResponseParser {
     //parser states
     int state;
     byte prefix;
-    int dataSize;
     int numHeaders = 0;
     HttpString currentHeader;
 
@@ -90,8 +89,6 @@ class AjpResponseParser {
                 if (!result.readComplete) {
                     this.state = READING_DATA_SIZE;
                     return;
-                } else {
-                    this.dataSize = result.value;
                 }
             }
             case READING_PREFIX_CODE: {
@@ -245,7 +242,6 @@ class AjpResponseParser {
 
         state = 0;
         prefix = 0;
-        dataSize = 0;
         numHeaders = 0;
         currentHeader = null;
 

@@ -27,9 +27,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
 
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-import javax.sql.DataSource;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -45,6 +42,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
 
 public class JDBCLogHandler implements HttpHandler, Runnable {
 
@@ -281,7 +281,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
                 + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     }
 
-    private class JDBCLogAttribute {
+    private static class JDBCLogAttribute {
 
         protected String remoteHost = "";
         protected String user = "";

@@ -49,7 +49,7 @@ import java.util.zip.Inflater;
  */
 public class PerMessageDeflateFunction implements ExtensionFunction {
 
-    public static final byte[] TAIL = new byte[]{0x00, 0x00, (byte) 0xFF, (byte) 0xFF};
+    private static final byte[] TAIL = new byte[]{0x00, 0x00, (byte) 0xFF, (byte) 0xFF};
 
     private final int deflaterLevel;
     private final boolean compressContextTakeover;

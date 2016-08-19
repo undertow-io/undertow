@@ -18,29 +18,28 @@
 
 package io.undertow.protocols.ajp;
 
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.StreamConnection;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.util.Attachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
 
 /**
  * AJP client side channel.

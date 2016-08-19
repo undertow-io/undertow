@@ -721,7 +721,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private void wakeupWaiters() {
         if(waiterCount > 0) {
             synchronized (lock) {
-                lock.notifyAll();
+                // It is possible that waiter count would be updated before gaining the lock, lets check one more
+                // time whether the condition wasn't changed in the meantime.
+                if (waiterCount > 0) {
+                    lock.notifyAll();
+                }
             }
         }
     }

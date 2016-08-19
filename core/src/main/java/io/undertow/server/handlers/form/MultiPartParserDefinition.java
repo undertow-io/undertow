@@ -172,7 +172,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     charset = value;
                 }
             }
-           this.parser = MultipartParser.beginParse(exchange.getConnection().getByteBufferPool(), this, boundary.getBytes(), charset);
+           this.parser = MultipartParser.beginParse(exchange.getConnection().getByteBufferPool(), this, boundary.getBytes(StandardCharsets.US_ASCII), charset);
 
         }
 

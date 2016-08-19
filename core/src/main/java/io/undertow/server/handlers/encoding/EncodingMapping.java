@@ -54,6 +54,20 @@ final class EncodingMapping implements Comparable<EncodingMapping> {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof EncodingMapping)) return false;
+
+        EncodingMapping that = (EncodingMapping) o;
+        return this.compareTo(that) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return getPriority();
+    }
+
+    @Override
     public int compareTo(final EncodingMapping o) {
         return priority - o.priority;
     }

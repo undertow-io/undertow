@@ -17,11 +17,6 @@
  */
 package io.undertow.servlet.test.security.digest;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.DIGEST;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import io.undertow.security.idm.DigestAlgorithm;
 import io.undertow.security.impl.DigestAuthorizationToken;
 import io.undertow.security.impl.DigestWWWAuthenticateToken;
@@ -44,19 +39,24 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HexConverter;
 import io.undertow.util.StatusCodes;
-
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.util.Map;
-
-import javax.servlet.ServletException;
-
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Map;
+import javax.servlet.ServletException;
+
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.DIGEST;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test case to test authentication using HTTP Digest.
@@ -67,7 +67,7 @@ import org.junit.runner.RunWith;
 public class DigestAuthTestCase {
 
     private static final String REALM_NAME = "Servlet_Realm";
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
+    private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     @BeforeClass
     public static void setup() throws ServletException {

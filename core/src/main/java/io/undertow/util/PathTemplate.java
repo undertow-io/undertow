@@ -18,14 +18,14 @@
 
 package io.undertow.util;
 
+import io.undertow.UndertowMessages;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.undertow.UndertowMessages;
 
 
 /**
@@ -239,6 +239,27 @@ public class PathTemplate implements Comparable<PathTemplate> {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PathTemplate)) return false;
+
+        PathTemplate that = (PathTemplate) o;
+
+        return this.compareTo(that) == 0;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = getTemplateString() != null ? getTemplateString().hashCode() : 0;
+        result = 31 * result + (template ? 1 : 0);
+        result = 31 * result + (getBase() != null ? getBase().hashCode() : 0);
+        result = 31 * result + (parts != null ? parts.hashCode() : 0);
+        result = 31 * result + (getParameterNames() != null ? getParameterNames().hashCode() : 0);
+        return result;
     }
 
     @Override

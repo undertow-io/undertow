@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.cache;
 
+import org.xnio.BufferAllocator;
+
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -25,8 +27,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import org.xnio.BufferAllocator;
 
 /**
  * A limited buffer pooled allocator.  This pool uses a series of buffer regions to back the
@@ -171,7 +171,7 @@ public final class LimitedBufferSlicePool {
         }
     }
 
-    private final class Slice {
+    private static final class Slice {
         private final ByteBuffer parent;
         private final int start;
         private final int size;
