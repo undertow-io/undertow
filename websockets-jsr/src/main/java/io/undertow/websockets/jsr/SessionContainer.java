@@ -56,19 +56,18 @@ public class SessionContainer {
     }
 
     public void awaitClose(long timeout) {
-        waiterCount++;
-        long end = System.currentTimeMillis() + timeout;
         synchronized (this) {
             if(openSessions.isEmpty()) {
                 return;
             }
+            waiterCount++;
+            long end = System.currentTimeMillis() + timeout;
             try {
                 while (System.currentTimeMillis() < end) {
                     wait(end - System.currentTimeMillis());
                 }
             } catch (InterruptedException e) {
                 //ignore
-                return;
             } finally {
                 waiterCount--;
             }
