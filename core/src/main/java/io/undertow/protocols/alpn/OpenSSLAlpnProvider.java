@@ -49,7 +49,7 @@ public class OpenSSLAlpnProvider implements ALPNProvider {
                     Method getApplicationProtocol = openSSLEngine.getMethod("getSelectedApplicationProtocol");
                     UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN Enabled");
                     return new OpenSSLALPNMethods(setApplicationProtocols, getApplicationProtocol);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN Enabled", e);
                     return null;
                 }
