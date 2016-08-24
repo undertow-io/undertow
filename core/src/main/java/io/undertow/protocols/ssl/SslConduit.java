@@ -530,7 +530,13 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if(allAreClear(state, FLAG_DELEGATE_SINK_SHUTDOWN)) {
                 sink.terminateWrites();
                 state |= FLAG_DELEGATE_SINK_SHUTDOWN;
+                notifyWriteClosed();
             }
+            boolean result = sink.flush();
+            if(result && anyAreSet(state, FLAG_READ_CLOSED)) {
+                closed();
+            }
+            return result;
         }
         return sink.flush();
     }
@@ -606,7 +612,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
         }
 
-        state |= FLAG_READ_CLOSED | FLAG_ENGINE_INBOUND_SHUTDOWN;
+        state |= FLAG_READ_CLOSED | FLAG_ENGINE_INBOUND_SHUTDOWN | FLAG_READ_SHUTDOWN;
         if(anyAreSet(state, FLAG_WRITE_CLOSED)) {
             closed();
         }
