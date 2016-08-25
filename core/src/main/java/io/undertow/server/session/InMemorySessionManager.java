@@ -542,15 +542,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             invalid = true;
 
             if(sessionManager.statisticsEnabled) {
-                long avg, newAvg;
-                do {
-                    avg = sessionManager.averageSessionLifetime.get();
-                    BigDecimal bd = new BigDecimal(avg);
-                    bd.multiply(new BigDecimal(sessionManager.expiredSessionCount.get())).add(bd);
-                    newAvg = bd.divide(new BigDecimal(sessionManager.expiredSessionCount.get() + 1), MathContext.DECIMAL64).longValue();
-                } while (!sessionManager.averageSessionLifetime.compareAndSet(avg, newAvg));
-
-
                 sessionManager.expiredSessionCount.incrementAndGet();
                 long life = System.currentTimeMillis() - creationTime;
                 long existing = sessionManager.longestSessionLifetime.get();
@@ -559,6 +550,19 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                         break;
                     }
                     existing = sessionManager.longestSessionLifetime.get();
+                }
+
+                if (sessionManager.expiredSessionCount.get() == 1) {
+                    // first and only session life time
+                    sessionManager.averageSessionLifetime.set(life);
+                } else {
+                    long avg, newAvg;
+                    do {
+                        avg = sessionManager.averageSessionLifetime.get();
+                        BigDecimal bd = new BigDecimal(avg);
+                        BigDecimal result = bd.multiply(new BigDecimal(sessionManager.expiredSessionCount.get() - 1)).add(new BigDecimal(life));
+                        newAvg = result.divide(new BigDecimal(sessionManager.expiredSessionCount.get()), MathContext.DECIMAL64).longValue();
+                    } while (!sessionManager.averageSessionLifetime.compareAndSet(avg, newAvg));
                 }
             }
             if (exchange != null) {
