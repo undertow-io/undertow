@@ -53,7 +53,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * SPDY channel.
+ * HTTP2 channel.
  *
  * @author Stuart Douglas
  */
@@ -559,12 +559,24 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     public synchronized void handleWindowUpdate(int streamId, int deltaWindowSize) throws IOException {
         if (streamId == 0) {
+            if (deltaWindowSize == 0) {
+                UndertowLogger.REQUEST_IO_LOGGER.debug("Invalid flow-control window increment of 0 received with WINDOW_UPDATE frame for connection");
+                sendGoAway(ERROR_PROTOCOL_ERROR);
+                return;
+            }
+
             boolean exhausted = sendWindowSize == 0;
             sendWindowSize += deltaWindowSize;
             if (exhausted) {
                 notifyFlowControlAllowed();
             }
         } else {
+            if (deltaWindowSize == 0) {
+                UndertowLogger.REQUEST_IO_LOGGER.debug("Invalid flow-control window increment of 0 received with WINDOW_UPDATE frame for stream " + streamId);
+                sendRstStream(streamId, ERROR_PROTOCOL_ERROR);
+                return;
+            }
+
             Http2StreamSinkChannel stream = outgoingStreams.get(streamId);
             if (stream == null) {
                 //TODO: error handling
