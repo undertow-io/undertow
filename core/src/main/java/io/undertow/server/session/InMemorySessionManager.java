@@ -25,6 +25,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcurrentDirectDeque;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.MathContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -68,10 +69,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     private final String deploymentName;
 
     private final AtomicLong createdSessionCount = new AtomicLong();
-    private final AtomicLong expiredSessionCount = new AtomicLong();
     private final AtomicLong rejectedSessionCount = new AtomicLong();
-    private final AtomicLong averageSessionLifetime = new AtomicLong();
-    private final AtomicLong longestSessionLifetime = new AtomicLong();
+    private volatile long longestSessionLifetime = 0;
+    private volatile long expiredSessionCount = 0;
+    private volatile BigInteger totalSessionLifetime = BigInteger.ZERO;
+
     private final boolean statisticsEnabled;
 
     private volatile long startTime;
@@ -117,7 +119,9 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public void start() {
         createdSessionCount.set(0);
-        expiredSessionCount.set(0);
+        expiredSessionCount = 0;
+        rejectedSessionCount.set(0);
+        totalSessionLifetime = BigInteger.ZERO;
         startTime = System.currentTimeMillis();
     }
 
@@ -279,7 +283,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public long getExpiredSessionCount() {
-        return expiredSessionCount.get();
+        return expiredSessionCount;
     }
 
     @Override
@@ -290,12 +294,13 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public long getMaxSessionAliveTime() {
-        return longestSessionLifetime.get();
+        return longestSessionLifetime;
     }
 
     @Override
-    public long getAverageSessionAliveTime() {
-        return averageSessionLifetime.get();
+    public synchronized long getAverageSessionAliveTime() {
+        //this method needs to be synchronised to make sure the session count and the total are in sync
+        return new BigDecimal(totalSessionLifetime).divide(BigDecimal.valueOf(expiredSessionCount), MathContext.DECIMAL128).longValue();
     }
 
     @Override
@@ -529,23 +534,13 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             invalid = true;
 
             if(sessionManager.statisticsEnabled) {
-                long avg, newAvg;
-                do {
-                    avg = sessionManager.averageSessionLifetime.get();
-                    BigDecimal bd = new BigDecimal(avg);
-                    bd.multiply(new BigDecimal(sessionManager.expiredSessionCount.get())).add(bd);
-                    newAvg = bd.divide(new BigDecimal(sessionManager.expiredSessionCount.get() + 1), MathContext.DECIMAL64).longValue();
-                } while (!sessionManager.averageSessionLifetime.compareAndSet(avg, newAvg));
-
-
-                sessionManager.expiredSessionCount.incrementAndGet();
                 long life = System.currentTimeMillis() - creationTime;
-                long existing = sessionManager.longestSessionLifetime.get();
-                while (life > existing) {
-                    if (sessionManager.longestSessionLifetime.compareAndSet(existing, life)) {
-                        break;
+                synchronized (sessionManager) {
+                    sessionManager.expiredSessionCount++;
+                    sessionManager.totalSessionLifetime = sessionManager.totalSessionLifetime.add(BigInteger.valueOf(life));
+                    if(sessionManager.longestSessionLifetime < life) {
+                        sessionManager.longestSessionLifetime = life;
                     }
-                    existing = sessionManager.longestSessionLifetime.get();
                 }
             }
             if (exchange != null) {
