@@ -19,6 +19,7 @@ package io.undertow.conduits;
 
 import io.undertow.UndertowLogger;
 import org.xnio.Buffers;
+import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -90,9 +91,11 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
         safeClose(source);
     }
 
-    public IdleTimeoutConduit(StreamSinkConduit sink, StreamSourceConduit source) {
-        this.sink = sink;
-        this.source = source;
+    public IdleTimeoutConduit(StreamConnection connection) {
+        this.sink = connection.getSinkChannel().getConduit();
+        this.source = connection.getSourceChannel().getConduit();
+        setWriteReadyHandler(new WriteReadyHandler.ChannelListenerHandler<>(connection.getSinkChannel()));
+        setReadReadyHandler(new ReadReadyHandler.ChannelListenerHandler<>(connection.getSourceChannel()));
     }
 
     private void handleIdleTimeout() throws ClosedChannelException {
