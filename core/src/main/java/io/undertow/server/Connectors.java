@@ -194,11 +194,9 @@ public class Connectors {
             header.append("; Expires=");
             header.append(DateUtils.toDateString(cookie.getExpires()));
         }
-        if (cookie.getComment() != null) {
-            if (cookie.getComment() != null && !cookie.getComment().isEmpty()) {
-                header.append("; Comment=");
-                header.append(cookie.getComment());
-            }
+        if (cookie.getComment() != null && !cookie.getComment().isEmpty()) {
+            header.append("; Comment=");
+            header.append(cookie.getComment());
         }
         return header.toString();
     }
