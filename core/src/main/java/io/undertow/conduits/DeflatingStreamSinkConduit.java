@@ -87,6 +87,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         this.currentBuffer = exchange.getConnection().getByteBufferPool().allocate();
         this.exchange = exchange;
         this.conduitFactory = conduitFactory;
+        setWriteReadyHandler(new WriteReadyHandler.ChannelListenerHandler<>(Connectors.getConduitSinkChannel(exchange)));
     }
 
     @Override
