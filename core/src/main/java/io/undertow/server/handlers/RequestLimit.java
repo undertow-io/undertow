@@ -26,9 +26,7 @@ import io.undertow.util.SameThreadExecutor;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-
-import static org.xnio.Bits.longBitMask;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Represents a limit on a number of running requests.
@@ -47,12 +45,11 @@ import static org.xnio.Bits.longBitMask;
  */
 public class RequestLimit {
     @SuppressWarnings("unused")
-    private volatile long state;
+    private volatile int requests;
+    private volatile int max;
 
-    private static final AtomicLongFieldUpdater<RequestLimit> stateUpdater = AtomicLongFieldUpdater.newUpdater(RequestLimit.class, "state");
+    private static final AtomicIntegerFieldUpdater<RequestLimit> requestsUpdater = AtomicIntegerFieldUpdater.newUpdater(RequestLimit.class, "requests");
 
-    private static final long MASK_MAX = longBitMask(32, 63);
-    private static final long MASK_CURRENT = longBitMask(0, 30);
 
     /**
      * The handler that will be invoked if the queue is full.
@@ -66,12 +63,14 @@ public class RequestLimit {
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
             try {
-                final SuspendedRequest task = queue.poll();
-                if (task != null) {
-                    task.exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
-                    task.exchange.dispatch(task.next);
-                } else {
-                    decrementRequests();
+                synchronized (RequestLimit.this) {
+                    final SuspendedRequest task = queue.poll();
+                    if (task != null) {
+                        task.exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
+                        task.exchange.dispatch(task.next);
+                    } else {
+                        decrementRequests();
+                    }
                 }
             } finally {
                 nextListener.proceed();
@@ -94,30 +93,42 @@ public class RequestLimit {
         if (maximumConcurrentRequests < 1) {
             throw new IllegalArgumentException("Maximum concurrent requests must be at least 1");
         }
-        state = (maximumConcurrentRequests & 0xFFFFFFFFL) << 32;
+        max = maximumConcurrentRequests;
 
         this.queue = new LinkedBlockingQueue<>(queueSize <= 0 ? Integer.MAX_VALUE : queueSize);
     }
 
     public void handleRequest(final HttpServerExchange exchange, final HttpHandler next) throws Exception {
-        long oldVal, newVal;
+        int oldVal, newVal;
         do {
-            oldVal = state;
-            final long current = oldVal & MASK_CURRENT;
-            final long max = (oldVal & MASK_MAX) >> 32L;
-            if (current >= max) {
+            oldVal = requests;
+            if (oldVal >= max) {
                 exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
                     @Override
                     public void run() {
-                        if (!queue.offer(new SuspendedRequest(exchange, next))) {
-                            Connectors.executeRootHandler(failureHandler, exchange);
+                        //we have to try again in the sync block
+                        //we need to have already dispatched for thread safety reasons
+                        synchronized (RequestLimit.this) {
+                            int oldVal, newVal;
+                            do {
+                                oldVal = requests;
+                                if (oldVal >= max) {
+                                    if (!queue.offer(new SuspendedRequest(exchange, next))) {
+                                        Connectors.executeRootHandler(failureHandler, exchange);
+                                    }
+                                    return;
+                                }
+                                newVal = oldVal + 1;
+                            } while (!requestsUpdater.compareAndSet(RequestLimit.this, oldVal, newVal));
+                            exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
+                            exchange.dispatch(next);
                         }
                     }
                 });
                 return;
             }
             newVal = oldVal + 1;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!requestsUpdater.compareAndSet(this, oldVal, newVal));
         exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
         next.handleRequest(exchange);
     }
@@ -128,7 +139,7 @@ public class RequestLimit {
      * @return the maximum concurrent requests
      */
     public int getMaximumConcurrentRequests() {
-        return (int) (state >> 32L);
+        return max;
     }
 
     /**
@@ -140,29 +151,29 @@ public class RequestLimit {
         if (newMax < 1) {
             throw new IllegalArgumentException("Maximum concurrent requests must be at least 1");
         }
-        long oldVal, newVal;
-        int current, oldMax;
-        do {
-            oldVal = state;
-            current = (int) (oldVal & MASK_CURRENT);
-            oldMax = (int) ((oldVal & MASK_MAX) >> 32L);
-            newVal = current | newMax & 0xFFFFFFFFL << 32L;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
-        while (current < newMax) {
-            // more space opened up!  Process queue entries for a while
-            final SuspendedRequest request = queue.poll();
-            if (request != null) {
-                // now bump up the counter by one; this *could* put us over the max if it changed in the meantime but that's OK
-                newVal = stateUpdater.getAndIncrement(this);
-                current = (int) (newVal & MASK_CURRENT);
-                request.exchange.dispatch(request.next);
+        int oldMax = this.max;
+        this.max = newMax;
+        if(newMax > oldMax) {
+            synchronized (this) {
+                while (!queue.isEmpty()) {
+                    int oldVal, newVal;
+                    do {
+                        oldVal = requests;
+                        if (oldVal >= max) {
+                            return oldMax;
+                        }
+                        newVal = oldVal + 1;
+                    } while (!requestsUpdater.compareAndSet(this, oldVal, newVal));
+                    SuspendedRequest res = queue.poll();
+                    res.exchange.dispatch(res.next);
+                }
             }
         }
         return oldMax;
     }
 
     private void decrementRequests() {
-        stateUpdater.decrementAndGet(this);
+        requestsUpdater.decrementAndGet(this);
     }
 
     public HttpHandler getFailureHandler() {
