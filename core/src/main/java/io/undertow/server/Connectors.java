@@ -26,6 +26,7 @@ import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
 
 import java.util.Date;
 import java.util.Map;
@@ -330,5 +331,9 @@ public class Connectors {
 
     public static void updateResponseBytesSent(HttpServerExchange exchange, long bytes) {
         exchange.updateBytesSent(bytes);
+    }
+
+    public static ConduitStreamSinkChannel getConduitSinkChannel(HttpServerExchange exchange) {
+        return exchange.getConnection().getSinkChannel();
     }
 }

@@ -116,7 +116,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
 
     @Override
     protected IdleTimeoutConduit createIdleTimeoutChannel(final StreamConnection connectedStreamChannel) {
-        return new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit()) {
+        return new IdleTimeoutConduit(connectedStreamChannel) {
             @Override
             protected void doClose() {
                 WebSockets.sendClose(CloseMessage.GOING_AWAY, null, WebSocketChannel.this, null);

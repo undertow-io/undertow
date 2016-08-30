@@ -32,6 +32,7 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DecompressingHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -66,7 +67,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         final StringBuilder resultString = new StringBuilder();
 
         for (int i = 0; i < 6; ++i) {
-            TestHttpClient client = new TestHttpClient();
+            DecompressingHttpClient client = new DecompressingHttpClient(new TestHttpClient());
             try {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
                 HttpResponse result = client.execute(get);

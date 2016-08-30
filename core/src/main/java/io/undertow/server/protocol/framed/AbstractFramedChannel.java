@@ -215,7 +215,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     }
 
     protected IdleTimeoutConduit createIdleTimeoutChannel(StreamConnection connectedStreamChannel) {
-        return new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit());
+        return new IdleTimeoutConduit(connectedStreamChannel);
     }
 
     void runInIoThread(Runnable task) {
