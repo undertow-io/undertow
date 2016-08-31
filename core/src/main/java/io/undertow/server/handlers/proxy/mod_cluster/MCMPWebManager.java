@@ -114,7 +114,7 @@ class MCMPWebManager extends MCMPHandler {
                             String srange = params.get("Range").getFirst();
                             final RequestData data = buildRequestData(exchange, params);
                             if (srange.equals("NODE")) {
-                                processNodeCommand(exchange, data, MCMPAction.DISABLE);
+                                processNodeCommand(exchange, data, MCMPAction.ENABLE);
                             }
                             if (srange.equals("DOMAIN")) {
                                 boolean domain = params.containsKey("Domain");
