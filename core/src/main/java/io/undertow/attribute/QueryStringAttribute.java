@@ -29,17 +29,21 @@ public class QueryStringAttribute implements ExchangeAttribute {
 
     public static final String QUERY_STRING_SHORT = "%q";
     public static final String QUERY_STRING = "%{QUERY_STRING}";
+    public static final String BARE_QUERY_STRING = "%{BARE_QUERY_STRING}";
 
-    public static final ExchangeAttribute INSTANCE = new QueryStringAttribute();
+    public static final ExchangeAttribute INSTANCE = new QueryStringAttribute(true);
+    public static final ExchangeAttribute BARE_INSTANCE = new QueryStringAttribute(false);
 
-    private QueryStringAttribute() {
+    private final boolean includeQuestionMark;
 
+    private QueryStringAttribute(boolean includeQuestionMark) {
+        this.includeQuestionMark = includeQuestionMark;
     }
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         String qs = exchange.getQueryString();
-        if(qs.isEmpty()) {
+        if(qs.isEmpty() || !includeQuestionMark) {
             return qs;
         }
         return '?' + qs;
@@ -61,6 +65,8 @@ public class QueryStringAttribute implements ExchangeAttribute {
         public ExchangeAttribute build(final String token) {
             if (token.equals(QUERY_STRING) || token.equals(QUERY_STRING_SHORT)) {
                 return QueryStringAttribute.INSTANCE;
+            } else if(token.equals(BARE_QUERY_STRING)) {
+                return QueryStringAttribute.BARE_INSTANCE;
             }
             return null;
         }
