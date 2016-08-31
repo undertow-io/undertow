@@ -328,8 +328,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 factoryMap.put(GenericHeaderAuthenticationMechanism.NAME, new GenericHeaderAuthenticationMechanism.Factory(identityManager));
             }
             List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<>();
-            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager)); //TODO: does this really need to be hard coded?
 
+            if(deploymentInfo.isUseCachedAuthenticationMechanism()) {
+                authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager));
+            }
             if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
 
                 //we don't allow multipart requests, and always use the default encoding
@@ -370,9 +372,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
 
-            if(deploymentInfo.isUseCachedAuthenticationMechanism()) {
-                authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager));
-            }
 
             deployment.setAuthenticationMechanisms(authenticationMechanisms);
             //if the JASPI auth mechanism is set then it takes over
