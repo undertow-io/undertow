@@ -241,7 +241,8 @@ public class ExtendedAccessLogParser {
             if (tokenizer.hasSubToken()) {
                 String nextToken = tokenizer.getToken();
                 if ("taken".equals(nextToken)) {
-                    return new ResponseTimeAttribute(TimeUnit.SECONDS);
+                    //if response timing are not enabled we just print a '-'
+                    return new SubstituteEmptyWrapper.SubstituteEmptyAttribute(new ResponseTimeAttribute(TimeUnit.SECONDS), "-");
                 }
             } else {
                 return new DateTimeAttribute("HH:mm:ss", "GMT");
