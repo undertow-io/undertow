@@ -321,7 +321,7 @@ public class ExtendedAccessLogParser {
                     if ("stem".equals(token)) {
                         return RequestURLAttribute.INSTANCE;
                     } else if ("query".equals(token)) {
-                        return new SubstituteEmptyWrapper.SubstituteEmptyAttribute(QueryStringAttribute.INSTANCE, "-");
+                        return new SubstituteEmptyWrapper.SubstituteEmptyAttribute(QueryStringAttribute.BARE_INSTANCE, "-");
                     }
                 } else {
                     return new ExchangeAttribute() {
