@@ -121,15 +121,13 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         final Http2StreamSourceChannel dataChannel = frame;
         final Http2ServerConnection connection = new Http2ServerConnection(channel, dataChannel, undertowOptions, bufferSize, rootHandler);
 
-        if(!dataChannel.getHeaders().contains(SCHEME) ||
-                !dataChannel.getHeaders().contains(METHOD) ||
-                !dataChannel.getHeaders().contains(AUTHORITY) ||
-                !dataChannel.getHeaders().contains(PATH)) {
+        // Check request headers.
+        if (!checkRequestHeaders(dataChannel.getHeaders())) {
             channel.sendRstStream(frame.getStreamId(), Http2Channel.ERROR_PROTOCOL_ERROR);
             try {
                 Channels.drain(frame, Long.MAX_VALUE);
             } catch (IOException e) {
-                //ignore, this is expected because of the RST
+                // ignore, this is expected because of the RST
             }
             return;
         }
@@ -218,4 +216,30 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         Connectors.executeRootHandler(rootHandler, exchange);
     }
 
+    /**
+     * Performs HTTP2 specification compliance check for headers and pseudo-headers of a current request.
+     *
+     * @param headers map of the request headers
+     * @return true if check was successful, false otherwise
+     */
+    private boolean checkRequestHeaders(HeaderMap headers) {
+        // :method pseudo-header must be present always exactly one time.
+        if (headers.count(METHOD) != 1) {
+            return false;
+        }
+
+        // if CONNECT type is used, then we expect :method and :authority to be present only;
+        // :scheme and :path must not be present
+        if (headers.get(METHOD).equals(Methods.CONNECT)) {
+            if (headers.contains(SCHEME) || headers.contains(PATH) || headers.count(AUTHORITY) != 1) {
+                return false;
+            }
+        // For other HTTP methods we expect that :scheme, :method, and :path pseudo-headers are
+        // present exactly one time.
+        } else if (headers.count(SCHEME) != 1 || headers.count(PATH) != 1) {
+            return false;
+        }
+
+        return true;
+    }
 }
