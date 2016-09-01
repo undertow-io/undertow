@@ -612,7 +612,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             }
             return;
         }
-        this.state = oldVal & ~MASK_STATE | FLAG_SHUTDOWN | STATE_BODY;
+        this.state = oldVal & ~MASK_STATE | FLAG_SHUTDOWN;
         throw new TruncatedResponseException();
     }
 
