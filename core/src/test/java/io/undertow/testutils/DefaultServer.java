@@ -706,11 +706,19 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return System.getProperty(serverName + ".server.address", "localhost");
     }
 
+    public static String getHostAddress() {
+        return getHostAddress(DEFAULT);
+    }
+
     public static int getHostPort(String serverName) {
         if (isApacheTest()) {
             return APACHE_PORT;
         }
         return Integer.getInteger(serverName + ".server.port", 7777);
+    }
+
+    public static int getHostPort() {
+        return getHostPort(DEFAULT);
     }
 
     public static int getHostSSLPort(String serverName) {

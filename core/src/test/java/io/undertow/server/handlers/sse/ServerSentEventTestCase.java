@@ -228,7 +228,7 @@ public class ServerSentEventTestCase {
         }));
         InputStream in = socket.getInputStream();
         OutputStream out = socket.getOutputStream();
-        out.write(("GET / HTTP/1.1\r\n\r\n").getBytes());
+        out.write(("GET / HTTP/1.1\r\nHost:" + DefaultServer.getHostAddress() +"\r\n\r\n").getBytes());
         out.flush();
         if(!connected.await(10, TimeUnit.SECONDS)) {
             Assert.fail();

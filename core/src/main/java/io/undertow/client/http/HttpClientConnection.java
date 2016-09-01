@@ -558,6 +558,12 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 if(connectionString != null) {
                     if (HttpString.tryFromString(connectionString).equals(Headers.CLOSE)) {
                         HttpClientConnection.this.state |= CLOSE_REQ;
+                        //we are going to close, kill any queued connections
+                        HttpClientExchange ex = pendingQueue.poll();
+                        while (ex != null) {
+                            ex.setFailed(new IOException(UndertowClientMessages.MESSAGES.connectionClosed()));
+                            ex = pendingQueue.poll();
+                        }
                     }
                 }
                 if(response.getResponseCode() == StatusCodes.SWITCHING_PROTOCOLS && Http2Channel.CLEARTEXT_UPGRADE_STRING.equals(response.getResponseHeaders().getFirst(Headers.UPGRADE))) {

@@ -216,6 +216,7 @@ public class WebSocketClient {
             final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation, clientExtensions);
             final Map<String, String> originalHeaders = handshake.createHeaders();
             originalHeaders.put(Headers.ORIGIN_STRING, scheme + "://" + uri.getHost());
+            originalHeaders.put(Headers.HOST_STRING, uri.getHost() + ":" + (uri.getPort() > 0? uri.getPort() : 80));
             final Map<String, List<String>> headers = new HashMap<>();
             for(Map.Entry<String, String> entry : originalHeaders.entrySet()) {
                 List<String> list = new ArrayList<>();
@@ -240,6 +241,7 @@ public class WebSocketClient {
                                 .setMethod(Methods.CONNECT)
                                 .setPath(uri.getHost() + ":" + port)
                                 .setProtocol(Protocols.HTTP_1_1);
+                        cr.getRequestHeaders().put(Headers.HOST, proxyUri.getHost() + ":" + (proxyUri.getPort() > 0 ? proxyUri.getPort() : 80));
                         connection.sendRequest(cr, new ClientCallback<ClientExchange>() {
                             @Override
                             public void completed(ClientExchange result) {
