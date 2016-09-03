@@ -59,7 +59,7 @@ public class AjpOpenListener implements OpenListener {
 
     private volatile OptionMap undertowOptions;
 
-    private final AjpRequestParser parser;
+    private volatile AjpRequestParser parser;
 
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
@@ -153,6 +153,7 @@ public class AjpOpenListener implements OpenListener {
         }
         this.undertowOptions = undertowOptions;
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()), undertowOptions.get(DECODE_URL, true));
     }
 
     @Override

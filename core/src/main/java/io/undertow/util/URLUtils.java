@@ -22,7 +22,6 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 
 /**
  * Utilities for dealing with URLs
@@ -238,7 +237,7 @@ public class URLUtils {
 
         private String decode(String charset, String attrName, final boolean doDecode) throws UnsupportedEncodingException {
             if (doDecode) {
-                return URLDecoder.decode(attrName, charset);
+                return URLUtils.decode(attrName, charset, true, new StringBuilder());
             }
             return attrName;
         }
