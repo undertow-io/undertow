@@ -58,8 +58,6 @@ public class Http2ClientProvider implements ClientProvider {
     private static final String HTTP2 = "h2";
     private static final String HTTP_1_1 = "http/1.1";
 
-    private static final String[] PROTOCOLS = {HTTP2, HTTP_1_1};
-
     private static final ChannelListener<SslConnection> FAILED = new ChannelListener<SslConnection>() {
         @Override
         public void handleEvent(SslConnection connection) {
