@@ -216,7 +216,7 @@ public class WebSocketClient {
             final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation, clientExtensions);
             final Map<String, String> originalHeaders = handshake.createHeaders();
             originalHeaders.put(Headers.ORIGIN_STRING, scheme + "://" + uri.getHost());
-            originalHeaders.put(Headers.HOST_STRING, uri.getHost() + ":" + (uri.getPort() > 0? uri.getPort() : 80));
+            originalHeaders.put(Headers.HOST_STRING, uri.getHost() + ":" + newUri.getPort());
             final Map<String, List<String>> headers = new HashMap<>();
             for(Map.Entry<String, String> entry : originalHeaders.entrySet()) {
                 List<String> list = new ArrayList<>();
@@ -231,7 +231,6 @@ public class WebSocketClient {
             if(toBind == null && sysBind != null) {
                 toBind = new InetSocketAddress(sysBind, 0);
             }
-            final InetSocketAddress finalToBind = toBind;
             if(proxyUri != null) {
                UndertowClient.getInstance().connect(new ClientCallback<ClientConnection>() {
                     @Override
