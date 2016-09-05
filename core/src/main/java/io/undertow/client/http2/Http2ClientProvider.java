@@ -166,7 +166,7 @@ public class Http2ClientProvider implements ClientProvider {
             clientStatistics = null;
         }
         Http2Channel http2Channel = new Http2Channel(connection, null, bufferPool, null, true, false, options);
-        return new Http2ClientConnection(http2Channel, false, defaultHost, clientStatistics);
+        return new Http2ClientConnection(http2Channel, false, defaultHost, clientStatistics, true);
     }
 
     private static class ClientStatisticsImpl implements ClientStatistics {
