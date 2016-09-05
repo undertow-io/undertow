@@ -224,7 +224,7 @@ public class Http2ClearClientProvider implements ClientProvider {
             }
 
             Http2Channel http2Channel = new Http2Channel(channel, null, bufferPool, null, true, true, options);
-            Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, true, defaultHost, clientStatistics);
+            Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, true, defaultHost, clientStatistics, false);
 
             listener.completed(http2ClientConnection);
         }

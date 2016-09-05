@@ -630,7 +630,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         try {
             StreamConnection connectedStreamChannel = this.performUpgrade();
             Http2Channel http2Channel = new Http2Channel(connectedStreamChannel, null, bufferPool, null, true, true, options);
-            Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, currentRequest.getResponseCallback(), currentRequest.getRequest(), currentRequest.getRequest().getRequestHeaders().getFirst(Headers.HOST), clientStatistics);
+            Http2ClientConnection http2ClientConnection = new Http2ClientConnection(http2Channel, currentRequest.getResponseCallback(), currentRequest.getRequest(), currentRequest.getRequest().getRequestHeaders().getFirst(Headers.HOST), clientStatistics, false);
             http2ClientConnection.getCloseSetter().set(new ChannelListener<ClientConnection>() {
                 @Override
                 public void handleEvent(ClientConnection channel) {
