@@ -20,6 +20,7 @@ package io.undertow.servlet.spec;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -494,7 +495,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             servletOutputStream.resetBuffer();
         }
         if (writer != null) {
-            writer = new PrintWriter(servletOutputStream, false);
+            final ServletPrintWriter servletPrintWriter;
+            try {
+                servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncoding());
+            writer = ServletPrintWriterDelegate.newInstance(servletPrintWriter);
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e); //should never happen
+            }
         }
     }
 
