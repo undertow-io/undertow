@@ -25,6 +25,7 @@ import java.nio.channels.ClosedChannelException;
 import io.undertow.predicate.PredicateBuilder;
 import io.undertow.protocols.http2.HpackException;
 import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.HttpString;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
@@ -471,4 +472,10 @@ public interface UndertowMessages {
 
     @Message(id = 147, value = "No host header in a HTTP/1.1 request")
     IOException noHostInHttp11Request();
+
+    @Message(id = 148, value = "Invalid HPack encoding. First byte: %s")
+    HpackException invalidHpackEncoding(byte b);
+
+    @Message(id = 149, value = "Pseudo header %s received after receiving normal headers. Pseudo headers must be the first headers in a HTTP/2 header block.")
+    IllegalArgumentException pseudoHeaderInWrongOrder(HttpString header);
 }

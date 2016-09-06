@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import io.undertow.UndertowLogger;
 import org.xnio.Bits;
 
+import io.undertow.UndertowMessages;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 
@@ -40,6 +41,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     private final HpackDecoder decoder;
     private int frameRemaining = -1;
     private boolean invalid = false;
+    private boolean processingPseudoHeaders = true;
 
     Http2HeaderBlockParser(int frameLength, HpackDecoder decoder) {
         super(frameLength);
@@ -83,6 +85,16 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     @Override
     public void emitHeader(HttpString name, String value, boolean neverIndex) {
         headerMap.add(name, value);
+        if(name.length() == 0) {
+            throw UndertowMessages.MESSAGES.invalidHeader();
+        }
+        if(name.byteAt(0) == ':') {
+            if(!processingPseudoHeaders) {
+                throw UndertowMessages.MESSAGES.pseudoHeaderInWrongOrder(name);
+            }
+        } else {
+            processingPseudoHeaders = false;
+        }
         for(int i = 0; i < name.length(); ++i) {
             byte c = name.byteAt(i);
             if(c>= 'A' && c <= 'Z') {
