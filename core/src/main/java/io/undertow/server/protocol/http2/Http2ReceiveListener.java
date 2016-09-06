@@ -223,14 +223,15 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
      * @return true if check was successful, false otherwise
      */
     private boolean checkRequestHeaders(HeaderMap headers) {
-        // :method pseudo-header must be present always exactly one time.
-        if (headers.count(METHOD) != 1) {
+        // :method pseudo-header must be present always exactly one time;
+        // HTTP2 request MUST NOT contain 'connection' header
+        if (headers.count(METHOD) != 1 || headers.contains(Headers.CONNECTION)) {
             return false;
         }
 
         // if CONNECT type is used, then we expect :method and :authority to be present only;
         // :scheme and :path must not be present
-        if (headers.get(METHOD).equals(Methods.CONNECT)) {
+        if (headers.get(METHOD).contains(Methods.CONNECT)) {
             if (headers.contains(SCHEME) || headers.contains(PATH) || headers.count(AUTHORITY) != 1) {
                 return false;
             }
@@ -238,6 +239,15 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         // present exactly one time.
         } else if (headers.count(SCHEME) != 1 || headers.count(PATH) != 1) {
             return false;
+        }
+
+        // HTTP2 request MAY contain TE header but if so, then only with 'trailers' value.
+        if (headers.contains(Headers.TE)) {
+            for (String value : headers.get(Headers.TE)) {
+                if (!value.equals("trailers")) {
+                    return false;
+                }
+            }
         }
 
         return true;
