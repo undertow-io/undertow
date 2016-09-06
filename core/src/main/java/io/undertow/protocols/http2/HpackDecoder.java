@@ -66,6 +66,8 @@ public class HpackDecoder {
      */
     private int maxMemorySize;
 
+    private boolean resuming;
+
     private final StringBuilder stringBuilder = new StringBuilder();
 
     public HpackDecoder(int maxMemorySize) {
@@ -163,7 +165,7 @@ public class HpackDecoder {
                     return;
                 }
             } else {
-                throw new RuntimeException("Not yet implemented");
+                throw UndertowMessages.MESSAGES.invalidHpackEncoding(b);
             }
         }
     }
