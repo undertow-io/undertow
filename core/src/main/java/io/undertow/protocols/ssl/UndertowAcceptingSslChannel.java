@@ -69,10 +69,6 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
     private static final AtomicIntegerFieldUpdater<UndertowAcceptingSslChannel> useClientModeUpdater = AtomicIntegerFieldUpdater.newUpdater(UndertowAcceptingSslChannel.class, "useClientMode");
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<UndertowAcceptingSslChannel> enableSessionCreationUpdater = AtomicIntegerFieldUpdater.newUpdater(UndertowAcceptingSslChannel.class, "enableSessionCreation");
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<UndertowAcceptingSslChannel, String[]> cipherSuitesUpdater = AtomicReferenceFieldUpdater.newUpdater(UndertowAcceptingSslChannel.class, String[].class, "cipherSuites");
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<UndertowAcceptingSslChannel, String[]> protocolsUpdater = AtomicReferenceFieldUpdater.newUpdater(UndertowAcceptingSslChannel.class, String[].class, "protocols");
 
     private final ChannelListener.Setter<AcceptingChannel<SslConnection>> closeSetter;
     private final ChannelListener.Setter<AcceptingChannel<SslConnection>> acceptSetter;
@@ -116,10 +112,14 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
             if (valueObject != null) return option.cast(Boolean.valueOf(enableSessionCreationUpdater.getAndSet(this, valueObject.booleanValue() ? 1 : 0) != 0));
         } else if (option == Options.SSL_ENABLED_CIPHER_SUITES) {
             final Sequence<String> seq = Options.SSL_ENABLED_CIPHER_SUITES.cast(value);
-            return option.cast(cipherSuitesUpdater.getAndSet(this, seq == null ? null : seq.toArray(new String[seq.size()])));
+            String[] old = this.cipherSuites;
+            this.cipherSuites = seq == null ? null : seq.toArray(new String[seq.size()]);
+            return option.cast(old);
         } else if (option == Options.SSL_ENABLED_PROTOCOLS) {
             final Sequence<String> seq = Options.SSL_ENABLED_PROTOCOLS.cast(value);
-            return option.cast(protocolsUpdater.getAndSet(this, seq == null ? null : seq.toArray(new String[seq.size()])));
+            String[] old = this.protocols;
+            this.protocols = seq == null ? null : seq.toArray(new String[seq.size()]);
+            return option.cast(old);
         } else {
             return tcpServer.setOption(option, value);
         }

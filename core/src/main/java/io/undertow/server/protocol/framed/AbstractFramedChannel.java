@@ -110,7 +110,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private volatile long frameDataRemaining;
     private volatile R receiver;
 
-    private boolean receivesSuspended = true;
+    private volatile boolean receivesSuspended = true;
 
     @SuppressWarnings("unused")
     private volatile int readsBroken = 0;
@@ -121,7 +121,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> readsBrokenUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "readsBroken");
     private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> writesBrokenUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "writesBroken");
 
-    private ReferenceCountedPooled readData = null;
+    private volatile ReferenceCountedPooled readData = null;
     private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<>();
     private volatile boolean flushingSenders = false;
 
@@ -138,7 +138,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * If this is true then the flush() method must be called to queue writes. This is provided to support batching
      */
     private volatile boolean requireExplicitFlush = false;
-    private boolean readChannelDone = false;
+    private volatile boolean readChannelDone = false;
 
     private final ReferenceCountedPooled.FreeNotifier freeNotifier = new ReferenceCountedPooled.FreeNotifier() {
         @Override
