@@ -78,7 +78,7 @@ public class HpackEncoder {
     private static final Map<HttpString, TableEntry[]> ENCODING_STATIC_TABLE;
 
     private final Deque<TableEntry> evictionQueue = new ArrayDeque<>();
-    private final Map<HttpString, List<TableEntry>> dynamicTable = new HashMap<>(); //TODO: use a custom data structure to reduce allocations
+    private final Map<HttpString, List<TableEntry>> dynamicTable = new HashMap<>();
 
     static {
         Map<HttpString, TableEntry[]> map = new HashMap<>();
@@ -299,7 +299,8 @@ public class HpackEncoder {
         }
         List<TableEntry> dynamic = dynamicTable.get(headerName);
         if (dynamic != null) {
-            for (TableEntry st : dynamic) {
+            for (int i = 0; i < dynamic.size(); ++i) {
+                TableEntry st = dynamic.get(i);
                 if (st.value.equals(value)) { //todo: some form of lookup?
                     return st;
                 }
