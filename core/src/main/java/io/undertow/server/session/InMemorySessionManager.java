@@ -305,6 +305,9 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public synchronized long getAverageSessionAliveTime() {
         //this method needs to be synchronised to make sure the session count and the total are in sync
+        if(expiredSessionCount == 0) {
+            return 0;
+        }
         return new BigDecimal(totalSessionLifetime).divide(BigDecimal.valueOf(expiredSessionCount), MathContext.DECIMAL128).longValue();
     }
 
