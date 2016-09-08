@@ -34,17 +34,7 @@ public class LocaleUtils {
         if (localeString == null) {
             return null;
         }
-        final String[] parts = localeString.split("-");
-        if (parts.length == 0) {
-            return null;
-        }
-        if (parts.length == 1) {
-            return new Locale(localeString, "");
-        } else if (parts.length == 2) {
-            return new Locale(parts[0], parts[1]);
-        } else {
-            return new Locale(parts[0], parts[1], parts[2]);
-        }
+        return Locale.forLanguageTag(localeString);
     }
 
     /**
