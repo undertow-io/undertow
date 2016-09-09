@@ -397,7 +397,7 @@ public class WebSockets {
             flushChannelAsync(wsChannel, callback, channel, null, timeoutmillis);
         } catch (IOException e) {
             if (callback != null) {
-                callback.onError(wsChannel, context, e);
+                callback.onError(wsChannel, null, e);
             } else {
                 IoUtils.safeClose(wsChannel);
             }
