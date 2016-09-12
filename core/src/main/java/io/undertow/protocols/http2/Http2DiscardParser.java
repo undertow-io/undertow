@@ -18,33 +18,27 @@
 
 package io.undertow.protocols.http2;
 
+import java.nio.ByteBuffer;
+
 /**
- * A Http2 Setting
+ * Parser for HTTP2 window update frames
  *
  * @author Stuart Douglas
  */
-public class Http2Setting {
+class Http2DiscardParser extends Http2PushBackParser {
 
-    public static final int SETTINGS_HEADER_TABLE_SIZE = 0x1;
-    public static final int SETTINGS_ENABLE_PUSH = 0x2;
-    public static final int SETTINGS_MAX_CONCURRENT_STREAMS = 0x3;
-    public static final int SETTINGS_INITIAL_WINDOW_SIZE = 0x4;
-    public static final int SETTINGS_MAX_FRAME_SIZE = 0x5;
-    public static final int SETTINGS_MAX_HEADER_LIST_SIZE = 0x6;
+    int remaining;
 
-    private final int id;
-    private final long value;
-
-    Http2Setting(int id, long value) {
-        this.id = id;
-        this.value = value;
+    Http2DiscardParser(int frameLength) {
+        super(frameLength);
+        remaining = frameLength;
     }
 
-    public int getId() {
-        return id;
+    @Override
+    protected void handleData(ByteBuffer resource, Http2FrameHeaderParser frameHeaderParser) {
+        int toUse = Math.min(resource.remaining(), remaining);
+        remaining -= toUse;
+        resource.position(resource.position() + toUse);
     }
 
-    public long getValue() {
-        return value;
-    }
 }

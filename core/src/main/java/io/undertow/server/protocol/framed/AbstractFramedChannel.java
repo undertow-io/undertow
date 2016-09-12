@@ -623,11 +623,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     //todo: rather than adding empty buffers just store the offsets
                     SendFrameHeader frameHeader = next.getFrameHeader();
                     PooledByteBuffer frameHeaderByteBuffer = frameHeader.getByteBuffer();
+                    ByteBuffer frameTrailerBuffer = frameHeader.getTrailer();
                     data[j * 3] = frameHeaderByteBuffer != null
                             ? frameHeaderByteBuffer.getBuffer()
                             : Buffers.EMPTY_BYTE_BUFFER;
                     data[(j * 3) + 1] = next.getBuffer() == null ? Buffers.EMPTY_BYTE_BUFFER : next.getBuffer();
-                    data[(j * 3) + 2] = next.getFrameFooter();
+                    data[(j * 3) + 2] = frameTrailerBuffer != null ? frameTrailerBuffer : Buffers.EMPTY_BYTE_BUFFER;
                     ++j;
                 }
                 long toWrite = Buffers.remaining(data);
@@ -641,9 +642,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 while (max > 0) {
                     S sinkChannel = pendingFrames.get(0);
                     PooledByteBuffer frameHeaderByteBuffer = sinkChannel.getFrameHeader().getByteBuffer();
+                    ByteBuffer frameTrailerBuffer = sinkChannel.getFrameHeader().getTrailer();
                     if (frameHeaderByteBuffer != null && frameHeaderByteBuffer.getBuffer().hasRemaining()
                             || sinkChannel.getBuffer() != null && sinkChannel.getBuffer().hasRemaining()
-                            || sinkChannel.getFrameFooter().hasRemaining()) {
+                            || frameTrailerBuffer != null && frameTrailerBuffer.hasRemaining()) {
                         break;
                     }
                     sinkChannel.flushComplete();

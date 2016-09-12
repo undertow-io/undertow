@@ -318,6 +318,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
     }
 
+    protected boolean isLastFrame() {
+        return anyAreSet(state, STATE_LAST_FRAME);
+    }
+
     @Override
     public void awaitReadable() throws IOException {
         if(Thread.currentThread() == getIoThread()) {

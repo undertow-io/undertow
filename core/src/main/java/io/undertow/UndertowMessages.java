@@ -480,6 +480,14 @@ public interface UndertowMessages {
     IllegalArgumentException newlineNotSupportedInHttpString(String value);
 
     @Message(id = 150, value = "Pseudo header %s received after receiving normal headers. Pseudo headers must be the first headers in a HTTP/2 header block.")
-    IllegalArgumentException pseudoHeaderInWrongOrder(HttpString header);
+    HpackException pseudoHeaderInWrongOrder(HttpString header);
 
+    @Message(id = 151, value = "Expected to receive a continuation frame")
+    String expectedContinuationFrame();
+
+    @Message(id = 152, value = "Incorrect frame size")
+    String incorrectFrameSize();
+
+    @Message(id = 153, value = "Stream id not registered")
+    IllegalStateException streamNotRegistered();
 }

@@ -57,16 +57,32 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
     @Override
     protected SendFrameHeader createFrameHeaderImpl() {
         //TODO: this is a mess WRT re-using between headers and push_promise, sort out a more reasonable abstraction
-        final int fcWindow = grabFlowControlBytes(getBuffer().remaining());
+        int dataPaddingBytes = getChannel().getPaddingBytes();
+        int attempted = getBuffer().remaining() + dataPaddingBytes + (dataPaddingBytes > 0 ? 1 : 0);
+        final int fcWindow = grabFlowControlBytes(attempted);
         if (fcWindow == 0 && getBuffer().hasRemaining()) {
             //flow control window is exhausted
             return new SendFrameHeader(getBuffer().remaining(), null);
         }
+        if(fcWindow <= dataPaddingBytes + 1) {
+            //so we won't actually be able to send any data, just padding, which is obviously not what we want
+            if(getBuffer().remaining() >= fcWindow) {
+                //easy fix, we just don't send any data
+                dataPaddingBytes = 0;
+            } else if (getBuffer().remaining() == dataPaddingBytes ){
+                //corner case.
+                dataPaddingBytes = 1;
+            } else {
+                dataPaddingBytes = fcWindow - getBuffer().remaining() - 1;
+            }
+        }
+
         final boolean finalFrame = isWritesShutdown() && fcWindow >= getBuffer().remaining();
         PooledByteBuffer firstHeaderBuffer = getChannel().getBufferPool().allocate();
         PooledByteBuffer[] allHeaderBuffers = null;
         ByteBuffer firstBuffer = firstHeaderBuffer.getBuffer();
         boolean firstFrame = false;
+
         if (first) {
             firstFrame = true;
             first = false;
@@ -76,16 +92,33 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             firstBuffer.put((byte) 0);
             firstBuffer.put((byte) frameType); //type
             firstBuffer.put((byte) 0); //back fill the flags
+
             Http2ProtocolUtils.putInt(firstBuffer, getStreamId());
+
+            int paddingBytes = getChannel().getPaddingBytes();
+            if(paddingBytes > 0) {
+                firstBuffer.put((byte) (paddingBytes & 0xFF));
+            }
             writeBeforeHeaderBlock(firstBuffer);
 
             HpackEncoder.State result = encoder.encode(headers, firstBuffer);
             PooledByteBuffer current = firstHeaderBuffer;
-            int headerFrameLength = firstBuffer.position() - 9;
+            int headerFrameLength = firstBuffer.position() - 9 + paddingBytes;
             firstBuffer.put(0, (byte) ((headerFrameLength >> 16) & 0xFF));
             firstBuffer.put(1, (byte) ((headerFrameLength >> 8) & 0xFF));
             firstBuffer.put(2, (byte) (headerFrameLength & 0xFF));
-            firstBuffer.put(4, (byte) ((isWritesShutdown() && !getBuffer().hasRemaining() && frameType == Http2Channel.FRAME_TYPE_HEADERS ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ))); //flags
+            firstBuffer.put(4, (byte) ((isWritesShutdown() && !getBuffer().hasRemaining() && frameType == Http2Channel.FRAME_TYPE_HEADERS ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ) | (paddingBytes > 0 ? Http2Channel.HEADERS_FLAG_PADDED : 0))); //flags
+            ByteBuffer currentBuffer = firstBuffer;
+
+            if(currentBuffer.remaining() < paddingBytes) {
+                allHeaderBuffers = allocateAll(allHeaderBuffers, current);
+                current = allHeaderBuffers[allHeaderBuffers.length - 1];
+                currentBuffer = current.getBuffer();
+            }
+            for(int i = 0; i < paddingBytes; ++ i) {
+                currentBuffer.put((byte) 0);
+            }
+
             while (result != HpackEncoder.State.COMPLETE) {
                 //todo: add some kind of limit here
 
@@ -95,7 +128,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
                 //note that if the buffers are small we may not actually need a continuation here
                 //but it greatly reduces the code complexity
                 //back fill the length
-                ByteBuffer currentBuffer = current.getBuffer();
+                currentBuffer = current.getBuffer();
                 currentBuffer.put((byte) 0);
                 currentBuffer.put((byte) 0);
                 currentBuffer.put((byte) 0);
@@ -113,40 +146,51 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
 
         PooledByteBuffer currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
         ByteBuffer currentBuffer = currentPooled.getBuffer();
+        ByteBuffer trailer = null;
         int remainingInBuffer = 0;
+
         if (getBuffer().remaining() > 0) {
             if (fcWindow > 0) {
                 //make sure we have room in the header buffer
-                if (currentBuffer.remaining() < 8) {
+                if (currentBuffer.remaining() < 10) {
                     allHeaderBuffers = allocateAll(allHeaderBuffers, currentPooled);
                     currentPooled = allHeaderBuffers == null ? firstHeaderBuffer : allHeaderBuffers[allHeaderBuffers.length - 1];
                     currentBuffer = currentPooled.getBuffer();
                 }
-                remainingInBuffer = getBuffer().remaining() - fcWindow;
-                getBuffer().limit(getBuffer().position() + fcWindow);
+                int toSend = fcWindow - dataPaddingBytes - (dataPaddingBytes > 0 ? 1 :0);
+                remainingInBuffer = getBuffer().remaining() - toSend;
+
+                getBuffer().limit(getBuffer().position() + toSend);
 
                 currentBuffer.put((byte) ((fcWindow >> 16) & 0xFF));
                 currentBuffer.put((byte) ((fcWindow >> 8) & 0xFF));
                 currentBuffer.put((byte) (fcWindow & 0xFF));
                 currentBuffer.put((byte) Http2Channel.FRAME_TYPE_DATA); //type
-                currentBuffer.put((byte) (finalFrame ? Http2Channel.HEADERS_FLAG_END_STREAM : 0)); //flags
+                currentBuffer.put((byte) ((finalFrame ? Http2Channel.DATA_FLAG_END_STREAM : 0) | (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
                 Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
-
+                if(dataPaddingBytes > 0) {
+                    currentBuffer.put((byte) (dataPaddingBytes & 0xFF));
+                    trailer = ByteBuffer.allocate(dataPaddingBytes);
+                }
             } else {
                 remainingInBuffer = getBuffer().remaining();
             }
         } else if (finalFrame && !firstFrame) {
-            currentBuffer.put((byte) 0);
-            currentBuffer.put((byte) 0);
-            currentBuffer.put((byte) 0);
+            currentBuffer.put((byte) ((fcWindow >> 16) & 0xFF));
+            currentBuffer.put((byte) ((fcWindow >> 8) & 0xFF));
+            currentBuffer.put((byte) (fcWindow & 0xFF));
             currentBuffer.put((byte) Http2Channel.FRAME_TYPE_DATA); //type
-            currentBuffer.put((byte) (Http2Channel.HEADERS_FLAG_END_STREAM & 0xFF)); //flags
+            currentBuffer.put((byte) ((Http2Channel.HEADERS_FLAG_END_STREAM & 0xFF)| (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
             Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
+            if(dataPaddingBytes > 0) {
+                currentBuffer.put((byte) (dataPaddingBytes & 0xFF));
+                trailer = ByteBuffer.allocate(dataPaddingBytes);
+            }
         }
         if (allHeaderBuffers == null) {
             //only one buffer required
             currentBuffer.flip();
-            return new SendFrameHeader(remainingInBuffer, currentPooled);
+            return new SendFrameHeader(remainingInBuffer, currentPooled, false, trailer);
         } else {
             //headers were too big to fit in one buffer
             //for now we will just copy them into a big buffer
@@ -162,7 +206,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
                     newBuf.put(allHeaderBuffers[i].getBuffer());
                 }
                 newBuf.flip();
-                return new SendFrameHeader(remainingInBuffer, new ImmediatePooledByteBuffer(newBuf));
+                return new SendFrameHeader(remainingInBuffer, new ImmediatePooledByteBuffer(newBuf), false, trailer);
             } finally {
                 //the allocate can oome
                 for (int i = 0; i < allHeaderBuffers.length; ++i) {
@@ -172,6 +216,8 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
         }
 
     }
+
+
 
     protected void writeBeforeHeaderBlock(ByteBuffer buffer) {
 
