@@ -312,7 +312,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
                     }
                 } else if (h2 && isAlpnEnabled()) {
-                    openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
+                    openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_PADDING_SIZE, 10));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10)));
 
                     SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE), true);
@@ -329,7 +329,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
 
                 } else if (h2c || h2cUpgrade) {
-                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, false));
+                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_PADDING_SIZE, 10));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
                     InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);

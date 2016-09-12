@@ -67,6 +67,9 @@ class Http2FrameHeaderParser implements FrameHeaderData {
             if (!parseFrameHeader(byteBuffer)) {
                 return false;
             }
+            if(continuationParser != null && type != FRAME_TYPE_CONTINUATION) {
+                throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.expectedContinuationFrame());
+            }
             switch (type) {
                 case FRAME_TYPE_DATA: {
                     if (streamId == 0) {
@@ -79,13 +82,16 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     if (streamId == 0) {
                         throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(Http2Channel.FRAME_TYPE_HEADERS));
                     }
-                    parser = new Http2HeadersParser(length, http2Channel.getDecoder());
+                    parser = new Http2HeadersParser(length, http2Channel.getDecoder(), http2Channel.isClient(), streamId);
                     if(allAreClear(flags, Http2Channel.HEADERS_FLAG_END_HEADERS)) {
                         continuationParser = (Http2HeadersParser) parser;
                     }
                     break;
                 }
                 case FRAME_TYPE_RST_STREAM: {
+                    if(length != 4) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_FRAME_SIZE_ERROR, UndertowMessages.MESSAGES.incorrectFrameSize());
+                    }
                     parser = new Http2RstStreamParser(length);
                     break;
                 }
@@ -94,12 +100,16 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                         http2Channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
                         throw UndertowMessages.MESSAGES.http2ContinuationFrameNotExpected();
                     }
+                    if(continuationParser.getStreamId() != streamId) {
+                        http2Channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
+                        throw UndertowMessages.MESSAGES.http2ContinuationFrameNotExpected();
+                    }
                     parser = continuationParser;
                     continuationParser.moreData(length);
                     break;
                 }
                 case FRAME_TYPE_PUSH_PROMISE: {
-                    parser = new Http2PushPromiseParser(length, http2Channel.getDecoder());
+                    parser = new Http2PushPromiseParser(length, http2Channel.getDecoder(), http2Channel.isClient(), streamId);
                     if(allAreClear(flags, Http2Channel.HEADERS_FLAG_END_HEADERS)) {
                         continuationParser = (Http2HeadersParser) parser;
                     }
@@ -123,6 +133,10 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_SETTINGS: {
+
+                    if(length % 6 != 0) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_FRAME_SIZE_ERROR, UndertowMessages.MESSAGES.incorrectFrameSize());
+                    }
                     if (streamId != 0) {
                         throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustBeZeroForFrameType(Http2Channel.FRAME_TYPE_SETTINGS));
                     }
@@ -130,10 +144,16 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_WINDOW_UPDATE: {
+                    if(length != 4) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_FRAME_SIZE_ERROR, UndertowMessages.MESSAGES.incorrectFrameSize());
+                    }
                     parser = new Http2WindowUpdateParser(length);
                     break;
                 }
                 case FRAME_TYPE_PRIORITY: {
+                    if(length != 5) {
+                        throw new ConnectionErrorException(Http2Channel.ERROR_FRAME_SIZE_ERROR, UndertowMessages.MESSAGES.incorrectFrameSize());
+                    }
                     if (streamId == 0) {
                         throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(Http2Channel.FRAME_TYPE_PRIORITY));
                     }
@@ -141,7 +161,8 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 default: {
-                    return true;
+                    parser = new Http2DiscardParser(length);
+                    break;
                 }
             }
         }
@@ -188,21 +209,25 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                 type == Http2Channel.FRAME_TYPE_CONTINUATION ||
                 type == Http2Channel.FRAME_TYPE_PRIORITY) {
             if (anyAreSet(flags, Http2Channel.DATA_FLAG_END_STREAM)) {
-                return http2Channel.getIncomingStreams().remove(streamId);
+                return http2Channel.removeStreamSource(streamId);
             } else if (type == FRAME_TYPE_CONTINUATION) {
-                Http2StreamSourceChannel channel = http2Channel.getIncomingStreams().get(streamId);
+                Http2StreamSourceChannel channel = http2Channel.getIncomingStream(streamId);
                 if(channel != null && channel.isHeadersEndStream() && anyAreSet(flags, Http2Channel.CONTINUATION_FLAG_END_HEADERS)) {
-                    http2Channel.getIncomingStreams().remove(streamId);
+                    http2Channel.removeStreamSource(streamId);
                 }
                 return channel;
             } else {
-                return http2Channel.getIncomingStreams().get(streamId);
+                return http2Channel.getIncomingStream(streamId);
             }
         }
         return null;
     }
 
-    public Http2HeadersParser getContinuationParser() {
+    Http2PushBackParser getParser() {
+        return parser;
+    }
+
+    Http2HeadersParser getContinuationParser() {
         return continuationParser;
     }
 }

@@ -18,6 +18,11 @@
 
 package io.undertow.client.http2;
 
+import static io.undertow.protocols.http2.Http2Channel.AUTHORITY;
+import static io.undertow.protocols.http2.Http2Channel.METHOD;
+import static io.undertow.protocols.http2.Http2Channel.PATH;
+import static io.undertow.protocols.http2.Http2Channel.SCHEME;
+import static io.undertow.protocols.http2.Http2Channel.STATUS;
 import static io.undertow.util.Headers.CONTENT_LENGTH;
 import static io.undertow.util.Headers.TRANSFER_ENCODING;
 
@@ -68,13 +73,6 @@ import io.undertow.util.HttpString;
  * @author Stuart Douglas
  */
 public class Http2ClientConnection implements ClientConnection {
-
-
-    static final HttpString METHOD = new HttpString(":method");
-    static final HttpString PATH = new HttpString(":path");
-    static final HttpString SCHEME = new HttpString(":scheme");
-    static final HttpString AUTHORITY = new HttpString(":authority");
-    static final HttpString STATUS = new HttpString(":status");
 
     private final Http2Channel http2Channel;
     private final ChannelListener.SimpleSetter<ClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();

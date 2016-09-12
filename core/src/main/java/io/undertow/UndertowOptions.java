@@ -241,6 +241,11 @@ public class UndertowOptions {
     public static final Option<Integer> HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE", Integer.class);
 
     /**
+     * The maximum amount of padding to send in a HTTP/2 frame. Actual amount will be randomly determined, defaults to Zero.
+     */
+    public static final Option<Integer> HTTP2_PADDING_SIZE = Option.simple(UndertowOptions.class, "HTTP2_PADDING_SIZE", Integer.class);
+
+    /**
      * Undertow keeps a LRU cache of common huffman encodings. This sets the maximum size, setting this to 0 will disable the caching.
      *
      */
@@ -254,7 +259,7 @@ public class UndertowOptions {
      *
      * Queued requests are processed by a priority queue, rather than a FIFO based queue, using HTTP2 stream priority.
      *
-     * If this number is smaller than or equal to zero then max concurrent streams determins the maximum number of streams that can be run.
+     * If this number is smaller than or equal to zero then max concurrent streams determines the maximum number of streams that can be run.
      *
      *
      */

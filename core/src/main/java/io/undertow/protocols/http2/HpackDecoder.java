@@ -349,7 +349,7 @@ public class HpackDecoder {
 
     public interface HeaderEmitter {
 
-        void emitHeader(HttpString name, String value, boolean neverIndex);
+        void emitHeader(HttpString name, String value, boolean neverIndex) throws HpackException;
     }
 
 
