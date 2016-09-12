@@ -18,6 +18,18 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.IOException;
+import java.nio.channels.Channel;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.channels.StreamSinkChannel;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.server.HttpHandler;
@@ -28,18 +40,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.channels.StreamSinkChannel;
-
-import java.io.IOException;
-import java.nio.channels.Channel;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Class that provides support for dealing with HTTP 100 (Continue) responses.
@@ -238,10 +238,11 @@ public class HttpContinue {
                                         callback.onException(exchange, null, e);
                                     }
                                 });
-                            }}));
-                            responseChannel.resumeWrites();
-                            exchange.dispatch();
-                        }else {
+                            }
+                        }));
+                responseChannel.resumeWrites();
+                exchange.dispatch();
+            } else {
                 callback.onComplete(exchange, null);
             }
         } catch (IOException e) {

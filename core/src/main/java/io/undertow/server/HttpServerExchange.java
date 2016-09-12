@@ -739,8 +739,13 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * {@link #dispatch(Executor, Runnable)} should be used instead of this method, as it is hard to use safely.
      *
+     * Use {@link io.undertow.util.SameThreadExecutor#INSTANCE} if you do not want to dispatch to another thread.
+     *
+     * @return this exchange
      */
+    @Deprecated
     public HttpServerExchange dispatch() {
         state |= FLAG_DISPATCHED;
         return this;
