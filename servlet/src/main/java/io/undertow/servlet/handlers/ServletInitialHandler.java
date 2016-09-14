@@ -170,7 +170,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             //this can only happen if the path ends with a /
             //otherwise there would be a redirect instead
             exchange.setRelativePath(info.getRewriteLocation());
-            exchange.setRequestPath(exchange.getRequestPath() + info.getRewriteLocation());
+            exchange.setRequestPath(exchange.getResolvedPath() + info.getRewriteLocation());
         }
 
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
