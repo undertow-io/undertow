@@ -694,6 +694,9 @@ public final class ProxyHandler implements HttpHandler {
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 IoUtils.safeClose(channel);
+            } catch (Exception e) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
+                IoUtils.safeClose(channel);
             }
 
         }
