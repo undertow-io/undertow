@@ -119,7 +119,7 @@ public class Http2ClientConnection implements ClientConnection {
     }
 
     @Override
-    public void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
+    public synchronized void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
         request.getRequestHeaders().put(PATH, request.getPath());
         request.getRequestHeaders().put(SCHEME, "https");
         request.getRequestHeaders().put(METHOD, request.getMethod().toString());
