@@ -184,6 +184,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, ByteBuffer initialOtherSideSettings, OptionMap settings) {
         super(connectedStreamChannel, bufferPool, Http2FramePriority.INSTANCE, data, settings);
         streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
+
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
         this.initialReceiveWindowSize = settings.get(UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, DEFAULT_INITIAL_WINDOW_SIZE);
 
@@ -209,6 +210,11 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             prefaceCount = PREFACE_BYTES.length;
             sendSettings();
             initialSettingsSent = true;
+            if(fromUpgrade) {
+                StreamHolder streamHolder = new StreamHolder((Http2StreamSinkChannel) null);
+                streamHolder.sinkClosed = true;
+                currentStreams.put(1, streamHolder);
+            }
         } else if(fromUpgrade) {
             sendSettings();
             initialSettingsSent = true;
@@ -921,7 +927,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
         lastGoodStreamId = 1;
         Http2HeadersStreamSinkChannel stream = new Http2HeadersStreamSinkChannel(this, 1);
-        currentStreams.put(1, new StreamHolder(stream));
+        StreamHolder streamHolder = new StreamHolder(stream);
+        streamHolder.sourceClosed = true;
+        currentStreams.put(1, streamHolder);
         return stream;
 
     }
