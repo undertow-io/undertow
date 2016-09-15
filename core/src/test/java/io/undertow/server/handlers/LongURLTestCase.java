@@ -37,7 +37,7 @@ import io.undertow.testutils.TestHttpClient;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore(apacheOnly = true)
+@AjpIgnore
 public class LongURLTestCase {
 
     private static final String MESSAGE = "HelloUrl";
