@@ -452,7 +452,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        if (h2 || h2c || ajp) {
+        if(h2 || h2c || ajp || h2cUpgrade) {
             //h2c-upgrade we still allow HTTP1
             HttpOneOnly httpOneOnly = method.getAnnotation(HttpOneOnly.class);
             if (httpOneOnly == null) {
