@@ -28,7 +28,7 @@
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parent</artifactId>
-    <version>1.3.25.Final-SNAPSHOT</version>
+    <version>1.3.25.Final</version>
 
     <name>Undertow</name>
     <description>Undertow</description>
