@@ -469,6 +469,11 @@
     <profiles>
         <profile>
             <id>findbugs</id>
+            <activation>
+                <property>
+                    <name>findbugs</name>
+                </property>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
