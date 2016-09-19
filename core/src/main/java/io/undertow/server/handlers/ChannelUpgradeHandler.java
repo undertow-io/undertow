@@ -51,6 +51,21 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      * @param handshake     a handshake implementation that can be used to verify the client request and modify the response
      */
     public synchronized void addProtocol(String productString, ChannelListener<? super StreamConnection> openListener, final HttpUpgradeHandshake handshake) {
+        addProtocol(productString, new HttpUpgradeListener() {
+            @Override
+            public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+                ChannelListeners.invokeChannelListener(streamConnection, openListener);
+            }
+        }, handshake);
+    }
+    /**
+     * Add a protocol to this handler.
+     *
+     * @param productString the product string to match
+     * @param openListener  the open listener to call
+     * @param handshake     a handshake implementation that can be used to verify the client request and modify the response
+     */
+    public synchronized void addProtocol(String productString, HttpUpgradeListener openListener, final HttpUpgradeHandshake handshake) {
         if (productString == null) {
             throw new IllegalArgumentException("productString is null");
         }
@@ -71,6 +86,16 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      * @param openListener  the open listener to call
      */
     public void addProtocol(String productString, ChannelListener<? super StreamConnection> openListener) {
+        addProtocol(productString, openListener, null);
+    }
+
+    /**
+     * Add a protocol to this handler.
+     *
+     * @param productString the product string to match
+     * @param openListener  the open listener to call
+     */
+    public void addProtocol(String productString, HttpUpgradeListener openListener) {
         addProtocol(productString, openListener, null);
     }
 
@@ -134,7 +159,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                 final List<Holder> holders = handlers.get(string);
                 if (holders != null) {
                     for (Holder holder : holders) {
-                        final ChannelListener<? super StreamConnection> listener = holder.listener;
+                        final HttpUpgradeListener listener = holder.listener;
                         if (holder.handshake != null) {
                             if (!holder.handshake.handleUpgrade(exchange)) {
                                 //handshake did not match, try again
@@ -142,13 +167,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                             }
                         }
 
-                        exchange.upgradeChannel(string, new HttpUpgradeListener() {
-
-                            @Override
-                            public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
-                                ChannelListeners.invokeChannelListener(streamConnection, listener);
-                            }
-                        });
+                        exchange.upgradeChannel(string,listener);
                         exchange.endExchange();
                         return;
                     }
@@ -160,10 +179,10 @@ public final class ChannelUpgradeHandler implements HttpHandler {
 
 
     private static final class Holder {
-        final ChannelListener<? super StreamConnection> listener;
+        final HttpUpgradeListener listener;
         final HttpUpgradeHandshake handshake;
 
-        private Holder(final ChannelListener<? super StreamConnection> listener, final HttpUpgradeHandshake handshake) {
+        private Holder(final HttpUpgradeListener listener, final HttpUpgradeHandshake handshake) {
             this.listener = listener;
             this.handshake = handshake;
         }
