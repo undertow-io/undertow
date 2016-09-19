@@ -29,6 +29,7 @@ import static org.xnio.IoUtils.safeClose;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -326,6 +327,11 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             try {
                 AbstractAjpClientStreamSourceChannel result = channel.receive();
                 if(result == null) {
+                    if(!channel.isOpen()) {
+                        if(currentRequest != null) {
+                            currentRequest.setFailed(new ClosedChannelException());
+                        }
+                    }
                     return;
                 }
 
