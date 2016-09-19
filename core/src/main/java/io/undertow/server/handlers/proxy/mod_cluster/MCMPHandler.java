@@ -74,6 +74,7 @@ import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.STICKY
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TIMEOUT;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TTL;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TYPE;
+import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.WAITWORKER;
 
 /**
  * The mod cluster management protocol http handler.
@@ -278,6 +279,8 @@ class MCMPHandler implements HttpHandler {
             } else if (ALIAS.equals(name)) {
                 final String[] alias = value.split(",");
                 hosts = Arrays.asList(alias);
+            } else if(WAITWORKER.equals(name)) {
+                node.setWaitWorker(Integer.parseInt(value));
             } else {
                 processError(TYPESYNTAX, SBADFLD + name + SBADFLD1, exchange);
                 return;
