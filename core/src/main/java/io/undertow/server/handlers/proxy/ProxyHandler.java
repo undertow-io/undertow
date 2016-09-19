@@ -167,6 +167,13 @@ public final class ProxyHandler implements HttpHandler {
             next.handleRequest(exchange);
             return;
         }
+        if(exchange.isResponseStarted()) {
+            //we can't proxy a request that has already started, this is basically a server configuration error
+            UndertowLogger.REQUEST_LOGGER.cannotProxyStartedRequest(exchange);
+            exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+            exchange.endExchange();
+            return;
+        }
         final long timeout = maxRequestTime > 0 ? System.currentTimeMillis() + maxRequestTime : 0;
         final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, maxConnectionRetries);
         if (timeout > 0) {
