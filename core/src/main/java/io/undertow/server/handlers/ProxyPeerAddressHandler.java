@@ -92,7 +92,7 @@ public class ProxyPeerAddressHandler implements HttpHandler {
                     value = value.substring(0, index);
                 }
             }
-            int port = 80;
+            int port = 0;
             if(forwardedPort != null) {
                 try {
                     port = Integer.parseInt(forwardedPort);
@@ -100,8 +100,11 @@ public class ProxyPeerAddressHandler implements HttpHandler {
                     UndertowLogger.REQUEST_LOGGER.debugf("Cannot parse port: %s", forwardedPort);
                 }
             }
+            String hostHeader = NetworkUtils.formatPossibleIpv6Address(value);
+            if (port != 0)
+               hostHeader += ":" + port;
+            exchange.getRequestHeaders().put(Headers.HOST, hostHeader);
             exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
-            exchange.getRequestHeaders().put(Headers.HOST, NetworkUtils.formatPossibleIpv6Address(value) + ":" + port);
         }
         next.handleRequest(exchange);
     }
