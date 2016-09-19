@@ -1,5 +1,6 @@
 io.undertow.server.handlers.builder.RewriteHandlerBuilder
-io.undertow.server.handlers.builder.SetHandlerBuilder
+io.undertow.server.handlers.SetAttributeHandler$Builder
+io.undertow.server.handlers.SetAttributeHandler$ClearBuilder
 io.undertow.server.handlers.builder.ResponseCodeHandlerBuilder
 io.undertow.server.handlers.DisableCacheHandler$Builder
 io.undertow.server.handlers.ProxyPeerAddressHandler$Builder
