@@ -312,16 +312,21 @@ public class ProxyConnectionPool implements Closeable {
     }
 
     private void connectionReady(final ConnectionHolder result, final ProxyCallback<ProxyConnection> callback, final HttpServerExchange exchange, final boolean exclusive) {
-        exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
-            @Override
-            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                if (!exclusive) {
-                    returnConnection(result);
+        try {
+            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                @Override
+                public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                    if (!exclusive) {
+                        returnConnection(result);
+                    }
+                    nextListener.proceed();
                 }
-                nextListener.proceed();
-            }
-        });
-
+            });
+        } catch (Exception e) {
+            returnConnection(result);
+            callback.failed(exchange);
+            return;
+        }
         callback.completed(exchange, new ProxyConnection(result.clientConnection, uri.getPath() == null ? "/" : uri.getPath()));
     }
 
@@ -592,7 +597,7 @@ public class ProxyConnectionPool implements Closeable {
         }
 
         private boolean isCancelled() {
-            return cancelled;
+            return cancelled || exchange.isResponseStarted();
         }
 
         private void setTimeoutKey(XnioExecutor.Key timeoutKey) {
