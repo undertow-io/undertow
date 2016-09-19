@@ -114,9 +114,9 @@ public final class ProxyHandler implements HttpHandler {
 
     private final HttpHandler next;
 
-    private final boolean rewriteHostHeader;
-    private final boolean reuseXForwarded;
-    private final int maxConnectionRetries;
+    private volatile boolean rewriteHostHeader;
+    private volatile boolean reuseXForwarded;
+    private volatile int maxConnectionRetries;
 
     private final Predicate idempotentRequestPredicate = IdempotentPredicate.INSTANCE;
 
@@ -753,6 +753,29 @@ public final class ProxyHandler implements HttpHandler {
                 exchange.endExchange();
             }
         }
+    }
+
+    public ProxyHandler setMaxConnectionRetries(int maxConnectionRetries) {
+        this.maxConnectionRetries = maxConnectionRetries;
+        return this;
+    }
+
+    public boolean isRewriteHostHeader() {
+        return rewriteHostHeader;
+    }
+
+    public ProxyHandler setRewriteHostHeader(boolean rewriteHostHeader) {
+        this.rewriteHostHeader = rewriteHostHeader;
+        return this;
+    }
+
+    public boolean isReuseXForwarded() {
+        return reuseXForwarded;
+    }
+
+    public ProxyHandler setReuseXForwarded(boolean reuseXForwarded) {
+        this.reuseXForwarded = reuseXForwarded;
+        return this;
     }
 
     public int getMaxConnectionRetries() {

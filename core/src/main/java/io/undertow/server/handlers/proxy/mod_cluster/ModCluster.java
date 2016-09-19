@@ -53,6 +53,7 @@ public class ModCluster {
 
     private final XnioWorker xnioWorker;
     private final ModClusterContainer container;
+    private final int maxRetries;
 
     private final String serverID = UUID.randomUUID().toString(); // TODO
 
@@ -68,6 +69,7 @@ public class ModCluster {
         this.maxRequestTime = builder.maxRequestTime;
         this.ttl = builder.ttl;
         this.useAlias = builder.useAlias;
+        this.maxRetries = builder.maxRetries;
         this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client, builder.clientOptions);
     }
 
@@ -134,7 +136,7 @@ public class ModCluster {
      * @return the proxy handler
      */
     public HttpHandler createProxyHandler() {
-        return new ProxyHandler(container.getProxyClient(), maxRequestTime, NEXT_HANDLER);
+        return new ProxyHandler(container.getProxyClient(), maxRequestTime, NEXT_HANDLER, false, false, maxRetries);
     }
 
     /**
@@ -143,7 +145,7 @@ public class ModCluster {
      * @return the proxy handler
      */
     public HttpHandler createProxyHandler(HttpHandler next) {
-        return new ProxyHandler(container.getProxyClient(), maxRequestTime, next);
+        return new ProxyHandler(container.getProxyClient(), maxRequestTime, next, false, false, maxRetries);
     }
     /**
      * Start
@@ -205,6 +207,7 @@ public class ModCluster {
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
         private long removeBrokenNodes = TimeUnit.MINUTES.toMillis(1);
         public OptionMap clientOptions = OptionMap.EMPTY;
+        public int maxRetries;
 
         private Builder(XnioWorker xnioWorker, UndertowClient client, XnioSsl xnioSsl) {
             this.xnioSsl = xnioSsl;
@@ -259,6 +262,10 @@ public class ModCluster {
         public Builder setUseAlias(boolean useAlias) {
             this.useAlias = useAlias;
             return this;
+        }
+
+        public void setMaxRetries(int maxRetries) {
+            this.maxRetries = maxRetries;
         }
 
         public long getTtl() {
