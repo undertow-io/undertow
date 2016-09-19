@@ -380,4 +380,7 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5080, value = "HttpServerExchange cannot have both async IO resumed and dispatch() called in the same cycle")
     void resumedAndDispatched();
+
+    @Message(id = 5081, value = "Configured mod_cluster management host address cannot be a wildcard address (%s)!")
+    IllegalArgumentException cannotUseWildcardAddressAsModClusterManagementHost(String providedAddress);
 }
