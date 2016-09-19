@@ -35,6 +35,7 @@ import org.xnio.StreamConnection;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 
 import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
 import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
@@ -144,6 +145,10 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
     }
 
     protected void lastDataRead() {
+        if(!lastFrameSent) {
+            markReadsBroken(new ClosedChannelException());
+            markWritesBroken(new ClosedChannelException());
+        }
         lastFrameRecieved = true;
         lastFrameSent = true;
         IoUtils.safeClose(this);
