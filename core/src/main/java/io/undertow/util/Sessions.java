@@ -37,12 +37,7 @@ public class Sessions {
      * @return The session
      */
     public static Session getSession(final HttpServerExchange exchange) {
-        SessionManager sessionManager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
-        SessionConfig sessionConfig = exchange.getAttachment(SessionConfig.ATTACHMENT_KEY);
-        if(sessionManager == null) {
-            throw UndertowMessages.MESSAGES.sessionManagerNotFound();
-        }
-        return sessionManager.getSession(exchange, sessionConfig);
+        return getSession(exchange, false);
     }
 
     /**
@@ -51,13 +46,17 @@ public class Sessions {
      * @return The session
      */
     public static Session getOrCreateSession(final HttpServerExchange exchange) {
+        return getSession(exchange, true);
+    }
+
+    private static Session getSession(final HttpServerExchange exchange, boolean create) {
         SessionManager sessionManager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
         SessionConfig sessionConfig = exchange.getAttachment(SessionConfig.ATTACHMENT_KEY);
         if(sessionManager == null) {
             throw UndertowMessages.MESSAGES.sessionManagerNotFound();
         }
         Session session = sessionManager.getSession(exchange, sessionConfig);
-        if(session == null) {
+        if(session == null && create) {
             session = sessionManager.createSession(exchange, sessionConfig);
         }
         return session;
