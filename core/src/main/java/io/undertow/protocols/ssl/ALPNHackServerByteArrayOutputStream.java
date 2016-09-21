@@ -50,7 +50,7 @@ class ALPNHackServerByteArrayOutputStream extends ByteArrayOutputStream {
     }
 
     @Override
-    public synchronized void write(byte[] b, int off, int len) {
+    public void write(byte[] b, int off, int len) {
         if(ready) {
             if(b[off] == 2) { // server hello
                 ready = false; //we are done processing

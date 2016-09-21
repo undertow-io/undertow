@@ -18,6 +18,12 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import io.undertow.UndertowLogger;
+import io.undertow.util.NetworkUtils;
+import org.xnio.OptionMap;
+import org.xnio.XnioWorker;
+import org.xnio.channels.MulticastMessageChannel;
+
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -30,12 +36,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-
-import io.undertow.UndertowLogger;
-import io.undertow.util.NetworkUtils;
-import org.xnio.OptionMap;
-import org.xnio.XnioWorker;
-import org.xnio.channels.MulticastMessageChannel;
 
 /**
  * @author Emanuel Muckenhuber
@@ -187,7 +187,7 @@ class MCMPAdvertiseTask implements Runnable {
     }
 
     private void digestString(MessageDigest md, String securityKey) {
-        byte[] buf = securityKey.getBytes();
+        byte[] buf = securityKey.getBytes(StandardCharsets.UTF_8);
         md.update(buf);
     }
 

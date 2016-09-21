@@ -41,6 +41,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     private final Masker masker;
     private volatile boolean dataWritten = false;
     protected final ExtensionFunction extensionFunction;
+    private final Random random = new Random();
 
     protected WebSocket07FrameSinkChannel(WebSocket07Channel wsChannel, WebSocketFrameType type) {
         super(wsChannel, type);
@@ -140,7 +141,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
         }
 
         if(masker != null) {
-            int maskingKey = new Random().nextInt(); //generate a new key for this frame
+            int maskingKey = random.nextInt(); //generate a new key for this frame
             header.put((byte)((maskingKey >> 24) & 0xFF));
             header.put((byte)((maskingKey >> 16) & 0xFF));
             header.put((byte)((maskingKey >> 8) & 0xFF));

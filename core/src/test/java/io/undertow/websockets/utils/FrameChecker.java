@@ -25,7 +25,7 @@ import org.junit.Assert;
 import org.xnio.FutureResult;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -53,7 +53,7 @@ public final class FrameChecker implements WebSocketTestClient.FrameListener {
                 if (frame instanceof TextWebSocketFrame) {
                     String buf = ((TextWebSocketFrame) frame).text();
 
-                    Assert.assertEquals(new String(expectedPayload, Charset.forName("UTF-8")), buf);
+                    Assert.assertEquals(new String(expectedPayload, StandardCharsets.UTF_8), buf);
                 } else {
                     ByteBuf buf = frame.content();
                     byte[] data = new byte[buf.readableBytes()];

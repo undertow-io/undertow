@@ -107,6 +107,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
             return authTransition();
 
         } else {
+            UndertowLogger.SECURITY_LOGGER.debugf("Authentication result was %s for %s", authenticationState, exchange);
             // Keep in mind this switch statement is only called after a call to authTransitionRequired.
             switch (authenticationState) {
                 case NOT_ATTEMPTED: // No constraint was set that mandated authentication so not reason to hold up the request.

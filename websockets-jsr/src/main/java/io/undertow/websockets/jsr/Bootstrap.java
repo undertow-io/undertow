@@ -21,8 +21,7 @@ package io.undertow.websockets.jsr;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.ThreadSetupAction;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.core.ContextClassLoaderSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.connector.ByteBufferPool;
@@ -77,10 +76,9 @@ public class Bootstrap implements ServletExtension {
             buffers = defaultContainer.getBufferPool();
         }
 
-        final List<ThreadSetupAction> setup = new ArrayList<>();
+        final List<ThreadSetupHandler> setup = new ArrayList<>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
         setup.addAll(deploymentInfo.getThreadSetupActions());
-        final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
 
         InetSocketAddress bind = null;
         if(info.getClientBindAddress() != null) {
@@ -90,7 +88,7 @@ public class Bootstrap implements ServletExtension {
         for(ExtensionHandshake e: info.getExtensions()) {
             extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
         }
-        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, threadSetupAction, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
+        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);

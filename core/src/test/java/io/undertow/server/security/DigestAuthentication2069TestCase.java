@@ -17,37 +17,38 @@
  */
 package io.undertow.server.security;
 
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityNotification.EventType;
+import io.undertow.security.idm.DigestAlgorithm;
+import io.undertow.security.impl.AuthenticationInfoToken;
+import io.undertow.security.impl.DigestAuthenticationMechanism;
+import io.undertow.security.impl.DigestAuthorizationToken;
+import io.undertow.security.impl.DigestQop;
+import io.undertow.security.impl.DigestWWWAuthenticateToken;
+import io.undertow.security.impl.SimpleNonceManager;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.HexConverter;
+import io.undertow.util.StatusCodes;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import io.undertow.security.idm.DigestAlgorithm;
-import io.undertow.security.impl.AuthenticationInfoToken;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.SecurityNotification.EventType;
-import io.undertow.security.impl.DigestAuthenticationMechanism;
-import io.undertow.security.impl.DigestAuthorizationToken;
-import io.undertow.security.impl.DigestQop;
-import io.undertow.security.impl.DigestWWWAuthenticateToken;
-import io.undertow.util.HexConverter;
-import io.undertow.security.impl.SimpleNonceManager;
-import io.undertow.testutils.DefaultServer;
-
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * For Digest authentication we support RFC2617, however this includes a requirement to allow a fall back to RFC2069, this test
@@ -58,7 +59,7 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
+    private static final Charset UTF_8 = StandardCharsets.UTF_8;
     private static final String REALM_NAME = "Digest_Realm";
 
     @Override

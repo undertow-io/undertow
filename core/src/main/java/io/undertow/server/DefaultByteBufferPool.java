@@ -61,6 +61,8 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
     private volatile boolean closed;
 
+    private final DefaultByteBufferPool arrayBackedPool;
+
 
     /**
      * @param direct               If this implementation should use direct buffers
@@ -81,6 +83,11 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         this.maximumPoolSize = maximumPoolSize;
         this.threadLocalCacheSize = threadLocalCacheSize;
         this.leakDectionPercent = leakDecetionPercent;
+        if(direct) {
+            arrayBackedPool = new DefaultByteBufferPool(false, bufferSize, maximumPoolSize, 0, leakDecetionPercent);
+        } else {
+            arrayBackedPool = this;
+        }
     }
 
 
@@ -97,6 +104,11 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     @Override
     public int getBufferSize() {
         return bufferSize;
+    }
+
+    @Override
+    public boolean isDirect() {
+        return direct;
     }
 
     @Override
@@ -141,6 +153,11 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         }
         buffer.clear();
         return new DefaultPooledBuffer(this, buffer, leakDectionPercent == 0 ? false : (++count % 100 > leakDectionPercent));
+    }
+
+    @Override
+    public ByteBufferPool getArrayBackedPool() {
+        return arrayBackedPool;
     }
 
     private void cleanupThreadLocalData() {

@@ -82,6 +82,7 @@ public class NodeConfig {
     private final int cacheConnections;
     private final int requestQueueSize;
     private final boolean queueNewRequests;
+    private final int waitWorker;
 
     NodeConfig(NodeBuilder b, final URI connectionURI) {
         this.connectionURI = connectionURI;
@@ -97,6 +98,7 @@ public class NodeConfig {
         cacheConnections = b.cacheConnections;
         requestQueueSize = b.requestQueueSize;
         queueNewRequests = b.queueNewRequests;
+        waitWorker = b.waitWorker;
         UndertowLogger.ROOT_LOGGER.nodeConfigCreated(this.connectionURI, balancer, domain, jvmRoute, flushPackets, flushwait, ping, ttl, timeout, maxConnections, cacheConnections, requestQueueSize, queueNewRequests);
     }
 
@@ -245,6 +247,7 @@ public class NodeConfig {
 
         private long ttl = 60000;
         private int timeout = 0;
+        private int waitWorker = -1;
 
         NodeBuilder(final ModCluster modCluster) {
             this.maxConnections = modCluster.getMaxConnections();
@@ -337,6 +340,14 @@ public class NodeConfig {
         public NodeConfig build() throws URISyntaxException {
             final URI uri = new URI(type, null, hostname, port, "/", "", "");
             return new NodeConfig(this, uri);
+        }
+
+        public void setWaitWorker(int waitWorker) {
+            this.waitWorker = waitWorker;
+        }
+
+        public int getWaitWorker() {
+            return waitWorker;
         }
     }
 

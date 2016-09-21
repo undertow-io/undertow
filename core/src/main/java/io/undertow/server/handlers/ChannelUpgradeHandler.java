@@ -51,17 +51,41 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      * @param handshake     a handshake implementation that can be used to verify the client request and modify the response
      */
     public synchronized void addProtocol(String productString, ChannelListener<? super StreamConnection> openListener, final HttpUpgradeHandshake handshake) {
+        addProtocol(productString, null, openListener, handshake);
+    }
+
+    /**
+     * Add a protocol to this handler.
+     *
+     * @param productString the product string to match
+     * @param openListener  the open listener to call
+     * @param handshake     a handshake implementation that can be used to verify the client request and modify the response
+     */
+    private synchronized void addProtocol(String productString, HttpUpgradeListener openListener, final HttpUpgradeHandshake handshake) {
+        addProtocol(productString, openListener, null, handshake);
+    }
+
+    private synchronized void addProtocol(String productString, HttpUpgradeListener openListener, final ChannelListener<? super StreamConnection> channelListener, final HttpUpgradeHandshake handshake) {
         if (productString == null) {
             throw new IllegalArgumentException("productString is null");
         }
-        if (openListener == null) {
+        if (openListener == null && channelListener == null) {
             throw new IllegalArgumentException("openListener is null");
         }
+        if(openListener == null) {
+            openListener = new HttpUpgradeListener() {
+                @Override
+                public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+                    ChannelListeners.invokeChannelListener(streamConnection, channelListener);
+                }
+            };
+        }
+
         List<Holder> list = handlers.get(productString);
         if (list == null) {
             handlers.put(productString, list = new CopyOnWriteArrayList<>());
         }
-        list.add(new Holder(openListener, handshake));
+        list.add(new Holder(openListener, handshake, channelListener));
     }
 
     /**
@@ -71,6 +95,16 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      * @param openListener  the open listener to call
      */
     public void addProtocol(String productString, ChannelListener<? super StreamConnection> openListener) {
+        addProtocol(productString, openListener, null);
+    }
+
+    /**
+     * Add a protocol to this handler.
+     *
+     * @param productString the product string to match
+     * @param openListener  the open listener to call
+     */
+    public void addProtocol(String productString, HttpUpgradeListener openListener) {
         addProtocol(productString, openListener, null);
     }
 
@@ -97,7 +131,32 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         Iterator<Holder> it = holders.iterator();
         while (it.hasNext()) {
             Holder holder = it.next();
-            if (holder.listener == openListener) {
+            if (holder.channelListener == openListener) {
+                it.remove();
+                break;
+            }
+        }
+        if (holders.isEmpty()) {
+            handlers.remove(productString);
+        }
+    }
+
+
+    /**
+     * Remove a protocol from this handler.
+     *
+     * @param productString the product string to match
+     * @param upgradeListener  The upgrade listener
+     */
+    public synchronized void removeProtocol(String productString, HttpUpgradeListener upgradeListener) {
+        List<Holder> holders = handlers.get(productString);
+        if (holders == null) {
+            return;
+        }
+        Iterator<Holder> it = holders.iterator();
+        while (it.hasNext()) {
+            Holder holder = it.next();
+            if (holder.listener == upgradeListener) {
                 it.remove();
                 break;
             }
@@ -134,7 +193,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                 final List<Holder> holders = handlers.get(string);
                 if (holders != null) {
                     for (Holder holder : holders) {
-                        final ChannelListener<? super StreamConnection> listener = holder.listener;
+                        final HttpUpgradeListener listener = holder.listener;
                         if (holder.handshake != null) {
                             if (!holder.handshake.handleUpgrade(exchange)) {
                                 //handshake did not match, try again
@@ -142,13 +201,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                             }
                         }
 
-                        exchange.upgradeChannel(string, new HttpUpgradeListener() {
-
-                            @Override
-                            public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
-                                ChannelListeners.invokeChannelListener(streamConnection, listener);
-                            }
-                        });
+                        exchange.upgradeChannel(string,listener);
                         exchange.endExchange();
                         return;
                     }
@@ -160,12 +213,14 @@ public final class ChannelUpgradeHandler implements HttpHandler {
 
 
     private static final class Holder {
-        final ChannelListener<? super StreamConnection> listener;
+        final HttpUpgradeListener listener;
         final HttpUpgradeHandshake handshake;
+        final ChannelListener<? super StreamConnection> channelListener;
 
-        private Holder(final ChannelListener<? super StreamConnection> listener, final HttpUpgradeHandshake handshake) {
+        private Holder(final HttpUpgradeListener listener, final HttpUpgradeHandshake handshake, ChannelListener<? super StreamConnection> channelListener) {
             this.listener = listener;
             this.handshake = handshake;
+            this.channelListener = channelListener;
         }
     }
 }

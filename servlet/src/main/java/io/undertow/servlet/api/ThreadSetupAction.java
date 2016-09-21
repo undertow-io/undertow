@@ -26,6 +26,7 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
+@Deprecated
 public interface ThreadSetupAction {
 
     /**

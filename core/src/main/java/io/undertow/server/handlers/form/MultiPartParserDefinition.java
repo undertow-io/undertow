@@ -95,6 +95,8 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             if(sizeLimit != null) {
                 exchange.setMaxEntitySize(sizeLimit);
             }
+            UndertowLogger.REQUEST_LOGGER.tracef("Created multipart parser for %s", exchange);
+
             return parser;
 
         }
@@ -170,7 +172,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     charset = value;
                 }
             }
-           this.parser = MultipartParser.beginParse(exchange.getConnection().getByteBufferPool(), this, boundary.getBytes(), charset);
+           this.parser = MultipartParser.beginParse(exchange.getConnection().getByteBufferPool(), this, boundary.getBytes(StandardCharsets.US_ASCII), charset);
 
         }
 
@@ -206,10 +208,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             if (inputStream == null) {
                 throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
             }
-            byte[] buf = new byte[1024];
-            try {
+            try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()){
+                ByteBuffer buf = pooled.getBuffer();
                 while (true) {
-                    int c = inputStream.read(buf);
+                    buf.clear();
+                    int c = inputStream.read(buf.array(), buf.arrayOffset(), buf.remaining());
                     if (c == -1) {
                         if (parser.isComplete()) {
                             break;
@@ -217,7 +220,8 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                             throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
                         }
                     } else if (c != 0) {
-                        parser.parse(ByteBuffer.wrap(buf, 0, c));
+                        buf.limit(c);
+                        parser.parse(buf);
                     }
                 }
                 exchange.putAttachment(FORM_DATA, data);

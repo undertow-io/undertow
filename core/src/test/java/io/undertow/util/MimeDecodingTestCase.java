@@ -18,15 +18,16 @@
 
 package io.undertow.util;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.testutils.DefaultServer;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Stuart Douglas
@@ -39,7 +40,7 @@ public class MimeDecodingTestCase {
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
-        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
         parser.parse(buf);
         Assert.assertTrue(parser.isComplete());
         Assert.assertEquals(2, handler.parts.size());
@@ -56,7 +57,7 @@ public class MimeDecodingTestCase {
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "UTF-8");
 
-        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
         parser.parse(buf);
         Assert.assertTrue(parser.isComplete());
         Assert.assertEquals(1, handler.parts.size());
@@ -72,7 +73,7 @@ public class MimeDecodingTestCase {
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
-        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
         parser.parse(buf);
         Assert.assertTrue(parser.isComplete());
         Assert.assertEquals(2, handler.parts.size());
@@ -88,7 +89,7 @@ public class MimeDecodingTestCase {
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
-        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
         parser.parse(buf);
         Assert.assertTrue(parser.isComplete());
         Assert.assertEquals(2, handler.parts.size());
@@ -104,7 +105,7 @@ public class MimeDecodingTestCase {
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(new DefaultByteBufferPool(true, 6, 100, 0), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
-        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
         parser.parse(buf);
         Assert.assertTrue(parser.isComplete());
         Assert.assertEquals(2, handler.parts.size());
@@ -120,7 +121,7 @@ public class MimeDecodingTestCase {
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "someboundarytext".getBytes(), "ISO-8859-1");
 
-        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
         parser.parse(buf);
         Assert.assertTrue(parser.isComplete());
         Assert.assertEquals(1, handler.parts.size());

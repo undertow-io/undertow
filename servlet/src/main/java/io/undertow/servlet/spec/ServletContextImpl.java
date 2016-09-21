@@ -40,6 +40,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.SessionConfigWrapper;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.ManagedListener;
@@ -59,6 +60,7 @@ import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterRegistration;
 import javax.servlet.MultipartConfigElement;
+import javax.servlet.ReadListener;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
@@ -66,6 +68,7 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
 import javax.servlet.SessionTrackingMode;
+import javax.servlet.WriteListener;
 import javax.servlet.annotation.HttpMethodConstraint;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.ServletSecurity;
@@ -117,6 +120,14 @@ public class ServletContextImpl implements ServletContext {
     private int filterMappingServletNameInsertPosition = 0;
     private final LRUCache<String, ContentTypeInfo> contentTypeCache;
 
+    //I don't think these really belong here, but there is not really anywhere else for them
+    //maybe we should move them into a separate class
+    private final ThreadSetupHandler.Action<Void, WriteListener> onWritePossibleTask;
+    private final ThreadSetupHandler.Action<Void, Runnable> runnableTask;
+    private final ThreadSetupHandler.Action<Void, ReadListener> onDataAvailableTask;
+    private final ThreadSetupHandler.Action<Void, ReadListener> onAllDataReadTask;
+    private final ThreadSetupHandler.Action<Void, ThreadSetupHandler.Action<Void, Object>> invokeActionTask;
+
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
         this.deployment = deployment;
@@ -130,6 +141,41 @@ public class ServletContextImpl implements ServletContext {
         }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
         this.contentTypeCache = new LRUCache<>(deployment.getDeploymentInfo().getContentTypeCacheSize(), -1, true);
+        this.onWritePossibleTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, WriteListener>() {
+            @Override
+            public Void call(HttpServerExchange exchange, WriteListener context) throws Exception {
+                context.onWritePossible();
+                return null;
+            }
+        });
+        this.runnableTask = new ThreadSetupHandler.Action<Void, Runnable>() {
+            @Override
+            public Void call(HttpServerExchange exchange, Runnable context) throws Exception {
+                context.run();
+                return null;
+            }
+        };
+        this.onDataAvailableTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, ReadListener>() {
+            @Override
+            public Void call(HttpServerExchange exchange, ReadListener context) throws Exception {
+                context.onDataAvailable();
+                return null;
+            }
+        });
+        this.onAllDataReadTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, ReadListener>() {
+            @Override
+            public Void call(HttpServerExchange exchange, ReadListener context) throws Exception {
+                context.onAllDataRead();
+                return null;
+            }
+        });
+        this.invokeActionTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, ThreadSetupHandler.Action<Void, Object>>() {
+            @Override
+            public Void call(HttpServerExchange exchange, ThreadSetupHandler.Action<Void, Object> context) throws Exception {
+                context.call(exchange, null);
+                return null;
+            }
+        });
     }
 
     public void initDone() {
@@ -816,6 +862,50 @@ public class ServletContextImpl implements ServletContext {
         this.sessionTrackingModes = sessionTrackingModes;
     }
 
+    void invokeOnWritePossible(HttpServerExchange exchange, WriteListener listener) {
+        try {
+            this.onWritePossibleTask.call(exchange, listener);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    void invokeOnAllDataRead(HttpServerExchange exchange, ReadListener listener) {
+        try {
+            this.onAllDataReadTask.call(exchange, listener);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    void invokeOnDataAvailable(HttpServerExchange exchange, ReadListener listener) {
+        try {
+            this.onDataAvailableTask.call(exchange, listener);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    void invokeAction(HttpServerExchange exchange, ThreadSetupHandler.Action<Void, Object> listener) {
+        try {
+            this.invokeActionTask.call(exchange, listener);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    void invokeRunnable(HttpServerExchange exchange, Runnable runnable) {
+        final boolean setupRequired = SecurityActions.currentServletRequestContext() == null;
+        if(setupRequired) {
+            try {
+                this.runnableTask.call(exchange, runnable);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            runnable.run();
+        }
+    }
     private static final class ReadServletAnnotationsTask implements PrivilegedAction<Void> {
 
         private final ServletInfo servletInfo;

@@ -32,10 +32,13 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DecompressingHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.IoUtils;
 
 import java.io.IOException;
 
@@ -55,6 +58,13 @@ public abstract class AbstractLoadBalancingProxyTestCase {
     protected static Undertow server1;
     protected static Undertow server2;
 
+    private static volatile boolean firstFail = true;
+
+    @BeforeClass
+    public static void setupFailTest() {
+        firstFail = true;
+    }
+
     @AfterClass
     public static void teardown() {
         server1.stop();
@@ -66,7 +76,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         final StringBuilder resultString = new StringBuilder();
 
         for (int i = 0; i < 6; ++i) {
-            TestHttpClient client = new TestHttpClient();
+            DecompressingHttpClient client = new DecompressingHttpClient(new TestHttpClient());
             try {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
                 HttpResponse result = client.execute(get);
@@ -89,6 +99,19 @@ public abstract class AbstractLoadBalancingProxyTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("/url/foo=bar", HttpClientUtils.readResponse(result));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testMaxRetries() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/fail");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("/fail:false", HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -199,6 +222,17 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send(exchange.getRequestURI());
+                    }
+                })
+                .addPrefixPath("/fail", new HttpHandler() {
+
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        if(firstFail) {
+                            firstFail = false;
+                            IoUtils.safeClose(exchange.getConnection());
+                        }
+                        exchange.getResponseSender().send(exchange.getRequestURI() + ":" + firstFail);
                     }
                 }));
     }

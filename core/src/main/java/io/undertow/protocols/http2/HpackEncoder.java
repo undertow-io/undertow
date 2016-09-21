@@ -78,7 +78,11 @@ public class HpackEncoder {
     private static final Map<HttpString, TableEntry[]> ENCODING_STATIC_TABLE;
 
     private final Deque<TableEntry> evictionQueue = new ArrayDeque<>();
-    private final Map<HttpString, List<TableEntry>> dynamicTable = new HashMap<>(); //TODO: use a custom data structure to reduce allocations
+    private final Map<HttpString, List<TableEntry>> dynamicTable = new HashMap<>();
+
+    private byte[] overflowData;
+    private int overflowPos;
+    private int overflowLength;
 
     static {
         Map<HttpString, TableEntry[]> map = new HashMap<>();
@@ -125,6 +129,17 @@ public class HpackEncoder {
      * @param target
      */
     public State encode(HeaderMap headers, ByteBuffer target) {
+        if(overflowData != null) {
+            for(int i = overflowPos; i < overflowLength; ++i) {
+                if(!target.hasRemaining()) {
+                    overflowPos = i;
+                    return State.OVERFLOW;
+                }
+                target.put(overflowData[i]);
+            }
+            overflowData = null;
+        }
+
         long it = headersIterator;
         if (headersIterator == -1) {
             handleTableSizeChange(target);
@@ -155,46 +170,62 @@ public class HpackEncoder {
                     int required = 11 + headerName.length(); //we use 11 to make sure we have enough room for the variable length itegers
 
                     String val = values.get(i);
+                    for(int v = 0; v < val.length(); ++v) {
+                        char c = val.charAt(v);
+                        if(c == '\r' || c == '\n') {
+                            val = val.replace('\r', ' ').replace('\n', ' ');
+                            break;
+                        }
+                    }
                     TableEntry tableEntry = findInTable(headerName, val);
 
                     required += (1 + val.length());
+                    boolean overflowing = false;
 
-                    if (target.remaining() < required) {
-                        this.headersIterator = it;
-                        return State.UNDERFLOW;
+                    ByteBuffer current = target;
+                    if (current.remaining() < required) {
+                        overflowing = true;
+                        current = ByteBuffer.wrap(overflowData = new byte[required]);
+                        overflowPos = 0;
                     }
                     boolean canIndex = hpackHeaderFunction.shouldUseIndexing(headerName, val) && (headerName.length() + val.length() + 32) < maxTableSize; //only index if it will fit
                     if (tableEntry == null && canIndex) {
                         //add the entry to the dynamic table
-                        target.put((byte) (1 << 6));
-                        writeHuffmanEncodableName(target, headerName);
-                        writeHuffmanEncodableValue(target, headerName, val);
+                        current.put((byte) (1 << 6));
+                        writeHuffmanEncodableName(current, headerName);
+                        writeHuffmanEncodableValue(current, headerName, val);
                         addToDynamicTable(headerName, val);
                     } else if (tableEntry == null) {
                         //literal never indexed
-                        target.put((byte) (1 << 4));
-                        writeHuffmanEncodableName(target, headerName);
-                        writeHuffmanEncodableValue(target, headerName, val);
+                        current.put((byte) (1 << 4));
+                        writeHuffmanEncodableName(current, headerName);
+                        writeHuffmanEncodableValue(current, headerName, val);
                     } else {
                         //so we know something is already in the table
                         if (val.equals(tableEntry.value)) {
                             //the whole thing is in the table
-                            target.put((byte) (1 << 7));
-                            encodeInteger(target, tableEntry.getPosition(), 7);
+                            current.put((byte) (1 << 7));
+                            encodeInteger(current, tableEntry.getPosition(), 7);
                         } else {
                             if (canIndex) {
                                 //add the entry to the dynamic table
-                                target.put((byte) (1 << 6));
-                                encodeInteger(target, tableEntry.getPosition(), 6);
-                                writeHuffmanEncodableValue(target, headerName, val);
+                                current.put((byte) (1 << 6));
+                                encodeInteger(current, tableEntry.getPosition(), 6);
+                                writeHuffmanEncodableValue(current, headerName, val);
                                 addToDynamicTable(headerName, val);
 
                             } else {
-                                target.put((byte) (1 << 4));
-                                encodeInteger(target, tableEntry.getPosition(), 4);
-                                writeHuffmanEncodableValue(target, headerName, val);
+                                current.put((byte) (1 << 4));
+                                encodeInteger(current, tableEntry.getPosition(), 4);
+                                writeHuffmanEncodableValue(current, headerName, val);
                             }
                         }
+                    }
+                    if(overflowing) {
+                        it = headers.fiNext(it);
+                        this.headersIterator = it;
+                        this.overflowLength = current.position();
+                        return State.OVERFLOW;
                     }
 
                 }
@@ -299,7 +330,8 @@ public class HpackEncoder {
         }
         List<TableEntry> dynamic = dynamicTable.get(headerName);
         if (dynamic != null) {
-            for (TableEntry st : dynamic) {
+            for (int i = 0; i < dynamic.size(); ++i) {
+                TableEntry st = dynamic.get(i);
                 if (st.value.equals(value)) { //todo: some form of lookup?
                     return st;
                 }
@@ -338,8 +370,7 @@ public class HpackEncoder {
 
     public enum State {
         COMPLETE,
-        UNDERFLOW,
-
+        OVERFLOW,
     }
 
     static class TableEntry {

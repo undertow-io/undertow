@@ -18,6 +18,7 @@
 
 package io.undertow.util;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 
 import java.util.Comparator;
@@ -65,6 +66,7 @@ public class PathMatcher<T> {
         if (!exactPathMatches.isEmpty()) {
             T match = getExactPath(path);
             if (match != null) {
+                UndertowLogger.REQUEST_LOGGER.debugf("Matched exact path %s", path);
                 return new PathMatch<>(path, "", match);
             }
         }
@@ -76,6 +78,7 @@ public class PathMatcher<T> {
             if (pathLength == length) {
                 SubstringMap.SubstringMatch<T> next = paths.get(path, length);
                 if (next != null) {
+                    UndertowLogger.REQUEST_LOGGER.debugf("Matched prefix path %s for path %s", next.getKey(), path);
                     return new PathMatch<>(path, "", next.getValue());
                 }
             } else if (pathLength < length) {
@@ -85,11 +88,13 @@ public class PathMatcher<T> {
                     //String part = path.substring(0, pathLength);
                     SubstringMap.SubstringMatch<T> next = paths.get(path, pathLength);
                     if (next != null) {
+                        UndertowLogger.REQUEST_LOGGER.debugf("Matched prefix path %s for path %s", next.getKey(), path);
                         return new PathMatch<>(next.getKey(), path.substring(pathLength), next.getValue());
                     }
                 }
             }
         }
+        UndertowLogger.REQUEST_LOGGER.debugf("Matched default handler path %s", path);
         return new PathMatch<>("", path, defaultHandler);
     }
 

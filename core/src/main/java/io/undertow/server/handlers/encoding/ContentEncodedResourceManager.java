@@ -152,7 +152,7 @@ public class ContentEncodedResourceManager {
         }
     }
 
-    private final class LockKey {
+    private static final class LockKey {
         private final String path;
         private final String encoding;
 

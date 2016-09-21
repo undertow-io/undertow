@@ -64,7 +64,7 @@
         <version.easymock>3.2</version.easymock>
         <version.io.undertow.jastow>2.0.0.Beta2</version.io.undertow.jastow>
         <version.junit>4.12</version.junit>
-        <version.netty>4.1.0.CR5</version.netty>
+        <version.netty>4.1.4.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpmime>4.2.6</version.org.apache.httpmime>
         <version.org.apache.httpcomponents>4.2.6</version.org.apache.httpcomponents>
@@ -90,6 +90,8 @@
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.1.Final</version.io.undertow.build.checkstyle-config>
+        <version.org.codehaus.mojo.findbugs-maven-plugin>2.5.5</version.org.codehaus.mojo.findbugs-maven-plugin>
+        <version.org.codehaus.mojo.findbugs-maven-plugin_java8>3.0.4</version.org.codehaus.mojo.findbugs-maven-plugin_java8>
         <version.org.mortbay.jetty.alpn.jdk7>7.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk7>
         <version.org.mortbay.jetty.alpn.jdk8>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8>
         <version.org.mortbay.jetty.alpn.jdk8.25>8.1.2.v20141202</version.org.mortbay.jetty.alpn.jdk8.25>
@@ -98,7 +100,7 @@
         <version.org.mortbay.jetty.alpn.jdk8.60>8.1.5.v20150921</version.org.mortbay.jetty.alpn.jdk8.60>
         <version.org.mortbay.jetty.alpn.jdk8.66>8.1.6.v20151105</version.org.mortbay.jetty.alpn.jdk8.66>
         <version.org.mortbay.jetty.alpn.jdk8.71>8.1.7.v20160121</version.org.mortbay.jetty.alpn.jdk8.71>
-        <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk7}</version.org.mortbay.jetty.alpn>
+        <version.org.mortbay.jetty.alpn>8.1.7.v20160121</version.org.mortbay.jetty.alpn>
         <version.org.eclipse.jetty.alpn>1.0.0</version.org.eclipse.jetty.alpn>
 
         <jdk.min.version>1.8</jdk.min.version>
@@ -108,6 +110,7 @@
 
         <!-- Non-default maven plugin versions and configuration -->
         <version.org.zanata.plugin>3.7.4</version.org.zanata.plugin>
+        <version.org.wildfly.openssl>1.0.0.Alpha1</version.org.wildfly.openssl>
     </properties>
 
     <modules>
@@ -124,6 +127,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
+
 
             <!-- Zanata translations -->
             <plugin>
@@ -170,6 +174,25 @@
                             <phase>compile</phase>
                             <goals>
                                 <goal>checkstyle</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <!-- FindBugs -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>findbugs-maven-plugin</artifactId>
+                    <version>${version.org.codehaus.mojo.findbugs-maven-plugin}</version>
+                    <configuration>
+                        <excludeFilterFile>../findbugs-exclude.xml</excludeFilterFile>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>find-bugs</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>check</goal>
                             </goals>
                         </execution>
                     </executions>
@@ -263,12 +286,6 @@
                 <version>${project.version}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
-                <artifactId>undertow-proxy</artifactId>
-                <version>${project.version}</version>
             </dependency>
 
             <dependency>
@@ -378,23 +395,10 @@
                 <version>${version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec}</version>
             </dependency>
 
-
-            <dependency>
-                <groupId>org.jboss.spec.javax.servlet.jsp</groupId>
-                <artifactId>jboss-jsp-api_2.3_spec</artifactId>
-                <version>${version.org.jboss.spec.javax.servlet.jsp}</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.jboss.spec.javax.websocket</groupId>
                 <artifactId>jboss-websocket-api_1.1_spec</artifactId>
                 <version>${version.org.jboss.spec.javax.websockets}</version>
-            </dependency>
-
-             <dependency>
-                <groupId>io.undertow.jastow</groupId>
-                <artifactId>jastow</artifactId>
-                <version>${version.io.undertow.jastow}</version>
             </dependency>
 
             <dependency>
@@ -410,16 +414,16 @@
             </dependency>
 
             <dependency>
-                <groupId>org.glassfish</groupId>
-                <artifactId>javax.el</artifactId>
-                <version>${version.org.glassfish.el}</version>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${version.com.h2database}</version>
                 <scope>test</scope>
             </dependency>
 
             <dependency>
-                <groupId>com.h2database</groupId>
-                <artifactId>h2</artifactId>
-                <version>${version.com.h2database}</version>
+                <groupId>org.wildfly.openssl</groupId>
+                <artifactId>wildfly-openssl</artifactId>
+                <version>${version.org.wildfly.openssl}</version>
                 <scope>test</scope>
             </dependency>
 
@@ -460,6 +464,22 @@
 
     <profiles>
         <profile>
+            <id>findbugs</id>
+            <activation>
+                <property>
+                    <name>findbugs</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>findbugs-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>jdk9</id>
             <activation>
                 <jdk>9</jdk>
@@ -483,6 +503,16 @@
                     </plugins>
                 </pluginManagement>
             </build>
+        </profile>
+
+        <profile>
+            <id>jdk8</id>
+            <activation>
+                <jdk>[1.8,)</jdk>
+            </activation>
+            <properties>
+                <version.org.codehaus.mojo.findbugs-maven-plugin>${version.org.codehaus.mojo.findbugs-maven-plugin_java8}</version.org.codehaus.mojo.findbugs-maven-plugin>
+            </properties>
         </profile>
 
         <profile>

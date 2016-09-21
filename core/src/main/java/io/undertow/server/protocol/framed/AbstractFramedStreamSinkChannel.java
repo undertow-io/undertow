@@ -98,7 +98,6 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private volatile SendFrameHeader header;
     private volatile PooledByteBuffer writeBuffer;
     private volatile PooledByteBuffer body;
-    private volatile PooledByteBuffer trailer;
 
     private static final int STATE_CLOSED = 1;
     private static final int STATE_WRITES_SHUTDOWN = 1 << 1;
@@ -153,21 +152,6 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected SendFrameHeader createFrameHeader() throws IOException{
         return null;
-    }
-
-    /**
-     * Returns the footer for the current frame.
-     *
-     * @return The footer for the current frame, or null
-     */
-    final ByteBuffer getFrameFooter() {
-        if (trailer == null) {
-            trailer = createFrameFooter();
-            if (trailer == null) {
-                trailer = EMPTY_BYTE_BUFFER;
-            }
-        }
-        return trailer.getBuffer();
     }
 
     protected PooledByteBuffer createFrameFooter() {
@@ -540,10 +524,6 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 header.getByteBuffer().close();
                 header = null;
             }
-            if (trailer != null) {
-                trailer.close();
-                trailer = null;
-            }
             if (anyAreSet(state, STATE_FIRST_DATA_WRITTEN)) {
                 channelForciblyClosed();
             }
@@ -648,9 +628,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if (header.getByteBuffer() != null) {
                 header.getByteBuffer().close();
             }
-            trailer.close();
             header = null;
-            trailer = null;
 
             readyForFlush = false;
             if (isWriteResumed() && !channelClosed) {
@@ -695,13 +673,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 ChannelListeners.invokeChannelListener(getIoThread(), (S) this, closeListener);
             }
         } finally {
-            if(header != null && header.getByteBuffer() != null) {
-                header.getByteBuffer().close();
-                header = null;
-            }
-            if(trailer != null) {
-                trailer.close();
-                trailer = null;
+            if(header != null) {
+                if( header.getByteBuffer() != null) {
+                    header.getByteBuffer().close();
+                    header = null;
+                }
             }
             if(body != null) {
                 body.close();
@@ -721,7 +697,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private void wakeupWaiters() {
         if(waiterCount > 0) {
             synchronized (lock) {
-                lock.notifyAll();
+                // It is possible that waiter count would be updated before gaining the lock, lets check one more
+                // time whether the condition wasn't changed in the meantime.
+                if (waiterCount > 0) {
+                    lock.notifyAll();
+                }
             }
         }
     }

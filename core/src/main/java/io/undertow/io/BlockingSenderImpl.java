@@ -27,6 +27,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.IoUtils;
 
@@ -36,11 +37,6 @@ import org.xnio.IoUtils;
  * @author Stuart Douglas
  */
 public class BlockingSenderImpl implements Sender {
-
-    /**
-     * TODO: we should be used pooled buffers
-     */
-    public static final int BUFFER_SIZE = 128;
 
     private final HttpServerExchange exchange;
     private final OutputStream outputStream;
@@ -144,8 +140,8 @@ public class BlockingSenderImpl implements Sender {
                 callback.onException(exchange, this, e);
             }
         } else {
-            ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-            try {
+            try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()){
+                ByteBuffer buffer = pooled.getBuffer();
                 long pos = source.position();
                 long size = source.size();
                 while (size - pos > 0) {
@@ -207,15 +203,16 @@ public class BlockingSenderImpl implements Sender {
                     return false;
                 }
             } else {
-                byte[] b = new byte[BUFFER_SIZE];
-                while (buffer.hasRemaining()) {
-                    int toRead = Math.min(buffer.remaining(), BUFFER_SIZE);
-                    buffer.get(b, 0, toRead);
-                    try {
-                        outputStream.write(b, 0, toRead);
-                    } catch (IOException e) {
-                        callback.onException(exchange, this, e);
-                        return false;
+                try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
+                    while (buffer.hasRemaining()) {
+                        int toRead = Math.min(buffer.remaining(), pooled.getBuffer().remaining());
+                        buffer.get(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), toRead);
+                        try {
+                            outputStream.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), toRead);
+                        } catch (IOException e) {
+                            callback.onException(exchange, this, e);
+                            return false;
+                        }
                     }
                 }
             }

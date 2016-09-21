@@ -107,6 +107,7 @@ public final class Undertow {
     }
 
     public synchronized void start() {
+        UndertowLogger.ROOT_LOGGER.debugf("starting undertow server %s", this);
         xnio = Xnio.getInstance(Undertow.class.getClassLoader());
         channels = new ArrayList<>();
         try {
@@ -134,7 +135,7 @@ public final class Undertow {
                     .getMap();
 
             OptionMap serverOptions = OptionMap.builder()
-                    .set(UndertowOptions.NO_REQUEST_TIMEOUT, 60000000)
+                    .set(UndertowOptions.NO_REQUEST_TIMEOUT, 60 * 1000)
                     .addAll(this.serverOptions)
                     .getMap();
 
@@ -143,6 +144,7 @@ public final class Undertow {
 
             listenerInfo = new ArrayList<>();
             for (ListenerConfig listener : listeners) {
+                UndertowLogger.ROOT_LOGGER.debugf("Configuring listener with protocol %s for interface %s and port %s", listener.type, listener.host, listener.port);
                 final HttpHandler rootHandler = listener.rootHandler != null ? listener.rootHandler : this.rootHandler;
                 if (listener.type == ListenerType.AJP) {
                     AjpOpenListener openListener = new AjpOpenListener(buffers, serverOptions);
@@ -203,6 +205,7 @@ public final class Undertow {
     }
 
     public synchronized void stop() {
+        UndertowLogger.ROOT_LOGGER.debugf("stopping undertow server %s", this);
         if (channels != null) {
             for (AcceptingChannel<? extends StreamConnection> channel : channels) {
                 IoUtils.safeClose(channel);
@@ -235,6 +238,8 @@ public final class Undertow {
         }
         return Collections.unmodifiableList(listenerInfo);
     }
+
+
 
     public enum ListenerType {
         HTTP,

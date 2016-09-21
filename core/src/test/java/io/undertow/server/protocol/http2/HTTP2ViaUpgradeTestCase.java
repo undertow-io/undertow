@@ -240,6 +240,7 @@ public class HTTP2ViaUpgradeTestCase {
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 DefaultFullHttpRequest upgradeRequest =
                         new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/sdf");
+                upgradeRequest.headers().add(Headers.HOST_STRING, "default");
                 ctx.writeAndFlush(upgradeRequest);
 
                 ctx.fireChannelActive();

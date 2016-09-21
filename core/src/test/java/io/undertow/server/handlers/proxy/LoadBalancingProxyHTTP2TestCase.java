@@ -25,7 +25,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.protocol.http2.Http2ServerConnection;
-import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -56,7 +55,6 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
 
     @BeforeClass
     public static void setup() throws URISyntaxException {
-        final SessionCookieConfig sessionConfig = new SessionCookieConfig();
         int port = DefaultServer.getHostPort("default");
         final HttpHandler handler1 = getRootHandler("s1", "server1");
         server1 = Undertow.builder()

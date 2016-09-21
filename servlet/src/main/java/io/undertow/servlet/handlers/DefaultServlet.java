@@ -392,6 +392,9 @@ public class DefaultServlet extends HttpServlet {
                 }
             }
         }
+        if(defaultAllowed && disallowed.isEmpty()) {
+            return true;
+        }
         int pos = path.lastIndexOf('/');
         final String lastSegment;
         if (pos == -1) {

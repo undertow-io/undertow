@@ -18,6 +18,12 @@
 
 package io.undertow.servlet.spec;
 
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -30,15 +36,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.http.Part;
-
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas
@@ -49,12 +48,16 @@ public class PartImpl implements Part {
     private final FormData.FormValue formValue;
     private final MultipartConfigElement config;
     private final ServletContextImpl servletContext;
+    private final HttpServletRequestImpl servletRequest;
 
-    public PartImpl(final String name, final FormData.FormValue formValue, MultipartConfigElement config, ServletContextImpl servletContext) {
+    public PartImpl(final String name, final FormData.FormValue formValue, MultipartConfigElement config,
+                    ServletContextImpl servletContext, HttpServletRequestImpl servletRequest) {
         this.name = name;
         this.formValue = formValue;
         this.config = config;
         this.servletContext = servletContext;
+        this.servletRequest = servletRequest;
+
     }
 
     @Override
@@ -62,7 +65,9 @@ public class PartImpl implements Part {
         if (formValue.isFile()) {
             return new BufferedInputStream(Files.newInputStream(formValue.getPath()));
         } else {
-            return new ByteArrayInputStream(formValue.getValue().getBytes());
+            String requestedCharset = servletRequest.getCharacterEncoding();
+            String charset = requestedCharset != null ? requestedCharset : servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding();
+            return new ByteArrayInputStream(formValue.getValue().getBytes(charset));
         }
     }
 

@@ -60,6 +60,7 @@ public interface UndertowLogger extends BasicLogger {
     UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, ClientConnection.class.getPackage().getName());
 
     UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
+    UndertowLogger SESSION_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".session");
     UndertowLogger SECURITY_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.security");
     UndertowLogger PROXY_REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".proxy");
     UndertowLogger REQUEST_DUMPER_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.dump");
@@ -379,4 +380,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5080, value = "HttpServerExchange cannot have both async IO resumed and dispatch() called in the same cycle")
     void resumedAndDispatched();
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5081, value = "Response has already been started, cannot proxy request %s")
+    void cannotProxyStartedRequest(HttpServerExchange exchange);
 }

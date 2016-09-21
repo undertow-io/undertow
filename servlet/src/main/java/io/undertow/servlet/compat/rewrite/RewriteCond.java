@@ -28,11 +28,11 @@ import java.util.regex.Pattern;
  */
 public class RewriteCond {
 
-    public abstract class Condition {
+    public abstract static class Condition {
         public abstract boolean evaluate(String value, Resolver resolver);
     }
 
-    public class PatternCondition extends Condition {
+    public static class PatternCondition extends Condition {
         public Pattern pattern;
         public Matcher matcher = null;
 
@@ -47,7 +47,7 @@ public class RewriteCond {
         }
     }
 
-    public class LexicalCondition extends Condition {
+    public static class LexicalCondition extends Condition {
         /**
          * -1: <
          * 0: =
@@ -72,7 +72,7 @@ public class RewriteCond {
         }
     }
 
-    public class ResourceCondition extends Condition {
+    public static class ResourceCondition extends Condition {
         /**
          * 0: -d (is directory ?)
          * 1: -f (is regular file ?)
@@ -122,35 +122,37 @@ public class RewriteCond {
             positive = false;
             condPattern = condPattern.substring(1);
         }
-        if (condPattern.startsWith("<")) {
-            LexicalCondition condition = new LexicalCondition();
-            condition.type = -1;
-            condition.condition = condPattern.substring(1);
-        } else if (condPattern.startsWith(">")) {
-            LexicalCondition condition = new LexicalCondition();
-            condition.type = 1;
-            condition.condition = condPattern.substring(1);
-        } else if (condPattern.startsWith("=")) {
-            LexicalCondition condition = new LexicalCondition();
-            condition.type = 0;
-            condition.condition = condPattern.substring(1);
-        } else if (condPattern.equals("-d")) {
-            ResourceCondition ncondition = new ResourceCondition();
-            ncondition.type = 0;
-        } else if (condPattern.equals("-f")) {
-            ResourceCondition ncondition = new ResourceCondition();
-            ncondition.type = 1;
-        } else if (condPattern.equals("-s")) {
-            ResourceCondition ncondition = new ResourceCondition();
-            ncondition.type = 2;
-        } else {
-            PatternCondition condition = new PatternCondition();
-            int flags = 0;
-            if (isNocase()) {
-                flags |= Pattern.CASE_INSENSITIVE;
-            }
-            condition.pattern = Pattern.compile(condPattern, flags);
-        }
+        // The counted condition is never anywhere assigned, there is a question whether it shouldn't look more like evaluate method.
+        // commenting it out as this code is taken from Tomcats, where it lives for quite long time without change.
+//        if (condPattern.startsWith("<")) {
+//            LexicalCondition condition = new LexicalCondition();
+//            condition.type = -1;
+//            condition.condition = condPattern.substring(1);
+//        } else if (condPattern.startsWith(">")) {
+//            LexicalCondition condition = new LexicalCondition();
+//            condition.type = 1;
+//            condition.condition = condPattern.substring(1);
+//        } else if (condPattern.startsWith("=")) {
+//            LexicalCondition condition = new LexicalCondition();
+//            condition.type = 0;
+//            condition.condition = condPattern.substring(1);
+//        } else if (condPattern.equals("-d")) {
+//            ResourceCondition ncondition = new ResourceCondition();
+//            ncondition.type = 0;
+//        } else if (condPattern.equals("-f")) {
+//            ResourceCondition ncondition = new ResourceCondition();
+//            ncondition.type = 1;
+//        } else if (condPattern.equals("-s")) {
+//            ResourceCondition ncondition = new ResourceCondition();
+//            ncondition.type = 2;
+//        } else {
+//            PatternCondition condition = new PatternCondition();
+//            int flags = 0;
+//            if (isNocase()) {
+//                flags |= Pattern.CASE_INSENSITIVE;
+//            }
+//            condition.pattern = Pattern.compile(condPattern, flags);
+//        }
     }
 
     public Matcher getMatcher() {

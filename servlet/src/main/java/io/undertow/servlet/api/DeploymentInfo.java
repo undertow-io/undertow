@@ -111,7 +111,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<FilterMappingInfo> filterUrlMappings = new ArrayList<>();
     private final List<ListenerInfo> listeners = new ArrayList<>();
     private final List<ServletContainerInitializerInfo> servletContainerInitializers = new ArrayList<>();
-    private final List<ThreadSetupAction> threadSetupActions = new ArrayList<>();
+    private final List<ThreadSetupHandler> threadSetupActions = new ArrayList<>();
     private final Map<String, String> initParameters = new HashMap<>();
     private final Map<String, Object> servletContextAttributes = new HashMap<>();
     private final Map<String, String> localeCharsetMapping = new HashMap<>();
@@ -155,7 +155,7 @@ public class DeploymentInfo implements Cloneable {
 
     /**
      * A handler chain wrapper to wrap the initial stages of the security handlers, if this is set it is assumed it
-     * is taking over the responsibility of setting the {@link SecurityContext} that can handle authentication and the
+     * is taking over the responsibility of setting the {@link io.undertow.security.api.SecurityContext} that can handle authentication and the
      * remaining Undertow handlers specific to authentication will be skipped.
      */
     private HandlerWrapper initialSecurityWrapper = null;
@@ -463,12 +463,18 @@ public class DeploymentInfo implements Cloneable {
         return servletContainerInitializers;
     }
 
+    @Deprecated
     public DeploymentInfo addThreadSetupAction(final ThreadSetupAction action) {
+        threadSetupActions.add(new LegacyThreadSetupActionWrapper(action));
+        return this;
+    }
+
+    public DeploymentInfo addThreadSetupAction(final ThreadSetupHandler action) {
         threadSetupActions.add(action);
         return this;
     }
 
-    public List<ThreadSetupAction> getThreadSetupActions() {
+    public List<ThreadSetupHandler> getThreadSetupActions() {
         return threadSetupActions;
     }
 
@@ -771,7 +777,7 @@ public class DeploymentInfo implements Cloneable {
      *
      * Undertow specific authentication mechanisms will not be installed but Undertow handlers will
      * still make the decision as to if authentication is required and will subsequently
-     * call {@link SecurityContext#authenticate()} as required.
+     * call {@link io.undertow.security.api.SecurityContext#authenticate()} as required.
      *
      * @param wrapper the {@link HandlerWrapper} to handle the initial security context installation.
      * @return {@code this} to allow chaining.

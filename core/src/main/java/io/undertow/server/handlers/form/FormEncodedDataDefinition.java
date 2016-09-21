@@ -19,7 +19,6 @@
 package io.undertow.server.handlers.form;
 
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
@@ -32,6 +31,7 @@ import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.URLUtils;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
@@ -63,6 +63,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                     charset = cs;
                 }
             }
+            UndertowLogger.REQUEST_LOGGER.tracef("Created form encoded parser for %s", exchange);
             return new FormEncodedDataParser(charset, exchange);
         }
         return null;
@@ -155,11 +156,11 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                 }
                                 case 1: {
                                     if (n == '=') {
-                                        name = URLDecoder.decode(builder.toString(), charset);
+                                        name = URLUtils.decode(builder.toString(), charset, true, new StringBuilder());
                                         builder.setLength(0);
                                         state = 2;
                                     } else if (n == '&') {
-                                        data.add(URLDecoder.decode(builder.toString(), charset), "");
+                                        data.add(URLUtils.decode(builder.toString(), charset, true, new StringBuilder()), "");
                                         builder.setLength(0);
                                         state = 0;
                                     } else {
@@ -182,7 +183,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                 }
                                 case 3: {
                                     if (n == '&') {
-                                        data.add(name, URLDecoder.decode(builder.toString(), charset));
+                                        data.add(name, URLUtils.decode(builder.toString(), charset, true, new StringBuilder()));
                                         builder.setLength(0);
                                         state = 0;
                                     } else {
@@ -198,10 +199,10 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                     if (state == 2) {
                         data.add(name, builder.toString());
                     } else if (state == 3) {
-                        data.add(name, URLDecoder.decode(builder.toString(), charset));
+                        data.add(name, URLUtils.decode(builder.toString(), charset, true, new StringBuilder()));
                     } else if(builder.length() > 0) {
                         if(state == 1) {
-                            data.add(URLDecoder.decode(builder.toString(), charset), "");
+                            data.add(URLUtils.decode(builder.toString(), charset, true, new StringBuilder()), "");
                         } else {
                             data.add(builder.toString(), "");
                         }

@@ -20,10 +20,6 @@ package io.undertow.protocols.ssl;
 
 import io.undertow.UndertowLogger;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -32,6 +28,10 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
 
 /**
  * SSLEngine wrapper that provides some super hacky ALPN support on JDK8.
@@ -59,6 +59,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
     private static final Field HANDSHAKE_HASH_DATA;
     private static final Field HANDSHAKE_HASH_FIN_MD;
 
+    private static final Class<?> SSL_ENGINE_IMPL_CLASS;
 
     static {
 
@@ -71,9 +72,10 @@ public class ALPNHackSSLEngine extends SSLEngine {
         Field protocolVersion;
         Method handshakeHashUpdate;
         Method handshakeHashProtocolDetermined;
+        Class<?> sslEngineImpleClass;
         try {
             Class<?> protocolVersionClass = Class.forName("sun.security.ssl.ProtocolVersion", true, ClassLoader.getSystemClassLoader());
-            Class<?> sslEngineImpleClass = Class.forName("sun.security.ssl.SSLEngineImpl", true, ClassLoader.getSystemClassLoader());
+            sslEngineImpleClass = Class.forName("sun.security.ssl.SSLEngineImpl", true, ClassLoader.getSystemClassLoader());
             handshaker = sslEngineImpleClass.getDeclaredField("handshaker");
             handshaker.setAccessible(true);
             handshakeHash = handshaker.getType().getDeclaredField("handshakeHash");
@@ -102,6 +104,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             handshakeHashData = null;
             handshakeHashFinMd = null;
             protocolVersion = null;
+            sslEngineImpleClass = null;
         }
         ENABLED = enabled && !Boolean.getBoolean("io.undertow.disable-jdk8-alpn");
         HANDSHAKER = handshaker;
@@ -112,6 +115,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
         HANDSHAKE_HASH_DATA = handshakeHashData;
         HANDSHAKE_HASH_FIN_MD = handshakeHashFinMd;
         HANDSHAKER_PROTOCOL_VERSION = protocolVersion;
+        SSL_ENGINE_IMPL_CLASS = sslEngineImpleClass;
     }
 
     private final SSLEngine delegate;
@@ -127,6 +131,13 @@ public class ALPNHackSSLEngine extends SSLEngine {
 
     public ALPNHackSSLEngine(SSLEngine delegate) {
         this.delegate = delegate;
+    }
+
+    public static boolean isEnabled(SSLEngine engine) {
+        if(!ENABLED) {
+            return false;
+        }
+        return SSL_ENGINE_IMPL_CLASS.isAssignableFrom(engine.getClass());
     }
 
     @Override
@@ -416,7 +427,6 @@ public class ALPNHackSSLEngine extends SSLEngine {
         try {
             Object handshaker = HANDSHAKER.get(sslEngine);
             Object hash = HANDSHAKE_HASH.get(handshaker);
-            ByteArrayOutputStream existing = (ByteArrayOutputStream) HANDSHAKE_HASH_DATA.get(hash);
 
             ALPNHackClientByteArrayOutputStream out = new ALPNHackClientByteArrayOutputStream(sslEngine);
             HANDSHAKE_HASH_DATA.set(hash, out);

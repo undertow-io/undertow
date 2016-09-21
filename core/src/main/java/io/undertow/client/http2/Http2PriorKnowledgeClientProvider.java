@@ -52,7 +52,7 @@ import java.util.Set;
  */
 public class Http2PriorKnowledgeClientProvider implements ClientProvider {
 
-    public static final byte[] PRI_REQUEST = {'P','R','I',' ','*',' ','H','T','T','P','/','2','.','0','\r','\n','\r','\n','S','M','\r','\n','\r','\n'};
+    private static final byte[] PRI_REQUEST = {'P','R','I',' ','*',' ','H','T','T','P','/','2','.','0','\r','\n','\r','\n','S','M','\r','\n','\r','\n'};
 
     @Override
     public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
@@ -144,7 +144,7 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
                             if(pri.hasRemaining()) {
                                 return;
                             }
-                            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics));
+                            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics, false));
                         } catch (IOException e) {
                             listener.failed(e);
                         }
@@ -152,7 +152,7 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
                 });
                 return;
             }
-            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics));
+            listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics, false));
         } catch (IOException e) {
             listener.failed(e);
         }

@@ -30,12 +30,16 @@ import static java.lang.Integer.signum;
 import static java.lang.System.arraycopy;
 import static java.util.Arrays.copyOfRange;
 
+import io.undertow.UndertowMessages;
+
 /**
  * An HTTP case-insensitive Latin-1 string.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class HttpString implements Comparable<HttpString>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final byte[] bytes;
     private final transient int hashCode;
     /**
@@ -116,6 +120,15 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         this.bytes = bytes;
         this.hashCode = calcHashCode(bytes);
         this.string = string;
+        checkForNewlines();
+    }
+
+    private void checkForNewlines() {
+        for(byte b : bytes) {
+            if(b == '\r' || b == '\n') {
+                throw UndertowMessages.MESSAGES.newlineNotSupportedInHttpString(string);
+            }
+        }
     }
 
     private HttpString(final byte[] bytes, final String string) {
@@ -123,6 +136,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         this.hashCode = calcHashCode(bytes);
         this.string = string;
         this.orderInt = 0;
+        checkForNewlines();
     }
 
     /**
@@ -133,6 +147,10 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @return the HTTP string, or {@code null} if the string is not in a compatible encoding
      */
     public static HttpString tryFromString(String string) {
+        HttpString cached = Headers.fromCache(string);
+        if(cached != null) {
+            return cached;
+        }
         final int len = string.length();
         final byte[] bytes = new byte[len];
         for (int i = 0; i < len; i++) {

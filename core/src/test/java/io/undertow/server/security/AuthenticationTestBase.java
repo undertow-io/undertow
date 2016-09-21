@@ -17,8 +17,6 @@
  */
 package io.undertow.server.security;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
@@ -39,13 +37,19 @@ import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HexConverter;
 import io.undertow.util.HttpString;
-import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.ietf.jgss.GSSException;
+import org.junit.Test;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
@@ -58,11 +62,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.ietf.jgss.GSSException;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * Base class for the authentication tests.
@@ -71,7 +72,7 @@ import org.junit.Test;
  */
 public abstract class AuthenticationTestBase {
 
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
+    private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     protected static final IdentityManager identityManager;
     protected static final AuditReceiver auditReceiver = new AuditReceiver();

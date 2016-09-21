@@ -532,7 +532,13 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if(allAreClear(state, FLAG_DELEGATE_SINK_SHUTDOWN)) {
                 sink.terminateWrites();
                 state |= FLAG_DELEGATE_SINK_SHUTDOWN;
+                notifyWriteClosed();
             }
+            boolean result = sink.flush();
+            if(result && anyAreSet(state, FLAG_READ_CLOSED)) {
+                closed();
+            }
+            return result;
         }
         return sink.flush();
     }
@@ -608,7 +614,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
         }
 
-        state |= FLAG_READ_CLOSED | FLAG_ENGINE_INBOUND_SHUTDOWN;
+        state |= FLAG_READ_CLOSED | FLAG_ENGINE_INBOUND_SHUTDOWN | FLAG_READ_SHUTDOWN;
         if(anyAreSet(state, FLAG_WRITE_CLOSED)) {
             closed();
         }
@@ -762,6 +768,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return 0;
             }
             if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
+                if(dataToUnwrap != null) {
+                    dataToUnwrap.close();
+                    dataToUnwrap = null;
+                }
                 notifyReadClosed();
                 return -1;
             }
@@ -791,7 +801,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
             //we always need to re-invoke if bytes have been produced, as the engine may have buffered some data
-            if (bytesProduced || (unwrappedData != null && unwrappedData.getBuffer().hasRemaining())) {
+            if (bytesProduced || (unwrappedData != null && unwrappedData.isOpen() && unwrappedData.getBuffer().hasRemaining())) {
                 requiresListenerInvocation = true;
             }
             if (dataToUnwrap != null) {

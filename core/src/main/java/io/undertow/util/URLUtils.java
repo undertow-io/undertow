@@ -22,7 +22,6 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 
 /**
  * Utilities for dealing with URLs
@@ -92,52 +91,63 @@ public class URLUtils {
                  * consecutive  bytes obtained this way to whatever
                  * character(s) they represent in the provided
                  * encoding.
+                 *
+                 * Note that we need to decode the whole rest of the value, we can't just decode
+                 * three characters. For multi code point characters there if the code point can be
+                 * represented as an alphanumeric
                  */
                     try {
-                        // (numChars-i)/3 is an upper bound for the number
+                        // (numChars-i) is an upper bound for the number
                         // of remaining bytes
                         if (bytes == null) {
-                            bytes = new byte[(numChars - i) / 3];
+                            bytes = new byte[numChars - i + 1];
                         }
                         int pos = 0;
 
-                        while (((i + 2) < numChars) && (c == '%')) {
-                            char p1 = Character.toLowerCase(s.charAt(i + 1));
-                            char p2 = Character.toLowerCase(s.charAt(i + 2));
-                            int v = 0;
-                            if (p1 >= '0' && p1 <= '9') {
-                                v = (p1 - '0') << 4;
-                            } else if (p1 >= 'a' && p1 <= 'f') {
-                                v = (p1 - 'a' + 10) << 4;
+                        while ((i< numChars)) {
+                            if (c == '%') {
+                                char p1 = Character.toLowerCase(s.charAt(i + 1));
+                                char p2 = Character.toLowerCase(s.charAt(i + 2));
+                                int v = 0;
+                                if (p1 >= '0' && p1 <= '9') {
+                                    v = (p1 - '0') << 4;
+                                } else if (p1 >= 'a' && p1 <= 'f') {
+                                    v = (p1 - 'a' + 10) << 4;
+                                } else {
+                                    throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
+                                }
+                                if (p2 >= '0' && p2 <= '9') {
+                                    v += (p2 - '0');
+                                } else if (p2 >= 'a' && p2 <= 'f') {
+                                    v += (p2 - 'a' + 10);
+                                } else {
+                                    throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
+                                }
+                                if (v < 0) {
+                                    throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
+                                }
+                                if (v == '/' || v == '\\') {
+                                    mightRequireSlashEscape = true;
+                                }
+
+                                bytes[pos++] = (byte) v;
+                                i += 3;
+                                if (i < numChars) {
+                                    c = s.charAt(i);
+                                }
+                            }else if(c == '+') {
+                                bytes[pos++] = (byte) ' ';
+                                ++i;
+                                if (i < numChars) {
+                                    c = s.charAt(i);
+                                }
                             } else {
-                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
+                                bytes[pos++] = (byte) c;
+                                ++i;
+                                if (i < numChars) {
+                                    c = s.charAt(i);
+                                }
                             }
-                            if (p2 >= '0' && p2 <= '9') {
-                                v += (p2 - '0');
-                            } else if (p2 >= 'a' && p2 <= 'f') {
-                                v += (p2 - 'a' + 10);
-                            } else {
-                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
-                            }
-                            if (v < 0) {
-                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
-                            }
-                            if(v == '/' || v== '\\') {
-                                mightRequireSlashEscape = true;
-                            }
-
-                            bytes[pos++] = (byte) v;
-                            i += 3;
-                            if (i < numChars) {
-                                c = s.charAt(i);
-                            }
-                        }
-
-                        // A trailing, incomplete byte encoding such as
-                        // "%x" will cause an exception to be thrown
-
-                        if ((i < numChars) && (c == '%')) {
-                            throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
                         }
 
                         String decoded = new String(bytes, 0, pos, enc);
@@ -227,7 +237,7 @@ public class URLUtils {
 
         private String decode(String charset, String attrName, final boolean doDecode) throws UnsupportedEncodingException {
             if (doDecode) {
-                return URLDecoder.decode(attrName, charset);
+                return URLUtils.decode(attrName, charset, true, new StringBuilder());
             }
             return attrName;
         }

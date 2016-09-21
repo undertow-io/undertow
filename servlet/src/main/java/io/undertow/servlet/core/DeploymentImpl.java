@@ -36,6 +36,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
@@ -63,12 +64,12 @@ public class DeploymentImpl implements Deployment {
     private volatile ServletContextImpl servletContext;
     private volatile ServletInitialHandler servletHandler;
     private volatile HttpHandler initialHandler;
-    private volatile CompositeThreadSetupAction threadSetupAction;
     private volatile ErrorPages errorPages;
     private volatile Map<String, String> mimeExtensionMappings;
     private volatile SessionManager sessionManager;
     private volatile Charset defaultCharset;
     private volatile List<AuthenticationMechanism> authenticationMechanisms;
+    private volatile List<ThreadSetupHandler> threadSetupActions;
 
     public DeploymentImpl(DeploymentManager deploymentManager, final DeploymentInfo deploymentInfo, ServletContainer servletContainer) {
         this.deploymentManager = deploymentManager;
@@ -149,12 +150,16 @@ public class DeploymentImpl implements Deployment {
         return servletPaths;
     }
 
-    public CompositeThreadSetupAction getThreadSetupAction() {
-        return threadSetupAction;
+    void setThreadSetupActions(List<ThreadSetupHandler> threadSetupActions) {
+        this.threadSetupActions = threadSetupActions;
     }
 
-    public void setThreadSetupAction(final CompositeThreadSetupAction threadSetupAction) {
-        this.threadSetupAction = threadSetupAction;
+    public <C, T> ThreadSetupHandler.Action<C, T> createThreadSetupAction(ThreadSetupHandler.Action<C, T> target) {
+        ThreadSetupHandler.Action<C, T> ret = target;
+        for(ThreadSetupHandler wrapper : threadSetupActions) {
+            ret = wrapper.create(ret);
+        }
+        return ret;
     }
 
     public ErrorPages getErrorPages() {

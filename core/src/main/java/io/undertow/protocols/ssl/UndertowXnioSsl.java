@@ -317,11 +317,15 @@ public class UndertowXnioSsl extends XnioSsl {
         }
 
         public void handleEvent(final StreamConnection connection) {
-            final SslConnection wrappedConnection = new UndertowSslConnection(connection, JsseSslUtils.createSSLEngine(sslContext, optionMap, destination), bufferPool);
-            if (! futureResult.setResult(wrappedConnection)) {
-                IoUtils.safeClose(connection);
-            } else {
-                ChannelListeners.invokeChannelListener(wrappedConnection, openListener);
+            try {
+                final SslConnection wrappedConnection = new UndertowSslConnection(connection, JsseSslUtils.createSSLEngine(sslContext, optionMap, destination), bufferPool);
+                if (!futureResult.setResult(wrappedConnection)) {
+                    IoUtils.safeClose(connection);
+                } else {
+                    ChannelListeners.invokeChannelListener(wrappedConnection, openListener);
+                }
+            } catch (Throwable e) {
+                futureResult.setException(new IOException(e));
             }
         }
     }

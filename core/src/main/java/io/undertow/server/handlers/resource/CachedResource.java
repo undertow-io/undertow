@@ -167,6 +167,7 @@ public class CachedResource implements Resource, RangeAwareResource {
             }
             underlyingResource.serve(newSender, exchange, completionCallback);
         } else {
+            UndertowLogger.REQUEST_LOGGER.tracef("Serving resource %s from the buffer cache to %s", name, exchange);
             //serve straight from the cache
             ByteBuffer[] buffers;
             boolean ok = false;

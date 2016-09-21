@@ -16,20 +16,26 @@
  *  limitations under the License.
  */
 
-package io.undertow.util;
+package io.undertow.protocols.alpn;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
+
+import io.undertow.UndertowLogger;
 
 /**
+ * Open listener adaptor for ALPN connections that use the JDK9 API
+ * <p>
+ * Not a proper open listener as such, but more a mechanism for selecting between them
+ *
  * @author Stuart Douglas
  */
-public class ALPN {
+public class JDK9AlpnProvider implements ALPNProvider {
 
-    private ALPN() {};
 
     public static final JDK9ALPNMethods JDK_9_ALPN_METHODS;
 
@@ -40,8 +46,10 @@ public class ALPN {
                 try {
                     Method setApplicationProtocols = SSLParameters.class.getMethod("setApplicationProtocols", String[].class);
                     Method getApplicationProtocol = SSLEngine.class.getMethod("getApplicationProtocol");
+                    UndertowLogger.ROOT_LOGGER.debug("Using JDK9 ALPN");
                     return new JDK9ALPNMethods(setApplicationProtocols, getApplicationProtocol);
                 } catch (Exception e) {
+                    UndertowLogger.ROOT_LOGGER.debug("JDK9 ALPN not supported", e);
                     return null;
                 }
             }
@@ -64,5 +72,36 @@ public class ALPN {
         public Method setApplicationProtocols() {
             return setApplicationProtocols;
         }
+    }
+
+    @Override
+    public boolean isEnabled(SSLEngine sslEngine) {
+        return JDK_9_ALPN_METHODS != null;
+    }
+
+    @Override
+    public SSLEngine setProtocols(SSLEngine engine, String[] protocols) {
+        SSLParameters sslParameters = engine.getSSLParameters();
+        try {
+            JDK_9_ALPN_METHODS.setApplicationProtocols().invoke(sslParameters, (Object) protocols);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
+        engine.setSSLParameters(sslParameters);
+        return engine;
+    }
+
+    @Override
+    public String getSelectedProtocol(SSLEngine engine) {
+        try {
+            return (String) JDK_9_ALPN_METHODS.getApplicationProtocol().invoke(engine);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int getPriority() {
+        return 300;
     }
 }

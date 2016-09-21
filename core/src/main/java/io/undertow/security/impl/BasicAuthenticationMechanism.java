@@ -31,6 +31,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
@@ -128,6 +129,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         if (authHeaders != null) {
             for (String current : authHeaders) {
                 if (current.toLowerCase(Locale.ENGLISH).startsWith(LOWERCASE_BASIC_PREFIX)) {
+
                     String base64Challenge = current.substring(PREFIX_LENGTH);
                     String plainChallenge = null;
                     try {
@@ -147,7 +149,9 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                         }
 
                         plainChallenge = new String(decode.array(), decode.arrayOffset(), decode.limit(), charset);
+                        UndertowLogger.SECURITY_LOGGER.debugf("Found basic auth header %s (decoded using charset %s) in %s", plainChallenge, charset, exchange);
                     } catch (IOException e) {
+                        UndertowLogger.SECURITY_LOGGER.debugf(e, "Failed to decode basic auth header %s in %s", base64Challenge, exchange);
                     }
                     int colonPos;
                     if (plainChallenge != null && (colonPos = plainChallenge.indexOf(COLON)) > -1) {
@@ -194,6 +198,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
             }
         }
         exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);
+        UndertowLogger.SECURITY_LOGGER.debugf("Sending basic auth challenge %s for %s", challenge, exchange);
         return new ChallengeResult(true, UNAUTHORIZED);
     }
 

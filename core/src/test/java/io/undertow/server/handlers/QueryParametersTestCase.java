@@ -23,16 +23,19 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 /**
  * Tests that query parameters are handled correctly.
@@ -91,9 +94,28 @@ public class QueryParametersTestCase {
             runTest(client, "{a=>b,s =>,t =>,value=>[bb,cc]}", "/path?a=b&value=bb&value=cc&s%20&t%20&");
             runTest(client, "{a=>b,s =>,t =>,u=>,value=>[bb,cc]}", "/path?a=b&value=bb&value=cc&s%20&t%20&u");
 
-
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+
+
+    @Test
+    @ProxyIgnore
+    public void testQueryParametersShiftJIS() throws IOException {
+        OptionMap old = DefaultServer.getUndertowOptions();
+        try {
+            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.URL_CHARSET, "Shift_JIS"));
+            TestHttpClient client = new TestHttpClient();
+            try {
+                runTest(client, "{unicode=>テスト}", "/path?unicode=%83e%83X%83g");
+
+            } finally {
+                client.getConnectionManager().shutdown();
+            }
+        } finally {
+            DefaultServer.setUndertowOptions(old);
         }
     }
 

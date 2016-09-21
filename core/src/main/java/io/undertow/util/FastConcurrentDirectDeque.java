@@ -285,6 +285,7 @@ public class FastConcurrentDirectDeque<E>
     }
 
     static final class Node<E> {
+
         volatile Node<E> prev;
         volatile E item;
         volatile Node<E> next;
@@ -340,6 +341,17 @@ public class FastConcurrentDirectDeque<E>
             } catch (Exception e) {
                 throw new Error(e);
             }
+        }
+
+        private static Unsafe getUnsafe() {
+            if (System.getSecurityManager() != null) {
+                return new PrivilegedAction<Unsafe>() {
+                    public Unsafe run() {
+                        return getUnsafe0();
+                    }
+                }.run();
+            }
+            return getUnsafe0();
         }
     }
 

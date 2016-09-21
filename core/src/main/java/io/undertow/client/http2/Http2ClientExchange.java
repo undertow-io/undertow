@@ -30,6 +30,7 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
+import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2StreamSinkChannel;
 import io.undertow.protocols.http2.Http2StreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
@@ -135,9 +136,9 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
 
     ClientResponse createResponse(Http2StreamSourceChannel result) {
         HeaderMap headers = result.getHeaders();
-        final String status = result.getHeaders().getFirst(Http2ClientConnection.STATUS);
+        final String status = result.getHeaders().getFirst(Http2Channel.STATUS);
         int statusCode = Integer.parseInt(status);
-        headers.remove(Http2ClientConnection.STATUS);
-        return new ClientResponse(statusCode, status != null ? status.substring(3) : "", clientRequest.getProtocol(), headers);
+        headers.remove(Http2Channel.STATUS);
+        return new ClientResponse(statusCode, status.substring(3), clientRequest.getProtocol(), headers);
     }
 }

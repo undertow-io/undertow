@@ -79,7 +79,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         @Override
         public void run() {
             timerKey = null;
-            long thresholdInMillis = threshold * 1000;
+            long thresholdInMillis = threshold * 1000L;
 
             // Check monitored threads, being careful that the request might have
             // completed by the time we examine it

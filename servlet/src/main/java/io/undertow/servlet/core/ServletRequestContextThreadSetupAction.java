@@ -19,13 +19,13 @@
 package io.undertow.servlet.core;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
  * @author Stuart Douglas
  */
-class ServletRequestContextThreadSetupAction implements ThreadSetupAction {
+class ServletRequestContextThreadSetupAction implements ThreadSetupHandler {
 
     static final ServletRequestContextThreadSetupAction INSTANCE = new ServletRequestContextThreadSetupAction();
 
@@ -34,17 +34,22 @@ class ServletRequestContextThreadSetupAction implements ThreadSetupAction {
     }
 
     @Override
-    public Handle setup(HttpServerExchange exchange) {
-        if(exchange == null) {
-            return null;
-        }
-        ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        final ServletRequestContext old = ServletRequestContext.current();
-        SecurityActions.setCurrentRequestContext(servletRequestContext);
-        return new Handle() {
+    public <T, C> Action<T, C> create(final Action<T, C> action) {
+        return new Action<T, C>() {
             @Override
-            public void tearDown() {
-                ServletRequestContext.setCurrentRequestContext(old);
+            public T call(HttpServerExchange exchange, C context) throws Exception {
+                if (exchange == null) {
+                    return action.call(null, context);
+                } else {
+                    ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                    final ServletRequestContext old = ServletRequestContext.current();
+                    SecurityActions.setCurrentRequestContext(servletRequestContext);
+                    try {
+                        return action.call(exchange, context);
+                    } finally {
+                        ServletRequestContext.setCurrentRequestContext(old);
+                    }
+                }
             }
         };
     }

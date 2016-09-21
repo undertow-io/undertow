@@ -622,7 +622,7 @@ class ModClusterContainer implements ModClusterController {
         return new ModClusterStatusImpl(balancers);
     }
 
-    private class ModClusterStatusImpl implements ModClusterStatus {
+    private static class ModClusterStatusImpl implements ModClusterStatus {
 
         private final List<LoadBalancer> balancers;
 
@@ -646,7 +646,7 @@ class ModClusterContainer implements ModClusterController {
         }
     }
 
-    private class BalancerImpl implements ModClusterStatus.LoadBalancer {
+    private static class BalancerImpl implements ModClusterStatus.LoadBalancer {
         private final Balancer balancer;
         private final List<ModClusterStatus.Node> nodes;
 
@@ -711,7 +711,7 @@ class ModClusterContainer implements ModClusterController {
         }
     }
 
-    private class NodeImpl implements ModClusterStatus.Node {
+    private static class NodeImpl implements ModClusterStatus.Node {
 
         private final Node node;
         private final List<ModClusterStatus.Context> contexts;
@@ -846,7 +846,7 @@ class ModClusterContainer implements ModClusterController {
         }
     }
 
-    private class ContextImpl implements ModClusterStatus.Context {
+    private static class ContextImpl implements ModClusterStatus.Context {
         private final Context context;
 
         private ContextImpl(Context context) {

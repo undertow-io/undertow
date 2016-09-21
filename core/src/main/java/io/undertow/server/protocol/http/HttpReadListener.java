@@ -31,6 +31,7 @@ import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.server.protocol.http2.Http2ReceiveListener;
 import io.undertow.util.ClosingChannelExceptionHandler;
 import io.undertow.util.ConnectionUtils;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -76,6 +77,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     private final long maxEntitySize;
     private final boolean recordRequestStartTime;
     private final boolean allowUnknownProtocols;
+    private final boolean requireHostHeader;
 
     //0 = new request ok, reads resumed
     //1 = request running, new request not ok
@@ -95,6 +97,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
+        this.requireHostHeader = connection.getUndertowOptions().get(UndertowOptions.REQUIRE_HOST_HTTP11, false);
         this.allowUnknownProtocols = connection.getUndertowOptions().get(UndertowOptions.ALLOW_UNKNOWN_PROTOCOLS, false);
         int requestParseTimeout = connection.getUndertowOptions().get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
         int requestIdleTimeout = connection.getUndertowOptions().get(UndertowOptions.NO_REQUEST_TIMEOUT, -1);
@@ -229,6 +232,13 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 //however this approach does not work for SSL, as the underlying channel is not thread safe
                 //so we just suspend every time (the overhead is likely much less than the general SSL overhead anyway)
                 channel.suspendReads();
+            }
+
+            if(requireHostHeader && !httpServerExchange.getRequestHeaders().contains(Headers.HOST)) {
+                if(httpServerExchange.getProtocol().equals(Protocols.HTTP_1_1)) {
+                    sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.noHostInHttp11Request());
+                    return;
+                }
             }
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {

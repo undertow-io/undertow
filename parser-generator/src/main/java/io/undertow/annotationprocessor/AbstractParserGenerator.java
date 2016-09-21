@@ -18,8 +18,18 @@
 
 package io.undertow.annotationprocessor;
 
+import org.jboss.classfilewriter.AccessFlag;
+import org.jboss.classfilewriter.ClassFile;
+import org.jboss.classfilewriter.ClassMethod;
+import org.jboss.classfilewriter.code.BranchEnd;
+import org.jboss.classfilewriter.code.CodeAttribute;
+import org.jboss.classfilewriter.code.CodeLocation;
+import org.jboss.classfilewriter.code.TableSwitchBuilder;
+import org.jboss.classfilewriter.util.DescriptorUtils;
+
 import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,15 +40,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.jboss.classfilewriter.AccessFlag;
-import org.jboss.classfilewriter.ClassFile;
-import org.jboss.classfilewriter.ClassMethod;
-import org.jboss.classfilewriter.code.BranchEnd;
-import org.jboss.classfilewriter.code.CodeAttribute;
-import org.jboss.classfilewriter.code.CodeLocation;
-import org.jboss.classfilewriter.code.TableSwitchBuilder;
-import org.jboss.classfilewriter.util.DescriptorUtils;
 
 /**
  * @author Stuart Douglas
@@ -52,6 +53,7 @@ public abstract class AbstractParserGenerator {
 
     private final String parseStateDescriptor;
     private final String httpExchangeDescriptor;
+    private final String existingClassName;
 
     public static final String HTTP_STRING_CLASS = "io.undertow.util.HttpString";
     public static final String HTTP_STRING_DESCRIPTOR = DescriptorUtils.makeDescriptor(HTTP_STRING_CLASS);
@@ -80,15 +82,16 @@ public abstract class AbstractParserGenerator {
     public static final String HANDLE_HEADER_VALUE = "handleHeaderValue";
     public static final String CLASS_NAME_SUFFIX = "$$generated";
 
-    public AbstractParserGenerator(final String parseStateClass, final String resultClass, final String constructorDescriptor) {
+    public AbstractParserGenerator(final String parseStateClass, final String resultClass, final String constructorDescriptor, String existingClassName) {
         this.parseStateClass = parseStateClass;
         this.resultClass = resultClass;
+        this.existingClassName = existingClassName;
         parseStateDescriptor = DescriptorUtils.makeDescriptor(parseStateClass);
         httpExchangeDescriptor = DescriptorUtils.makeDescriptor(resultClass);
         this.constructorDescriptor = constructorDescriptor;
     }
 
-    public byte[] createTokenizer(final String existingClassName, final String[] httpVerbs, String[] httpVersions, String[] standardHeaders) {
+    public byte[] createTokenizer(final String[] httpVerbs, String[] httpVersions, String[] standardHeaders) {
         final String className = existingClassName + CLASS_NAME_SUFFIX;
         final ClassFile file = new ClassFile(className, existingClassName);
 
@@ -482,13 +485,13 @@ public abstract class AbstractParserGenerator {
     }
 
     private void setupLocalVariables(final CodeAttribute c) {
-        c.setupFrame(DescriptorUtils.makeDescriptor("fakeclass"),
+        c.setupFrame(DescriptorUtils.makeDescriptor(existingClassName + CLASS_NAME_SUFFIX),
                 DescriptorUtils.makeDescriptor(ByteBuffer.class),
                 parseStateDescriptor,
                 httpExchangeDescriptor,
                 "I",
                 "I",
-                DescriptorUtils.makeDescriptor(String.class),
+                HTTP_STRING_DESCRIPTOR,
                 DescriptorUtils.makeDescriptor(StringBuilder.class),
                 "[B");
     }
@@ -647,10 +650,9 @@ public abstract class AbstractParserGenerator {
 
     private static void addStates(final State current, final String value, final int i, final List<State> allStates) {
         if (i == value.length()) {
-            current.finalState = true;
             return;
         }
-        byte[] bytes = value.getBytes();
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
         final byte currentByte = bytes[i];
         State newState = current.next.get(currentByte);
         if (newState == null) {
@@ -666,10 +668,6 @@ public abstract class AbstractParserGenerator {
         String terminalState;
         String fieldName;
         String httpStringFieldName;
-        /**
-         * If this state represents a possible final state
-         */
-        boolean finalState;
         final byte value;
         final String soFar;
         final Map<Byte, State> next = new HashMap<Byte, State>();
@@ -679,6 +677,23 @@ public abstract class AbstractParserGenerator {
         private State(final byte value, final String soFar) {
             this.value = value;
             this.soFar = soFar;
+        }
+
+        @Override
+        public int hashCode() {
+            return stateno.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (!(obj instanceof State)) {
+              return false;
+            }
+            State other = (State) obj;
+            return stateno.equals(other.stateno);
         }
 
         @Override

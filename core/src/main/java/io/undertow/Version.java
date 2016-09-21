@@ -18,6 +18,7 @@
 
 package io.undertow;
 
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
@@ -30,9 +31,9 @@ public class Version {
 
     static {
         String version = "Unknown";
-        try {
+        try (InputStream versionPropsStream = Version.class.getResourceAsStream("version.properties")){
             Properties props = new Properties();
-            props.load(Version.class.getResourceAsStream("version.properties"));
+            props.load(versionPropsStream);
             version = props.getProperty("undertow.version");
         } catch (Exception e) {
             e.printStackTrace();

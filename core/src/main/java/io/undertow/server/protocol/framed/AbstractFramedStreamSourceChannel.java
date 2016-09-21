@@ -73,7 +73,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     /**
      * The backing data for the current frame.
      */
-    private PooledByteBuffer data;
+    private volatile PooledByteBuffer data;
     private int currentDataOriginalSize;
 
     /**
@@ -121,8 +121,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         try {
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
-                state |= STATE_RETURNED_MINUS_ONE;
-                return -1;
+                synchronized (lock) {
+                    state |= STATE_RETURNED_MINUS_ONE;
+                    return -1;
+                }
             } else if (data != null) {
                 int old = data.getBuffer().limit();
                 try {
@@ -159,8 +161,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         try {
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
-                state |= STATE_RETURNED_MINUS_ONE;
-                return -1;
+                synchronized (lock) {
+                    state |= STATE_RETURNED_MINUS_ONE;
+                    return -1;
+                }
             } else if (data != null && data.getBuffer().hasRemaining()) {
                 int old = data.getBuffer().limit();
                 try {
@@ -210,7 +214,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     @Override
     public void suspendReads() {
-        state &= ~STATE_READS_RESUMED;
+        synchronized (lock) {
+            state &= ~STATE_READS_RESUMED;
+        }
     }
 
     /**
@@ -256,33 +262,36 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * For this class there is no difference between a resume and a wakeup
      */
     void resumeReadsInternal(boolean wakeup) {
-        boolean alreadyResumed = anyAreSet(state, STATE_READS_RESUMED);
-        state |= STATE_READS_RESUMED;
-        if(!alreadyResumed || wakeup) {
-            if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
-                state |= STATE_IN_LISTENER_LOOP;
-                getFramedChannel().runInIoThread(new Runnable() {
+        synchronized (lock) {
+            boolean alreadyResumed = anyAreSet(state, STATE_READS_RESUMED);
+            state |= STATE_READS_RESUMED;
+            if (!alreadyResumed || wakeup) {
+                if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
+                    state |= STATE_IN_LISTENER_LOOP;
+                    getFramedChannel().runInIoThread(new Runnable() {
 
-                    @Override
-                    public void run() {
-                        try {
-                            boolean moreData;
-                            do {
-                                ChannelListener<? super R> listener = getReadListener();
-                                if (listener == null || !isReadResumed()) {
-                                    return;
+                        @Override
+                        public void run() {
+                            try {
+                                boolean moreData;
+                                do {
+                                    ChannelListener<? super R> listener = getReadListener();
+                                    if (listener == null || !isReadResumed()) {
+                                        return;
+                                    }
+                                    ChannelListeners.invokeChannelListener((R) AbstractFramedStreamSourceChannel.this, listener);
+                                    //if writes are shutdown or we become active then we stop looping
+                                    //we stop when writes are shutdown because we can't flush until we are active
+                                    //although we may be flushed as part of a batch
+                                    moreData = (frameDataRemaining > 0 && data != null) || !pendingFrameData.isEmpty() || anyAreSet(state, STATE_WAITNG_MINUS_ONE);
                                 }
-                                ChannelListeners.invokeChannelListener((R) AbstractFramedStreamSourceChannel.this, listener);
-                                //if writes are shutdown or we become active then we stop looping
-                                //we stop when writes are shutdown because we can't flush until we are active
-                                //although we may be flushed as part of a batch
-                                moreData = (frameDataRemaining > 0 &&  data != null) || !pendingFrameData.isEmpty() || anyAreSet(state, STATE_WAITNG_MINUS_ONE);
-                            } while (allAreSet(state, STATE_READS_RESUMED) && allAreClear(state, STATE_CLOSED) && moreData);
-                        } finally {
-                            state &= ~STATE_IN_LISTENER_LOOP;
+                                while (allAreSet(state, STATE_READS_RESUMED) && allAreClear(state, STATE_CLOSED) && moreData);
+                            } finally {
+                                state &= ~STATE_IN_LISTENER_LOOP;
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
         }
     }
@@ -297,7 +306,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     }
 
     protected void lastFrame() {
-        state |= STATE_LAST_FRAME;
+        synchronized (lock) {
+            state |= STATE_LAST_FRAME;
+        }
         waitingForFrame = false;
         if(data == null && pendingFrameData.isEmpty() && frameDataRemaining == 0) {
             state |= STATE_DONE | STATE_CLOSED;
@@ -305,6 +316,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             getFramedChannel().notifyClosed(this);
             IoUtils.safeClose(this);
         }
+    }
+
+    protected boolean isLastFrame() {
+        return anyAreSet(state, STATE_LAST_FRAME);
     }
 
     @Override
@@ -447,7 +462,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         try {
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
-                state |= STATE_RETURNED_MINUS_ONE;
+                synchronized (lock) {
+                    state |= STATE_RETURNED_MINUS_ONE;
+                }
                 return -1;
             } else if (data != null) {
                 int old = data.getBuffer().limit();
@@ -489,7 +506,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         }
         try {
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
-                state |= STATE_RETURNED_MINUS_ONE;
+                synchronized (lock) {
+                    state |= STATE_RETURNED_MINUS_ONE;
+                }
                 return -1;
             } else if (data != null) {
                 int old = data.getBuffer().limit();
@@ -590,24 +609,26 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         if(anyAreSet(state, STATE_CLOSED)) {
             return;
         }
-        state |= STATE_CLOSED;
-        if (allAreClear(state, STATE_DONE | STATE_LAST_FRAME)) {
-            state |= STATE_STREAM_BROKEN;
-            getFramedChannel().notifyClosed(this);
-            channelForciblyClosed();
-        }
-        if (data != null) {
-            data.close();
-            data = null;
-        }
-        while (!pendingFrameData.isEmpty()) {
-            pendingFrameData.poll().frameData.close();
-        }
+        synchronized (lock) {
+            state |= STATE_CLOSED;
+            if (allAreClear(state, STATE_DONE | STATE_LAST_FRAME)) {
+                state |= STATE_STREAM_BROKEN;
+                getFramedChannel().notifyClosed(this);
+                channelForciblyClosed();
+            }
+            if (data != null) {
+                data.close();
+                data = null;
+            }
+            while (!pendingFrameData.isEmpty()) {
+                pendingFrameData.poll().frameData.close();
+            }
 
-        ChannelListeners.invokeChannelListener(this, (ChannelListener<? super AbstractFramedStreamSourceChannel<C, R, S>>) closeSetter.get());
-        if(closeListeners != null) {
-            for(int i = 0; i < closeListeners.length; ++i) {
-                closeListeners[i].handleEvent(this);
+            ChannelListeners.invokeChannelListener(this, (ChannelListener<? super AbstractFramedStreamSourceChannel<C, R, S>>) closeSetter.get());
+            if (closeListeners != null) {
+                for (int i = 0; i < closeListeners.length; ++i) {
+                    closeListeners[i].handleEvent(this);
+                }
             }
         }
     }
@@ -629,24 +650,29 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * Called when this stream is no longer valid. Reads from the stream will result
      * in an exception.
      */
-    protected synchronized void markStreamBroken() {
+    protected void markStreamBroken() {
         if(anyAreSet(state, STATE_STREAM_BROKEN)) {
             return;
         }
-        state |= STATE_STREAM_BROKEN;
-        if(data != null) {
-            data.close();
-            data = null;
-        }
-        for(FrameData frame : pendingFrameData) {
-            frame.frameData.close();
-        }
-        pendingFrameData.clear();
-        getFramedChannel().notifyClosed(this);
-        if(isReadResumed()) {
-            resumeReadsInternal(true);
-        }
         synchronized (lock) {
+            state |= STATE_STREAM_BROKEN;
+            PooledByteBuffer data = this.data;
+            if(data != null) {
+                try {
+                    data.close(); //may have been closed by the read thread
+                } catch (Exception e) {
+                    //ignore
+                }
+                this.data = null;
+            }
+            for(FrameData frame : pendingFrameData) {
+                frame.frameData.close();
+            }
+            pendingFrameData.clear();
+            getFramedChannel().notifyClosed(this);
+            if(isReadResumed()) {
+                resumeReadsInternal(true);
+            }
             if (waiters > 0) {
                 lock.notifyAll();
             }

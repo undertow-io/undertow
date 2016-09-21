@@ -18,12 +18,12 @@
 
 package io.undertow.server.handlers.cache;
 
-import io.undertow.util.ConcurrentDirectDeque;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import io.undertow.util.ConcurrentDirectDeque;
 
 /**
  * A non-blocking cache where entries are indexed by a key.
@@ -119,7 +119,7 @@ public class LRUCache<K, V> {
 
     private void bumpAccess(CacheEntry<K, V> cacheEntry) {
         Object prevToken = cacheEntry.claimToken();
-        if (prevToken != Boolean.FALSE) {
+        if (!Boolean.FALSE.equals(prevToken)) {
             if (prevToken != null) {
                 accessQueue.removeToken(prevToken);
             }

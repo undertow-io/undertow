@@ -25,6 +25,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcurrentDirectDeque;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.MathContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -68,10 +69,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     private final String deploymentName;
 
     private final AtomicLong createdSessionCount = new AtomicLong();
-    private final AtomicLong expiredSessionCount = new AtomicLong();
     private final AtomicLong rejectedSessionCount = new AtomicLong();
-    private final AtomicLong averageSessionLifetime = new AtomicLong();
-    private final AtomicLong longestSessionLifetime = new AtomicLong();
+    private volatile long longestSessionLifetime = 0;
+    private volatile long expiredSessionCount = 0;
+    private volatile BigInteger totalSessionLifetime = BigInteger.ZERO;
+
     private final boolean statisticsEnabled;
 
     private volatile long startTime;
@@ -117,7 +119,9 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public void start() {
         createdSessionCount.set(0);
-        expiredSessionCount.set(0);
+        expiredSessionCount = 0;
+        rejectedSessionCount.set(0);
+        totalSessionLifetime = BigInteger.ZERO;
         startTime = System.currentTimeMillis();
     }
 
@@ -176,6 +180,8 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             createdSessionCount.incrementAndGet();
         }
         final SessionImpl session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken, defaultSessionTimeout);
+
+        UndertowLogger.SESSION_LOGGER.debugf("Created session with id %s for exchange %s", sessionID, serverExchange);
         sessions.put(sessionID, session);
         config.setSessionId(serverExchange, session.getId());
         session.lastAccessed = System.currentTimeMillis();
@@ -213,16 +219,19 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public synchronized void registerSessionListener(final SessionListener listener) {
+        UndertowLogger.SESSION_LOGGER.debugf("Registered session listener %s", listener);
         sessionListeners.addSessionListener(listener);
     }
 
     @Override
     public synchronized void removeSessionListener(final SessionListener listener) {
+        UndertowLogger.SESSION_LOGGER.debugf("Removed session listener %s", listener);
         sessionListeners.removeSessionListener(listener);
     }
 
     @Override
     public void setDefaultSessionTimeout(final int timeout) {
+        UndertowLogger.SESSION_LOGGER.debugf("Setting default session timeout to %s", timeout);
         defaultSessionTimeout = timeout;
     }
 
@@ -279,7 +288,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public long getExpiredSessionCount() {
-        return expiredSessionCount.get();
+        return expiredSessionCount;
     }
 
     @Override
@@ -290,12 +299,16 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public long getMaxSessionAliveTime() {
-        return longestSessionLifetime.get();
+        return longestSessionLifetime;
     }
 
     @Override
-    public long getAverageSessionAliveTime() {
-        return averageSessionLifetime.get();
+    public synchronized long getAverageSessionAliveTime() {
+        //this method needs to be synchronised to make sure the session count and the total are in sync
+        if(expiredSessionCount == 0) {
+            return 0;
+        }
+        return new BigDecimal(totalSessionLifetime).divide(BigDecimal.valueOf(expiredSessionCount), MathContext.DECIMAL128).longValue();
     }
 
     @Override
@@ -390,6 +403,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                     timerCancelKey = null;
                 }
                 expireTime = newExpireTime;
+                UndertowLogger.SESSION_LOGGER.tracef("Bumping timeout for session %s to %s", sessionId, expireTime);
                 if(timerCancelKey == null) {
                     //+500ms, to make sure that the time has actually expired
                     //we don't re-schedule every time, as it is expensive
@@ -446,6 +460,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             if (invalid) {
                 throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
+            UndertowLogger.SESSION_LOGGER.debugf("Setting max inactive interval for %s to %s", sessionId, interval);
             maxInactiveInterval = interval;
             bumpTimeout();
         }
@@ -491,6 +506,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                sessionManager.sessionListeners.attributeUpdated(this, name, value, existing);
             }
             bumpTimeout();
+            UndertowLogger.SESSION_LOGGER.tracef("Setting session attribute %s to %s for session %s", name, value, sessionId);
             return existing;
         }
 
@@ -502,6 +518,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             final Object existing = attributes.remove(name);
             sessionManager.sessionListeners.attributeRemoved(this, name, existing);
             bumpTimeout();
+            UndertowLogger.SESSION_LOGGER.tracef("Removing session attribute %s for session %s", name, sessionId);
             return existing;
         }
 
@@ -527,28 +544,19 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 }
                 invalidationStarted = true;
             }
+            UndertowLogger.SESSION_LOGGER.debugf("Invalidating session %s for exchange %s", sessionId, exchange);
 
             sessionManager.sessionListeners.sessionDestroyed(this, exchange, reason);
             invalid = true;
 
             if(sessionManager.statisticsEnabled) {
-                long avg, newAvg;
-                do {
-                    avg = sessionManager.averageSessionLifetime.get();
-                    BigDecimal bd = new BigDecimal(avg);
-                    bd.multiply(new BigDecimal(sessionManager.expiredSessionCount.get())).add(bd);
-                    newAvg = bd.divide(new BigDecimal(sessionManager.expiredSessionCount.get() + 1), MathContext.DECIMAL64).longValue();
-                } while (!sessionManager.averageSessionLifetime.compareAndSet(avg, newAvg));
-
-
-                sessionManager.expiredSessionCount.incrementAndGet();
                 long life = System.currentTimeMillis() - creationTime;
-                long existing = sessionManager.longestSessionLifetime.get();
-                while (life > existing) {
-                    if (sessionManager.longestSessionLifetime.compareAndSet(existing, life)) {
-                        break;
+                synchronized (sessionManager) {
+                    sessionManager.expiredSessionCount++;
+                    sessionManager.totalSessionLifetime = sessionManager.totalSessionLifetime.add(BigInteger.valueOf(life));
+                    if(sessionManager.longestSessionLifetime < life) {
+                        sessionManager.longestSessionLifetime = life;
                     }
-                    existing = sessionManager.longestSessionLifetime.get();
                 }
             }
             if (exchange != null) {
@@ -572,6 +580,8 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
             sessionManager.sessions.remove(oldId);
             sessionManager.sessionListeners.sessionIdChanged(this, oldId);
+            UndertowLogger.SESSION_LOGGER.debugf("Changing session id %s to %s", oldId, newId);
+
             return newId;
         }
 

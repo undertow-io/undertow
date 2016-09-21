@@ -33,9 +33,9 @@ public class Http2Setting {
     public static final int SETTINGS_MAX_HEADER_LIST_SIZE = 0x6;
 
     private final int id;
-    private final int value;
+    private final long value;
 
-    Http2Setting(int id, int value) {
+    Http2Setting(int id, long value) {
         this.id = id;
         this.value = value;
     }
@@ -44,7 +44,7 @@ public class Http2Setting {
         return id;
     }
 
-    public int getValue() {
+    public long getValue() {
         return value;
     }
 }

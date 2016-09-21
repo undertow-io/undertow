@@ -18,18 +18,19 @@
 
 package io.undertow.servlet.core;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.api.ThreadSetupAction;
-import io.undertow.servlet.spec.WebConnectionImpl;
-import org.xnio.ChannelListener;
-import org.xnio.StreamConnection;
-
-import javax.servlet.http.HttpUpgradeHandler;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
+import javax.servlet.http.HttpUpgradeHandler;
+
+import org.xnio.ChannelListener;
+import org.xnio.StreamConnection;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
+import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.api.ThreadSetupHandler;
+import io.undertow.servlet.spec.WebConnectionImpl;
 
 /**
  * Lister that handles a servlet exchange upgrade event.
@@ -37,14 +38,38 @@ import java.util.concurrent.Executor;
  * @author Stuart Douglas
  */
 public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements HttpUpgradeListener {
-    private final InstanceHandle<T> instance;
-    private final ThreadSetupAction threadSetupAction;
     private final HttpServerExchange exchange;
+    private final ThreadSetupHandler.Action<Void, StreamConnection> initAction;
+    private final ThreadSetupHandler.Action<Void, Object> destroyAction;
 
-    public ServletUpgradeListener(final InstanceHandle<T> instance, ThreadSetupAction threadSetupAction, HttpServerExchange exchange) {
-        this.instance = instance;
-        this.threadSetupAction = threadSetupAction;
+    public ServletUpgradeListener(final InstanceHandle<T> instance, Deployment deployment, HttpServerExchange exchange) {
         this.exchange = exchange;
+        this.initAction = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, StreamConnection>() {
+            @Override
+            public Void call(HttpServerExchange exchange, StreamConnection context) {
+
+                DelayedExecutor executor = new DelayedExecutor(exchange.getIoThread());
+                try {
+                    //run the upgrade in the worker thread
+                    instance.getInstance().init(new WebConnectionImpl(context, ServletUpgradeListener.this.exchange.getConnection().getByteBufferPool(), executor));
+                } finally {
+                    executor.openGate();
+                }
+                return null;
+            }
+        });
+        this.destroyAction = new ThreadSetupHandler.Action<Void, Object>() {
+            @Override
+            public Void call(HttpServerExchange exchange, Object context) throws Exception {
+                try {
+                    instance.getInstance().destroy();
+                } finally {
+                    instance.release();
+                }
+                return null;
+            }
+        };
+
     }
 
     @Override
@@ -52,15 +77,10 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Htt
         channel.getCloseSetter().set(new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection channel) {
-                final ThreadSetupAction.Handle handle = threadSetupAction.setup(ServletUpgradeListener.this.exchange);
                 try {
-                    instance.getInstance().destroy();
-                } finally {
-                    try {
-                        handle.tearDown();
-                    } finally {
-                        instance.release();
-                    }
+                    destroyAction.call(null, null);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
             }
         });
@@ -68,17 +88,10 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Htt
         this.exchange.getConnection().getWorker().execute(new Runnable() {
             @Override
             public void run() {
-                DelayedExecutor executor = new DelayedExecutor(exchange.getIoThread());
-                final ThreadSetupAction.Handle handle = threadSetupAction.setup(ServletUpgradeListener.this.exchange);
                 try {
-                    //run the upgrade in the worker thread
-                    instance.getInstance().init(new WebConnectionImpl(channel, ServletUpgradeListener.this.exchange.getConnection().getByteBufferPool(), executor));
-                } finally {
-                    try {
-                        handle.tearDown();
-                    } finally {
-                        executor.openGate();
-                    }
+                    initAction.call(exchange, channel);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
             }
         });

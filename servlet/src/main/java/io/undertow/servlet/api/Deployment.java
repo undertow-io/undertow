@@ -29,7 +29,6 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.core.ManagedFilters;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.ManagedServlets;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ErrorPages;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
@@ -57,7 +56,7 @@ public interface Deployment {
 
     ServletPathMatches getServletPaths();
 
-    CompositeThreadSetupAction getThreadSetupAction();
+    <T, C> ThreadSetupHandler.Action<T, C> createThreadSetupAction(ThreadSetupHandler.Action<T, C> target);
 
     ErrorPages getErrorPages();
 

@@ -29,6 +29,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketVersion;
 
 import io.undertow.websockets.extensions.ExtensionHandshake;
@@ -210,6 +211,7 @@ public class WebSocketClient {
             return connectImpl(uri, new FutureResult<WebSocketChannel>(), 0);
         }
         private IoFuture<WebSocketChannel> connectImpl(final URI uri, final FutureResult<WebSocketChannel> ioFuture, final int redirectCount) {
+            WebSocketLogger.REQUEST_LOGGER.debugf("Opening websocket connection to %s", uri);
             final String scheme = uri.getScheme().equals("wss") ? "https" : "http";
             final URI newUri;
             try {
@@ -220,6 +222,7 @@ public class WebSocketClient {
             final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation, clientExtensions);
             final Map<String, String> originalHeaders = handshake.createHeaders();
             originalHeaders.put(Headers.ORIGIN_STRING, scheme + "://" + uri.getHost());
+            originalHeaders.put(Headers.HOST_STRING, uri.getHost() + ":" + newUri.getPort());
             final Map<String, List<String>> headers = new HashMap<>();
             for(Map.Entry<String, String> entry : originalHeaders.entrySet()) {
                 List<String> list = new ArrayList<>();
@@ -234,7 +237,6 @@ public class WebSocketClient {
             if(toBind == null && sysBind != null) {
                 toBind = new InetSocketAddress(sysBind, 0);
             }
-            final InetSocketAddress finalToBind = toBind;
             if(proxyUri != null) {
                UndertowClient.getInstance().connect(new ClientCallback<ClientConnection>() {
                     @Override
@@ -244,27 +246,33 @@ public class WebSocketClient {
                                 .setMethod(Methods.CONNECT)
                                 .setPath(uri.getHost() + ":" + port)
                                 .setProtocol(Protocols.HTTP_1_1);
+                        cr.getRequestHeaders().put(Headers.HOST, proxyUri.getHost() + ":" + (proxyUri.getPort() > 0 ? proxyUri.getPort() : 80));
                         connection.sendRequest(cr, new ClientCallback<ClientExchange>() {
                             @Override
                             public void completed(ClientExchange result) {
                                 result.setResponseListener(new ClientCallback<ClientExchange>() {
                                     @Override
                                     public void completed(ClientExchange response) {
-                                        if (response.getResponse().getResponseCode() == 200) {
-                                            try {
-                                                StreamConnection targetConnection = connection.performUpgrade();
-                                                if(uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
-                                                    handleConnectionWithExistingConnection(((UndertowXnioSsl)ssl).wrapExistingConnection(targetConnection, optionMap));
-                                                } else {
-                                                    handleConnectionWithExistingConnection(targetConnection);
+                                        try {
+                                            if (response.getResponse().getResponseCode() == 200) {
+                                                try {
+                                                    StreamConnection targetConnection = connection.performUpgrade();
+                                                    WebSocketLogger.REQUEST_LOGGER.debugf("Established websocket connection to %s", uri);
+                                                    if (uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
+                                                        handleConnectionWithExistingConnection(((UndertowXnioSsl) ssl).wrapExistingConnection(targetConnection, optionMap));
+                                                    } else {
+                                                        handleConnectionWithExistingConnection(targetConnection);
+                                                    }
+                                                } catch (IOException e) {
+                                                    ioFuture.setException(e);
+                                                } catch (Exception e) {
+                                                    ioFuture.setException(new IOException(e));
                                                 }
-                                            } catch (IOException e) {
-                                                ioFuture.setException(e);
-                                            } catch (Exception e) {
-                                                ioFuture.setException(new IOException(e));
+                                            } else {
+                                                ioFuture.setException(UndertowMessages.MESSAGES.proxyConnectionFailed(response.getResponse().getResponseCode()));
                                             }
-                                        } else {
-                                            ioFuture.setException(UndertowMessages.MESSAGES.proxyConnectionFailed(response.getResponse().getResponseCode()));
+                                        } catch (Exception e) {
+                                            ioFuture.setException(new IOException(e));
                                         }
                                     }
 

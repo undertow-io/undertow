@@ -20,6 +20,8 @@ package io.undertow.server;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.BufferAllocator;
+import org.xnio.ByteBufferSlicePool;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 
@@ -31,13 +33,21 @@ import java.nio.ByteBuffer;
 public class XnioByteBufferPool implements ByteBufferPool {
 
     private final Pool<ByteBuffer> pool;
+    private final ByteBufferPool arrayBackedPool;
     private final int bufferSize;
+    private final boolean direct;
 
     public XnioByteBufferPool(Pool<ByteBuffer> pool) {
         this.pool = pool;
         Pooled<ByteBuffer> buf = pool.allocate();
         bufferSize = buf.getResource().remaining();
+        direct = !buf.getResource().hasArray();
         buf.free();
+        if(direct) {
+            arrayBackedPool = new XnioByteBufferPool(new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, bufferSize, bufferSize, 0));
+        } else {
+            arrayBackedPool = this;
+        }
     }
 
     @Override
@@ -66,6 +76,11 @@ public class XnioByteBufferPool implements ByteBufferPool {
     }
 
     @Override
+    public ByteBufferPool getArrayBackedPool() {
+        return arrayBackedPool;
+    }
+
+    @Override
     public void close() {
 
     }
@@ -73,5 +88,10 @@ public class XnioByteBufferPool implements ByteBufferPool {
     @Override
     public int getBufferSize() {
         return bufferSize;
+    }
+
+    @Override
+    public boolean isDirect() {
+        return direct;
     }
 }

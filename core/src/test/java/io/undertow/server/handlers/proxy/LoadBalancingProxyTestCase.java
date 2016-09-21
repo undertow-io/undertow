@@ -19,7 +19,11 @@
 package io.undertow.server.handlers.proxy;
 
 import io.undertow.Undertow;
+import io.undertow.predicate.Predicates;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.encoding.ContentEncodingRepository;
+import io.undertow.server.handlers.encoding.EncodingHandler;
+import io.undertow.server.handlers.encoding.GzipEncodingProvider;
 import io.undertow.testutils.DefaultServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -54,11 +58,16 @@ public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCa
         server1.start();
         server2.start();
 
-        DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
+        ProxyHandler handler = new ProxyHandler(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(4)
                 .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
                 .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
-                , 10000, ResponseCodeHandler.HANDLE_404, false, false , 1));
+                , 10000, ResponseCodeHandler.HANDLE_404, false, false, 2);
+
+        DefaultServer.setRootHandler(new EncodingHandler(handler, new ContentEncodingRepository()
+                .addEncodingHandler("gzip",
+                        new GzipEncodingProvider(), 50,
+                        Predicates.truePredicate())));
     }
 
 }

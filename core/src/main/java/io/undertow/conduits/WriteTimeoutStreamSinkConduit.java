@@ -182,7 +182,9 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
         Integer timeout = 0;
         try {
             timeout = connection.getSourceChannel().getOption(Options.WRITE_TIMEOUT);
-        } catch (IOException ignore) {}
+        } catch (IOException ignore) {
+            // should never happen, ignoring
+        }
         Integer idleTimeout = openListener.getUndertowOptions().get(UndertowOptions.IDLE_TIMEOUT);
         if ((timeout == null || timeout <= 0) && idleTimeout != null) {
             timeout = idleTimeout;

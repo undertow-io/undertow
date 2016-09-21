@@ -18,18 +18,6 @@
 
 package io.undertow.server.protocol.http2;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import javax.net.ssl.SSLSession;
-
-import io.undertow.server.ConnectorStatisticsImpl;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.http2.AbstractHttp2StreamSourceChannel;
@@ -37,6 +25,7 @@ import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.protocols.http2.Http2StreamSourceChannel;
+import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -44,7 +33,17 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
 import org.xnio.channels.Channels;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import javax.net.ssl.SSLSession;
 
 /**
  * The recieve listener for a Http2 connection.
@@ -121,15 +120,13 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         final Http2StreamSourceChannel dataChannel = frame;
         final Http2ServerConnection connection = new Http2ServerConnection(channel, dataChannel, undertowOptions, bufferSize, rootHandler);
 
-        if(!dataChannel.getHeaders().contains(SCHEME) ||
-                !dataChannel.getHeaders().contains(METHOD) ||
-                !dataChannel.getHeaders().contains(AUTHORITY) ||
-                !dataChannel.getHeaders().contains(PATH)) {
+        // Check request headers.
+        if (!checkRequestHeaders(dataChannel.getHeaders())) {
             channel.sendRstStream(frame.getStreamId(), Http2Channel.ERROR_PROTOCOL_ERROR);
             try {
                 Channels.drain(frame, Long.MAX_VALUE);
             } catch (IOException e) {
-                //ignore, this is expected because of the RST
+                // ignore, this is expected because of the RST
             }
             return;
         }
@@ -218,4 +215,40 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         Connectors.executeRootHandler(rootHandler, exchange);
     }
 
+    /**
+     * Performs HTTP2 specification compliance check for headers and pseudo-headers of a current request.
+     *
+     * @param headers map of the request headers
+     * @return true if check was successful, false otherwise
+     */
+    private boolean checkRequestHeaders(HeaderMap headers) {
+        // :method pseudo-header must be present always exactly one time;
+        // HTTP2 request MUST NOT contain 'connection' header
+        if (headers.count(METHOD) != 1 || headers.contains(Headers.CONNECTION)) {
+            return false;
+        }
+
+        // if CONNECT type is used, then we expect :method and :authority to be present only;
+        // :scheme and :path must not be present
+        if (headers.get(METHOD).contains(Methods.CONNECT)) {
+            if (headers.contains(SCHEME) || headers.contains(PATH) || headers.count(AUTHORITY) != 1) {
+                return false;
+            }
+        // For other HTTP methods we expect that :scheme, :method, and :path pseudo-headers are
+        // present exactly one time.
+        } else if (headers.count(SCHEME) != 1 || headers.count(PATH) != 1) {
+            return false;
+        }
+
+        // HTTP2 request MAY contain TE header but if so, then only with 'trailers' value.
+        if (headers.contains(Headers.TE)) {
+            for (String value : headers.get(Headers.TE)) {
+                if (!value.equals("trailers")) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 }

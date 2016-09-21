@@ -126,6 +126,13 @@ public class MimeMappings {
         defaultMappings.put("wrl", "x-world/x-vrml");
         defaultMappings.put("mpv2", "video/mpeg2");
 
+        defaultMappings.put("eot", "application/vnd.ms-fontobject");
+        defaultMappings.put("woff", "application/font-woff");
+        defaultMappings.put("woff2", "application/font-woff2");
+        defaultMappings.put("ttf", "application/x-font-ttf");
+        defaultMappings.put("otf", "application/x-font-opentype");
+        defaultMappings.put("sfnt", "application/font-sfnt");
+
         /* Add XML related MIMEs */
 
         defaultMappings.put("xml", "application/xml");

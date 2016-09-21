@@ -123,6 +123,13 @@
             <optional>true</optional>
         </dependency>
 
+        <dependency>
+            <groupId>org.wildfly.openssl</groupId>
+            <artifactId>wildfly-openssl</artifactId>
+            <version>${version.org.wildfly.openssl}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -174,6 +181,8 @@
                     <systemPropertyVariables>
                         <test.ajp>${ajp}</test.ajp>
                         <test.proxy>${proxy}</test.proxy>
+                        <openssl>false</openssl>
+                        <test.openssl>${openssl}</test.openssl>
                         <test.dump>${dump}</test.dump>
                         <test.bufferSize>${bufferSize}</test.bufferSize>
                         <default.server.address>localhost</default.server.address>
@@ -182,6 +191,7 @@
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
+                        <org.wildfly.openssl.path>${org.wildfly.openssl.path}</org.wildfly.openssl.path>
                     </systemPropertyVariables>
                     <argLine>${jacoco.agent.argLine} ${surefire.system.args}</argLine>
                 </configuration>
@@ -190,6 +200,18 @@
     </build>
 
     <profiles>
+
+        <profile>
+            <id>mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <org.wildfly.openssl.path>/usr/local/opt/openssl/lib</org.wildfly.openssl.path>
+            </properties>
+        </profile>
         <profile>
             <id>proxy</id>
             <build>

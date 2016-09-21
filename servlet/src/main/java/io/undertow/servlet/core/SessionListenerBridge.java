@@ -18,19 +18,20 @@
 
 package io.undertow.servlet.core;
 
+import java.security.AccessController;
+import java.util.HashSet;
 import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpSessionBindingEvent;
 import javax.servlet.http.HttpSessionBindingListener;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionListener;
-import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
-
-import java.security.AccessController;
-import java.util.HashSet;
 
 /**
  * Class that bridges between Undertow native session listeners and servlet ones.
@@ -40,15 +41,22 @@ import java.util.HashSet;
 public class SessionListenerBridge implements SessionListener {
 
     public static final String IO_UNDERTOW = "io.undertow";
-    private final ThreadSetupAction threadSetup;
     private final ApplicationListeners applicationListeners;
     private final ServletContext servletContext;
+    private final ThreadSetupHandler.Action<Void, Session> destroyedAction;
 
-    public SessionListenerBridge(final ThreadSetupAction threadSetup, final ApplicationListeners applicationListeners, final ServletContext servletContext) {
-        this.threadSetup = threadSetup;
+    public SessionListenerBridge(final Deployment deployment, final ApplicationListeners applicationListeners, final ServletContext servletContext) {
         this.applicationListeners = applicationListeners;
         this.servletContext = servletContext;
+        this.destroyedAction = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Session>() {
+            @Override
+            public Void call(HttpServerExchange exchange, Session session) throws ServletException {
+                doDestroy(session);
+                return null;
+            }
+        });
     }
+
 
     @Override
     public void sessionCreated(final Session session, final HttpServerExchange exchange) {
@@ -58,42 +66,47 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void sessionDestroyed(final Session session, final HttpServerExchange exchange, final SessionDestroyedReason reason) {
-        ThreadSetupAction.Handle handle = null;
-        try {
-            final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);
-            if (reason == SessionDestroyedReason.TIMEOUT) {
-                handle = threadSetup.setup(exchange);
-            }
-            applicationListeners.sessionDestroyed(httpSession);
-            //we make a defensive copy here, as there is no guarantee that the underlying session map
-            //is a concurrent map, and as a result a concurrent modification exception may be thrown
-            HashSet<String> names = new HashSet<>(session.getAttributeNames());
-            for(String attribute : names) {
-                session.removeAttribute(attribute);
-            }
-        } finally {
-            if (handle != null) {
-                handle.tearDown();
-            }
-            ServletRequestContext current = SecurityActions.currentServletRequestContext();
-            Session underlying = null;
-            if(current != null && current.getSession() != null) {
-                if(System.getSecurityManager() == null) {
-                    underlying = current.getSession().getSession();
-                } else {
-                    underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(current.getSession()));
-                }
-            }
 
-            if (current != null && underlying == session) {
-                current.setSession(null);
+        if (reason == SessionDestroyedReason.TIMEOUT) {
+            try {
+                //we need to perform thread setup actions
+                destroyedAction.call(exchange, session);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
+        } else {
+            doDestroy(session);
+        }
+
+        ServletRequestContext current = SecurityActions.currentServletRequestContext();
+        Session underlying = null;
+        if (current != null && current.getSession() != null) {
+            if (System.getSecurityManager() == null) {
+                underlying = current.getSession().getSession();
+            } else {
+                underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(current.getSession()));
+            }
+        }
+
+        if (current != null && underlying == session) {
+            current.setSession(null);
+        }
+    }
+
+    private void doDestroy(Session session) {
+        final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);
+        applicationListeners.sessionDestroyed(httpSession);
+        //we make a defensive copy here, as there is no guarantee that the underlying session map
+        //is a concurrent map, and as a result a concurrent modification exception may be thrown
+        HashSet<String> names = new HashSet<>(session.getAttributeNames());
+        for (String attribute : names) {
+            session.removeAttribute(attribute);
         }
     }
 
     @Override
     public void attributeAdded(final Session session, final String name, final Object value) {
-        if(name.startsWith(IO_UNDERTOW)) {
+        if (name.startsWith(IO_UNDERTOW)) {
             return;
         }
         final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);
@@ -105,7 +118,7 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void attributeUpdated(final Session session, final String name, final Object value, final Object old) {
-        if(name.startsWith(IO_UNDERTOW)) {
+        if (name.startsWith(IO_UNDERTOW)) {
             return;
         }
         final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);
@@ -122,7 +135,7 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void attributeRemoved(final Session session, final String name, final Object old) {
-        if(name.startsWith(IO_UNDERTOW)) {
+        if (name.startsWith(IO_UNDERTOW)) {
             return;
         }
         final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, false);

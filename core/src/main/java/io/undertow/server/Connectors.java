@@ -26,6 +26,7 @@ import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
 
 import java.util.Date;
 import java.util.Map;
@@ -193,6 +194,10 @@ public class Connectors {
             header.append("; Expires=");
             header.append(DateUtils.toDateString(cookie.getExpires()));
         }
+        if (cookie.getComment() != null && !cookie.getComment().isEmpty()) {
+            header.append("; Comment=");
+            header.append(cookie.getComment());
+        }
         return header.toString();
     }
 
@@ -325,5 +330,9 @@ public class Connectors {
 
     public static void updateResponseBytesSent(HttpServerExchange exchange, long bytes) {
         exchange.updateBytesSent(bytes);
+    }
+
+    public static ConduitStreamSinkChannel getConduitSinkChannel(HttpServerExchange exchange) {
+        return exchange.getConnection().getSinkChannel();
     }
 }

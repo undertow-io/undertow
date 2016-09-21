@@ -23,9 +23,16 @@ public class DebuggingSlicePool implements ByteBufferPool{
     static volatile String currentLabel;
 
     private final ByteBufferPool delegate;
+    private final ByteBufferPool arrayBacked;
+
 
     public DebuggingSlicePool(ByteBufferPool delegate) {
         this.delegate = delegate;
+        if(delegate.isDirect()) {
+            this.arrayBacked = new DebuggingSlicePool(delegate.getArrayBackedPool());
+        } else {
+            this.arrayBacked = this;
+        }
     }
 
     public static void addContext(String context) {
@@ -39,6 +46,11 @@ public class DebuggingSlicePool implements ByteBufferPool{
     }
 
     @Override
+    public ByteBufferPool getArrayBackedPool() {
+        return arrayBacked;
+    }
+
+    @Override
     public void close() {
         delegate.close();
     }
@@ -46,6 +58,11 @@ public class DebuggingSlicePool implements ByteBufferPool{
     @Override
     public int getBufferSize() {
         return delegate.getBufferSize();
+    }
+
+    @Override
+    public boolean isDirect() {
+        return delegate.isDirect();
     }
 
     static class DebuggingBuffer implements PooledByteBuffer {
