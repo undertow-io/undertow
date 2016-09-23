@@ -111,6 +111,7 @@
         <!-- Non-default maven plugin versions and configuration -->
         <version.org.zanata.plugin>3.7.4</version.org.zanata.plugin>
         <version.org.wildfly.openssl>1.0.0.Alpha1</version.org.wildfly.openssl>
+        <version.jar.plugin>2.6</version.jar.plugin>
     </properties>
 
     <modules>
