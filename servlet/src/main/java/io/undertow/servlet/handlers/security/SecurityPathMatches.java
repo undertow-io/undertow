@@ -22,21 +22,39 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
+import io.undertow.util.Methods;
 
 /**
  * @author Stuart Douglas
  */
 public class SecurityPathMatches {
+
+    private static Set<String> KNOWN_METHODS;
+
+    static {
+        Set<String> methods = new HashSet<>();
+        methods.add(Methods.GET_STRING);
+        methods.add(Methods.POST_STRING);
+        methods.add(Methods.PUT_STRING);
+        methods.add(Methods.DELETE_STRING);
+        methods.add(Methods.OPTIONS_STRING);
+        methods.add(Methods.HEAD_STRING);
+        methods.add(Methods.TRACE_STRING);
+        KNOWN_METHODS = Collections.unmodifiableSet(methods);
+    }
+
 
     private final boolean denyUncoveredHttpMethods;
     private final PathSecurityInformation defaultPathSecurityInformation;
@@ -53,7 +71,6 @@ public class SecurityPathMatches {
     }
 
     /**
-     *
      * @return <code>true</code> If no security path information has been defined
      */
     public boolean isEmpty() {
@@ -128,12 +145,12 @@ public class SecurityPathMatches {
      * merge all constraints, as per 13.8.1 Combining Constraints
      */
     private SingleConstraintMatch mergeConstraints(final RuntimeMatch currentMatch) {
-        if(currentMatch.uncovered && denyUncoveredHttpMethods) {
+        if (currentMatch.uncovered && denyUncoveredHttpMethods) {
             return new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.DENY, Collections.<String>emptySet());
         }
         final Set<String> allowedRoles = new HashSet<>();
-        for(SingleConstraintMatch match : currentMatch.constraints) {
-            if(match.getRequiredRoles().isEmpty()) {
+        for (SingleConstraintMatch match : currentMatch.constraints) {
+            if (match.getRequiredRoles().isEmpty()) {
                 return new SingleConstraintMatch(match.getEmptyRoleSemantic(), Collections.<String>emptySet());
             } else {
                 allowedRoles.addAll(match.getRequiredRoles());
@@ -147,7 +164,7 @@ public class SecurityPathMatches {
         for (SecurityInformation role : roles) {
             transport(currentMatch, role.transportGuaranteeType);
             currentMatch.constraints.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
-            if(role.emptyRoleSemantic == SecurityInfo.EmptyRoleSemantic.DENY || !role.roles.isEmpty()) {
+            if (role.emptyRoleSemantic == SecurityInfo.EmptyRoleSemantic.DENY || !role.roles.isEmpty()) {
                 currentMatch.uncovered = false;
             }
         }
@@ -173,6 +190,39 @@ public class SecurityPathMatches {
             match.type = other;
         }
     }
+
+    public void logWarningsAboutUncoveredMethods() {
+        logWarningsAboutUncoveredMethods(exactPathRoleInformation, "", "");
+        logWarningsAboutUncoveredMethods(prefixPathRoleInformation, "", "/*");
+        logWarningsAboutUncoveredMethods(exactPathRoleInformation, "*.", "");
+    }
+
+    private void logWarningsAboutUncoveredMethods(Map<String, PathSecurityInformation> matches, String prefix, String suffix) {
+        //according to the spec we should be logging warnings about paths with uncovered HTTP methods
+        for (Map.Entry<String, PathSecurityInformation> entry : matches.entrySet()) {
+            if (entry.getValue().perMethodRequiredRoles.isEmpty() && entry.getValue().excludedMethodRoles.isEmpty()) {
+                continue;
+            }
+            Set<String> missing = new HashSet<>(KNOWN_METHODS);
+            for (String m : entry.getValue().perMethodRequiredRoles.keySet()) {
+                missing.remove(m);
+            }
+            Iterator<String> it = missing.iterator();
+            while (it.hasNext()) {
+                String val = it.next();
+                for (ExcludedMethodRoles excluded : entry.getValue().excludedMethodRoles) {
+                    if (!excluded.methods.contains(val)) {
+                        it.remove();
+                        break;
+                    }
+                }
+            }
+            if (!missing.isEmpty()) {
+                UndertowServletLogger.ROOT_LOGGER.unsecuredMethodsOnPath(prefix + entry.getKey() + suffix, missing);
+            }
+        }
+    }
+
 
     public static Builder builder(final DeploymentInfo deploymentInfo) {
         return new Builder(deploymentInfo);
