@@ -21,18 +21,17 @@ package io.undertow;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLPeerUnverifiedException;
 
-import io.undertow.predicate.PredicateBuilder;
-import io.undertow.protocols.http2.HpackException;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.HttpString;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
-
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLPeerUnverifiedException;
+import io.undertow.predicate.PredicateBuilder;
+import io.undertow.protocols.http2.HpackException;
+import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas
@@ -480,7 +479,7 @@ public interface UndertowMessages {
     IllegalArgumentException newlineNotSupportedInHttpString(String value);
 
     @Message(id = 150, value = "Pseudo header %s received after receiving normal headers. Pseudo headers must be the first headers in a HTTP/2 header block.")
-    HpackException pseudoHeaderInWrongOrder(HttpString header);
+    String pseudoHeaderInWrongOrder(HttpString header);
 
     @Message(id = 151, value = "Expected to receive a continuation frame")
     String expectedContinuationFrame();

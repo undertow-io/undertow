@@ -102,7 +102,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
             try {
                 decoder.decode(resource, moreDataThisFrame || continuationFramesComing);
             } catch (HpackException e) {
-                throw new ConnectionErrorException(Http2Channel.ERROR_COMPRESSION_ERROR, e);
+                throw new ConnectionErrorException(e.getCloseCode(), e);
             }
             if(oldLimit != -1) {
                 if(resource.remaining() == 0) {
@@ -144,7 +144,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
                 }
             }
             if(!processingPseudoHeaders) {
-                throw UndertowMessages.MESSAGES.pseudoHeaderInWrongOrder(name);
+                throw new HpackException(UndertowMessages.MESSAGES.pseudoHeaderInWrongOrder(name), Http2Channel.ERROR_PROTOCOL_ERROR);
             }
         } else {
             processingPseudoHeaders = false;
