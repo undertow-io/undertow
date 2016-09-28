@@ -29,11 +29,13 @@ import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_SETTINGS;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_WINDOW_UPDATE;
 import static io.undertow.protocols.http2.Http2Channel.HEADERS_FLAG_END_HEADERS;
 import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
@@ -207,7 +209,7 @@ class Http2FrameHeaderParser implements FrameHeaderData {
     public AbstractFramedStreamSourceChannel<?, ?, ?> getExistingChannel() {
         if (type == FRAME_TYPE_DATA ||
                 type == Http2Channel.FRAME_TYPE_CONTINUATION ||
-                type == Http2Channel.FRAME_TYPE_PRIORITY) {
+                type == Http2Channel.FRAME_TYPE_PRIORITY ) {
             if (anyAreSet(flags, Http2Channel.DATA_FLAG_END_STREAM)) {
                 return http2Channel.removeStreamSource(streamId);
             } else if (type == FRAME_TYPE_CONTINUATION) {
@@ -219,6 +221,21 @@ class Http2FrameHeaderParser implements FrameHeaderData {
             } else {
                 return http2Channel.getIncomingStream(streamId);
             }
+        } else if(type == FRAME_TYPE_HEADERS) {
+            //headers can actually be a trailer
+
+            Http2StreamSourceChannel channel = http2Channel.getIncomingStream(streamId);
+            if(channel != null) {
+                if(anyAreClear(flags, Http2Channel.HEADERS_FLAG_END_STREAM)) {
+                    //this is a protocol error
+                    UndertowLogger.REQUEST_IO_LOGGER.debug("Received HTTP/2 trailers header without end stream set");
+                    http2Channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
+                }
+                if (channel.isHeadersEndStream() && anyAreSet(flags, Http2Channel.HEADERS_FLAG_END_HEADERS)) {
+                    http2Channel.removeStreamSource(streamId);
+                }
+            }
+            return channel;
         }
         return null;
     }
