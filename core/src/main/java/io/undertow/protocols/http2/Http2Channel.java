@@ -590,8 +590,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     return false;
                 }
                 initialSendWindowSize = (int) setting.getValue();
-                int difference = initialSendWindowSize - old;
-                sendWindowSize += difference;
             } else if (setting.getId() == Http2Setting.SETTINGS_MAX_FRAME_SIZE) {
                 if(setting.getValue() > MAX_FRAME_SIZE || setting.getValue() < DEFAULT_MAX_FRAME_SIZE) {
                     UndertowLogger.REQUEST_IO_LOGGER.debug("Invalid value received for SETTINGS_MAX_FRAME_SIZE " + setting.getValue());

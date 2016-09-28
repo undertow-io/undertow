@@ -124,7 +124,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
     }
 
     synchronized void updateFlowControlWindow(final int delta) throws IOException {
-        boolean exhausted = flowControlWindow == 0;
+        boolean exhausted = flowControlWindow <= 0;
         flowControlWindow += delta;
         if (exhausted) {
             getChannel().notifyFlowControlAllowed();
