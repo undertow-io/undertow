@@ -994,7 +994,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
     }
 
-    static final class StreamHolder {
+    private static final class StreamHolder {
         boolean sourceClosed = false;
         boolean sinkClosed = false;
         Http2StreamSourceChannel sourceChannel;
