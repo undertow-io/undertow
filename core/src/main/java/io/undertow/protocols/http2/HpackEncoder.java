@@ -163,6 +163,10 @@ public class HpackEncoder {
                     skip = true;
                 }
             }
+            if(values.getHeaderName().equals(Headers.TRANSFER_ENCODING)) {
+                //ignore transfer-encoding, it is forbidden by the spec
+                skip = true;
+            }
             if (!skip) {
                 for (int i = 0; i < values.size(); ++i) {
 
