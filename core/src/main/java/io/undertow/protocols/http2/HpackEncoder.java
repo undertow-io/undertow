@@ -29,8 +29,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static io.undertow.protocols.http2.Hpack.HeaderField;
 import static io.undertow.protocols.http2.Hpack.STATIC_TABLE;
@@ -43,6 +45,17 @@ import static io.undertow.protocols.http2.Hpack.encodeInteger;
  * @author Stuart Douglas
  */
 public class HpackEncoder {
+
+    private static final Set<HttpString> SKIP;
+
+    static {
+        Set<HttpString> set = new HashSet<>();
+        set.add(Headers.CONNECTION);
+        set.add(Headers.TRANSFER_ENCODING);
+        set.add(Headers.KEEP_ALIVE);
+        set.add(Headers.UPGRADE);
+        SKIP = Collections.unmodifiableSet(set);
+    }
 
     public static final HpackHeaderFunction DEFAULT_HEADER_FUNCTION = new HpackHeaderFunction() {
         @Override
@@ -163,8 +176,8 @@ public class HpackEncoder {
                     skip = true;
                 }
             }
-            if(values.getHeaderName().equals(Headers.TRANSFER_ENCODING)) {
-                //ignore transfer-encoding, it is forbidden by the spec
+            if(SKIP.contains(values.getHeaderName())) {
+                //ignore connection specific headers
                 skip = true;
             }
             if (!skip) {
