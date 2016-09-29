@@ -36,6 +36,10 @@ public class HpackException extends Exception {
         this.closeCode = closeCode;
     }
 
+    public HpackException(int closeCode) {
+        this.closeCode = closeCode;
+    }
+
     public int getCloseCode() {
         return closeCode;
     }

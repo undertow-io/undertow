@@ -29,6 +29,7 @@ import io.undertow.UndertowLogger;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
 /**
@@ -132,6 +133,9 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
         headerMap.add(name, value);
         if(name.length() == 0) {
             throw UndertowMessages.MESSAGES.invalidHeader();
+        }
+        if(name.equals(Headers.TRANSFER_ENCODING)) {
+            throw new HpackException(Http2Channel.ERROR_PROTOCOL_ERROR);
         }
         if(name.byteAt(0) == ':') {
             if(client) {
