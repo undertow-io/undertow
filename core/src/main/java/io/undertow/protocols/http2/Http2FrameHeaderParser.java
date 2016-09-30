@@ -18,6 +18,7 @@
 
 package io.undertow.protocols.http2;
 
+import static io.undertow.protocols.http2.Http2Channel.DATA_FLAG_END_STREAM;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_CONTINUATION;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_DATA;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_GOAWAY;
@@ -207,20 +208,25 @@ class Http2FrameHeaderParser implements FrameHeaderData {
 
     @Override
     public AbstractFramedStreamSourceChannel<?, ?, ?> getExistingChannel() {
+        Http2StreamSourceChannel http2StreamSourceChannel;
         if (type == FRAME_TYPE_DATA ||
                 type == Http2Channel.FRAME_TYPE_CONTINUATION ||
                 type == Http2Channel.FRAME_TYPE_PRIORITY ) {
             if (anyAreSet(flags, Http2Channel.DATA_FLAG_END_STREAM)) {
-                return http2Channel.removeStreamSource(streamId);
+                http2StreamSourceChannel = http2Channel.removeStreamSource(streamId);
             } else if (type == FRAME_TYPE_CONTINUATION) {
-                Http2StreamSourceChannel channel = http2Channel.getIncomingStream(streamId);
-                if(channel != null && channel.isHeadersEndStream() && anyAreSet(flags, Http2Channel.CONTINUATION_FLAG_END_HEADERS)) {
+                http2StreamSourceChannel = http2Channel.getIncomingStream(streamId);
+                if(http2StreamSourceChannel != null && http2StreamSourceChannel.isHeadersEndStream() && anyAreSet(flags, Http2Channel.CONTINUATION_FLAG_END_HEADERS)) {
                     http2Channel.removeStreamSource(streamId);
                 }
-                return channel;
             } else {
-                return http2Channel.getIncomingStream(streamId);
+                http2StreamSourceChannel = http2Channel.getIncomingStream(streamId);
             }
+            if(type == FRAME_TYPE_DATA && http2StreamSourceChannel != null) {
+                Http2DataFrameParser dataFrameParser = (Http2DataFrameParser) parser;
+                http2StreamSourceChannel.updateContentSize(getFrameLength() - dataFrameParser.getPadding(), anyAreSet(flags, DATA_FLAG_END_STREAM));
+            }
+            return http2StreamSourceChannel;
         } else if(type == FRAME_TYPE_HEADERS) {
             //headers can actually be a trailer
 

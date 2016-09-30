@@ -24,12 +24,14 @@ import java.nio.channels.FileChannel;
 import org.xnio.Bits;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import io.undertow.UndertowLogger;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
 
 /**
  * @author Stuart Douglas
@@ -58,11 +60,19 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
      */
     private boolean ignoreForceClose = false;
 
+    private long contentLengthRemaining;
+
     Http2StreamSourceChannel(Http2Channel framedChannel, PooledByteBuffer data, long frameDataRemaining, HeaderMap headers, int streamId) {
         super(framedChannel, data, frameDataRemaining);
         this.headers = headers;
         this.streamId = streamId;
         this.flowControlWindow = framedChannel.getInitialReceiveWindowSize();
+        String contentLengthString = headers.getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString != null) {
+            contentLengthRemaining = Long.parseLong(contentLengthString);
+        } else {
+            contentLengthRemaining = -1;
+        }
     }
 
     @Override
@@ -242,4 +252,23 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
                 "headers=" + headers +
                 '}';
     }
+
+    /**
+     * Checks that the actual content size matches the expected. We check this proactivly, rather than as the data is read
+     * @param frameLength The amount of data in the frame
+     * @param last If this is the last frame
+     */
+    void updateContentSize(long frameLength, boolean last) {
+        if(contentLengthRemaining != -1) {
+            contentLengthRemaining -= frameLength;
+            if(contentLengthRemaining < 0) {
+                UndertowLogger.REQUEST_IO_LOGGER.debugf("Closing stream %s on %s as data length exceeds content size", streamId, getFramedChannel());
+                getFramedChannel().sendRstStream(streamId, Http2Channel.ERROR_PROTOCOL_ERROR);
+            } else if(last && contentLengthRemaining != 0) {
+                UndertowLogger.REQUEST_IO_LOGGER.debugf("Closing stream %s on %s as data length was less than content size", streamId, getFramedChannel());
+                getFramedChannel().sendRstStream(streamId, Http2Channel.ERROR_PROTOCOL_ERROR);
+            }
+        }
+    }
+
 }
