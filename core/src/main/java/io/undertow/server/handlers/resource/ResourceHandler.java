@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,6 +50,7 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.MimeMappings;
 import io.undertow.util.RedirectBuilder;
@@ -58,6 +60,23 @@ import io.undertow.util.StatusCodes;
  * @author Stuart Douglas
  */
 public class ResourceHandler implements HttpHandler {
+
+    /**
+     * Set of methods prescribed by HTTP 1.1. If request method is not one of those, handler will
+     * return NOT_IMPLEMENTED.
+     */
+    private static final Set<HttpString> KNOWN_METHODS = new HashSet<>();
+
+    static {
+        KNOWN_METHODS.add(Methods.OPTIONS);
+        KNOWN_METHODS.add(Methods.GET);
+        KNOWN_METHODS.add(Methods.HEAD);
+        KNOWN_METHODS.add(Methods.POST);
+        KNOWN_METHODS.add(Methods.PUT);
+        KNOWN_METHODS.add(Methods.DELETE);
+        KNOWN_METHODS.add(Methods.TRACE);
+        KNOWN_METHODS.add(Methods.CONNECT);
+    }
 
     private final List<String> welcomeFiles = new CopyOnWriteArrayList<>(new String[]{"index.html", "index.htm", "default.html", "default.htm"});
     /**
@@ -122,7 +141,13 @@ public class ResourceHandler implements HttpHandler {
         } else if (exchange.getRequestMethod().equals(Methods.HEAD)) {
             serveResource(exchange, false);
         } else {
-            exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
+            if (KNOWN_METHODS.contains(exchange.getRequestMethod())) {
+                exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
+                exchange.getResponseHeaders().add(Headers.ALLOW,
+                        String.join(", ", Methods.GET_STRING, Methods.HEAD_STRING, Methods.POST_STRING));
+            } else {
+                exchange.setStatusCode(StatusCodes.NOT_IMPLEMENTED);
+            }
             exchange.endExchange();
         }
     }
