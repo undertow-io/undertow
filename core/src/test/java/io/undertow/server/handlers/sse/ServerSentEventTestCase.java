@@ -95,6 +95,39 @@ public class ServerSentEventTestCase {
         }
     }
 
+    @Test
+    public void testRetry() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            DefaultServer.setRootHandler(new ServerSentEventHandler(new ServerSentEventConnectionCallback() {
+                @Override
+                public void connected(ServerSentEventConnection connection, String lastEventId) {
+                    connection.sendRetry(1000, new ServerSentEventConnection.EventCallback() {
+                        @Override
+                        public void done(ServerSentEventConnection connection, String data, String event, String id) {
+                            connection.shutdown();
+                        }
+
+                        @Override
+                        public void failed(ServerSentEventConnection connection, String data, String event, String id, IOException e) {
+                            e.printStackTrace();
+                            IoUtils.safeClose(connection);
+                        }
+                    });
+                }
+            }));
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+
+            Assert.assertEquals("retry:1000\n\n", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
 
     @Test
