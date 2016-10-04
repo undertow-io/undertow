@@ -40,6 +40,7 @@ public final class Methods {
     public static final String DELETE_STRING = "DELETE";
     public static final String TRACE_STRING = "TRACE";
     public static final String CONNECT_STRING = "CONNECT";
+    public static final String PATCH_STRING = "PATCH";
     public static final String PROPFIND_STRING = "PROPFIND";
     public static final String PROPPATCH_STRING = "PROPPATCH";
     public static final String MKCOL_STRING = "MKCOL";
@@ -70,6 +71,7 @@ public final class Methods {
     public static final HttpString DELETE = new HttpString(DELETE_STRING);
     public static final HttpString TRACE = new HttpString(TRACE_STRING);
     public static final HttpString CONNECT = new HttpString(CONNECT_STRING);
+    public static final HttpString PATCH = new HttpString(PATCH_STRING);
     public static final HttpString PROPFIND = new HttpString(PROPFIND_STRING);
     public static final HttpString PROPPATCH = new HttpString(PROPPATCH_STRING);
     public static final HttpString MKCOL = new HttpString(MKCOL_STRING);
@@ -103,6 +105,7 @@ public final class Methods {
         putString(methods, DELETE);
         putString(methods, TRACE);
         putString(methods, CONNECT);
+        putString(methods, PATCH);
         putString(methods, PROPFIND);
         putString(methods, PROPPATCH);
         putString(methods, MKCOL);
