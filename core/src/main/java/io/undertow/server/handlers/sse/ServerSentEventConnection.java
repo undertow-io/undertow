@@ -205,7 +205,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
     public synchronized void send(String data, String event, String id, EventCallback callback) {
         if (open == 0 || shutdown) {
             if (callback != null) {
-                callback.failed(this, event, data, id, new ClosedChannelException());
+                callback.failed(this, data, event, id, new ClosedChannelException());
             }
             return;
         }
@@ -454,8 +454,25 @@ public class ServerSentEventConnection implements Channel, Attachable {
 
     public interface EventCallback {
 
+        /**
+         * Notification that is called when a message is sucessfully sent
+         *
+         * @param connection The connection
+         * @param data The message data
+         * @param event The message event
+         * @param id The message id
+         */
         void done(ServerSentEventConnection connection, String data, String event, String id);
 
+        /**
+         * Notification that is called when a message send fails.
+         *
+         * @param connection The connection
+         * @param data The message data
+         * @param event The message event
+         * @param id The message id
+         * @param e The exception
+         */
         void failed(ServerSentEventConnection connection, String data, String event, String id, IOException e);
 
     }
