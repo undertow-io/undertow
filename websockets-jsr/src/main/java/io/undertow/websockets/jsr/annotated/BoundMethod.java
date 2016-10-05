@@ -49,7 +49,7 @@ final class BoundMethod {
         this.decoderRequired = decoderRequired;
         this.maxMessageSize = maxMessageSize;
         final Set<Integer> allParams = new HashSet<>();
-        for (int i = 0; i < method.getParameterTypes().length; ++i) {
+        for (int i = 0; i < method.getParameterCount(); ++i) {
             allParams.add(i);
             paramTypes.add(method.getParameterTypes()[i]);
         }
@@ -79,7 +79,7 @@ final class BoundMethod {
     }
 
     public Object invoke(final Object instance, final Map<Class<?>, Object> values) throws Exception {
-        final Object[] params = new Object[method.getParameterTypes().length];
+        final Object[] params = new Object[method.getParameterCount()];
         for (BoundParameter param : parameters) {
             param.populate(params, values);
         }
@@ -119,11 +119,16 @@ final class BoundMethod {
         if(!method.getReturnType().isAssignableFrom(this.method.getReturnType())) {
             return false;
         }
-        if(method.getParameterTypes().length != this.method.getParameterTypes().length) {
+        if(method.getParameterCount() != this.method.getParameterCount()) {
             return false;
         }
-        for(int i = 0; i < method.getParameterTypes().length; ++i) {
-            if(method.getParameterTypes()[i] != this.method.getParameterTypes()[i]) {
+        if(method.getParameterCount() == 0) {
+            return true;
+        }
+        Class<?>[] otherParameterTypes = this.method.getParameterTypes();
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        for(int i = 0; i < parameterTypes.length; ++i) {
+            if(parameterTypes[i] != otherParameterTypes[i]) {
                 return false;
             }
         }

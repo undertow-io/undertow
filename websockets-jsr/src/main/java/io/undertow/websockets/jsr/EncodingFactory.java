@@ -295,10 +295,10 @@ public class EncodingFactory {
     private static Class<?> findEncodeMethod(final Class<? extends Encoder> encoder, final Class<?> returnType, Class<?>... otherParameters) throws DeploymentException {
         for (Method method : encoder.getMethods()) {
             if (method.getName().equals("encode") && !method.isBridge() &&
-                    method.getParameterTypes().length == 1 + otherParameters.length &&
+                    method.getParameterCount() == 1 + otherParameters.length &&
                     method.getReturnType() == returnType) {
                 boolean ok = true;
-                for (int i = 1; i < method.getParameterTypes().length; ++i) {
+                for (int i = 1; i < method.getParameterCount(); ++i) {
                     if (method.getParameterTypes()[i] != otherParameters[i - 1]) {
                         ok = false;
                         break;
