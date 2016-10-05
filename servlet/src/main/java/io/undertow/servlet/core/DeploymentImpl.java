@@ -221,8 +221,6 @@ public class DeploymentImpl implements Deployment {
     }
 
     void destroy(){
-        getApplicationListeners().contextDestroyed();
-        getApplicationListeners().stop();
         if (servletContext!=null){
             servletContext.destroy();
         }
