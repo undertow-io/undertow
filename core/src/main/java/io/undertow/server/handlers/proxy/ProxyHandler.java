@@ -371,10 +371,6 @@ public final class ProxyHandler implements HttpHandler {
         public void run() {
             final ClientRequest request = new ClientRequest();
 
-            StringBuilder requestURI = new StringBuilder();
-            if(!clientConnection.getTargetPath().isEmpty() && !clientConnection.getTargetPath().equals("/")) {
-                requestURI.append(clientConnection.getTargetPath());
-            }
             String targetURI = exchange.getRequestURI();
             if(exchange.isHostIncludedInRequestURI()) {
                 int uriPart = targetURI.indexOf("//");
@@ -386,6 +382,12 @@ public final class ProxyHandler implements HttpHandler {
 
             if(!exchange.getResolvedPath().isEmpty() && targetURI.startsWith(exchange.getResolvedPath())) {
                 targetURI = targetURI.substring(exchange.getResolvedPath().length());
+            }
+
+            StringBuilder requestURI = new StringBuilder();
+            if(!clientConnection.getTargetPath().isEmpty()
+                    && (!clientConnection.getTargetPath().equals("/") || targetURI.isEmpty())) {
+                requestURI.append(clientConnection.getTargetPath());
             }
             requestURI.append(targetURI);
 
