@@ -265,8 +265,8 @@ public class AnnotatedEndpointFactory {
 
 
     private static String[] pathParams(final Method method) {
-        String[] params = new String[method.getParameterTypes().length];
-        for (int i = 0; i < method.getParameterTypes().length; ++i) {
+        String[] params = new String[method.getParameterCount()];
+        for (int i = 0; i < method.getParameterCount(); ++i) {
             PathParam param = getPathParam(method, i);
             if (param != null) {
                 params[i] = param.value();
@@ -317,7 +317,7 @@ public class AnnotatedEndpointFactory {
         BoundSingleParameter(final Method method, final Class<?> type, final boolean optional) {
             this.type = type;
             int pos = -1;
-            for (int i = 0; i < method.getParameterTypes().length; ++i) {
+            for (int i = 0; i < method.getParameterCount(); ++i) {
                 boolean pathParam = false;
                 for (Annotation annotation : method.getParameterAnnotations()[i]) {
                     if (annotation.annotationType().equals(PathParam.class)) {
