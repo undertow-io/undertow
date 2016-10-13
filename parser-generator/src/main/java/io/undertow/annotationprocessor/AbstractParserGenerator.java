@@ -583,7 +583,7 @@ public abstract class AbstractParserGenerator {
             c.branchEnd(tokenEnd.get());
         }
 
-        if (!currentState.soFar.equals("")) {
+        if (!currentState.soFar.isEmpty()) {
             c.getstatic(file.getName(), currentState.httpStringFieldName, HTTP_STRING_DESCRIPTOR);
             stateMachine.handleStateMachineMatchedToken(c);
             //TODO: exit if it returns null
