@@ -148,15 +148,16 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final DeploymentImpl deployment = new DeploymentImpl(this, deploymentInfo, servletContainer);
         this.deployment = deployment;
 
+        final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
+        deployment.setServletContext(servletContext);
+        handleExtensions(deploymentInfo, servletContext);
+
         final List<ThreadSetupHandler> setup = new ArrayList<>();
         setup.add(ServletRequestContextThreadSetupAction.INSTANCE);
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
         setup.addAll(deploymentInfo.getThreadSetupActions());
         deployment.setThreadSetupActions(setup);
 
-        final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
-        deployment.setServletContext(servletContext);
-        handleExtensions(deploymentInfo, servletContext);
         deployment.getServletPaths().setWelcomePages(deploymentInfo.getWelcomePages());
 
         deployment.setDefaultCharset(Charset.forName(deploymentInfo.getDefaultEncoding()));

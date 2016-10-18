@@ -122,11 +122,11 @@ public class ServletContextImpl implements ServletContext {
 
     //I don't think these really belong here, but there is not really anywhere else for them
     //maybe we should move them into a separate class
-    private final ThreadSetupHandler.Action<Void, WriteListener> onWritePossibleTask;
-    private final ThreadSetupHandler.Action<Void, Runnable> runnableTask;
-    private final ThreadSetupHandler.Action<Void, ReadListener> onDataAvailableTask;
-    private final ThreadSetupHandler.Action<Void, ReadListener> onAllDataReadTask;
-    private final ThreadSetupHandler.Action<Void, ThreadSetupHandler.Action<Void, Object>> invokeActionTask;
+    private volatile ThreadSetupHandler.Action<Void, WriteListener> onWritePossibleTask;
+    private volatile ThreadSetupHandler.Action<Void, Runnable> runnableTask;
+    private volatile ThreadSetupHandler.Action<Void, ReadListener> onDataAvailableTask;
+    private volatile ThreadSetupHandler.Action<Void, ReadListener> onAllDataReadTask;
+    private volatile ThreadSetupHandler.Action<Void, ThreadSetupHandler.Action<Void, Object>> invokeActionTask;
 
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
@@ -141,6 +141,29 @@ public class ServletContextImpl implements ServletContext {
         }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
         this.contentTypeCache = new LRUCache<>(deployment.getDeploymentInfo().getContentTypeCacheSize(), -1, true);
+
+    }
+
+    public void initDone() {
+        initialized = true;
+        Set<SessionTrackingMode> trackingMethods = sessionTrackingModes;
+        SessionConfig sessionConfig = sessionCookieConfig;
+        if (trackingMethods != null && !trackingMethods.isEmpty()) {
+            if (sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
+                sessionConfig = new SslSessionConfig(deployment.getSessionManager());
+            } else {
+                if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE) && sessionTrackingModes.contains(SessionTrackingMode.URL)) {
+                    sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH)));
+                } else if (sessionTrackingModes.contains(SessionTrackingMode.URL)) {
+                    sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH));
+                }
+            }
+        }
+        SessionConfigWrapper wrapper = deploymentInfo.getSessionConfigWrapper();
+        if (wrapper != null) {
+            sessionConfig = wrapper.wrap(sessionConfig, deployment);
+        }
+        this.sessionConfig = new ServletContextSessionConfig(sessionConfig);
         this.onWritePossibleTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, WriteListener>() {
             @Override
             public Void call(HttpServerExchange exchange, WriteListener context) throws Exception {
@@ -176,28 +199,6 @@ public class ServletContextImpl implements ServletContext {
                 return null;
             }
         });
-    }
-
-    public void initDone() {
-        initialized = true;
-        Set<SessionTrackingMode> trackingMethods = sessionTrackingModes;
-        SessionConfig sessionConfig = sessionCookieConfig;
-        if (trackingMethods != null && !trackingMethods.isEmpty()) {
-            if (sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
-                sessionConfig = new SslSessionConfig(deployment.getSessionManager());
-            } else {
-                if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE) && sessionTrackingModes.contains(SessionTrackingMode.URL)) {
-                    sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH)));
-                } else if (sessionTrackingModes.contains(SessionTrackingMode.URL)) {
-                    sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH));
-                }
-            }
-        }
-        SessionConfigWrapper wrapper = deploymentInfo.getSessionConfigWrapper();
-        if (wrapper != null) {
-            sessionConfig = wrapper.wrap(sessionConfig, deployment);
-        }
-        this.sessionConfig = new ServletContextSessionConfig(sessionConfig);
     }
 
     @Override
