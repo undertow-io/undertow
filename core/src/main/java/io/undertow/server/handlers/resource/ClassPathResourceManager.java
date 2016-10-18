@@ -43,7 +43,7 @@ public class ClassPathResourceManager implements ResourceManager {
 
     public ClassPathResourceManager(final ClassLoader classLoader, final String prefix) {
         this.classLoader = classLoader;
-        if (prefix.equals("")) {
+        if (prefix.isEmpty()) {
             this.prefix = "";
         } else if (prefix.endsWith("/")) {
             this.prefix = prefix;

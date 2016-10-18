@@ -373,7 +373,7 @@ public class DefaultServlet extends HttpServlet {
         } else {
             result = CanonicalPathUtils.canonicalize(result);
         }
-        if ((result == null) || (result.equals(""))) {
+        if ((result == null) || (result.isEmpty())) {
             result = "/";
         }
         return result;
