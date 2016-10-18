@@ -40,6 +40,8 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import io.undertow.protocols.alpn.ALPNProvider;
+import io.undertow.protocols.alpn.JettyAlpnProvider;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.runner.Description;
@@ -767,7 +769,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static boolean isAlpnEnabled() {
         if (alpnEnabled == null) {
             SSLEngine engine = getServerSslContext().createSSLEngine();
-            alpnEnabled = ALPNManager.INSTANCE.getProvider(engine) != null;
+            ALPNProvider provider = ALPNManager.INSTANCE.getProvider(engine);
+            if(provider instanceof JettyAlpnProvider) {
+                alpnEnabled = System.getProperty("alpn-boot-string") != null;
+            } else {
+                alpnEnabled = provider != null;
+            }
         }
         return alpnEnabled;
     }

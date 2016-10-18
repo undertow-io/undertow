@@ -278,6 +278,7 @@
                                 <test.level>${test.level}</test.level>
                                 <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                 <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
+                                <alpn-boot-string>true</alpn-boot-string>
                             </systemPropertyVariables>
                             <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
                         </configuration>
