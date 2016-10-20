@@ -582,12 +582,11 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private String extractCharset(HeaderMap headers) {
         String contentType = headers.getFirst(Headers.CONTENT_TYPE);
-        if (contentType == null) {
-            return null;
-        }
-        String value = Headers.extractQuotedValueFromHeader(contentType, "charset");
-        if(value != null) {
-            return value;
+        if (contentType != null) {
+            String value = Headers.extractQuotedValueFromHeader(contentType, "charset");
+            if (value != null) {
+                return value;
+            }
         }
         return ISO_8859_1;
     }
