@@ -181,6 +181,9 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 }
             }
         });
+        //we resume reads, so if the target goes away we get notified
+        connection.getSourceChannel().setReadListener(clientReadListener);
+        connection.getSourceChannel().resumeReads();
     }
 
     @Override
@@ -466,7 +469,6 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         currentRequest = null;
 
         HttpClientExchange next = pendingQueue.poll();
-
         if (next == null) {
             //we resume reads, so if the target goes away we get notified
             connection.getSourceChannel().setReadListener(clientReadListener);
