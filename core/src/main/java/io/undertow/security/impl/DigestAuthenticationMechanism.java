@@ -47,7 +47,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +73,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     private static final Set<DigestAuthorizationToken> MANDATORY_REQUEST_TOKENS;
 
     static {
-        Set<DigestAuthorizationToken> mandatoryTokens = new HashSet<>();
+        Set<DigestAuthorizationToken> mandatoryTokens = EnumSet.noneOf(DigestAuthorizationToken.class);
         mandatoryTokens.add(DigestAuthorizationToken.USERNAME);
         mandatoryTokens.add(DigestAuthorizationToken.REALM);
         mandatoryTokens.add(DigestAuthorizationToken.NONCE);
@@ -183,7 +183,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
         Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
         // Step 1 - Verify the set of tokens received to ensure valid values.
-        Set<DigestAuthorizationToken> mandatoryTokens = new HashSet<>(MANDATORY_REQUEST_TOKENS);
+        Set<DigestAuthorizationToken> mandatoryTokens = EnumSet.copyOf(MANDATORY_REQUEST_TOKENS);
         if (!supportedAlgorithms.contains(DigestAlgorithm.MD5)) {
             // If we don't support MD5 then the client must choose an algorithm as we can not fall back to MD5.
             mandatoryTokens.add(DigestAuthorizationToken.ALGORITHM);
