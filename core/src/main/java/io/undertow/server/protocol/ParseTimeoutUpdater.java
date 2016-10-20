@@ -23,6 +23,7 @@ import io.undertow.server.ServerConnection;
 import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
 
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -82,7 +83,11 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
             }
         }
         if(handle == null) {
-            handle = connection.getIoThread().executeAfter(this, timeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+            try {
+                handle = connection.getIoThread().executeAfter(this, timeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+            } catch (RejectedExecutionException e) {
+                UndertowLogger.REQUEST_LOGGER.debug("Failed to schedule parse timeout, server is probably shutting down", e);
+            }
         }
     }
 
