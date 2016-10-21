@@ -221,7 +221,6 @@ public class WebSocketClient {
             }
             final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(version, newUri, clientNegotiation, clientExtensions);
             final Map<String, String> originalHeaders = handshake.createHeaders();
-            originalHeaders.put(Headers.ORIGIN_STRING, scheme + "://" + uri.getHost());
             originalHeaders.put(Headers.HOST_STRING, uri.getHost() + ":" + newUri.getPort());
             final Map<String, List<String>> headers = new HashMap<>();
             for(Map.Entry<String, String> entry : originalHeaders.entrySet()) {
