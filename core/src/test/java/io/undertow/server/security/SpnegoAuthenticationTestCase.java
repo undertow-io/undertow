@@ -18,13 +18,6 @@
 
 package io.undertow.server.security;
 
-import static io.undertow.server.security.KerberosKDCUtil.login;
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.NEGOTIATE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
 import io.undertow.security.api.SecurityNotification.EventType;
@@ -35,14 +28,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.StatusCodes;
-
-import java.security.GeneralSecurityException;
-import java.security.PrivilegedExceptionAction;
-import java.util.Collections;
-import java.util.List;
-
-import javax.security.auth.Subject;
-
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -54,6 +40,22 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
+import javax.security.auth.Subject;
+
+import static io.undertow.server.security.KerberosKDCUtil.login;
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.NEGOTIATE;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * A test case to test the SPNEGO authentication mechanism.
@@ -123,8 +125,11 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
                         if (headers.length > 0) {
                             String header = getAuthHeader(NEGOTIATE, headers);
 
-                            byte[] headerBytes = header.getBytes("UTF-8");
-                            token = FlexBase64.decode(headerBytes, NEGOTIATE.toString().length() + 1, headerBytes.length).array();
+                            byte[] headerBytes = header.getBytes(StandardCharsets.US_ASCII);
+                            // FlexBase64.decode() returns byte buffer, which can contain backend array of greater size.
+                            // when on such ByteBuffer is called array(), it returns the underlying byte array including the 0 bytes
+                            // at the end, which makes the token invalid. => using Base64 mime decoder, which returnes directly properly sized byte[].
+                            token = Base64.getMimeDecoder().decode(ArrayUtils.subarray(headerBytes, NEGOTIATE.toString().length() + 1, headerBytes.length));
                         }
 
                         if (result.getStatusLine().getStatusCode() == StatusCodes.OK) {
