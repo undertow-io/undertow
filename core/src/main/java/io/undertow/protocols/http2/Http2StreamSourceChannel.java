@@ -81,6 +81,14 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
         Http2PushBackParser parser = data.getParser();
         if(parser instanceof Http2DataFrameParser) {
             remainingPadding = ((Http2DataFrameParser) parser).getPadding();
+            if(remainingPadding > 0) {
+                try {
+                    updateFlowControlWindow(remainingPadding + 1);
+                } catch (IOException e) {
+                    IoUtils.safeClose(getFramedChannel());
+                    throw new RuntimeException(e);
+                }
+            }
         }
         handleFinalFrame(data);
     }
@@ -92,12 +100,6 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
             long paddingThisBuffer = data.getBuffer().remaining() - actualDataRemaining;
             data.getBuffer().limit((int) (data.getBuffer().position() + actualDataRemaining));
             remainingPadding -= paddingThisBuffer;
-            try {
-                updateFlowControlWindow((int) paddingThisBuffer);
-            } catch (IOException e) {
-                IoUtils.safeClose(getFramedChannel());
-                throw new RuntimeException(e);
-            }
             return frameDataRemaining - paddingThisBuffer;
         }
         return frameDataRemaining;
