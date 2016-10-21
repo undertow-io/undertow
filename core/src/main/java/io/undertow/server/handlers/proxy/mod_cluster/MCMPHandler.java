@@ -136,7 +136,7 @@ class MCMPHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         final HttpString method = exchange.getRequestMethod();
-        if(!HANDLED_METHODS.contains(method)) {
+        if(!handlesMethod(method)) {
             next.handleRequest(exchange);
             return;
         }
@@ -165,6 +165,10 @@ class MCMPHandler implements HttpHandler {
             final Sender sender = exchange.getResponseSender();
             sender.send("failed to process management request");
         }
+    }
+
+    protected boolean handlesMethod(HttpString method) {
+        return HANDLED_METHODS.contains(method);
     }
 
     /**

@@ -83,6 +83,13 @@ class MCMPWebManager extends MCMPHandler {
         processRequest(exchange);
     }
 
+    protected boolean handlesMethod(HttpString method) {
+        if(Methods.GET.equals(method)) {
+            return true;
+        }
+        return super.handlesMethod(method);
+    }
+
     private void processRequest(HttpServerExchange exchange) throws IOException {
         Map<String, Deque<String>> params = exchange.getQueryParameters();
         boolean hasNonce = params.containsKey("nonce");
