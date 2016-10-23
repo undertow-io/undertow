@@ -104,9 +104,9 @@ class KerberosKDCUtil {
         if (initialised) {
             return false;
         }
+        setupEnvironment();
         startLdapServer();
         startKDC();
-        setupEnvironment();
 
         initialised = true;
         return true;
