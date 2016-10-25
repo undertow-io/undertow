@@ -47,7 +47,20 @@ public class SinglePortConfidentialityHandler extends AbstractConfidentialityHan
         String host = exchange.getHostName();
 
         String queryString = exchange.getQueryString();
-        return new URI("https", null, host, port, exchange.getRequestURI(),
+        String uri = exchange.getRequestURI();
+        if(exchange.isHostIncludedInRequestURI()) {
+            int slashCount = 0;
+            for(int i = 0; i < uri.length(); ++i) {
+                if(uri.charAt(i) == '/') {
+                    slashCount++;
+                    if(slashCount == 3) {
+                        uri = uri.substring(i);
+                        break;
+                    }
+                }
+            }
+        }
+        return new URI("https", null, host, port, uri,
                 queryString == null || queryString.length() == 0 ? null : queryString, null);
     }
 
