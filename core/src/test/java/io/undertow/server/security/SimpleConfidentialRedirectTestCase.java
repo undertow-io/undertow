@@ -25,6 +25,7 @@ import java.security.GeneralSecurityException;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import io.undertow.security.handlers.SinglePortConfidentialityHandler;
@@ -32,6 +33,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
 import io.undertow.util.HttpString;
@@ -45,8 +47,9 @@ import io.undertow.util.StatusCodes;
 @RunWith(DefaultServer.class)
 public class SimpleConfidentialRedirectTestCase {
 
-    @Test
-    public void simpleRedirectTestCase() throws IOException, GeneralSecurityException {
+
+    @BeforeClass
+    public static void setup() throws IOException {
         DefaultServer.startSSLServer();
 
         HttpHandler current = new HttpHandler() {
@@ -61,6 +64,14 @@ public class SimpleConfidentialRedirectTestCase {
         current = new SinglePortConfidentialityHandler(current, DefaultServer.getHostSSLPort("default"));
 
         DefaultServer.setRootHandler(current);
+    }
+
+    public static void stop() throws IOException {
+        DefaultServer.stopSSLServer();
+    }
+
+    @Test
+    public void simpleRedirectTestCase() throws IOException, GeneralSecurityException {
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
@@ -68,16 +79,21 @@ public class SimpleConfidentialRedirectTestCase {
             sendRequest(client, "/foo+bar");
             sendRequest(client, "/foo+bar;aa");
 
-            //now we need to test what happens if the client send a full URI
-            //see UNDERTOW-874
-            Socket socket = new Socket(DefaultServer.getHostAddress(), DefaultServer.getHostPort());
-            socket.getOutputStream().write(("GET " + DefaultServer.getDefaultServerURL() + "/foo HTTP/1.0\r\n\r\n").getBytes(StandardCharsets.UTF_8));
-            String result = FileUtils.readFile(socket.getInputStream());
-            Assert.assertTrue(result.contains("Location: https://127.0.0.1:7778/foo"));
 
         } finally {
             client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @ProxyIgnore
+    public void testRedirectWithFullURLInPath() throws IOException {
+        DefaultServer.isProxy();
+        //now we need to test what happens if the client send a full URI
+        //see UNDERTOW-874
+        try (Socket socket = new Socket(DefaultServer.getHostAddress(), DefaultServer.getHostPort())) {
+            socket.getOutputStream().write(("GET " + DefaultServer.getDefaultServerURL() + "/foo HTTP/1.0\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+            String result = FileUtils.readFile(socket.getInputStream());
+            Assert.assertTrue(result.contains("Location: " + DefaultServer.getDefaultServerSSLAddress() + "/foo"));
         }
     }
 
