@@ -17,22 +17,25 @@
  */
 package io.undertow.server.security;
 
-import io.undertow.security.handlers.SinglePortConfidentialityHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.HttpString;
-import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
+import java.io.IOException;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import java.io.IOException;
-import java.security.GeneralSecurityException;
+import io.undertow.security.handlers.SinglePortConfidentialityHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FileUtils;
+import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 
 /**
  * A simple test case to verify a redirect works.
@@ -50,6 +53,7 @@ public class SimpleConfidentialRedirectTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                exchange.getResponseHeaders().put(HttpString.tryFromString("uri"), exchange.getRequestURI());
                 exchange.endExchange();
             }
         };
@@ -60,15 +64,30 @@ public class SimpleConfidentialRedirectTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Header[] header = result.getHeaders("scheme");
-            Assert.assertEquals("https", header[0].getValue());
+            sendRequest(client, "/foo");
+            sendRequest(client, "/foo+bar");
+            sendRequest(client, "/foo+bar;aa");
+
+            //now we need to test what happens if the client send a full URI
+            //see UNDERTOW-874
+            Socket socket = new Socket(DefaultServer.getHostAddress(), DefaultServer.getHostPort());
+            socket.getOutputStream().write(("GET " + DefaultServer.getDefaultServerURL() + "/foo HTTP/1.0\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+            String result = FileUtils.readFile(socket.getInputStream());
+            Assert.assertTrue(result.contains("Location: https://127.0.0.1:7778/foo"));
+
         } finally {
             client.getConnectionManager().shutdown();
             DefaultServer.stopSSLServer();
         }
+    }
+
+    private void sendRequest(TestHttpClient client, String uri) throws IOException {
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + uri);
+        HttpResponse result = client.execute(get);
+        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        Assert.assertEquals("https", result.getFirstHeader("scheme").getValue());
+        Assert.assertEquals(uri, result.getFirstHeader("uri").getValue());
+        HttpClientUtils.readResponse(result);
     }
 
 }
