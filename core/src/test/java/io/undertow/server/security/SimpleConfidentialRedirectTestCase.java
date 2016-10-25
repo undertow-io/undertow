@@ -24,6 +24,7 @@ import java.security.GeneralSecurityException;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -66,6 +67,7 @@ public class SimpleConfidentialRedirectTestCase {
         DefaultServer.setRootHandler(current);
     }
 
+    @AfterClass
     public static void stop() throws IOException {
         DefaultServer.stopSSLServer();
     }
