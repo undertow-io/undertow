@@ -184,7 +184,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 // Deliberately ignore - no Subject so don't offer GSSAPI is our main concern here.
             }
             if (server == null) {
-                return new ChallengeResult(false);
+                return ChallengeResult.NOT_SENT;
             }
         }
 

@@ -196,7 +196,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
             //otherwise we assume another method will send the challenge
             String authHeader = exchange.getRequestHeaders().getFirst(AUTHORIZATION);
             if(authHeader == null) {
-                return new ChallengeResult(false);
+                return ChallengeResult.NOT_SENT;
             }
         }
         exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);

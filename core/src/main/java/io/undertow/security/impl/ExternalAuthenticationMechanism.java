@@ -85,7 +85,7 @@ public class ExternalAuthenticationMechanism implements AuthenticationMechanism 
 
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
-        return new ChallengeResult(false);
+        return ChallengeResult.NOT_SENT;
     }
 
     public static final class Factory implements AuthenticationMechanismFactory {

@@ -147,7 +147,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
 
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
-        return new ChallengeResult(false);
+        return ChallengeResult.NOT_SENT;
     }
 
     protected Session getSession(final HttpServerExchange exchange) {

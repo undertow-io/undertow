@@ -74,6 +74,8 @@ public interface AuthenticationMechanism {
      * not set the response code, instead that should be indicated in the {@link ChallengeResult} and the most appropriate
      * overall response code will be selected.
      *
+     * This method should not return <code>null</code>.
+     *
      * @param exchange        The exchange
      * @param securityContext The security context
      * @return A {@link ChallengeResult} indicating if a challenge was sent and the desired response code.
@@ -109,6 +111,8 @@ public interface AuthenticationMechanism {
      * Simple class to wrap the result of requesting a mechanism sends it's challenge.
      */
     class ChallengeResult {
+
+        public static ChallengeResult NOT_SENT = new ChallengeResult(false);
 
         private final boolean challengeSent;
         private final Integer statusCode;

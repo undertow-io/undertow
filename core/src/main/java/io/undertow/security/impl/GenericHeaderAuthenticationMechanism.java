@@ -103,7 +103,7 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
 
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
-        return new ChallengeResult(false);
+        return ChallengeResult.NOT_SENT;
     }
 
 

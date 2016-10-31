@@ -294,7 +294,9 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
                 final AuthenticationMechanism mechanism = currentMethod.item;
                 currentMethod = currentMethod.next;
                 ChallengeResult result = mechanism.sendChallenge(exchange, SecurityContextImpl.this);
-
+                if(result == null) {
+                    throw UndertowMessages.MESSAGES.sendChallengeReturnedNull(mechanism);
+                }
                 if (result.isChallengeSent()) {
                     challengeSent = true;
                     Integer desiredCode = result.getDesiredResponseCode();
