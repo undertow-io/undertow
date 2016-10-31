@@ -30,6 +30,7 @@ import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 import io.undertow.predicate.PredicateBuilder;
 import io.undertow.protocols.http2.HpackException;
+import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HttpString;
 
@@ -489,4 +490,7 @@ public interface UndertowMessages {
 
     @Message(id = 153, value = "Stream id not registered")
     IllegalStateException streamNotRegistered();
+
+    @Message(id = 154, value = "Mechanism %s returned a null result from sendChallenge()")
+    NullPointerException sendChallengeReturnedNull(AuthenticationMechanism mechanism);
 }

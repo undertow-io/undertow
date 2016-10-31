@@ -81,7 +81,7 @@ public class CachedAuthenticatedSessionMechanism implements AuthenticationMechan
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
         // This mechanism can only use what is already available and can not send a challenge of it's own.
-        return new ChallengeResult(false);
+        return ChallengeResult.NOT_SENT;
     }
 
 }

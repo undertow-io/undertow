@@ -137,7 +137,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
 
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
-        return new ChallengeResult(false);
+        return ChallengeResult.NOT_SENT;
     }
 
     public static final class Factory implements AuthenticationMechanismFactory {
