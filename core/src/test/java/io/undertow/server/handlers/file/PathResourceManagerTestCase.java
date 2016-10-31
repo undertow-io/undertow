@@ -44,6 +44,5 @@ public class PathResourceManagerTestCase {
         final PathResourceManager resourceManager = new PathResourceManager(rootPath, 1024 * 1024);
         Assert.assertNotNull(resourceManager.getResource("hello.txt"));
         Assert.assertNotNull(resourceManager.getResource("./hello.txt"));
-        Assert.assertNotNull(resourceManager.getResource("../subdir/hello.txt"));
     }
 }
