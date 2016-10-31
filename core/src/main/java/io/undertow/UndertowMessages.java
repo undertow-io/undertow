@@ -149,7 +149,7 @@ public interface UndertowMessages {
     RuntimeException tooManyQueryParameters(int noParams);
 
     @Message(id = 40, value = "To many headers, cannot have more than %s header")
-    RuntimeException tooManyHeaders(int noParams);
+    String tooManyHeaders(int noParams);
 
     @Message(id = 41, value = "Channel is closed")
     ClosedChannelException channelIsClosed();
