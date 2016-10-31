@@ -1,5 +1,6 @@
 package io.undertow.server.handlers.file;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -33,5 +34,16 @@ public class PathResourceManagerTestCase {
         final PathResourceManager resourceManager = new PathResourceManager(rootPath, 1024 * 1024);
         Assert.assertNotNull(resourceManager.getResource("a.txt"));
         Assert.assertNull(resourceManager.getResource("../page.html"));
+    }
+
+    @Test
+    public void testBaseDirInSymlink() throws Exception {
+
+        final Path rootPath = Paths.get("test-assets").resolve("subdir-symlink");
+        Assert.assertTrue("Ensure that subdir-symkink is still a symlink as expected", Files.isSymbolicLink(rootPath));
+        final PathResourceManager resourceManager = new PathResourceManager(rootPath, 1024 * 1024);
+        Assert.assertNotNull(resourceManager.getResource("hello.txt"));
+        Assert.assertNotNull(resourceManager.getResource("./hello.txt"));
+        Assert.assertNotNull(resourceManager.getResource("../subdir/hello.txt"));
     }
 }
