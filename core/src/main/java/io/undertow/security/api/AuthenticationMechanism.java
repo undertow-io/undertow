@@ -112,7 +112,7 @@ public interface AuthenticationMechanism {
      */
     class ChallengeResult {
 
-        public static ChallengeResult NOT_SENT = new ChallengeResult(false);
+        public static final ChallengeResult NOT_SENT = new ChallengeResult(false);
 
         private final boolean challengeSent;
         private final Integer statusCode;
