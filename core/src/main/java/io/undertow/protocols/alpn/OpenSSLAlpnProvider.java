@@ -50,7 +50,7 @@ public class OpenSSLAlpnProvider implements ALPNProvider {
                     UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN Enabled");
                     return new OpenSSLALPNMethods(setApplicationProtocols, getApplicationProtocol);
                 } catch (Throwable e) {
-                    UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN Enabled", e);
+                    UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN disabled", e);
                     return null;
                 }
             }
