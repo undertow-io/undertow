@@ -175,8 +175,8 @@ public abstract class HttpRequestParser {
     }
 
     public HttpRequestParser(OptionMap options) {
-        maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, 1000);
-        maxHeaders = options.get(UndertowOptions.MAX_HEADERS, 200);
+        maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
+        maxHeaders = options.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS);
         allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         decode = options.get(UndertowOptions.DECODE_URL, true);
         charset = options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
@@ -194,7 +194,7 @@ public abstract class HttpRequestParser {
     }
 
 
-    public void handle(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) {
+    public void handle(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) throws BadRequestException {
         if (currentState.state == ParseState.VERB) {
             //fast path, we assume that it will parse fully so we avoid all the if statements
 
@@ -261,7 +261,7 @@ public abstract class HttpRequestParser {
         handleStateful(buffer, currentState, builder);
     }
 
-    private void handleStateful(ByteBuffer buffer, ParseState currentState, HttpServerExchange builder) {
+    private void handleStateful(ByteBuffer buffer, ParseState currentState, HttpServerExchange builder) throws BadRequestException {
         if (currentState.state == ParseState.PATH) {
             handlePath(buffer, currentState, builder);
             if (!buffer.hasRemaining()) {
@@ -641,7 +641,7 @@ public abstract class HttpRequestParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final void handleHeaderValue(ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
+    final void handleHeaderValue(ByteBuffer buffer, ParseState state, HttpServerExchange builder) throws BadRequestException {
         HttpString headerName = state.nextHeader;
         StringBuilder stringBuilder = state.stringBuilder;
         HashMap<HttpString, String> headerValuesCache = state.headerValuesCache;
@@ -657,7 +657,7 @@ public abstract class HttpRequestParser {
         handleHeaderValueCacheMiss(buffer, state, builder, headerName, headerValuesCache, stringBuilder);
     }
 
-    private void handleHeaderValueCacheMiss(ByteBuffer buffer, ParseState state, HttpServerExchange builder, HttpString headerName, HashMap<HttpString, String> headerValuesCache, StringBuilder stringBuilder) {
+    private void handleHeaderValueCacheMiss(ByteBuffer buffer, ParseState state, HttpServerExchange builder, HttpString headerName, HashMap<HttpString, String> headerValuesCache, StringBuilder stringBuilder) throws BadRequestException {
 
         int parseState = state.parseState;
         while (buffer.hasRemaining() && parseState == NORMAL) {
@@ -717,7 +717,7 @@ public abstract class HttpRequestParser {
 
 
                         if (state.mapCount++ > maxHeaders) {
-                            throw UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders);
+                            throw new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
                         }
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
                         builder.getRequestHeaders().add(headerName, headerValue);
@@ -754,7 +754,7 @@ public abstract class HttpRequestParser {
         state.parseState = parseState;
     }
 
-    protected boolean handleCachedHeader(String existing, ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
+    protected boolean handleCachedHeader(String existing, ByteBuffer buffer, ParseState state, HttpServerExchange builder) throws BadRequestException {
         int pos = buffer.position();
         while (pos < buffer.limit() && buffer.get(pos) == ' ') {
             pos++;
@@ -783,7 +783,7 @@ public abstract class HttpRequestParser {
         }
         buffer.position(pos + i);
         if (state.mapCount++ > maxHeaders) {
-            throw UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders);
+            throw new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
         }
         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
         builder.getRequestHeaders().add(state.nextHeader, existing);
@@ -852,6 +852,12 @@ public abstract class HttpRequestParser {
         }
         return results;
 
+    }
+
+    public static class BadRequestException extends Exception {
+        public BadRequestException(String msg) {
+            super(msg);
+        }
     }
 
 }

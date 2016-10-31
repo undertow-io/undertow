@@ -53,7 +53,7 @@ public class ParserResumeTestCase {
     }
 
     @Test
-    public void testOneCharacterAtATime() {
+    public void testOneCharacterAtATime() throws HttpRequestParser.BadRequestException {
         context.reset();
         byte[] in = DATA.getBytes();
         HttpServerExchange result = new HttpServerExchange(null);
@@ -70,7 +70,7 @@ public class ParserResumeTestCase {
         runAssertions(result);
     }
 
-    private void testResume(final int split, byte[] in) {
+    private void testResume(final int split, byte[] in) throws HttpRequestParser.BadRequestException {
         context.reset();
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);

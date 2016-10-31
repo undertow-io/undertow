@@ -137,6 +137,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private int sendMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int receiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int unackedReceiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE; //the old max frame size, this gets updated when our setting frame is acked
+    private final int maxHeaders;
 
     /**
      * How much data we have told the remote endpoint we are prepared to accept.
@@ -189,6 +190,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         this.initialReceiveWindowSize = settings.get(UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, DEFAULT_INITIAL_WINDOW_SIZE);
 
         this.protocol = protocol == null ? Http2OpenListener.HTTP2 : protocol;
+        this.maxHeaders = settings.get(UndertowOptions.MAX_HEADERS, clientSide ? -1 : UndertowOptions.DEFAULT_MAX_HEADERS);
 
         encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
         receiveMaxFrameSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_FRAME_SIZE, DEFAULT_MAX_FRAME_SIZE);
@@ -835,6 +837,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     HpackDecoder getDecoder() {
         return decoder;
+    }
+
+    int getMaxHeaders() {
+        return maxHeaders;
     }
 
     int getPaddingBytes() {

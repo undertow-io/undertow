@@ -23,13 +23,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+import org.junit.Assert;
+import org.junit.Test;
+import org.xnio.IoUtils;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
-import org.junit.Assert;
-import org.junit.Test;
-import org.xnio.IoUtils;
 
 /**
  * @author Stuart Douglas
@@ -55,11 +55,11 @@ public class AjpParsingUnitTestCase {
         }
     }
 
-    public static final AjpRequestParser AJP_REQUEST_PARSER = new AjpRequestParser("UTF-8", true);
+    public static final AjpRequestParser AJP_REQUEST_PARSER = new AjpRequestParser("UTF-8", true, 100, 100);
 
 
     @Test
-    public void testAjpParsing() throws IOException {
+    public void testAjpParsing() throws IOException, AjpRequestParser.BadRequestException {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
         HttpServerExchange result = new HttpServerExchange(null);
         final AjpRequestParseState state = new AjpRequestParseState();
@@ -72,7 +72,7 @@ public class AjpParsingUnitTestCase {
     }
 
     @Test
-    public void testByteByByteAjpParsing() throws IOException {
+    public void testByteByByteAjpParsing() throws IOException, AjpRequestParser.BadRequestException {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
 
         HttpServerExchange result = new HttpServerExchange(null);

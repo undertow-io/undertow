@@ -46,7 +46,7 @@ public class SimpleParserTestCase {
     private final ParseState parseState = new ParseState();
 
     @Test
-    public void testEncodedSlashDisallowed() {
+    public void testEncodedSlashDisallowed() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath%2FotherPath HTTP/1.1\r\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -58,7 +58,7 @@ public class SimpleParserTestCase {
     }
 
     @Test
-    public void testEncodedSlashAllowed() {
+    public void testEncodedSlashAllowed() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath%2fotherPath HTTP/1.1\r\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -70,7 +70,7 @@ public class SimpleParserTestCase {
     }
 
     @Test
-    public void testColonSlashInURL() {
+    public void testColonSlashInURL() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /a/http://myurl.com/b/c HTTP/1.1\r\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -82,7 +82,7 @@ public class SimpleParserTestCase {
     }
 
     @Test
-    public void testColonSlashInFullURL() {
+    public void testColonSlashInFullURL() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET http://foo.com/a/http://myurl.com/b/c HTTP/1.1\r\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -95,7 +95,7 @@ public class SimpleParserTestCase {
 
 
     @Test
-    public void testPathParameters() {
+    public void testPathParameters() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath;p1 HTTP/1.1\r\n\r\n".getBytes();
         ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null);
@@ -119,7 +119,7 @@ public class SimpleParserTestCase {
     }
 
     @Test
-    public void testFullUrlRootPath() {
+    public void testFullUrlRootPath() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET http://myurl.com HTTP/1.1\r\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -130,7 +130,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("http://myurl.com", result.getRequestURI());
     }
     @Test
-    public void testSimpleRequest() {
+    public void testSimpleRequest() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\n".getBytes();
         runTest(in);
     }
@@ -138,7 +138,7 @@ public class SimpleParserTestCase {
 
 
     @Test
-    public void testSimpleRequestWithHeaderCaching() {
+    public void testSimpleRequestWithHeaderCaching() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: foo\r\n\r\n".getBytes();
         runTest(in, "foo");
         in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader:       foo\r\n\r\n".getBytes();
@@ -151,26 +151,26 @@ public class SimpleParserTestCase {
 
 
     @Test
-    public void testCarriageReturnLineEnds() {
+    public void testCarriageReturnLineEnds() throws HttpRequestParser.BadRequestException {
 
         byte[] in = "GET /somepath HTTP/1.1\rHost:   www.somehost.net\rOtherHeader: some\r    value\r\r\n".getBytes();
         runTest(in);
     }
 
     @Test
-    public void testLineFeedsLineEnds() {
+    public void testLineFeedsLineEnds() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath HTTP/1.1\nHost:   www.somehost.net\nOtherHeader: some\n    value\n\n".getBytes();
         runTest(in);
     }
 
     @Test
-    public void testTabWhitespace() {
+    public void testTabWhitespace() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\t/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
         runTest(in);
     }
 
     @Test
-    public void testCanonicalPath() {
+    public void testCanonicalPath() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -181,7 +181,7 @@ public class SimpleParserTestCase {
     }
 
     @Test
-    public void testNoHeaders() {
+    public void testNoHeaders() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\t/aa\tHTTP/1.1\n\n\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -192,7 +192,7 @@ public class SimpleParserTestCase {
     }
 
     @Test
-    public void testQueryParams() {
+    public void testQueryParams() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\thttp://www.somehost.net/somepath?a=b&b=c&d&e&f=\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -210,7 +210,7 @@ public class SimpleParserTestCase {
     }
 
     @Test
-    public void testSameHttpStringReturned() {
+    public void testSameHttpStringReturned() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nAccept-Charset:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context1 = new ParseState();
@@ -241,7 +241,7 @@ public class SimpleParserTestCase {
 
 
     @Test
-    public void testEmptyQueryParams() {
+    public void testEmptyQueryParams() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /clusterbench/requestinfo//?;?=44&test=OK;devil=3&&&&&&&&&&&&&&&&&&&&&&&&&&&&777=666 HTTP/1.1\r\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
@@ -256,7 +256,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("44", result.getQueryParameters().get(";?").getFirst());
     }
     @Test
-    public void testNonEncodedAsciiCharacters() throws UnsupportedEncodingException {
+    public void testNonEncodedAsciiCharacters() throws UnsupportedEncodingException, HttpRequestParser.BadRequestException {
         byte[] in = "GET /bÃ¥r HTTP/1.1\r\n\r\n".getBytes("ISO-8859-1");
 
         final ParseState context = new ParseState();
@@ -267,10 +267,10 @@ public class SimpleParserTestCase {
         Assert.assertEquals("/bÃ¥r", result.getRequestURI()); //not decoded
     }
 
-    private void runTest(final byte[] in) {
+    private void runTest(final byte[] in) throws HttpRequestParser.BadRequestException {
         runTest(in, "some value");
     }
-    private void runTest(final byte[] in, String lastHeader) {
+    private void runTest(final byte[] in, String lastHeader) throws HttpRequestParser.BadRequestException {
         parseState.reset();
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), parseState, result);

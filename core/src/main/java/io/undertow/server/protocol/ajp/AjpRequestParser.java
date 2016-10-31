@@ -67,6 +67,8 @@ public class AjpRequestParser {
 
     private final String encoding;
     private final boolean doDecode;
+    private final int maxParameters;
+    private final int maxHeaders;
 
     private static final HttpString[] HTTP_HEADERS;
 
@@ -169,13 +171,15 @@ public class AjpRequestParser {
         ATTRIBUTES[13] = STORED_METHOD;
     }
 
-    public AjpRequestParser(String encoding, boolean doDecode) {
+    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders) {
         this.encoding = encoding;
         this.doDecode = doDecode;
+        this.maxParameters = maxParameters;
+        this.maxHeaders = maxHeaders;
     }
 
 
-    public void parse(final ByteBuffer buf, final AjpRequestParseState state, final HttpServerExchange exchange) throws IOException {
+    public void parse(final ByteBuffer buf, final AjpRequestParseState state, final HttpServerExchange exchange) throws IOException, BadRequestException {
         if (!buf.hasRemaining()) {
             return;
         }
@@ -250,7 +254,7 @@ public class AjpRequestParser {
                         exchange.setRequestURI(result.value);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
-                        URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters);
+                        URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
                     }
                 } else {
                     state.state = AjpRequestParseState.READING_REQUEST_URI;
@@ -313,6 +317,9 @@ public class AjpRequestParser {
                     return;
                 } else {
                     state.numHeaders = result.value;
+                    if(state.numHeaders > maxHeaders) {
+                        throw new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(state.numHeaders));
+                    }
                 }
             }
             case AjpRequestParseState.READING_HEADERS: {
@@ -394,7 +401,7 @@ public class AjpRequestParser {
                     if (state.currentAttribute.equals(QUERY_STRING)) {
                         String resultAsQueryString = result == null ? "" : result;
                         exchange.setQueryString(resultAsQueryString);
-                        URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode);
+                        URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode, maxParameters);
                     } else if (state.currentAttribute.equals(REMOTE_USER)) {
                         exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_PRINCIPAL, result);
                     } else if (state.currentAttribute.equals(AUTH_TYPE)) {
@@ -555,6 +562,11 @@ public class AjpRequestParser {
         URL,
         QUERY_STRING,
         OTHER
+    }
 
+    public static class BadRequestException extends Exception {
+        public BadRequestException(String msg) {
+            super(msg);
+        }
     }
 }

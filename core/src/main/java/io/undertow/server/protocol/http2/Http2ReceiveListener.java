@@ -67,6 +67,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private final StringBuilder decodeBuffer = new StringBuilder();
     private final boolean allowEncodingSlash;
     private final int bufferSize;
+    private final int maxParameters;
 
 
 
@@ -88,6 +89,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         this.maxEntitySize = undertowOptions.get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.allowEncodingSlash = undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
+        this.maxParameters = undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         if (undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
             this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         } else {
@@ -141,7 +143,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
 
         final String path = exchange.getRequestHeaders().getFirst(PATH);
-        Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer);
+        Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
         SSLSession session = channel.getSslSession();
         if(session != null) {
             connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
@@ -199,7 +201,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setRequestMethod(initial.getRequestMethod());
         exchange.setQueryString(initial.getQueryString());
         String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
-        Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer);
+        Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
 
         SSLSession session = channel.getSslSession();
         if(session != null) {
