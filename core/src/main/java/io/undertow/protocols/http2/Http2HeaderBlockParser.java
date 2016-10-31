@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import io.undertow.UndertowLogger;
 import org.xnio.Bits;
 
+import io.undertow.UndertowMessages;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 
@@ -40,14 +41,19 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     private final HpackDecoder decoder;
     private int frameRemaining = -1;
     private boolean invalid = false;
+    private final int maxHeaders;
 
-    Http2HeaderBlockParser(int frameLength, HpackDecoder decoder) {
+    Http2HeaderBlockParser(int frameLength, HpackDecoder decoder, int maxHeaders) {
         super(frameLength);
         this.decoder = decoder;
+        this.maxHeaders = maxHeaders;
     }
 
     @Override
     protected void handleData(ByteBuffer resource, Http2FrameHeaderParser header) throws IOException {
+        if(maxHeaders > 0 && headerMap.size() >= maxHeaders) {
+            throw new IOException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
+        }
         boolean continuationFramesComing = Bits.anyAreClear(header.flags, Http2Channel.HEADERS_FLAG_END_HEADERS);
         if (frameRemaining == -1) {
             frameRemaining = header.length;

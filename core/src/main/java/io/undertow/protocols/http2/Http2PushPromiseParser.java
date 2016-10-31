@@ -33,8 +33,8 @@ class Http2PushPromiseParser extends Http2HeaderBlockParser {
     private int promisedStreamId;
     private static final int STREAM_MASK = ~(1 << 7);
 
-    Http2PushPromiseParser(int frameLength, HpackDecoder hpackDecoder) {
-        super(frameLength, hpackDecoder);
+    Http2PushPromiseParser(int frameLength, HpackDecoder hpackDecoder, int maxHeaders) {
+        super(frameLength, hpackDecoder, maxHeaders);
     }
 
     @Override
