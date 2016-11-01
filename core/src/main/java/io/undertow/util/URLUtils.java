@@ -49,12 +49,12 @@ public class URLUtils {
 
     }
 
-    public static void parseQueryString(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode) {
-        QUERY_STRING_PARSER.parse(string, exchange, charset, doDecode);
+    public static void parseQueryString(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode, int maxParameters) {
+        QUERY_STRING_PARSER.parse(string, exchange, charset, doDecode, maxParameters);
     }
 
-    public static void parsePathParms(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode) {
-        PATH_PARAM_PARSER.parse(string, exchange, charset, doDecode);
+    public static void parsePathParms(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode, int maxParameters) {
+        PATH_PARAM_PARSER.parse(string, exchange, charset, doDecode, maxParameters);
     }
 
     /**
@@ -206,7 +206,8 @@ public class URLUtils {
 
     private abstract static class QueryStringParser {
 
-        void parse(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode) {
+        void parse(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode, int max) {
+            int count = 0;
             try {
                 int stringStart = 0;
                 String attrName = null;
@@ -218,8 +219,14 @@ public class URLUtils {
                     } else if (c == '&') {
                         if (attrName != null) {
                             handle(exchange, decode(charset, attrName, doDecode), decode(charset, string.substring(stringStart, i), doDecode));
+                            if(++count > max) {
+                                throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(max));
+                            }
                         } else {
                             handle(exchange, decode(charset, string.substring(stringStart, i), doDecode), "");
+                            if(++count > max) {
+                                throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(max));
+                            }
                         }
                         stringStart = i + 1;
                         attrName = null;
@@ -227,8 +234,14 @@ public class URLUtils {
                 }
                 if (attrName != null) {
                     handle(exchange, decode(charset, attrName, doDecode), decode(charset, string.substring(stringStart, string.length()), doDecode));
+                    if(++count > max) {
+                        throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(max));
+                    }
                 } else if (string.length() != stringStart) {
                     handle(exchange, decode(charset, string.substring(stringStart, string.length()), doDecode), "");
+                    if(++count > max) {
+                        throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(max));
+                    }
                 }
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e);

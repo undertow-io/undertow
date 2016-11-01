@@ -77,6 +77,8 @@ public class UndertowOptions {
      */
     public static final Option<Integer> NO_REQUEST_TIMEOUT = Option.simple(UndertowOptions.class, "NO_REQUEST_TIMEOUT", Integer.class);
 
+    public static final int DEFAULT_MAX_PARAMETERS = 1000;
+
     /**
      * The maximum number of parameters that will be parsed. This is used to protect against hash vulnerabilities.
      * <p>
@@ -86,6 +88,8 @@ public class UndertowOptions {
      * Defaults to 1000
      */
     public static final Option<Integer> MAX_PARAMETERS = Option.simple(UndertowOptions.class, "MAX_PARAMETERS", Integer.class);
+
+    public static final int DEFAULT_MAX_HEADERS = 200;
 
     /**
      * The maximum number of headers that will be parsed. This is used to protect against hash vulnerabilities.

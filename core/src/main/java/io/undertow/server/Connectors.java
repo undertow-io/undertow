@@ -19,6 +19,7 @@
 package io.undertow.server;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
@@ -235,7 +236,6 @@ public class Connectors {
         }
     }
 
-
     /**
      * Sets the request path and query parameters, decoding to the requested charset.
      *
@@ -243,7 +243,18 @@ public class Connectors {
      * @param encodedPath        The encoded path
      * @param charset     The charset
      */
+    @Deprecated
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer) {
+        setExchangeRequestPath(exchange, encodedPath, charset, decode, allowEncodedSlash, decodeBuffer, exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
+    }
+        /**
+         * Sets the request path and query parameters, decoding to the requested charset.
+         *
+         * @param exchange    The exchange
+         * @param encodedPath        The encoded path
+         * @param charset     The charset
+         */
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer, int maxParameters) {
         boolean requiresDecode = false;
         for (int i = 0; i < encodedPath.length(); ++i) {
             char c = encodedPath.charAt(i);
@@ -260,7 +271,7 @@ public class Connectors {
                 exchange.setRequestURI(encodedPart);
                 final String qs = encodedPath.substring(i + 1);
                 exchange.setQueryString(qs);
-                URLUtils.parseQueryString(qs, exchange, charset, decode);
+                URLUtils.parseQueryString(qs, exchange, charset, decode, maxParameters);
                 return;
             } else if(c == ';') {
                 String part;
@@ -276,15 +287,15 @@ public class Connectors {
                     if (encodedPath.charAt(j) == '?') {
                         exchange.setRequestURI(encodedPath.substring(0, j));
                         String pathParams = encodedPath.substring(i + 1, j);
-                        URLUtils.parsePathParms(pathParams, exchange, charset, decode);
+                        URLUtils.parsePathParms(pathParams, exchange, charset, decode, maxParameters);
                         String qs = encodedPath.substring(j + 1);
                         exchange.setQueryString(qs);
-                        URLUtils.parseQueryString(qs, exchange, charset, decode);
+                        URLUtils.parseQueryString(qs, exchange, charset, decode, maxParameters);
                         return;
                     }
                 }
                 exchange.setRequestURI(encodedPath);
-                URLUtils.parsePathParms(encodedPath.substring(i + 1), exchange, charset, decode);
+                URLUtils.parsePathParms(encodedPath.substring(i + 1), exchange, charset, decode, maxParameters);
                 return;
             } else if(c == '%' || c == '+') {
                 requiresDecode = true;
