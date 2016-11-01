@@ -322,7 +322,7 @@ public class PathResourceManager implements ResourceManager  {
     protected PathResource getFileResource(final Path file, final String path, final Path symlinkBase, String normalizedFile) throws IOException {
         if (this.caseSensitive) {
             if (symlinkBase != null) {
-                String relative = symlinkBase.relativize(file).toString();
+                String relative = symlinkBase.relativize(file).normalize().toString();
                 String fileResolved = file.toRealPath().toString();
                 String symlinkBaseResolved = symlinkBase.toRealPath().toString();
                 if (!fileResolved.startsWith(symlinkBaseResolved)) {
