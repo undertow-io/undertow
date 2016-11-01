@@ -111,7 +111,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
 
     }
 
-    private class ServletAuthenticatedSessionManager implements AuthenticatedSessionManager {
+    private static class ServletAuthenticatedSessionManager implements AuthenticatedSessionManager {
 
         @Override
         public AuthenticatedSession lookupSession(HttpServerExchange exchange) {
