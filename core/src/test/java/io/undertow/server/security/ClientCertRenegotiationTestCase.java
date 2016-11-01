@@ -79,8 +79,6 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
 
     @Test
     public void testClientCertSuccess() throws Exception {
-        setAuthenticationChain();
-
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(clientSSLContext);
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
@@ -100,8 +98,6 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
 
     @Test
     public void testClientCertSuccessWithPostBody() throws Exception {
-        setAuthenticationChain();
-
         TestHttpClient client = new TestHttpClient();
         try {
             client.setSSLContext(clientSSLContext);
@@ -127,7 +123,6 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
 
     @Test
     public void testClientCertSuccessWithLargePostBody() throws Exception {
-        setAuthenticationChain();
         PooledByteBuffer buf = DefaultServer.getBufferPool().allocate();
         int requestSize = buf.getBuffer().limit() - 1;
         buf.close();

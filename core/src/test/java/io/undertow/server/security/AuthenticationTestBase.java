@@ -25,6 +25,7 @@ import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
+import io.undertow.security.handlers.CachedAuthenticatedSessionHandler;
 import io.undertow.security.handlers.NotificationReceiverHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.idm.Account;
@@ -46,6 +47,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.ietf.jgss.GSSException;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
@@ -223,17 +225,33 @@ public abstract class AuthenticationTestBase {
         };
     }
 
-    protected void setAuthenticationChain() {
+    @Before
+    public void setAuthenticationChain() {
+        List<AuthenticationMechanism> testMechanisms = getTestMechanisms();
+        if(testMechanisms == null) {
+            return;
+        }
         HttpHandler current = new ResponseHandler();
         current = new AuthenticationCallHandler(current);
         current = new AuthenticationConstraintHandler(current);
 
-        current = new AuthenticationMechanismsHandler(current, getTestMechanisms());
+        current = new AuthenticationMechanismsHandler(current, testMechanisms);
         auditReceiver.takeNotifications(); // Ensure empty on initialisation.
         current = new NotificationReceiverHandler(current, Collections.<NotificationReceiver> singleton(auditReceiver));
 
-        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, current);
+        if(cachingRequired()) {
+            current = new CachedAuthenticatedSessionHandler(current);
+        }
 
+        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, current);
+        setRootHandler(current);
+    }
+
+    protected boolean cachingRequired() {
+        return false;
+    }
+
+    protected void setRootHandler(HttpHandler current) {
         DefaultServer.setRootHandler(current);
     }
 
