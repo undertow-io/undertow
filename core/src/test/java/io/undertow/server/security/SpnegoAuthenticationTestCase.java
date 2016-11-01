@@ -88,7 +88,6 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
 
     @Test
     public void testSpnegoSuccess() throws Exception {
-        setAuthenticationChain();
 
         final TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
