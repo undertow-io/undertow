@@ -48,21 +48,18 @@ public class SpnegoBasicAuthenticationTestCase extends SpnegoAuthenticationTestC
 
     @Test
     public void testBasicSuccess() throws Exception {
-        setAuthenticationChain();
         _testBasicSuccess();
         assertSingleNotificationType(EventType.AUTHENTICATED);
     }
 
     @Test
     public void testBadUserName() throws Exception {
-        setAuthenticationChain();
         _testBadUserName();
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
     @Test
     public void testBadPassword() throws Exception {
-        setAuthenticationChain();
         _testBadPassword();
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }

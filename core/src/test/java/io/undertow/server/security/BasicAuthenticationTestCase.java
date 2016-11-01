@@ -60,7 +60,6 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
 
     @Test
     public void testBasicSuccess() throws Exception {
-        setAuthenticationChain();
         _testBasicSuccess();
         assertSingleNotificationType(EventType.AUTHENTICATED);
     }
@@ -88,7 +87,6 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
 
     @Test
     public void testBadUserName() throws Exception {
-        setAuthenticationChain();
         _testBadUserName();
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
@@ -112,7 +110,6 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
 
     @Test
     public void testBadPassword() throws Exception {
-        setAuthenticationChain();
         _testBadPassword();
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }

@@ -70,8 +70,6 @@ public class ClientCertTestCase extends AuthenticationTestBase {
 
     @Test
     public void testClientCertSuccess() throws Exception {
-        setAuthenticationChain();
-
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(clientSSLContext);
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());

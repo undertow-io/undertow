@@ -59,7 +59,6 @@ public class GenericHeaderAuthenticationTestCase extends AuthenticationTestBase 
 
     @Test
     public void testGenericHeaderSucess() throws Exception {
-        setAuthenticationChain();
         _testGenericHeaderSucess();
         assertSingleNotificationType(EventType.AUTHENTICATED);
     }
@@ -85,7 +84,6 @@ public class GenericHeaderAuthenticationTestCase extends AuthenticationTestBase 
 
     @Test
     public void testBadUserName() throws Exception {
-        setAuthenticationChain();
         _testBadUserName();
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
@@ -107,7 +105,6 @@ public class GenericHeaderAuthenticationTestCase extends AuthenticationTestBase 
 
     @Test
     public void testBadPassword() throws Exception {
-        setAuthenticationChain();
         _testBadPassword();
         assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
