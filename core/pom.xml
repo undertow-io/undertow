@@ -175,10 +175,13 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>test-jar</id>
                         <goals>
-                            <goal>jar</goal>
                             <goal>test-jar</goal>
                         </goals>
+                        <configuration>
+                            <classifier>tests</classifier>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
