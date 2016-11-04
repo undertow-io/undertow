@@ -61,7 +61,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      * @param openListener  the open listener to call
      * @param handshake     a handshake implementation that can be used to verify the client request and modify the response
      */
-    private synchronized void addProtocol(String productString, HttpUpgradeListener openListener, final HttpUpgradeHandshake handshake) {
+    public synchronized void addProtocol(String productString, HttpUpgradeListener openListener, final HttpUpgradeHandshake handshake) {
         addProtocol(productString, openListener, null, handshake);
     }
 
