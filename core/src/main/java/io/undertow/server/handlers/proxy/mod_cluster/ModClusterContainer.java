@@ -178,11 +178,12 @@ class ModClusterContainer implements ModClusterController {
 
         final String balancerRef = config.getBalancer();
         Balancer balancer = balancers.get(balancerRef);
-        if (balancer == null) {
-            // TODO compare balancer configs, if they are not equal log a warning?
-            balancer = balancerConfig.build();
-            balancers.put(balancerRef, balancer);
+        if (balancer != null) {
+            UndertowLogger.ROOT_LOGGER.debugf("Balancer %s already exists, replacing", balancerRef);
         }
+        balancer = balancerConfig.build();
+        balancers.put(balancerRef, balancer);
+
         final Node node = new Node(config, balancer, ioThread, bufferPool, this);
         nodes.put(jvmRoute, node);
         // Schedule the health check
