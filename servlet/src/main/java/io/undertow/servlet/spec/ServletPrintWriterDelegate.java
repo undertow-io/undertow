@@ -20,13 +20,12 @@ package io.undertow.servlet.spec;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Field;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Locale;
 
-import sun.reflect.ReflectionFactory;
+import sun.misc.Unsafe;
 
 /**
  * @author Stuart Douglas
@@ -36,31 +35,18 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
         super((OutputStream) null);
     }
 
-    private static final Constructor<ServletPrintWriterDelegate> CONSTRUCTOR;
+    private static final sun.misc.Unsafe UNSAFE;
 
     static {
-        CONSTRUCTOR = AccessController.doPrivileged(new PrivilegedAction<Constructor<ServletPrintWriterDelegate>>() {
-            @Override
-            public Constructor<ServletPrintWriterDelegate> run() {
-                try {
-                    return (Constructor)ReflectionFactory.getReflectionFactory().newConstructorForSerialization(ServletPrintWriterDelegate.class, Object.class.getDeclaredConstructor());
-                } catch (NoSuchMethodException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
+        UNSAFE = getUnsafe();
     }
 
     public static ServletPrintWriterDelegate newInstance(final ServletPrintWriter servletPrintWriter) {
         final ServletPrintWriterDelegate delegate;
         if (System.getSecurityManager() == null) {
             try {
-                delegate = CONSTRUCTOR.newInstance();
+                delegate = (ServletPrintWriterDelegate) UNSAFE.allocateInstance(ServletPrintWriterDelegate.class);
             } catch (InstantiationException e) {
-                throw new RuntimeException(e);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            } catch (InvocationTargetException e) {
                 throw new RuntimeException(e);
             }
         } else {
@@ -68,12 +54,8 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
                 @Override
                 public ServletPrintWriterDelegate run() {
                     try {
-                        return CONSTRUCTOR.newInstance();
+                        return  (ServletPrintWriterDelegate) UNSAFE.allocateInstance(ServletPrintWriterDelegate.class);
                     } catch (InstantiationException e) {
-                        throw new RuntimeException(e);
-                    } catch (IllegalAccessException e) {
-                        throw new RuntimeException(e);
-                    } catch (InvocationTargetException e) {
                         throw new RuntimeException(e);
                     }
                 }
@@ -266,4 +248,24 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
         return this;
     }
 
+    private static Unsafe getUnsafe() {
+        if (System.getSecurityManager() != null) {
+            return new PrivilegedAction<Unsafe>() {
+                public Unsafe run() {
+                    return getUnsafe0();
+                }
+            }.run();
+        }
+        return getUnsafe0();
+    }
+
+    private static Unsafe getUnsafe0()  {
+        try {
+            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            return (Unsafe) theUnsafe.get(null);
+        } catch (Throwable t) {
+            throw new RuntimeException("JDK did not allow accessing unsafe", t);
+        }
+    }
 }
