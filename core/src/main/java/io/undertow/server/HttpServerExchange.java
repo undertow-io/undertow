@@ -1800,7 +1800,6 @@ public final class HttpServerExchange extends AbstractAttachable {
             requestChannel.runResume();
             ret = true;
         }
-        state &= ~(FLAG_SHOULD_RESUME_READS | FLAG_SHOULD_RESUME_WRITES);
         return ret;
     }
 
@@ -1909,6 +1908,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         @Override
+        public void suspendWrites() {
+            state &= ~FLAG_SHOULD_RESUME_WRITES;
+            super.suspendWrites();
+        }
+
+        @Override
         public void wakeupWrites() {
             if (isFinished()) {
                 return;
@@ -1936,8 +1941,10 @@ public final class HttpServerExchange extends AbstractAttachable {
                 } else {
                     if (wakeup) {
                         wakeup = false;
+                        state &= ~FLAG_SHOULD_RESUME_WRITES;
                         delegate.wakeupWrites();
                     } else {
+                        state &= ~FLAG_SHOULD_RESUME_WRITES;
                         delegate.resumeWrites();
                     }
                 }
@@ -2134,6 +2141,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void suspendReads() {
             readsResumed = false;
+            state &= ~(FLAG_SHOULD_RESUME_READS);
             super.suspendReads();
         }
 
@@ -2303,8 +2311,10 @@ public final class HttpServerExchange extends AbstractAttachable {
                 } else {
                     if (wakeup) {
                         wakeup = false;
+                        state &= ~FLAG_SHOULD_RESUME_READS;
                         delegate.wakeupReads();
                     } else {
+                        state &= ~FLAG_SHOULD_RESUME_READS;
                         delegate.resumeReads();
                     }
                 }
