@@ -114,19 +114,14 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Map.class, session.getPathParameters());
                 params.put(method.getMessageType(), partialMessage);
                 params.put(boolean.class, last);
-                session.getContainer().invokeEndpointMethod(new Runnable() {
-                    @Override
-                    public void run() {
-                        final Object result;
-                        try {
-                            result = method.invoke(instance.getInstance(), params);
-                        } catch (Throwable e) {
-                            AnnotatedEndpoint.this.onError(session, e);
-                            return;
-                        }
-                        sendResult(result, session);
-                    }
-                });
+                final Object result;
+                try {
+                    result = method.invoke(instance.getInstance(), params);
+                } catch (Throwable e) {
+                    AnnotatedEndpoint.this.onError(session, e);
+                    return;
+                }
+                sendResult(result, session);
             }
         });
     }
@@ -142,19 +137,14 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 params.put(method.getMessageType(), partialMessage);
-                session.getContainer().invokeEndpointMethod(new Runnable() {
-                    @Override
-                    public void run() {
-                        final Object result;
-                        try {
-                            result = method.invoke(instance.getInstance(), params);
-                        } catch (Exception e) {
-                            AnnotatedEndpoint.this.onError(session, e);
-                            return;
-                        }
-                        sendResult(result, session);
-                    }
-                });
+                final Object result;
+                try {
+                    result = method.invoke(instance.getInstance(), params);
+                } catch (Exception e) {
+                    AnnotatedEndpoint.this.onError(session, e);
+                    return;
+                }
+                sendResult(result, session);
             }
         });
     }
