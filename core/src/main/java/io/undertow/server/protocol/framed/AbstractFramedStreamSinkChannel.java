@@ -158,7 +158,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         return null;
     }
 
-    final void preWrite() {
+    final synchronized void preWrite() {
         if(allAreClear(state, STATE_PRE_WRITE_CALLED)) {
             state |= STATE_PRE_WRITE_CALLED;
             body = preWriteTransform(body);
@@ -233,7 +233,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     @Override
-    public void shutdownWrites() throws IOException {
+    public synchronized void shutdownWrites() throws IOException {
         if(anyAreSet(state, STATE_WRITES_SHUTDOWN) || broken ) {
             return;
         }
@@ -242,7 +242,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         state |= STATE_WRITES_SHUTDOWN;
     }
 
-    private void queueFinalFrame() throws IOException {
+    private synchronized void queueFinalFrame() throws IOException {
         if (!readyForFlush && !fullyFlushed && allAreClear(state, STATE_CLOSED)  && !broken && !finalFrameQueued) {
             if( null == body && null != writeBuffer) {
                 sendWriteBuffer();
@@ -348,9 +348,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if (readyForFlush) {
             return false;
         }
-        if (fullyFlushed) {
-            state |= STATE_CLOSED;
-            return true;
+        synchronized (this) {
+            if (fullyFlushed) {
+                state |= STATE_CLOSED;
+                return true;
+            }
         }
         if (anyAreSet(state, STATE_WRITES_SHUTDOWN) && !finalFrameQueued) {
             queueFinalFrame();
@@ -459,7 +461,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         return Channels.writeFinalBasic(this, src);
     }
 
-    private void handleBufferFull() throws IOException {
+    private synchronized void handleBufferFull() throws IOException {
         bufferFull = true;
         if (!readyForFlush) {
             sendWriteBuffer();
@@ -511,7 +513,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             return;
         }
         try {
-            state |= STATE_CLOSED;
+            synchronized (this) {
+                state |= STATE_CLOSED;
+            }
             if(writeBuffer != null) {
                 writeBuffer.close();
                 writeBuffer = null;
@@ -583,7 +587,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     /**
      * Method that is invoked when a frame has been fully flushed. This method is only invoked by the IO thread
      */
-    final void flushComplete() throws IOException {
+    final synchronized void flushComplete() throws IOException {
         try {
             bufferFull = false;
             int remaining = header.getRemainingInBuffer();
