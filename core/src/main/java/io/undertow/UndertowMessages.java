@@ -493,4 +493,7 @@ public interface UndertowMessages {
 
     @Message(id = 154, value = "Mechanism %s returned a null result from sendChallenge()")
     NullPointerException sendChallengeReturnedNull(AuthenticationMechanism mechanism);
+
+    @Message(id = 155, value = "Framed channel body was set when it was not ready for flush")
+    IllegalStateException bodyIsSetAndNotReadyForFlush();
 }
