@@ -102,7 +102,15 @@ class ParseState {
 
     String nextQueryParam;
 
-    int mapCount;
+    /**
+     * The counter for header
+     */
+    int headerCount;
+
+    /**
+     * The counter for query and path parameters
+     */
+    int paramCount;
 
     final StringBuilder decodeBuffer = new StringBuilder();
 
@@ -136,6 +144,7 @@ class ParseState {
         this.stringBuilder.setLength(0);
         this.nextHeader = null;
         this.nextQueryParam = null;
-        this.mapCount = 0;
+        this.headerCount = 0;
+        this.paramCount = 0;
     }
 }
