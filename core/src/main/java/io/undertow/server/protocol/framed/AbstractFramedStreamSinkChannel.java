@@ -434,14 +434,14 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected boolean safeToSend() throws IOException {
         int state = this.state;
+        if (anyAreSet(state, STATE_CLOSED) || broken) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
         if (readyForFlush) {
             return false; //we can't do anything, we are waiting for a flush
         }
         if( null != this.body) {
-            return false; // already have a pooled buffer
-        }
-        if (anyAreSet(state, STATE_CLOSED) || broken) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+            throw UndertowMessages.MESSAGES.bodyIsSetAndNotReadyForFlush();
         }
         return true;
     }
@@ -623,6 +623,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             } else if (body != null) {
                 // We still have a body, but since we just flushed, we transfer it to the write buffer.
                 // This works as long as you call write() again
+
+                //TODO: this code may not work if the channel has frame level compression and flow control
+                //we don't have an implementation that needs this yet so it is ok for now
+
                 body.getBuffer().compact();
                 writeBuffer = body;
                 body = null;
