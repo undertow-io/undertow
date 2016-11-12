@@ -18,6 +18,22 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.net.ssl.SSLEngine;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Pool;
+import org.xnio.StreamConnection;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.ssl.SslConnection;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -33,33 +49,20 @@ import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import io.undertow.server.XnioByteBufferPool;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.Pool;
-import org.xnio.StreamConnection;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.ssl.SslConnection;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javax.net.ssl.SSLEngine;
 
 /**
  * Open listener adaptor for ALPN connections
- *
+ * <p>
  * Not a proper open listener as such, but more a mechanism for selecting between them.
- *
- *
  *
  * @author Stuart Douglas
  */
 public class AlpnOpenListener implements ChannelListener<StreamConnection>, OpenListener {
+
+    /**
+     * HTTP/2 required cipher. Not strictly part of ALPN but it can live here for now till we have a better solution.
+     */
+    public static final String REQUIRED_CIPHER = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
 
     private final ALPNManager alpnManager = ALPNManager.INSTANCE; //todo: configurable
     private final ByteBufferPool bufferPool;
@@ -75,7 +78,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         this(bufferPool, undertowOptions, "http/1.1", httpListener);
     }
 
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool,  OptionMap undertowOptions) {
+    public AlpnOpenListener(Pool<ByteBuffer> bufferPool, OptionMap undertowOptions) {
         this(bufferPool, undertowOptions, null, null);
     }
 
@@ -91,7 +94,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         this(bufferPool, OptionMap.EMPTY, null, null);
     }
 
-    public AlpnOpenListener(ByteBufferPool bufferPool,  OptionMap undertowOptions) {
+    public AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions) {
         this(bufferPool, undertowOptions, null, null);
     }
 
@@ -100,7 +103,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         this.undertowOptions = undertowOptions;
         this.fallbackProtocol = fallbackProtocol;
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
-        if(fallbackProtocol != null && fallbackListener != null) {
+        if (fallbackProtocol != null && fallbackListener != null) {
             addProtocol(fallbackProtocol, fallbackListener, 0);
         }
     }
@@ -113,7 +116,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
     @Override
     public void setRootHandler(HttpHandler rootHandler) {
         this.rootHandler = rootHandler;
-        for(Map.Entry<String, ListenerEntry> delegate : listeners.entrySet()) {
+        for (Map.Entry<String, ListenerEntry> delegate : listeners.entrySet()) {
             delegate.getValue().listener.setRootHandler(rootHandler);
         }
     }
@@ -129,7 +132,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
-        for(Map.Entry<String, ListenerEntry> delegate : listeners.entrySet()) {
+        for (Map.Entry<String, ListenerEntry> delegate : listeners.entrySet()) {
             delegate.getValue().listener.setRootHandler(rootHandler);
         }
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
@@ -142,11 +145,11 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
 
     @Override
     public ConnectorStatistics getConnectorStatistics() {
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             List<ConnectorStatistics> stats = new ArrayList<>();
-            for(Map.Entry<String, ListenerEntry> l : listeners.entrySet()) {
+            for (Map.Entry<String, ListenerEntry> l : listeners.entrySet()) {
                 ConnectorStatistics c = l.getValue().listener.getConnectorStatistics();
-                if(c != null) {
+                if (c != null) {
                     stats.add(c);
                 }
             }
@@ -198,7 +201,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         List<ListenerEntry> list = new ArrayList<>(listeners.values());
         Collections.sort(list);
         protocols = new String[list.size()];
-        for(int i = 0; i < list.size(); ++i) {
+        for (int i = 0; i < list.size(); ++i) {
             protocols[i] = list.get(i).protocol;
         }
         return this;
@@ -211,12 +214,23 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         }
         final SslConduit sslConduit = UndertowXnioSsl.getSslConduit((SslConnection) channel);
         final SSLEngine sslEngine = sslConduit.getSSLEngine();
+        if (!engineSupportsHTTP2(sslEngine)) {
+            UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however %s is not present, falling back to default protocol", REQUIRED_CIPHER);
+            if (fallbackProtocol != null) {
+                ListenerEntry listener = listeners.get(fallbackProtocol);
+                if (listener != null) {
+                    listener.listener.handleEvent(channel);
+                    return;
+                }
+            }
+        }
+
 
         ALPNProvider provider = alpnManager.getProvider(sslEngine);
-        if(provider == null) {
-            if(fallbackProtocol != null) {
+        if (provider == null) {
+            if (fallbackProtocol != null) {
                 ListenerEntry listener = listeners.get(fallbackProtocol);
-                if(listener != null) {
+                if (listener != null) {
                     listener.listener.handleEvent(channel);
                     return;
                 }
@@ -227,13 +241,23 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         }
 
         SSLEngine newEngine = provider.setProtocols(sslEngine, protocols);
-        if(newEngine != sslEngine) {
+        if (newEngine != sslEngine) {
             sslConduit.setSslEngine(newEngine);
         }
         final AlpnConnectionListener potentialConnection = new AlpnConnectionListener(channel, newEngine, provider);
         channel.getSourceChannel().setReadListener(potentialConnection);
         potentialConnection.handleEvent(channel.getSourceChannel());
 
+    }
+
+    public static boolean engineSupportsHTTP2(SSLEngine engine) {
+        String[] ciphers = engine.getEnabledCipherSuites();
+        for (String i : ciphers) {
+            if (i.equals(REQUIRED_CIPHER)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private class AlpnConnectionListener implements ChannelListener<StreamSourceChannel> {
@@ -260,11 +284,11 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
                     }
                     buffer.getBuffer().flip();
                     final String selected = provider.getSelectedProtocol(engine);
-                    if(selected != null) {
+                    if (selected != null) {
                         DelegateOpenListener listener;
-                        if(selected.isEmpty()) {
+                        if (selected.isEmpty()) {
                             //alpn not in use
-                            if(fallbackProtocol == null) {
+                            if (fallbackProtocol == null) {
                                 UndertowLogger.REQUEST_IO_LOGGER.noALPNFallback(channel.getPeerAddress());
                                 IoUtils.safeClose(channel);
                                 return;
@@ -277,8 +301,8 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
                         listener.handleEvent(channel, buffer);
                         free = false;
                         return;
-                    } else if(res > 0) {
-                        if(fallbackProtocol == null) {
+                    } else if (res > 0) {
+                        if (fallbackProtocol == null) {
                             UndertowLogger.REQUEST_IO_LOGGER.noALPNFallback(channel.getPeerAddress());
                             IoUtils.safeClose(channel);
                             return;
@@ -297,7 +321,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 IoUtils.safeClose(channel);
-            }  finally {
+            } finally {
                 if (free) {
                     buffer.close();
                 }
