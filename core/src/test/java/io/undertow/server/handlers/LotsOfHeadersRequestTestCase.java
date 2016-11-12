@@ -18,12 +18,16 @@
 
 package io.undertow.server.handlers;
 
+import java.io.IOException;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -32,11 +36,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.util.Deque;
-import java.util.Map;
 import io.undertow.UndertowOptions;
 import org.xnio.OptionMap;
 
@@ -45,13 +44,19 @@ import org.xnio.OptionMap;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore(apacheOnly = true)
-public class LotsOfQueryParametersTestCase {
+public class LotsOfHeadersRequestTestCase {
 
-    private static final String QUERY = "QUERY";
-    private static final String MESSAGE = "Hello Query";
+    private static final String HEADER = "HEADER";
+    private static final String MESSAGE = "Hello Header";
 
-    private static final int DEFAULT_MAX_PARAMETERS = 1000;
-    private static final int TEST_MAX_PARAMETERS = 10;
+    private static final int DEFAULT_MAX_HEADERS = 200;
+    private static final int TEST_MAX_HEADERS = 10;
+    // Why -3? Because HttpClient adds the following 3 request headers by default:
+    //  - Host
+    //  - User-Agent
+    //  - Connection: Keep-Alive
+    private static final int DEFAULT_COUNT = DEFAULT_MAX_HEADERS - 3;
+    private static final int TEST_COUNT = TEST_MAX_HEADERS - 3;
 
     @BeforeClass
     public static void setup() {
@@ -60,29 +65,28 @@ public class LotsOfQueryParametersTestCase {
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
-                for (Map.Entry<String, Deque<String>> entry : exchange.getQueryParameters().entrySet()) {
-                    exchange.getResponseHeaders().put(HttpString.tryFromString(entry.getKey()), entry.getValue().getFirst());
+                HeaderMap headers = exchange.getRequestHeaders();
+                for (HeaderValues header : headers) {
+                    for (String val : header) {
+                        exchange.getResponseHeaders().put(HttpString.tryFromString(header.getHeaderName().toString()), val);
+                    }
                 }
             }
         });
     }
 
     @Test
-    public void testLotsOfQueryParameters_Default_Ok() throws IOException {
+    public void testLotsOfHeadersInRequest_Default_Ok() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            StringBuilder qs = new StringBuilder();
-            for (int i = 0; i < DEFAULT_MAX_PARAMETERS; ++i) {
-                qs.append(QUERY + i);
-                qs.append("=");
-                qs.append(URLEncoder.encode(MESSAGE + i, "UTF-8"));
-                qs.append("&");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            for (int i = 0; i < DEFAULT_COUNT; ++i) {
+                get.addHeader(HEADER + i, MESSAGE + i);
             }
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs.toString());
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            for (int i = 0; i < DEFAULT_MAX_PARAMETERS; ++i) {
-                Header[] header = result.getHeaders(QUERY + i);
+            for (int i = 0; i < DEFAULT_COUNT; ++i) {
+                Header[] header = result.getHeaders(HEADER + i);
                 Assert.assertEquals(MESSAGE + i, header[0].getValue());
             }
         } finally {
@@ -91,18 +95,14 @@ public class LotsOfQueryParametersTestCase {
     }
 
     @Test
-    public void testLotsOfQueryParameters_Default_BadRequest() throws IOException {
+    public void testLotsOfHeadersInRequest_Default_BadRequest() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            StringBuilder qs = new StringBuilder();
-            // add query parameters more than MAX_PARAMETERS
-            for (int i = 0; i < (DEFAULT_MAX_PARAMETERS + 1); ++i) {
-                qs.append(QUERY + i);
-                qs.append("=");
-                qs.append(URLEncoder.encode(MESSAGE + i, "UTF-8"));
-                qs.append("&");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            // add request headers more than MAX_HEADERS
+            for (int i = 0; i < (DEFAULT_COUNT + 1); ++i) {
+                get.addHeader(HEADER + i, MESSAGE + i);
             }
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs.toString());
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
         } finally {
@@ -111,23 +111,19 @@ public class LotsOfQueryParametersTestCase {
     }
 
     @Test
-    public void testLotsOfQueryParameters_MaxParameters_Ok() throws IOException {
+    public void testLotsOfHeadersInRequest_MaxHeaders_Ok() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
         TestHttpClient client = new TestHttpClient();
         try {
-            StringBuilder qs = new StringBuilder();
-            for (int i = 0; i < TEST_MAX_PARAMETERS; ++i) {
-                qs.append(QUERY + i);
-                qs.append("=");
-                qs.append(URLEncoder.encode(MESSAGE + i, "UTF-8"));
-                qs.append("&");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            for (int i = 0; i < TEST_COUNT; ++i) {
+                get.addHeader(HEADER + i, MESSAGE + i);
             }
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs.toString());
-            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_PARAMETERS, TEST_MAX_PARAMETERS));
+            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_HEADERS, TEST_MAX_HEADERS));
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            for (int i = 0; i < TEST_MAX_PARAMETERS; ++i) {
-                Header[] header = result.getHeaders(QUERY + i);
+            for (int i = 0; i < TEST_COUNT; ++i) {
+                Header[] header = result.getHeaders(HEADER + i);
                 Assert.assertEquals(MESSAGE + i, header[0].getValue());
             }
         } finally {
@@ -137,20 +133,16 @@ public class LotsOfQueryParametersTestCase {
     }
 
     @Test
-    public void testLotsOfQueryParameters_MaxParameters_BadRequest() throws IOException {
+    public void testLotsOfHeadersInRequest_MaxHeaders_BadRequest() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
         TestHttpClient client = new TestHttpClient();
         try {
-            StringBuilder qs = new StringBuilder();
-            // add query parameters more than specified MAX_PARAMETERS
-            for (int i = 0; i < (TEST_MAX_PARAMETERS + 1); ++i) {
-                qs.append(QUERY + i);
-                qs.append("=");
-                qs.append(URLEncoder.encode(MESSAGE + i, "UTF-8"));
-                qs.append("&");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            // add request headers more than MAX_HEADERS
+            for (int i = 0; i < (TEST_COUNT + 1); ++i) {
+                get.addHeader(HEADER + i, MESSAGE + i);
             }
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs.toString());
-            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_PARAMETERS, TEST_MAX_PARAMETERS));
+            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_HEADERS, TEST_MAX_HEADERS));
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
         } finally {
