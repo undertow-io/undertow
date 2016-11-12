@@ -421,7 +421,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(isWritesShutdown()) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
-        return sendInternal(pooled);
+        boolean result = sendInternal(pooled);
+        if(result) {
+            flush();
+        }
+        return result;
     }
 
     protected boolean sendInternal(PooledByteBuffer pooled) throws IOException {
