@@ -26,6 +26,7 @@ package io.undertow.util;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -345,11 +346,11 @@ public class FastConcurrentDirectDeque<E>
 
         private static Unsafe getUnsafe() {
             if (System.getSecurityManager() != null) {
-                return new PrivilegedAction<Unsafe>() {
+                return AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
                     public Unsafe run() {
                         return getUnsafe0();
                     }
-                }.run();
+                });
             }
             return getUnsafe0();
         }

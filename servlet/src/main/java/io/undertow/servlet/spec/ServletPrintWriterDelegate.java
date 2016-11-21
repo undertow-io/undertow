@@ -250,11 +250,11 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
 
     private static Unsafe getUnsafe() {
         if (System.getSecurityManager() != null) {
-            return new PrivilegedAction<Unsafe>() {
+            return AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
                 public Unsafe run() {
                     return getUnsafe0();
                 }
-            }.run();
+            });
         }
         return getUnsafe0();
     }
