@@ -36,6 +36,7 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.HttpString;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.SslConnection;
@@ -60,6 +61,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHttp2StreamSourceChannel, AbstractHttp2StreamSinkChannel> implements Attachable {
 
     public static final String CLEARTEXT_UPGRADE_STRING = "h2c";
+
+    public static final HttpString METHOD = new HttpString(":method");
+    public static final HttpString PATH = new HttpString(":path");
+    public static final HttpString SCHEME = new HttpString(":scheme");
+    public static final HttpString AUTHORITY = new HttpString(":authority");
+    public static final HttpString STATUS = new HttpString(":status");
 
     static final int FRAME_TYPE_DATA = 0x00;
     static final int FRAME_TYPE_HEADERS = 0x01;

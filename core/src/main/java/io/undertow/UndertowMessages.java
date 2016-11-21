@@ -31,6 +31,7 @@ import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
+import io.undertow.util.ParameterLimitException;
 
 /**
  * @author Stuart Douglas
@@ -170,7 +171,7 @@ public interface UndertowMessages {
     IllegalStateException tooManyCookies(int maxCookies);
 
     @Message(id = 47, value = "The number of parameters exceeded the maximum of %s")
-    IllegalStateException tooManyParameters(int maxValues);
+    ParameterLimitException tooManyParameters(int maxValues);
 
     @Message(id = 48, value = "No request is currently active")
     IllegalStateException noRequestActive();

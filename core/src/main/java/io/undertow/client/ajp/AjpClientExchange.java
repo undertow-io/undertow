@@ -81,6 +81,9 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
 
     void terminateRequest() {
         state |= REQUEST_TERMINATED;
+        if(!clientConnection.isOpen()) {
+            state |= RESPONSE_TERMINATED;
+        }
         if (anyAreSet(state, RESPONSE_TERMINATED)) {
             clientConnection.requestDone();
         }
@@ -88,6 +91,9 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
 
     void terminateResponse() {
         state |= RESPONSE_TERMINATED;
+        if(!clientConnection.isOpen()) {
+            state |= REQUEST_TERMINATED;
+        }
         if (anyAreSet(state, REQUEST_TERMINATED)) {
             clientConnection.requestDone();
         }

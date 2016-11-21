@@ -510,7 +510,7 @@ public abstract class HttpRequestParser {
                     urlDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && nextQueryParam == null) {
-                    if (mapCount++ > maxParameters) {
+                    if (++mapCount > maxParameters) {
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
                     if (queryParamPos != stringBuilder.length()) {
@@ -519,7 +519,7 @@ public abstract class HttpRequestParser {
                     urlDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&') {
-                    if (mapCount++ > maxParameters) {
+                    if (++mapCount > maxParameters) {
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
                     exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true));
@@ -535,7 +535,7 @@ public abstract class HttpRequestParser {
         state.pos = queryParamPos;
         state.nextQueryParam = nextQueryParam;
         state.urlDecodeRequired = urlDecodeRequired;
-        state.mapCount = 0;
+        state.mapCount = mapCount;
     }
 
     private String decode(final String value, boolean urlDecodeRequired, ParseState state, final boolean allowEncodedSlash) {
@@ -595,14 +595,14 @@ public abstract class HttpRequestParser {
                     urlDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && nextQueryParam == null) {
-                    if (mapCount++ > maxParameters) {
+                    if (++mapCount > maxParameters) {
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
                     exchange.addPathParam(decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true), "");
                     urlDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&') {
-                    if (mapCount++ > maxParameters) {
+                    if (++mapCount > maxParameters) {
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
 
@@ -618,7 +618,7 @@ public abstract class HttpRequestParser {
         }
         state.pos = queryParamPos;
         state.nextQueryParam = nextQueryParam;
-        state.mapCount = 0;
+        state.mapCount = mapCount;
         state.urlDecodeRequired = urlDecodeRequired;
     }
 
@@ -716,7 +716,7 @@ public abstract class HttpRequestParser {
                         String headerValue = stringBuilder.toString();
 
 
-                        if (state.mapCount++ > maxHeaders) {
+                        if (++state.mapCount > maxHeaders) {
                             throw new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
                         }
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
@@ -782,7 +782,7 @@ public abstract class HttpRequestParser {
             return false;
         }
         buffer.position(pos + i);
-        if (state.mapCount++ > maxHeaders) {
+        if (++state.mapCount > maxHeaders) {
             throw new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
         }
         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol

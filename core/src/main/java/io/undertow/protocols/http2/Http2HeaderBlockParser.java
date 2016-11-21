@@ -20,12 +20,16 @@ package io.undertow.protocols.http2;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
-import io.undertow.UndertowLogger;
 import org.xnio.Bits;
+import io.undertow.UndertowLogger;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
 /**
@@ -41,19 +45,35 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     private final HpackDecoder decoder;
     private int frameRemaining = -1;
     private boolean invalid = false;
+    private boolean processingPseudoHeaders = true;
+    private final boolean client;
     private final int maxHeaders;
 
-    Http2HeaderBlockParser(int frameLength, HpackDecoder decoder, int maxHeaders) {
+    private int currentPadding;
+    private final int streamId;
+
+    //headers the server is allowed to receive
+    private static final Set<HttpString> SERVER_HEADERS;
+
+    static {
+        Set<HttpString> server = new HashSet<>();
+        server.add(Http2Channel.METHOD);
+        server.add(Http2Channel.AUTHORITY);
+        server.add(Http2Channel.SCHEME);
+        server.add(Http2Channel.PATH);
+        SERVER_HEADERS = Collections.unmodifiableSet(server);
+    }
+
+    Http2HeaderBlockParser(int frameLength, HpackDecoder decoder, boolean client, int maxHeaders, int streamId) {
         super(frameLength);
         this.decoder = decoder;
+        this.client = client;
         this.maxHeaders = maxHeaders;
+        this.streamId = streamId;
     }
 
     @Override
     protected void handleData(ByteBuffer resource, Http2FrameHeaderParser header) throws IOException {
-        if(maxHeaders > 0 && headerMap.size() >= maxHeaders) {
-            throw new IOException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
-        }
         boolean continuationFramesComing = Bits.anyAreClear(header.flags, Http2Channel.HEADERS_FLAG_END_HEADERS);
         if (frameRemaining == -1) {
             frameRemaining = header.length;
@@ -62,16 +82,44 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
         final int pos = resource.position();
         try {
             if (!beforeHeadersHandled) {
+                int start = resource.position();
                 if (!handleBeforeHeader(resource, header)) {
                     return;
                 }
+                currentPadding = getPaddingLength();
+                frameRemaining -= (resource.position() - start);
             }
             beforeHeadersHandled = true;
             decoder.setHeaderEmitter(this);
+            int oldLimit = -1;
+            if(currentPadding > 0) {
+                int actualData = frameRemaining - currentPadding;
+                if(actualData < 0) {
+                    throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR);
+                }
+                if(resource.remaining() > actualData) {
+                    oldLimit = resource.limit();
+                    resource.limit(resource.position() + actualData);
+                }
+            }
             try {
-                decoder.decode(resource, moreDataThisFrame);
+                decoder.decode(resource, moreDataThisFrame || continuationFramesComing);
             } catch (HpackException e) {
                 throw new ConnectionErrorException(Http2Channel.ERROR_COMPRESSION_ERROR, e);
+            }
+
+            if(maxHeaders > 0 && headerMap.size() > maxHeaders) {
+                throw new StreamErrorException(Http2Channel.ERROR_FRAME_SIZE_ERROR);
+            }
+            if(oldLimit != -1) {
+                if(resource.remaining() == 0) {
+                    int paddingInBuffer = oldLimit - resource.limit();
+                    currentPadding -= paddingInBuffer;
+                    resource.limit(oldLimit);
+                    resource.position(oldLimit);
+                } else {
+                    resource.limit(oldLimit);
+                }
             }
         } finally {
             int used = resource.position() - pos;
@@ -87,8 +135,34 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     }
 
     @Override
-    public void emitHeader(HttpString name, String value, boolean neverIndex) {
+    public void emitHeader(HttpString name, String value, boolean neverIndex) throws HpackException {
+        if(maxHeaders > 0 && headerMap.size() > maxHeaders) {
+            return;
+        }
         headerMap.add(name, value);
+
+        if(name.length() == 0) {
+            throw UndertowMessages.MESSAGES.invalidHeader();
+        }
+        if(name.equals(Headers.TRANSFER_ENCODING)) {
+            throw new HpackException();
+        }
+        if(name.byteAt(0) == ':') {
+            if(client) {
+                if(!name.equals(Http2Channel.STATUS)) {
+                    invalid = true;
+                }
+            } else {
+                if(!SERVER_HEADERS.contains(name)) {
+                    invalid = true;
+                }
+            }
+            if(!processingPseudoHeaders) {
+                throw new HpackException();
+            }
+        } else {
+            processingPseudoHeaders = false;
+        }
         for(int i = 0; i < name.length(); ++i) {
             byte c = name.byteAt(i);
             if(c>= 'A' && c <= 'Z') {
@@ -98,7 +172,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
         }
 
     }
-
+    protected abstract int getPaddingLength();
     @Override
     protected void moreData(int data) {
         super.moreData(data);
@@ -107,5 +181,9 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
 
     public boolean isInvalid() {
         return invalid;
+    }
+
+    public int getStreamId() {
+        return streamId;
     }
 }

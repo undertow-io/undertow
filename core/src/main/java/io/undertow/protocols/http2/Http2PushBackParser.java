@@ -18,10 +18,10 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.UndertowMessages;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import io.undertow.UndertowMessages;
 
 /**
  * Parser that supports push back when not all data can be read.
@@ -33,9 +33,13 @@ public abstract class Http2PushBackParser {
     private byte[] pushedBackData;
     private boolean finished;
     private int remainingData;
+    private final int frameLength;
+
+    int cnt;
 
     public Http2PushBackParser(int frameLength) {
         this.remainingData = frameLength;
+        this.frameLength = frameLength;
     }
 
     public void parse(ByteBuffer data, Http2FrameHeaderParser headerParser) throws IOException {
@@ -58,7 +62,9 @@ public abstract class Http2PushBackParser {
             handleData(dataToParse, headerParser);
             used = rem - dataToParse.remaining();
             if(!isFinished() && remainingData > 0 && used == 0 && dataToParse.remaining() >= remainingData) {
-                throw UndertowMessages.MESSAGES.parserDidNotMakeProgress();
+                if(cnt++ == 100) {
+                    throw UndertowMessages.MESSAGES.parserDidNotMakeProgress();
+                }
             }
 
         } finally {
@@ -86,6 +92,9 @@ public abstract class Http2PushBackParser {
     protected abstract void handleData(ByteBuffer resource, Http2FrameHeaderParser headerParser) throws IOException;
 
     public boolean isFinished() {
+        if(pushedBackData != null && remainingData == pushedBackData.length) {
+            return true;
+        }
         return finished;
     }
 
@@ -96,5 +105,9 @@ public abstract class Http2PushBackParser {
     protected void moreData(int data) {
         finished = false;
         this.remainingData += data;
+    }
+
+    public int getFrameLength() {
+        return frameLength;
     }
 }

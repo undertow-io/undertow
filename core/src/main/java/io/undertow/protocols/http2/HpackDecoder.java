@@ -66,6 +66,8 @@ public class HpackDecoder {
      */
     private int maxMemorySize;
 
+    private boolean first = true;
+
     private final StringBuilder stringBuilder = new StringBuilder();
 
     public HpackDecoder(int maxMemorySize) {
@@ -89,6 +91,7 @@ public class HpackDecoder {
             int originalPos = buffer.position();
             byte b = buffer.get();
             if ((b & 0b10000000) != 0) {
+                first = false;
                 //if the first bit is set it is an indexed header field
                 buffer.position(buffer.position() - 1); //unget the byte
                 int index = Hpack.decodeInteger(buffer, 7); //prefix is 7
@@ -103,6 +106,7 @@ public class HpackDecoder {
                 }
                 handleIndex(index);
             } else if ((b & 0b01000000) != 0) {
+                first = false;
                 //Literal Header Field with Incremental Indexing
                 HttpString headerName = readHeaderName(buffer, 6);
                 if (headerName == null) {
@@ -123,6 +127,7 @@ public class HpackDecoder {
                 headerEmitter.emitHeader(headerName, headerValue, false);
                 addEntryToHeaderTable(new HeaderField(headerName, headerValue));
             } else if ((b & 0b11110000) == 0) {
+                first = false;
                 //Literal Header Field without Indexing
                 HttpString headerName = readHeaderName(buffer, 4);
                 if (headerName == null) {
@@ -142,6 +147,7 @@ public class HpackDecoder {
                 }
                 headerEmitter.emitHeader(headerName, headerValue, false);
             } else if ((b & 0b11110000) == 0b00010000) {
+                first = false;
                 //Literal Header Field never indexed
                 HttpString headerName = readHeaderName(buffer, 4);
                 if (headerName == null) {
@@ -158,13 +164,19 @@ public class HpackDecoder {
                 }
                 headerEmitter.emitHeader(headerName, headerValue, true);
             } else if ((b & 0b11100000) == 0b00100000) {
+                if(!first) {
+                    throw new HpackException();
+                }
                 //context update max table size change
                 if (!handleMaxMemorySizeChange(buffer, originalPos)) {
                     return;
                 }
             } else {
-                throw new RuntimeException("Not yet implemented");
+                throw new HpackException();
             }
+        }
+        if(!moreData) {
+            first = true;
         }
     }
 
@@ -349,7 +361,7 @@ public class HpackDecoder {
 
     public interface HeaderEmitter {
 
-        void emitHeader(HttpString name, String value, boolean neverIndex);
+        void emitHeader(HttpString name, String value, boolean neverIndex) throws HpackException;
     }
 
 

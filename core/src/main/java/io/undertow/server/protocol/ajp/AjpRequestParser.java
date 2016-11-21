@@ -57,6 +57,7 @@ import io.undertow.security.impl.ExternalAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.ParameterLimitException;
 import io.undertow.util.URLUtils;
 
 /**
@@ -254,7 +255,11 @@ public class AjpRequestParser {
                         exchange.setRequestURI(result.value);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
-                        URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
+                        try {
+                            URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
+                        } catch (ParameterLimitException e) {
+                            state.badRequest = true;
+                        }
                     }
                 } else {
                     state.state = AjpRequestParseState.READING_REQUEST_URI;
@@ -318,7 +323,7 @@ public class AjpRequestParser {
                 } else {
                     state.numHeaders = result.value;
                     if(state.numHeaders > maxHeaders) {
-                        throw new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(state.numHeaders));
+                        state.badRequest = true;
                     }
                 }
             }
@@ -344,7 +349,9 @@ public class AjpRequestParser {
                         state.readHeaders = readHeaders;
                         return;
                     }
-                    exchange.getRequestHeaders().add(state.currentHeader, result.value);
+                    if(!state.badRequest) {
+                        exchange.getRequestHeaders().add(state.currentHeader, result.value);
+                    }
                     state.currentHeader = null;
                     ++readHeaders;
                 }
@@ -401,7 +408,11 @@ public class AjpRequestParser {
                     if (state.currentAttribute.equals(QUERY_STRING)) {
                         String resultAsQueryString = result == null ? "" : result;
                         exchange.setQueryString(resultAsQueryString);
-                        URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode, maxParameters);
+                        try {
+                            URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode, maxParameters);
+                        } catch (ParameterLimitException e) {
+                            state.badRequest = true;
+                        }
                     } else if (state.currentAttribute.equals(REMOTE_USER)) {
                         exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_PRINCIPAL, result);
                     } else if (state.currentAttribute.equals(AUTH_TYPE)) {

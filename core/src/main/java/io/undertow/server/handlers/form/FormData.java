@@ -75,7 +75,7 @@ public final class FormData implements Iterable<String> {
         }
         values.add(new FormValueImpl(value, headers));
         if (++valueCount > maxValues) {
-            throw UndertowMessages.MESSAGES.tooManyParameters(maxValues);
+            throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(maxValues));
         }
     }
 
@@ -86,10 +86,10 @@ public final class FormData implements Iterable<String> {
         }
         values.add(new FormValueImpl(value, fileName, headers));
         if (values.size() > maxValues) {
-            throw UndertowMessages.MESSAGES.tooManyParameters(maxValues);
+            throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(maxValues));
         }
         if (++valueCount > maxValues) {
-            throw UndertowMessages.MESSAGES.tooManyParameters(maxValues);
+            throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(maxValues));
         }
     }
 
@@ -102,7 +102,7 @@ public final class FormData implements Iterable<String> {
         values.add(new FormValueImpl(value, headers));
 
         if (++valueCount > maxValues) {
-            throw UndertowMessages.MESSAGES.tooManyParameters(maxValues);
+            throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(maxValues));
         }
     }
 
