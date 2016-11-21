@@ -365,6 +365,19 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return null;
     }
 
+    /**
+     * Should only be used for tests
+     *
+     * DO NOT CALL THIS METHOD WHEN REQUESTS ARE IN PROGRESS
+     *
+     * It is not thread safe so internal state can get messed up.
+     */
+    public void closeCurrentConnections() {
+        for(Host host : hosts) {
+            host.closeCurrentConnections();
+        }
+    }
+
     public final class Host extends ConnectionPoolErrorHandler.SimpleConnectionPoolErrorHandler implements ConnectionPoolManager {
         final ProxyConnectionPool connectionPool;
         final String jvmRoute;
@@ -410,6 +423,10 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
         public URI getUri() {
             return uri;
+        }
+
+        void closeCurrentConnections() {
+            connectionPool.closeCurrentConnections();
         }
     }
 

@@ -33,6 +33,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
+import io.undertow.util.Protocols;
 
 /**
  * Upgrade listener for HTTP2, this allows connections to be established using the upgrade
@@ -81,6 +82,7 @@ public class Http2UpgradeHandler implements HttpHandler {
                                     exchange.endExchange();
                                     return;
                                 }
+                                exchange.setProtocol(Protocols.HTTP_2_0);
                                 next.handleRequest(exchange);
                             }
                         }, undertowOptions, exchange.getConnection().getBufferSize(), null);

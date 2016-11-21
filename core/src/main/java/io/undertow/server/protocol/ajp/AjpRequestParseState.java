@@ -94,12 +94,14 @@ class AjpRequestParseState {
     public String sslCipher;
     public String sslCert;
     public String sslKeySize;
+    boolean badRequest;
 
     public void reset() {
         stringLength = -1;
         currentStringLength = 0;
         currentIntegerPart = -1;
         readHeaders = 0;
+        badRequest = false;
     }
     public boolean isComplete() {
         return state == 15;

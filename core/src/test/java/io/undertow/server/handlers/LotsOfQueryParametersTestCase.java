@@ -67,7 +67,7 @@ public class LotsOfQueryParametersTestCase {
         });
     }
 
-    @Test
+    @Test @AjpIgnore
     public void testLotsOfQueryParameters_Default_Ok() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -110,7 +110,7 @@ public class LotsOfQueryParametersTestCase {
         }
     }
 
-    @Test
+    @Test @AjpIgnore
     public void testLotsOfQueryParameters_MaxParameters_Ok() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
         TestHttpClient client = new TestHttpClient();
@@ -136,7 +136,7 @@ public class LotsOfQueryParametersTestCase {
         }
     }
 
-    @Test
+    @Test @AjpIgnore
     public void testLotsOfQueryParameters_MaxParameters_BadRequest() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
         TestHttpClient client = new TestHttpClient();
