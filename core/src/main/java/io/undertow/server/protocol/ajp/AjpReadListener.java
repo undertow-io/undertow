@@ -34,6 +34,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.StatusCodes;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -105,6 +106,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             channel.suspendReads();
             return;
         }
+
         PooledByteBuffer existing = connection.getExtraBytes();
 
         final PooledByteBuffer pooled = existing == null ? connection.getByteBufferPool().allocate() : existing;
@@ -223,6 +225,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 if(state.attributes != null) {
                     httpServerExchange.putAttachment(HttpServerExchange.REQUEST_ATTRIBUTES, state.attributes);
                 }
+                AjpRequestParseState oldState = state;
                 state = null;
                 this.httpServerExchange = null;
                 httpServerExchange.setPersistent(true);
@@ -234,7 +237,13 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 if(connectorStatistics != null) {
                     connectorStatistics.setup(httpServerExchange);
                 }
-                Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
+
+                if(oldState.badRequest) {
+                    httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                    httpServerExchange.endExchange();
+                } else {
+                    Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
+                }
 
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation

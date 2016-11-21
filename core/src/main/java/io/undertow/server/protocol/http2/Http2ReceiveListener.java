@@ -34,7 +34,9 @@ import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
+import io.undertow.util.ParameterLimitException;
 import io.undertow.util.Protocols;
+import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -143,7 +145,15 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
 
         final String path = exchange.getRequestHeaders().getFirst(PATH);
-        Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
+        try {
+            Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
+        } catch (ParameterLimitException e) {
+            //this can happen if max parameters is exceeded
+            UndertowLogger.REQUEST_IO_LOGGER.debug("Failed to set request path", e);
+            exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+            exchange.endExchange();
+            return;
+        }
         SSLSession session = channel.getSslSession();
         if(session != null) {
             connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
@@ -201,7 +211,13 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setRequestMethod(initial.getRequestMethod());
         exchange.setQueryString(initial.getQueryString());
         String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
-        Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
+        try {
+            Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
+        } catch (ParameterLimitException e) {
+            exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+            exchange.endExchange();
+            return;
+        }
 
         SSLSession session = channel.getSslSession();
         if(session != null) {

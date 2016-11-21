@@ -42,6 +42,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -533,6 +534,21 @@ public class ProxyConnectionPool implements Closeable {
                 holder = new CallbackHolder(proxyTarget, callback, exchange, -1);
             }
             data.awaitingConnections.add(holder);
+        }
+    }
+
+    /**
+     * Should only be used for tests.
+     *
+     */
+    void closeCurrentConnections() {
+        for(Map.Entry<XnioIoThread, HostThreadData> data : hostThreadData.entrySet()) {
+            ConnectionHolder d = data.getValue().availableConnections.poll();
+            while (d != null) {
+                IoUtils.safeClose(d.clientConnection);
+                d = data.getValue().availableConnections.poll();
+            }
+            data.getValue().connections = 0;
         }
     }
 

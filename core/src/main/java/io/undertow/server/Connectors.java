@@ -23,6 +23,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.ParameterLimitException;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
 import io.undertow.connector.PooledByteBuffer;
@@ -253,7 +254,11 @@ public class Connectors {
      */
     @Deprecated
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer) {
-        setExchangeRequestPath(exchange, encodedPath, charset, decode, allowEncodedSlash, decodeBuffer, exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
+        try {
+            setExchangeRequestPath(exchange, encodedPath, charset, decode, allowEncodedSlash, decodeBuffer, exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
+        } catch (ParameterLimitException e) {
+            throw new RuntimeException(e);
+        }
     }
         /**
          * Sets the request path and query parameters, decoding to the requested charset.
@@ -262,7 +267,7 @@ public class Connectors {
          * @param encodedPath        The encoded path
          * @param charset     The charset
          */
-    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer, int maxParameters) {
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException {
         boolean requiresDecode = false;
         for (int i = 0; i < encodedPath.length(); ++i) {
             char c = encodedPath.charAt(i);

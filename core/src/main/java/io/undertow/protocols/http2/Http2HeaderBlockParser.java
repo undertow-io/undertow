@@ -74,9 +74,6 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
 
     @Override
     protected void handleData(ByteBuffer resource, Http2FrameHeaderParser header) throws IOException {
-        if(maxHeaders > 0 && headerMap.size() >= maxHeaders) {
-            throw new IOException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
-        }
         boolean continuationFramesComing = Bits.anyAreClear(header.flags, Http2Channel.HEADERS_FLAG_END_HEADERS);
         if (frameRemaining == -1) {
             frameRemaining = header.length;
@@ -110,6 +107,10 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
             } catch (HpackException e) {
                 throw new ConnectionErrorException(e.getCloseCode(), e);
             }
+
+            if(maxHeaders > 0 && headerMap.size() > maxHeaders) {
+                throw new StreamErrorException(Http2Channel.ERROR_FRAME_SIZE_ERROR);
+            }
             if(oldLimit != -1) {
                 if(resource.remaining() == 0) {
                     int paddingInBuffer = oldLimit - resource.limit();
@@ -135,7 +136,11 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
 
     @Override
     public void emitHeader(HttpString name, String value, boolean neverIndex) throws HpackException {
+        if(maxHeaders > 0 && headerMap.size() > maxHeaders) {
+            return;
+        }
         headerMap.add(name, value);
+
         if(name.length() == 0) {
             throw UndertowMessages.MESSAGES.invalidHeader();
         }

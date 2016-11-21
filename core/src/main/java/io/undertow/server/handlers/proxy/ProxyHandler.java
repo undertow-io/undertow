@@ -585,7 +585,7 @@ public final class ProxyHandler implements HttpHandler {
                                 result.getRequestChannel().getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
                                     @Override
                                     public void handleEvent(StreamSinkChannel channel) {
-                                        Transfer.initiateTransfer(exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, result), handler, handler, exchange.getConnection().getByteBufferPool());
+                                        Transfer.initiateTransfer(exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, result, exchange, proxyClientHandler, idempotentPredicate), handler, handler, exchange.getConnection().getByteBufferPool());
 
                                     }
                                 }, handler));
@@ -596,7 +596,7 @@ public final class ProxyHandler implements HttpHandler {
                             handler.handleException(result.getRequestChannel(), e);
                         }
                     }
-                    HTTPTrailerChannelListener trailerListener = new HTTPTrailerChannelListener(exchange, result);
+                    HTTPTrailerChannelListener trailerListener = new HTTPTrailerChannelListener(exchange, result, exchange, proxyClientHandler, idempotentPredicate);
                     if(!exchange.isRequestComplete()) {
                         Transfer.initiateTransfer(exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), trailerListener, handler, handler, exchange.getConnection().getByteBufferPool());
                     } else {
@@ -607,21 +607,23 @@ public final class ProxyHandler implements HttpHandler {
 
                 @Override
                 public void failed(IOException e) {
-                    UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
-                    if(idempotentPredicate.resolve(exchange) && proxyClientHandler != null) {
-                        proxyClientHandler.failed(exchange); //this will attempt a retry if configured to do so
-                    } else {
-                        if (!exchange.isResponseStarted()) {
-                            exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
-                            exchange.endExchange();
-                        } else {
-                            IoUtils.safeClose(exchange.getConnection());
-                        }
-                    }
+                    handleFailure(exchange, proxyClientHandler, idempotentPredicate, e);
                 }
             });
 
 
+        }
+    }
+
+    static void handleFailure(HttpServerExchange exchange, ProxyClientHandler proxyClientHandler, Predicate idempotentRequestPredicate, IOException e) {
+        UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
+        if(exchange.isResponseStarted()) {
+            IoUtils.safeClose(exchange.getConnection());
+        } else if(idempotentRequestPredicate.resolve(exchange) && proxyClientHandler != null) {
+            proxyClientHandler.failed(exchange); //this will attempt a retry if configured to do so
+        } else {
+            exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
+            exchange.endExchange();
         }
     }
 
@@ -674,22 +676,12 @@ public final class ProxyHandler implements HttpHandler {
                 });
             }
             final IoExceptionHandler handler = new IoExceptionHandler(exchange, result.getConnection());
-            Transfer.initiateTransfer(result.getResponseChannel(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(result, exchange), handler, handler, exchange.getConnection().getByteBufferPool());
+            Transfer.initiateTransfer(result.getResponseChannel(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(result, exchange, exchange, proxyClientHandler, idempotentPredicate), handler, handler, exchange.getConnection().getByteBufferPool());
         }
 
         @Override
         public void failed(IOException e) {
-            UndertowLogger.PROXY_REQUEST_LOGGER.proxyRequestFailed(exchange.getRequestURI(), e);
-            if (!exchange.isResponseStarted()) {
-                if(idempotentPredicate.resolve(exchange) && proxyClientHandler != null) {
-                    proxyClientHandler.failed(exchange);
-                } else {
-                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                    exchange.endExchange();
-                }
-            } else {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            handleFailure(exchange, proxyClientHandler, idempotentPredicate, e);
         }
     }
 
@@ -697,10 +689,16 @@ public final class ProxyHandler implements HttpHandler {
 
         private final Attachable source;
         private final Attachable target;
+        private final HttpServerExchange exchange;
+        private final ProxyClientHandler proxyClientHandler;
+        private final Predicate idempotentPredicate;
 
-        private HTTPTrailerChannelListener(final Attachable source, final Attachable target) {
+        private HTTPTrailerChannelListener(final Attachable source, final Attachable target, HttpServerExchange exchange, ProxyClientHandler proxyClientHandler, Predicate idempotentPredicate) {
             this.source = source;
             this.target = target;
+            this.exchange = exchange;
+            this.proxyClientHandler = proxyClientHandler;
+            this.idempotentPredicate = idempotentPredicate;
         }
 
         @Override
@@ -725,11 +723,9 @@ public final class ProxyHandler implements HttpHandler {
                     channel.shutdownWrites();
                 }
             } catch (IOException e) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                IoUtils.safeClose(channel);
+                handleFailure(exchange, proxyClientHandler, idempotentPredicate, e);
             } catch (Exception e) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
-                IoUtils.safeClose(channel);
+                handleFailure(exchange, proxyClientHandler, idempotentPredicate, new IOException(e));
             }
 
         }

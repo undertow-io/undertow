@@ -35,6 +35,7 @@ import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.ParameterLimitException;
 import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
@@ -65,6 +66,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 
 /**
  * A server connection. There is one connection per request
@@ -397,7 +399,14 @@ public class Http2ServerConnection extends ServerConnection {
             exchange.setRequestMethod(method);
             exchange.setProtocol(Protocols.HTTP_1_1);
             exchange.setRequestScheme(this.exchange.getRequestScheme());
-            Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false), new StringBuilder(), getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_HEADERS));
+            try {
+                Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false), new StringBuilder(), getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_HEADERS));
+            } catch (ParameterLimitException e) {
+                UndertowLogger.REQUEST_IO_LOGGER.debug("Too many parameters in HTTP/2 request", e);
+                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                exchange.endExchange();
+                return false;
+            }
 
             Connectors.terminateRequest(exchange);
             getIoThread().execute(new Runnable() {
