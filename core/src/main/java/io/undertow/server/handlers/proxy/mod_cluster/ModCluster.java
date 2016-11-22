@@ -264,12 +264,9 @@ public class ModCluster {
             return this;
         }
 
-        public void setMaxRetries(int maxRetries) {
+        public Builder setMaxRetries(int maxRetries) {
             this.maxRetries = maxRetries;
-        }
-
-        public long getTtl() {
-            return ttl;
+            return this;
         }
 
         public Builder setTtl(long ttl) {
