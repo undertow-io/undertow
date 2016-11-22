@@ -32,6 +32,7 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * This class provides the connector part of the {@link HttpServerExchange} API.
@@ -221,7 +222,13 @@ public class Connectors {
                 exchange.unDispatch();
                 if (dispatchTask != null) {
                     executor = executor == null ? exchange.getConnection().getWorker() : executor;
-                    executor.execute(dispatchTask);
+                    try {
+                        executor.execute(dispatchTask);
+                    } catch (RejectedExecutionException e) {
+                        UndertowLogger.REQUEST_LOGGER.debug("Failed to dispatch to worker", e);
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.endExchange();
+                    }
                 }
             } else if (!resumed) {
                 exchange.endExchange();
