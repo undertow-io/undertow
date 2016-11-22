@@ -591,7 +591,7 @@ class MCMPHandler implements HttpHandler {
     /**
      * Process <tt>INFO</tt> request
      *
-     * @throws Exception
+     * @throws IOException
      */
     protected void processInfo(HttpServerExchange exchange) throws IOException {
         final String data = processInfoString();
@@ -634,7 +634,7 @@ class MCMPHandler implements HttpHandler {
      * Process <tt>DUMP</tt> request
      *
      * @param exchange
-     * @throws java.io.IOException
+     * @throws IOException
      */
     protected void processDump(HttpServerExchange exchange) throws IOException {
         final String data = processDumpString();
@@ -714,7 +714,7 @@ class MCMPHandler implements HttpHandler {
     /**
      * If the process is OK, then add 200 HTTP status and its "OK" phrase
      *
-     * @throws Exception
+     * @throws IOException
      */
     static void processOK(HttpServerExchange exchange) throws IOException {
         exchange.setStatusCode(StatusCodes.OK);

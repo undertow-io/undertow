@@ -394,8 +394,8 @@ class ModClusterContainer implements ModClusterController {
      *
      * @param domain   the load balancing domain, if known
      * @param jvmRoute the original jvmRoute
+     * @param entry    the resolved virtual host entry
      * @return the context, {@code null} if not found
-     * @oaram entry      the resolved virtual host entry
      */
     Context findFailoverNode(final VirtualHost.HostEntry entry, final String domain, final String jvmRoute, final boolean forceStickySession) {
         String failOverDomain = null;
