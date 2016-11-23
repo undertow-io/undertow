@@ -39,8 +39,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.xnio.XnioExecutor;
 import org.xnio.XnioExecutor.Key;
+import org.xnio.XnioIoThread;
 
 import io.undertow.util.FlexBase64;
+import io.undertow.util.WorkerUtils;
 
 /**
  * A default {@link io.undertow.security.api.NonceManager} implementation to provide reasonable single host management of nonces.
@@ -180,7 +182,6 @@ public class SimpleNonceManager implements SessionNonceManager {
                     // replacement nonce without a stale round trip.
                     long earliestAccepted = now - firstUseTimeOut;
                     if (value.timeStamp < earliestAccepted || value.timeStamp > now) {
-                        XnioExecutor executor = exchange.getIoThread();
                         Nonce replacement = createNewNonce(holder);
                         if (value.executorKey != null) {
                             // The outcome doesn't matter - if we have the value we have all we need.
@@ -202,7 +203,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                         knownNonces.put(nonce, replacement);
                         earliestAccepted = now - (overallTimeOut + cacheTimePostExpiry);
                         long timeTillExpiry = replacement.timeStamp - earliestAccepted;
-                        replacement.executorKey = executor.executeAfter(new KnownNonceCleaner(nonce), timeTillExpiry,
+                        replacement.executorKey = WorkerUtils.executeAfter(exchange.getIoThread(), new KnownNonceCleaner(nonce), timeTillExpiry,
                                 TimeUnit.MILLISECONDS);
 
                     }
@@ -234,7 +235,6 @@ public class SimpleNonceManager implements SessionNonceManager {
      */
     @Override
     public boolean validateNonce(String nonce, int nonceCount, HttpServerExchange exchange) {
-        XnioExecutor executor = exchange.getIoThread();
         if (nonceCount < 0) {
             if (invalidNonces.contains(nonce)) {
                 // Without a nonce count the nonce is only usable once.
@@ -245,7 +245,7 @@ public class SimpleNonceManager implements SessionNonceManager {
             // At this point we need to validate that the nonce is still within it's time limits,
             // If a new nonce had been selected then a known nonce would not have been found.
             // The nonce will also have it's nonce count checked.
-            return validateNonceWithCount(new Nonce(nonce), nonceCount, executor);
+            return validateNonceWithCount(new Nonce(nonce), nonceCount, exchange.getIoThread());
 
         } else if (forwardMapping.containsKey(new NonceHolder(nonce))) {
             // We could have let this drop through as the next validation would fail anyway but
@@ -269,13 +269,13 @@ public class SimpleNonceManager implements SessionNonceManager {
 
         if (nonceCount < 0) {
             // Allow a single use but reject all further uses.
-            return addInvalidNonce(value, executor);
+            return addInvalidNonce(value, exchange.getIoThread());
         } else {
-            return validateNonceWithCount(value, nonceCount, executor);
+            return validateNonceWithCount(value, nonceCount, exchange.getIoThread());
         }
     }
 
-    private boolean validateNonceWithCount(Nonce nonce, int nonceCount, final XnioExecutor executor) {
+    private boolean validateNonceWithCount(Nonce nonce, int nonceCount, final XnioIoThread executor) {
         // This point could have been reached either because the knownNonces map contained the key or because
         // it didn't and a count was supplied - either way need to double check the contents of knownNonces once
         // the lock is in place.
@@ -294,7 +294,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                 if (nonce.timeStamp > earliestAccepted && nonce.timeStamp <= now) {
                     knownNonces.put(nonce.nonce, nonce);
                     long timeTillExpiry = nonce.timeStamp - earliestAccepted;
-                    nonce.executorKey = executor.executeAfter(new KnownNonceCleaner(nonce.nonce), timeTillExpiry,
+                    nonce.executorKey = WorkerUtils.executeAfter(executor, new KnownNonceCleaner(nonce.nonce), timeTillExpiry,
                             TimeUnit.MILLISECONDS);
                     return true;
                 }

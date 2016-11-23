@@ -248,7 +248,7 @@ public class DateUtils {
             long toGo = 1000 - mod;
             dateString = DateUtils.toDateString(new Date(realTime));
             if (cachedDateString.compareAndSet(null, dateString)) {
-                exchange.getConnection().getIoThread().executeAfter(INVALIDATE_TASK, toGo, TimeUnit.MILLISECONDS);
+                WorkerUtils.executeAfter(exchange.getIoThread(), INVALIDATE_TASK, toGo, TimeUnit.MILLISECONDS);
             }
         }
         return dateString;

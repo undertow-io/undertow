@@ -28,6 +28,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.util.WorkerUtils;
+
 /**
  * Class that implements the token bucket algorithm.
  * <p>
@@ -294,7 +296,7 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
         scheduled = true;
         next.suspendWrites();
         long millis = nextSendTime - System.currentTimeMillis();
-        getWriteThread().executeAfter(new Runnable() {
+        WorkerUtils.executeAfter(getWriteThread(), new Runnable() {
             @Override
             public void run() {
                 scheduled = false;

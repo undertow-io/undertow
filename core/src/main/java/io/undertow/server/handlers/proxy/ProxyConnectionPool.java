@@ -28,6 +28,7 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
+import io.undertow.util.WorkerUtils;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -228,7 +229,7 @@ public class ProxyConnectionPool implements Closeable {
                     connectionHolder.timeout = currentTime + timeToLive;
                     if(hostData.availableConnections.size() > coreCachedConnections) {
                         if (hostData.nextTimeout <= 0) {
-                            hostData.timeoutKey = connection.getIoThread().executeAfter(hostData.timeoutTask, timeToLive, TimeUnit.MILLISECONDS);
+                            hostData.timeoutKey = WorkerUtils.executeAfter(connection.getIoThread(), hostData.timeoutTask, timeToLive, TimeUnit.MILLISECONDS);
                             hostData.nextTimeout = connectionHolder.timeout;
                         }
                     }
@@ -359,7 +360,7 @@ public class ProxyConnectionPool implements Closeable {
         final int retry = connectionPoolManager.getProblemServerRetry();
         // only schedule a retry task if the node is not available
         if (retry > 0 && !connectionPoolManager.isAvailable()) {
-            exchange.getIoThread().executeAfter(new Runnable() {
+            WorkerUtils.executeAfter(exchange.getIoThread(), new Runnable() {
                 @Override
                 public void run() {
                     if (closed) {
@@ -428,7 +429,7 @@ public class ProxyConnectionPool implements Closeable {
                     // Schedule a timeout task
                     final long remaining = holder.timeout - currentTime + 1;
                     data.nextTimeout = holder.timeout;
-                    data.timeoutKey = holder.clientConnection.getIoThread().executeAfter(data.timeoutTask, remaining, TimeUnit.MILLISECONDS);
+                    data.timeoutKey = WorkerUtils.executeAfter(holder.clientConnection.getIoThread(), data.timeoutTask, remaining, TimeUnit.MILLISECONDS);
                     return;
                 }
             } else {
@@ -527,7 +528,7 @@ public class ProxyConnectionPool implements Closeable {
             if (timeout > 0) {
                 long time = System.currentTimeMillis();
                 holder = new CallbackHolder(proxyTarget, callback, exchange, time + timeUnit.toMillis(timeout));
-                holder.setTimeoutKey(exchange.getIoThread().executeAfter(holder, timeout, timeUnit));
+                holder.setTimeoutKey(WorkerUtils.executeAfter(exchange.getIoThread(), holder, timeout, timeUnit));
             } else {
                 holder = new CallbackHolder(proxyTarget, callback, exchange, -1);
             }

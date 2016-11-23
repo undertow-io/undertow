@@ -38,6 +38,7 @@ import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.WorkerUtils;
 import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
 
@@ -119,7 +120,7 @@ public class AsyncContextImpl implements AsyncContext {
             }
         }
         if (timeout > 0 && !complete) {
-            this.timeoutKey = exchange.getIoThread().executeAfter(timeoutTask, timeout, TimeUnit.MILLISECONDS);
+            this.timeoutKey = WorkerUtils.executeAfter(exchange.getIoThread(), timeoutTask, timeout, TimeUnit.MILLISECONDS);
         }
     }
 
