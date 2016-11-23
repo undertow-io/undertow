@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.test.listener.servletcontext;
 
+import org.junit.Assert;
+
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextAttributeEvent;
@@ -37,6 +39,7 @@ public class TestSci implements ServletContainerInitializer {
     public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
         ctx.addListener(new DynamicListener());
         ctx.setAttribute("testDL", "foo");
+        Assert.assertNotNull(ctx.getAttribute(ServletContext.TEMPDIR));
     }
 
     public static class DynamicListener implements ServletContextAttributeListener {
