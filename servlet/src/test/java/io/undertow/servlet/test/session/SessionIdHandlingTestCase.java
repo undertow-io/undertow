@@ -106,7 +106,7 @@ public class SessionIdHandlingTestCase {
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=destroycreate");
             result = client.execute(get);
-            String createdSessionId = getSession(client.getCookieStore().getCookies());
+            final String createdSessionId = getSession(client.getCookieStore().getCookies());
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(newSessionId, response);
