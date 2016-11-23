@@ -42,8 +42,6 @@ public interface Session {
      *
      * @return a string specifying the identifier
      *         assigned to this session
-     * @throws IllegalStateException if this method is called on an
-     *                               invalidated session
      */
     String getId();
 

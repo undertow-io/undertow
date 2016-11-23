@@ -235,7 +235,16 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     public boolean isInvalid() {
-        return invalid;
+        if(invalid) {
+            return true;
+        }
+        try {
+            //TODO: in 1.5 we need to add session.isValid()
+            session.getMaxInactiveInterval();
+            return false;
+        } catch (IllegalStateException e) {
+            return true;
+        }
     }
 
     public static class UnwrapSessionAction implements PrivilegedAction<Session> {
