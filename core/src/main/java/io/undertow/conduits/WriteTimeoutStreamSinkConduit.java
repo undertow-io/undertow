@@ -21,6 +21,7 @@ package io.undertow.conduits;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.server.OpenListener;
+import io.undertow.util.WorkerUtils;
 
 import org.xnio.Buffers;
 import org.xnio.ChannelListeners;
@@ -63,7 +64,7 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
             long current = System.currentTimeMillis();
             if (current  < expireTime) {
                 //timeout has been bumped, re-schedule
-                handle = connection.getIoThread().executeAfter(timeoutCommand, (expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+                handle = WorkerUtils.executeAfter(getWriteThread(),timeoutCommand, (expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
                 return;
             }
             UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity", connection.getSinkChannel());

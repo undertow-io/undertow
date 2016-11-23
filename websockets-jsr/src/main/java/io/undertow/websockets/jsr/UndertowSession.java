@@ -19,6 +19,7 @@ package io.undertow.websockets.jsr;
 
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.util.WorkerUtils;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -254,7 +255,7 @@ public final class UndertowSession implements Session {
 
     private void handleReconnect(final long reconnect) {
         JsrWebSocketLogger.REQUEST_LOGGER.debugf("Attempting reconnect in %s ms for session %s", reconnect, this);
-        webSocketChannel.getIoThread().executeAfter(new Runnable() {
+        WorkerUtils.executeAfter(webSocketChannel.getIoThread(), new Runnable() {
             @Override
             public void run() {
                 clientConnectionBuilder.connect().addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {

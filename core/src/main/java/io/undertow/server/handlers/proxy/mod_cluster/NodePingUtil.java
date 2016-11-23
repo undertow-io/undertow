@@ -42,6 +42,7 @@ import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.util.WorkerUtils;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
@@ -480,7 +481,7 @@ class NodePingUtil {
     }
 
     static void scheduleCancelTask(final XnioIoThread ioThread, final CancellableTask cancellable, final long timeout, final TimeUnit timeUnit ) {
-        final XnioExecutor.Key key = ioThread.executeAfter(new Runnable() {
+        final XnioExecutor.Key key = WorkerUtils.executeAfter(ioThread, new Runnable() {
             @Override
             public void run() {
                 cancellable.cancel();

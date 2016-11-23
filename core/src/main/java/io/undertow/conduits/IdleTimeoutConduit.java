@@ -18,6 +18,7 @@
 package io.undertow.conduits;
 
 import io.undertow.UndertowLogger;
+import io.undertow.util.WorkerUtils;
 import org.xnio.Buffers;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
@@ -66,7 +67,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
             long current = System.currentTimeMillis();
             if(current  < expireTime) {
                 //timeout has been bumped, re-schedule
-                handle = sink.getWriteThread().executeAfter(timeoutCommand, (expireTime - current) + DELTA, TimeUnit.MILLISECONDS);
+                handle = WorkerUtils.executeAfter(getWriteThread(), timeoutCommand, (expireTime - current) + DELTA, TimeUnit.MILLISECONDS);
                 return;
             }
 
@@ -351,7 +352,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
         expireTime = newExpireTime;
         XnioExecutor.Key key = handle;
         if (key == null) {
-            handle = getWriteThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
+            handle = WorkerUtils.executeAfter(getWriteThread(), timeoutCommand, timeout, TimeUnit.MILLISECONDS);
         }
     }
 

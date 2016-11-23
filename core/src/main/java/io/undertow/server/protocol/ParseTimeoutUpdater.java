@@ -20,6 +20,7 @@ package io.undertow.server.protocol;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.ServerConnection;
+import io.undertow.util.WorkerUtils;
 import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
 
@@ -84,7 +85,7 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
         }
         if(handle == null) {
             try {
-                handle = connection.getIoThread().executeAfter(this, timeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+                handle = WorkerUtils.executeAfter(connection.getIoThread(), this, timeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
             } catch (RejectedExecutionException e) {
                 UndertowLogger.REQUEST_LOGGER.debug("Failed to schedule parse timeout, server is probably shutting down", e);
             }
@@ -123,7 +124,7 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
         if (expireTime > 0) { //timeout is not active
             long now = System.currentTimeMillis();
             if(expireTime > now) {
-                handle = connection.getIoThread().executeAfter(this, (expireTime - now) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+                handle = WorkerUtils.executeAfter(connection.getIoThread(), this, (expireTime - now) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
             } else {
                 UndertowLogger.REQUEST_LOGGER.parseRequestTimedOut(connection.getPeerAddress());
                 IoUtils.safeClose(connection);

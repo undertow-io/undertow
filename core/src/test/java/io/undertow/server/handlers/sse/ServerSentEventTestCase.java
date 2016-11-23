@@ -25,6 +25,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.WorkerUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DecompressingHttpClient;
@@ -253,7 +254,7 @@ public class ServerSentEventTestCase {
                             }
                         });
                         if(latch.getCount() > 0) {
-                            thread.executeAfter(this, 100, TimeUnit.MILLISECONDS);
+                            WorkerUtils.executeAfter(thread, this, 100, TimeUnit.MILLISECONDS);
                         }
                     }
                 });

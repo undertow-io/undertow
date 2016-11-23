@@ -55,6 +55,7 @@ import io.undertow.util.NetworkUtils;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.Transfer;
+import io.undertow.util.WorkerUtils;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -175,7 +176,7 @@ public final class ProxyHandler implements HttpHandler {
         final long timeout = maxRequestTime > 0 ? System.currentTimeMillis() + maxRequestTime : 0;
         final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, maxConnectionRetries, idempotentRequestPredicate);
         if (timeout > 0) {
-            final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
+            final XnioExecutor.Key key = WorkerUtils.executeAfter(exchange.getIoThread(), new Runnable() {
                 @Override
                 public void run() {
                     clientHandler.cancel(exchange);

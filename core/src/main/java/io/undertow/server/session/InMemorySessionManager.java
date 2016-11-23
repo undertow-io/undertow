@@ -23,6 +23,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcurrentDirectDeque;
+import io.undertow.util.WorkerUtils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 
 /**
@@ -354,7 +356,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         private volatile boolean invalid = false;
         private volatile boolean invalidationStarted = false;
 
-        final XnioExecutor executor;
+        final XnioIoThread executor;
         final XnioWorker worker;
 
         XnioExecutor.Key timerCancelKey;
@@ -369,14 +371,14 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                         if(currentTime >= expireTime) {
                             invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT);
                         } else {
-                            timerCancelKey = executor.executeAfter(cancelTask, expireTime - currentTime, TimeUnit.MILLISECONDS);
+                            timerCancelKey = WorkerUtils.executeAfter(executor, cancelTask, expireTime - currentTime, TimeUnit.MILLISECONDS);
                         }
                     }
                 });
             }
         };
 
-        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final XnioExecutor executor, final XnioWorker worker, final Object evictionToken, final int maxInactiveInterval) {
+        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final XnioIoThread executor, final XnioWorker worker, final Object evictionToken, final int maxInactiveInterval) {
             this.sessionManager = sessionManager;
             this.sessionId = sessionId;
             this.sessionCookieConfig = sessionCookieConfig;

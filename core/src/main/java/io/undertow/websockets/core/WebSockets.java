@@ -19,6 +19,7 @@
 package io.undertow.websockets.core;
 
 import io.undertow.util.ImmediatePooledByteBuffer;
+import io.undertow.util.WorkerUtils;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -688,7 +689,7 @@ public class WebSockets {
     }
 
     private static void setupTimeout(final StreamSinkFrameChannel channel, long timeoutmillis) {
-        final XnioExecutor.Key key = channel.getIoThread().executeAfter(new Runnable() {
+        final XnioExecutor.Key key = WorkerUtils.executeAfter(channel.getIoThread(), new Runnable() {
             @Override
             public void run() {
                 if (channel.isOpen()) {

@@ -96,7 +96,7 @@ public class ConnectionUtils {
             int res = connection.getSourceChannel().read(b);
             b.clear();
             if (res == 0) {
-                final XnioExecutor.Key key = connection.getIoThread().executeAfter(new Runnable() {
+                final XnioExecutor.Key key = WorkerUtils.executeAfter(connection.getIoThread(), new Runnable() {
                     @Override
                     public void run() {
                         IoUtils.safeClose(connection);
