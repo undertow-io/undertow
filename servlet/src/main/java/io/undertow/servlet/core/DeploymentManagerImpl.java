@@ -180,7 +180,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     //now create the servlets and filters that we know about. We can still get more later
                     createServletsAndFilters(deployment, deploymentInfo);
 
-                    //first run the SCI's
+                    //first initialize the temp dir
+                    initializeTempDir(servletContext, deploymentInfo);
+
+                    //then run the SCI's
                     for (final ServletContainerInitializerInfo sci : deploymentInfo.getServletContainerInitializers()) {
                         final InstanceHandle<? extends ServletContainerInitializer> instance = sci.getInstanceFactory().createInstance();
                         try {
@@ -197,7 +200,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
                     initializeErrorPages(deployment, deploymentInfo);
                     initializeMimeMappings(deployment, deploymentInfo);
-                    initializeTempDir(servletContext, deploymentInfo);
                     listeners.contextInitialized();
                     //run
 
