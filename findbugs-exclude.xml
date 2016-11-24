@@ -250,4 +250,8 @@
         <Class name="io.undertow.servlet.spec.AsyncContextImpl"/>
     </Match>
 
+    <Match>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+
 </FindBugsFilter>
