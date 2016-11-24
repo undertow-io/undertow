@@ -238,6 +238,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        //any problems with the paths won't get detected until the data is initialize
+        //so we force initialization here
+        deployment.getServletPaths().initData();
         state = State.DEPLOYED;
     }
 
