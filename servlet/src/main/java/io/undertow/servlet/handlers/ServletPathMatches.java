@@ -72,6 +72,10 @@ public class ServletPathMatches {
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
     }
 
+    public void initData(){
+        getData();
+    }
+
     public ServletChain getServletHandlerByName(final String name) {
         return getData().getServletHandlerByName(name);
     }
