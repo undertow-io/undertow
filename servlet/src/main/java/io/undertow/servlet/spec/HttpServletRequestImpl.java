@@ -664,15 +664,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
-            if (exchange.getRequestMethod().equals(Methods.POST)) {
-                final FormData parsedFormData = parseFormData();
-                if (parsedFormData != null) {
-                    FormData.FormValue res = parsedFormData.getFirst(name);
-                    if (res == null || res.isFile()) {
-                        return null;
-                    } else {
-                        return res.getValue();
-                    }
+            final FormData parsedFormData = parseFormData();
+            if (parsedFormData != null) {
+                FormData.FormValue res = parsedFormData.getFirst(name);
+                if (res == null || res.isFile()) {
+                    return null;
+                } else {
+                    return res.getValue();
                 }
             }
             return null;
