@@ -52,6 +52,7 @@ public class SecurityPathMatches {
         methods.add(Methods.OPTIONS_STRING);
         methods.add(Methods.HEAD_STRING);
         methods.add(Methods.TRACE_STRING);
+        methods.add(Methods.CONNECT_STRING);
         KNOWN_METHODS = Collections.unmodifiableSet(methods);
     }
 
@@ -192,9 +193,11 @@ public class SecurityPathMatches {
     }
 
     public void logWarningsAboutUncoveredMethods() {
-        logWarningsAboutUncoveredMethods(exactPathRoleInformation, "", "");
-        logWarningsAboutUncoveredMethods(prefixPathRoleInformation, "", "/*");
-        logWarningsAboutUncoveredMethods(exactPathRoleInformation, "*.", "");
+        if(!denyUncoveredHttpMethods) {
+            logWarningsAboutUncoveredMethods(exactPathRoleInformation, "", "");
+            logWarningsAboutUncoveredMethods(prefixPathRoleInformation, "", "/*");
+            logWarningsAboutUncoveredMethods(extensionRoleInformation, "*.", "");
+        }
     }
 
     private void logWarningsAboutUncoveredMethods(Map<String, PathSecurityInformation> matches, String prefix, String suffix) {
