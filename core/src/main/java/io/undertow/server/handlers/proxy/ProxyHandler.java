@@ -174,7 +174,11 @@ public final class ProxyHandler implements HttpHandler {
             return;
         }
         final long timeout = maxRequestTime > 0 ? System.currentTimeMillis() + maxRequestTime : 0;
-        final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, maxConnectionRetries, idempotentRequestPredicate);
+        int maxRetries = maxConnectionRetries;
+        if(target instanceof ProxyClient.MaxRetriesProxyTarget) {
+            maxRetries = Math.max(maxRetries, ((ProxyClient.MaxRetriesProxyTarget) target).getMaxRetries());
+        }
+        final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, maxRetries, idempotentRequestPredicate);
         if (timeout > 0) {
             final XnioExecutor.Key key = WorkerUtils.executeAfter(exchange.getIoThread(), new Runnable() {
                 @Override
