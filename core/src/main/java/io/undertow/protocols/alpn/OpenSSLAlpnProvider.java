@@ -35,27 +35,11 @@ import io.undertow.UndertowLogger;
 public class OpenSSLAlpnProvider implements ALPNProvider {
 
 
-    public static final OpenSSLALPNMethods OPENSSL_ALPN_METHODS;
+    private static volatile OpenSSLALPNMethods openSSLALPNMethods;
+    private static volatile boolean initialized;
 
     public static final String OPENSSL_ENGINE = "org.wildfly.openssl.OpenSSLEngine";
 
-    static {
-        OPENSSL_ALPN_METHODS = AccessController.doPrivileged(new PrivilegedAction<OpenSSLALPNMethods>() {
-            @Override
-            public OpenSSLALPNMethods run() {
-                try {
-                    Class<?> openSSLEngine = Class.forName(OPENSSL_ENGINE, true, OpenSSLAlpnProvider.class.getClassLoader());
-                    Method setApplicationProtocols = openSSLEngine.getMethod("setApplicationProtocols", String[].class);
-                    Method getApplicationProtocol = openSSLEngine.getMethod("getSelectedApplicationProtocol");
-                    UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN Enabled");
-                    return new OpenSSLALPNMethods(setApplicationProtocols, getApplicationProtocol);
-                } catch (Throwable e) {
-                    UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN disabled", e);
-                    return null;
-                }
-            }
-        });
-    }
 
     public static class OpenSSLALPNMethods {
         private final Method setApplicationProtocols;
@@ -77,13 +61,13 @@ public class OpenSSLAlpnProvider implements ALPNProvider {
 
     @Override
     public boolean isEnabled(SSLEngine sslEngine) {
-        return OPENSSL_ALPN_METHODS != null && sslEngine.getClass().getName().equals(OPENSSL_ENGINE);
+        return sslEngine.getClass().getName().equals(OPENSSL_ENGINE) && getOpenSSLAlpnMethods() != null;
     }
 
     @Override
     public SSLEngine setProtocols(SSLEngine engine, String[] protocols) {
         try {
-            OPENSSL_ALPN_METHODS.setApplicationProtocols().invoke(engine, (Object) protocols);
+            getOpenSSLAlpnMethods().setApplicationProtocols().invoke(engine, (Object) protocols);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
@@ -93,10 +77,36 @@ public class OpenSSLAlpnProvider implements ALPNProvider {
     @Override
     public String getSelectedProtocol(SSLEngine engine) {
         try {
-            return (String) OPENSSL_ALPN_METHODS.getApplicationProtocol().invoke(engine);
+            return (String) getOpenSSLAlpnMethods().getApplicationProtocol().invoke(engine);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static OpenSSLALPNMethods getOpenSSLAlpnMethods() {
+        if(!initialized) {
+            synchronized (OpenSSLAlpnProvider.class) {
+                if(!initialized) {
+                    openSSLALPNMethods = AccessController.doPrivileged(new PrivilegedAction<OpenSSLALPNMethods>() {
+                        @Override
+                        public OpenSSLALPNMethods run() {
+                            try {
+                                Class<?> openSSLEngine = Class.forName(OPENSSL_ENGINE, true, OpenSSLAlpnProvider.class.getClassLoader());
+                                Method setApplicationProtocols = openSSLEngine.getMethod("setApplicationProtocols", String[].class);
+                                Method getApplicationProtocol = openSSLEngine.getMethod("getSelectedApplicationProtocol");
+                                UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN Enabled");
+                                return new OpenSSLALPNMethods(setApplicationProtocols, getApplicationProtocol);
+                            } catch (Throwable e) {
+                                UndertowLogger.ROOT_LOGGER.debug("OpenSSL ALPN disabled", e);
+                                return null;
+                            }
+                        }
+                    });
+                    initialized = true;
+                }
+            }
+        }
+        return openSSLALPNMethods;
     }
 
     @Override
