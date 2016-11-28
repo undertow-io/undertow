@@ -63,4 +63,8 @@ public interface ProxyClient {
     interface ProxyTarget {
 
     }
+
+    interface MaxRetriesProxyTarget extends ProxyTarget {
+        int getMaxRetries();
+    }
 }
