@@ -429,6 +429,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     }
                 }
                 frameData.close();
+                sendGoAway(ERROR_NO_ERROR);
                 break;
             }
             case FRAME_TYPE_WINDOW_UPDATE: {
