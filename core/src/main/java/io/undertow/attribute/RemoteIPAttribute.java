@@ -40,8 +40,8 @@ public class RemoteIPAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        final InetSocketAddress peerAddress = (InetSocketAddress) exchange.getConnection().getPeerAddress();
-        return peerAddress.getAddress().getHostAddress();
+        final InetSocketAddress sourceAddress = (InetSocketAddress) exchange.getSourceAddress();
+        return sourceAddress.getAddress().getHostAddress();
     }
 
     @Override
