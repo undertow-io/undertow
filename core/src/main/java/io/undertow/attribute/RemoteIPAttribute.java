@@ -18,6 +18,7 @@
 
 package io.undertow.attribute;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 import io.undertow.server.HttpServerExchange;
@@ -40,8 +41,17 @@ public class RemoteIPAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        final InetSocketAddress peerAddress = (InetSocketAddress) exchange.getConnection().getPeerAddress();
-        return peerAddress.getAddress().getHostAddress();
+        final InetSocketAddress sourceAddress = exchange.getSourceAddress();
+        InetAddress address = sourceAddress.getAddress();
+        if (address == null) {
+            //this can happen when we have an unresolved X-forwarded-for address
+            //in this case we just return the IP of the balancer
+            address = ((InetSocketAddress) exchange.getConnection().getPeerAddress()).getAddress();
+        }
+        if(address == null) {
+            return null;
+        }
+        return address.getHostAddress();
     }
 
     @Override
