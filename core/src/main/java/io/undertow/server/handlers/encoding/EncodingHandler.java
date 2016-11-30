@@ -62,7 +62,7 @@ public class EncodingHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         AllowedContentEncodings encodings = contentEncodingRepository.getContentEncodings(exchange);
-        if (encodings == null) {
+        if (encodings == null || !exchange.isResponseChannelAvailable()) {
             next.handleRequest(exchange);
         } else if (encodings.isNoEncodingsAllowed()) {
             noEncodingHandler.handleRequest(exchange);
