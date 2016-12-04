@@ -56,7 +56,7 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
      * @param requestParseTimeout Timeout value. Negative value will indicate that this updated is disabled.
      * @param requestIdleTimeout
      */
-    public ParseTimeoutUpdater(ConnectedChannel channel, long requestParseTimeout, long requestIdleTimeout) {
+    public ParseTimeoutUpdater(final ConnectedChannel channel, long requestParseTimeout, long requestIdleTimeout) {
         this(channel, requestParseTimeout, requestIdleTimeout, new Runnable() {
             @Override
             public void run() {
