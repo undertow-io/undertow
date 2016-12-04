@@ -23,7 +23,9 @@ import io.undertow.server.ServerConnection;
 import io.undertow.util.WorkerUtils;
 import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
+import org.xnio.channels.ConnectedChannel;
 
+import java.io.Closeable;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -33,9 +35,9 @@ import java.util.concurrent.TimeUnit;
  * @author Sebastian Laskawiec
  * @see io.undertow.UndertowOptions#REQUEST_PARSE_TIMEOUT
  */
-public final class ParseTimeoutUpdater implements Runnable, ServerConnection.CloseListener {
+public final class ParseTimeoutUpdater implements Runnable, ServerConnection.CloseListener, Closeable {
 
-    private final ServerConnection connection;
+    private final ConnectedChannel connection;
     private final long requestParseTimeout;
     private final long requestIdleTimeout;
     private volatile XnioExecutor.Key handle;
@@ -45,6 +47,8 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
     //we add 50ms to the timeout to make sure the underlying channel has actually timed out
     private static final int FUZZ_FACTOR = 50;
 
+    private final Runnable closeTask;
+
 
     /**
      * Creates new instance of ParseTimeoutSourceConduit.
@@ -52,12 +56,27 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
      * @param requestParseTimeout Timeout value. Negative value will indicate that this updated is disabled.
      * @param requestIdleTimeout
      */
-    public ParseTimeoutUpdater(ServerConnection channel, long requestParseTimeout, long requestIdleTimeout) {
+    public ParseTimeoutUpdater(ConnectedChannel channel, long requestParseTimeout, long requestIdleTimeout) {
+        this(channel, requestParseTimeout, requestIdleTimeout, new Runnable() {
+            @Override
+            public void run() {
+                IoUtils.safeClose(channel);
+            }
+        });
+    }
+
+    /**
+     * Creates new instance of ParseTimeoutSourceConduit.
+     *  @param channel             Channel which will be closed in case of timeout.
+     * @param requestParseTimeout Timeout value. Negative value will indicate that this updated is disabled.
+     * @param requestIdleTimeout
+     */
+    public ParseTimeoutUpdater(ConnectedChannel channel, long requestParseTimeout, long requestIdleTimeout, Runnable closeTask) {
         this.connection = channel;
         this.requestParseTimeout = requestParseTimeout;
         this.requestIdleTimeout = requestIdleTimeout;
+        this.closeTask = closeTask;
     }
-
     /**
      * Called when the connection goes idle
      */
@@ -127,13 +146,17 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
                 handle = WorkerUtils.executeAfter(connection.getIoThread(), this, (expireTime - now) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
             } else {
                 UndertowLogger.REQUEST_LOGGER.parseRequestTimedOut(connection.getPeerAddress());
-                IoUtils.safeClose(connection);
+                closeTask.run();
             }
         }
     }
 
     @Override
     public void closed(ServerConnection connection) {
+        close();
+    }
+
+    public void close() {
         if(handle != null) {
             handle.remove();
             handle = null;

@@ -18,7 +18,22 @@
 
 package io.undertow.server.handlers.proxy;
 
+import static io.undertow.Handlers.jvmRoute;
+import static io.undertow.Handlers.path;
+
+import java.io.IOException;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DecompressingHttpClient;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.IoUtils;
 import io.undertow.Undertow;
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.InMemorySessionManager;
@@ -29,21 +44,8 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DecompressingHttpClient;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.IoUtils;
-
-import java.io.IOException;
-
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
 
 /**
  * Tests the load balancing proxy
@@ -64,6 +66,8 @@ public abstract class AbstractLoadBalancingProxyTestCase {
     public static void setupFailTest() {
         firstFail = true;
     }
+
+    protected static final int IDLE_TIMEOUT = 100;
 
     @AfterClass
     public static void teardown() {
@@ -207,6 +211,35 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         }
     }
 
+    @Test
+    public void testConnectionTimeout() throws Exception {
+
+        TestHttpClient client = new TestHttpClient();
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/timeout");
+        get.addHeader("Connection", "close");
+        HttpResponse result = client.execute(get);
+        boolean res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
+        Assert.assertEquals(false, res);
+        try {
+            for (int i = 0; i < 20; ++i) { //try and make sure that all IO threads have been used, this is not reliable however
+                result = client.execute(get);
+                HttpClientUtils.readResponse(result);
+            }
+            result = client.execute(get);
+            res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
+            //Assert.assertEquals(true, res); //this will fail sometime, unless we make a huge number of requests to make sure all IO threads are utilised
+            Thread.sleep(IDLE_TIMEOUT + 1000);
+            UndertowLogger.ROOT_LOGGER.info("Sending timed out request");
+            result = client.execute(get);
+            res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
+            Assert.assertEquals(false, res);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    private static final AttachmentKey<Boolean> EXISTING = AttachmentKey.create(Boolean.class);
+
     protected static HttpHandler getRootHandler(String s1, String server1) {
         final SessionCookieConfig sessionConfig = new SessionCookieConfig();
         return jvmRoute("JSESSIONID", s1, path()
@@ -228,11 +261,21 @@ public abstract class AbstractLoadBalancingProxyTestCase {
 
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if(firstFail) {
+                        if (firstFail) {
                             firstFail = false;
                             IoUtils.safeClose(exchange.getConnection());
                         }
                         exchange.getResponseSender().send(exchange.getRequestURI() + ":" + firstFail);
+                    }
+                }).addPrefixPath("/timeout", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        if (exchange.getConnection().getAttachment(EXISTING) == null) {
+                            exchange.getConnection().putAttachment(EXISTING, true);
+                            exchange.getResponseSender().send("false");
+                        } else {
+                            exchange.getResponseSender().send("true");
+                        }
                     }
                 }));
     }

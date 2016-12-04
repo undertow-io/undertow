@@ -23,6 +23,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.server.protocol.http2.Http2OpenListener;
@@ -53,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLSession;
 
 /**
@@ -174,6 +176,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
+    private ParseTimeoutUpdater parseTimeoutUpdater;
+
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, true, null, settings);
@@ -234,6 +238,32 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 throw new RuntimeException(e);
             }
         }
+        int requestParseTimeout = settings.get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
+        int requestIdleTimeout = settings.get(UndertowOptions.NO_REQUEST_TIMEOUT, -1);
+        if(requestIdleTimeout < 0 && requestParseTimeout < 0) {
+            this.parseTimeoutUpdater = null;
+        } else {
+            this.parseTimeoutUpdater = new ParseTimeoutUpdater(this, requestParseTimeout, requestIdleTimeout, new Runnable() {
+                @Override
+                public void run() {
+                    sendGoAway(ERROR_NO_ERROR);
+                    //just to make sure the connection is actually closed we give it 2 seconds
+                    //then we forcibly kill the connection
+                    getIoThread().executeAfter(new Runnable() {
+                        @Override
+                        public void run() {
+                            IoUtils.safeClose(Http2Channel.this);
+                        }
+                    }, 2, TimeUnit.SECONDS);
+                }
+            });
+            this.addCloseTask(new ChannelListener<Http2Channel>() {
+                @Override
+                public void handleEvent(Http2Channel channel) {
+                    parseTimeoutUpdater.close();
+                }
+            });
+        }
     }
 
     private void sendSettings() {
@@ -273,15 +303,26 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
     }
 
-
-
     private void sendPreface() {
         Http2PrefaceStreamSinkChannel preface = new Http2PrefaceStreamSinkChannel(this);
         flushChannelIgnoreFailure(preface);
     }
-
     @Override
     protected AbstractHttp2StreamSourceChannel createChannel(FrameHeaderData frameHeaderData, PooledByteBuffer frameData) throws IOException {
+        AbstractHttp2StreamSourceChannel channel = createChannelImpl(frameHeaderData, frameData);
+        if(channel instanceof Http2StreamSourceChannel) {
+            if (parseTimeoutUpdater != null) {
+                if (channel != null) {
+                    parseTimeoutUpdater.requestStarted();
+                } else if (currentStreams.isEmpty()) {
+                    parseTimeoutUpdater.failedParse();
+                }
+            }
+        }
+        return channel;
+    }
+
+    protected AbstractHttp2StreamSourceChannel createChannelImpl(FrameHeaderData frameHeaderData, PooledByteBuffer frameData) throws IOException {
 
         Http2FrameHeaderParser frameParser = (Http2FrameHeaderParser) frameHeaderData;
         AbstractHttp2StreamSourceChannel channel;
@@ -824,6 +865,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
         if(isLastFrameReceived() && currentStreams.isEmpty()) {
             sendGoAway(ERROR_NO_ERROR);
+        } else if(parseTimeoutUpdater != null && currentStreams.isEmpty()) {
+            parseTimeoutUpdater.connectionIdle();
         }
     }
 

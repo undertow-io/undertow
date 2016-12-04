@@ -25,6 +25,7 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.Options;
 import io.undertow.Undertow;
+import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.DefaultServer;
 
@@ -43,11 +44,13 @@ public class LoadBalancingProxyAJPTestCase extends AbstractLoadBalancingProxyTes
         server1 = Undertow.builder()
                 .addAjpListener(port + 1, DefaultServer.getHostAddress("default"))
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(getRootHandler("s1", "server1"))
                 .build();
         server2 = Undertow.builder()
                 .addAjpListener(port + 2, DefaultServer.getHostAddress("default"))
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(getRootHandler("s2", "server2"))
                 .build();
         server1.start();
