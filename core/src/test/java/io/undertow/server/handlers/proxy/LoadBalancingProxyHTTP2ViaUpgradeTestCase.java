@@ -58,6 +58,7 @@ public class LoadBalancingProxyHTTP2ViaUpgradeTestCase extends AbstractLoadBalan
         server1 = Undertow.builder()
                 .addHttpListener(port + 1, DefaultServer.getHostAddress("default"))
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(new Http2UpgradeHandler(new HttpHandler() {
                     @Override
@@ -76,6 +77,7 @@ public class LoadBalancingProxyHTTP2ViaUpgradeTestCase extends AbstractLoadBalan
         server2 = Undertow.builder()
                 .addHttpListener(port + 2, DefaultServer.getHostAddress("default"))
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(new Http2UpgradeHandler(new HttpHandler() {
                     @Override

@@ -19,6 +19,7 @@
 package io.undertow.server.handlers.proxy;
 
 import io.undertow.Undertow;
+import io.undertow.UndertowOptions;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.encoding.ContentEncodingRepository;
@@ -47,12 +48,14 @@ public class LoadBalancingProxyTestCase extends AbstractLoadBalancingProxyTestCa
         server1 = Undertow.builder()
                 .addHttpListener(port + 1, DefaultServer.getHostAddress("default"))
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(getRootHandler("s1", "server1"))
                 .build();
 
         server2 = Undertow.builder()
                 .addHttpListener(port + 2, DefaultServer.getHostAddress("default"))
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(getRootHandler("s2", "server2"))
                 .build();
         server1.start();

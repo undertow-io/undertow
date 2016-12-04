@@ -60,6 +60,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
         server1 = Undertow.builder()
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(new HttpHandler() {
                     @Override
@@ -79,6 +80,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
                 .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {

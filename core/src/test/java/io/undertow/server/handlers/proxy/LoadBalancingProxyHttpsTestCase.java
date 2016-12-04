@@ -50,11 +50,13 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
         server1 = Undertow.builder()
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(getRootHandler("s1", "server1"))
                 .build();
         server2 = Undertow.builder()
                 .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_SPDY, false)
+                .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setHandler(getRootHandler("s2", "server2"))
                 .build();
