@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.UndertowLogger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -32,7 +33,7 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
-import io.undertow.UndertowLogger;
+
 import io.undertow.UndertowMessages;
 
 /**
@@ -41,52 +42,32 @@ import io.undertow.UndertowMessages;
  *
  * @author Stuart Douglas
  */
-public abstract class DetachableStreamSourceChannel implements StreamSourceChannel {
+public abstract class DetachableStreamSourceChannel implements StreamSourceChannel{
 
     protected final StreamSourceChannel delegate;
 
     protected ChannelListener.SimpleSetter<DetachableStreamSourceChannel> readSetter;
     protected ChannelListener.SimpleSetter<DetachableStreamSourceChannel> closeSetter;
-    private boolean minusOneReturned = false;
 
     public DetachableStreamSourceChannel(final StreamSourceChannel delegate) {
         this.delegate = delegate;
-        if(isFinished()) {
-            minusOneReturned = true;
-        }
     }
 
     protected abstract boolean isFinished();
 
     @Override
     public void resumeReads() {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return;
         }
-        if (isFinished()) {
-            runReadListener();
-        } else {
-            delegate.resumeReads();
-        }
-    }
-
-    private void runReadListener() {
-        if (readSetter != null && readSetter.get() != null) {
-            ChannelListeners.invokeChannelListener(getIoThread(), this, readSetter.get());
-        }
+        delegate.resumeReads();
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return -1;
         }
-        long ret = delegate.transferTo(position, count, target);
-        if (ret == -1) {
-            minusOneReturned = true;
-        } else if (isFinished()) {
-            runReadListener();
-        }
-        return ret;
+        return delegate.transferTo(position, count, target);
     }
 
     public void awaitReadable() throws IOException {
@@ -104,16 +85,10 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return -1;
         }
-        long ret = delegate.transferTo(count, throughBuffer, target);
-        if (ret == -1) {
-            minusOneReturned = true;
-        } else if (isFinished()) {
-            runReadListener();
-        }
-        return ret;
+        return delegate.transferTo(count, throughBuffer, target);
     }
 
     public XnioWorker getWorker() {
@@ -121,21 +96,18 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public boolean isReadResumed() {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return false;
         }
         return delegate.isReadResumed();
     }
 
     public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
-        if (isFinished() && minusOneReturned) {
+
+        if (isFinished()) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
-        if (!isFinished()) {
-            return delegate.setOption(option, value);
-        } else {
-            return null;
-        }
+        return delegate.setOption(option, value);
     }
 
     public boolean supportsOption(final Option<?> option) {
@@ -143,23 +115,20 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public void shutdownReads() throws IOException {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return;
         }
         delegate.shutdownReads();
-        if (isFinished() && delegate.isReadResumed()) {
-            runReadListener();
-        }
     }
 
     public ChannelListener.Setter<? extends StreamSourceChannel> getReadSetter() {
         if (readSetter == null) {
             readSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
-                if (delegate instanceof ConduitStreamSourceChannel) {
-                    ((ConduitStreamSourceChannel) delegate).setReadListener(new SetterDelegatingListener((ChannelListener.SimpleSetter) readSetter, this));
+                if(delegate instanceof ConduitStreamSourceChannel) {
+                    ((ConduitStreamSourceChannel)delegate).setReadListener(new SetterDelegatingListener((ChannelListener.SimpleSetter)readSetter, this));
                 } else {
-                    delegate.getReadSetter().set(new SetterDelegatingListener((ChannelListener.SimpleSetter) readSetter, this));
+                    delegate.getReadSetter().set(new SetterDelegatingListener((ChannelListener.SimpleSetter)readSetter, this));
                 }
             }
         }
@@ -167,47 +136,31 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public boolean isOpen() {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return false;
         }
         return delegate.isOpen();
     }
 
     public long read(final ByteBuffer[] dsts) throws IOException {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return -1;
         }
-        long ret = delegate.read(dsts);
-        if (ret == -1) {
-            minusOneReturned = true;
-        } else if (isFinished()) {
-            runReadListener();
-        }
-        return ret;
+        return delegate.read(dsts);
     }
 
     public long read(final ByteBuffer[] dsts, final int offset, final int length) throws IOException {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return -1;
         }
-        long ret = delegate.read(dsts, offset, length);
-        if (ret == -1) {
-            minusOneReturned = true;
-        } else if (isFinished()) {
-            runReadListener();
-        }
-        return ret;
+        return delegate.read(dsts, offset, length);
     }
 
     public void wakeupReads() {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return;
         }
-        if(isFinished()) {
-            runReadListener();
-        } else {
-            delegate.wakeupReads();
-        }
+        delegate.wakeupReads();
     }
 
     public XnioExecutor getReadThread() {
@@ -215,8 +168,8 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public void awaitReadable(final long time, final TimeUnit timeUnit) throws IOException {
-        if(isFinished()) {
-            return;
+        if (isFinished()) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
         }
         delegate.awaitReadable(time, timeUnit);
     }
@@ -225,8 +178,8 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
         if (closeSetter == null) {
             closeSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
-                if (delegate instanceof ConduitStreamSourceChannel) {
-                    ((ConduitStreamSourceChannel) delegate).setCloseListener(ChannelListeners.delegatingChannelListener(this, closeSetter));
+                if(delegate instanceof ConduitStreamSourceChannel) {
+                    ((ConduitStreamSourceChannel)delegate).setCloseListener(ChannelListeners.delegatingChannelListener(this, closeSetter));
                 } else {
                     delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
                 }
@@ -236,30 +189,24 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public void close() throws IOException {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return;
         }
         delegate.close();
     }
 
     public <T> T getOption(final Option<T> option) throws IOException {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
         return delegate.getOption(option);
     }
 
     public int read(final ByteBuffer dst) throws IOException {
-        if (isFinished() && minusOneReturned) {
+        if (isFinished()) {
             return -1;
         }
-        int ret = delegate.read(dst);
-        if (ret == -1) {
-            minusOneReturned = true;
-        } else if (isFinished()) {
-            runReadListener();
-        }
-        return ret;
+        return delegate.read(dst);
     }
 
     @Override
@@ -280,7 +227,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
 
         public void handleEvent(final StreamSourceChannel channel) {
             ChannelListener<? super StreamSourceChannel> channelListener = setter.get();
-            if (channelListener != null) {
+            if(channelListener != null) {
                 ChannelListeners.invokeChannelListener(this.channel, channelListener);
             } else {
                 UndertowLogger.REQUEST_LOGGER.debugf("suspending reads on %s to prevent listener runaway", channel);
