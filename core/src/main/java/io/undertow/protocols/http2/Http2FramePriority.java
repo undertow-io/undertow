@@ -33,13 +33,38 @@ import io.undertow.server.protocol.framed.SendFrameHeader;
  */
 class Http2FramePriority implements FramePriority<Http2Channel, AbstractHttp2StreamSourceChannel, AbstractHttp2StreamSinkChannel> {
 
-    public static Http2FramePriority INSTANCE = new Http2FramePriority();
+    private int nextId;
+
+    Http2FramePriority(int nextId) {
+        this.nextId = nextId;
+    }
 
     @Override
     public boolean insertFrame(AbstractHttp2StreamSinkChannel newFrame, List<AbstractHttp2StreamSinkChannel> pendingFrames) {
+        //we need to deal with out of order streams
+        //if multiple threads are creating streams they may not end up here in the correct order
+        boolean incrementIfAccepted = false;
+        if ((newFrame.getChannel().isClient() && newFrame instanceof Http2HeadersStreamSinkChannel) ||
+                newFrame instanceof Http2PushPromiseStreamSinkChannel) {
+            if (newFrame instanceof Http2PushPromiseStreamSinkChannel) {
+                int streamId = ((Http2PushPromiseStreamSinkChannel) newFrame).getStreamId();
+                if (streamId > nextId) {
+                    return false;
+                } else if (streamId == nextId) {
+                    incrementIfAccepted = true;
+                }
+            } else {
+                int streamId = ((Http2HeadersStreamSinkChannel) newFrame).getStreamId();
+                if (streamId > nextId) {
+                    return false;
+                } else if (streamId == nextId) {
+                    incrementIfAccepted = true;
+                }
+            }
+        }
         //first deal with flow control
         if (newFrame instanceof Http2StreamSinkChannel) {
-            if(newFrame.isBroken() || !newFrame.isOpen()) {
+            if (newFrame.isBroken() || !newFrame.isOpen()) {
                 return true; //just quietly drop the frame
             }
             try {
@@ -56,24 +81,54 @@ class Http2FramePriority implements FramePriority<Http2Channel, AbstractHttp2Str
         }
 
         pendingFrames.add(newFrame);
+        if (incrementIfAccepted) {
+            nextId += 2;
+        }
         return true;
     }
 
     @Override
     public void frameAdded(AbstractHttp2StreamSinkChannel addedFrame, List<AbstractHttp2StreamSinkChannel> pendingFrames, Deque<AbstractHttp2StreamSinkChannel> holdFrames) {
         Iterator<AbstractHttp2StreamSinkChannel> it = holdFrames.iterator();
+
         while (it.hasNext()) {
             AbstractHttp2StreamSinkChannel pending = it.next();
+            boolean incrementNextId = false;
+
+            if ((pending.getChannel().isClient() && pending instanceof Http2HeadersStreamSinkChannel) ||
+                    pending instanceof Http2PushPromiseStreamSinkChannel) {
+                if (pending instanceof Http2PushPromiseStreamSinkChannel) {
+                    int streamId = ((Http2PushPromiseStreamSinkChannel) pending).getStreamId();
+                    if (streamId > nextId) {
+                        continue;
+                    } else if (streamId == nextId) {
+                        incrementNextId = true;
+                    }
+                } else {
+                    int streamId = ((Http2HeadersStreamSinkChannel) pending).getStreamId();
+                    if (streamId > nextId) {
+                        continue;
+                    } else if (streamId == nextId) {
+                        incrementNextId = true;
+                    }
+                }
+            }
+
             if (pending instanceof Http2StreamSinkChannel) {
                 SendFrameHeader header = ((Http2StreamSinkChannel) pending).generateSendFrameHeader();
                 if (header.getByteBuffer() != null) {
                     pendingFrames.add(pending);
                     it.remove();
+                    it = holdFrames.iterator();
+                    if (incrementNextId) {
+                        nextId += 2;
+                    }
                 } else {
                     //we clear the header, as we want to generate a new real header when the flow control window is updated
                     ((Http2StreamSinkChannel) pending).clearHeader();
                 }
             }
         }
+
     }
 }

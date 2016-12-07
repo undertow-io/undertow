@@ -226,72 +226,6 @@ public class HttpClientTestCase {
 
     }
 
-    /*
-    @Test
-    public void testSimpleHttpContinue() throws Exception {
-        //
-        final HttpContinueAcceptingHandler handler = new HttpContinueAcceptingHandler();
-        DefaultServer.setRootHandler(handler);
-        final UndertowClient client = createClient();
-        try {
-            {
-                final ClientConnection connection = client.connect(ADDRESS, worker, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
-                try {
-                    final UndertowClientRequest request = connection.createRequest(Methods.POST_STRING, new URI("/"));
-                    request.getRequestHeaders().add(Headers.EXPECT, "100-continue");
-                    final StreamSinkChannel channel = request.writeRequestBody(message.length());
-
-                    final StringWriteChannelListener listener = new StringWriteChannelListener(message);
-                    listener.setup(channel);
-
-                    final UndertowClientResponse response = request.getResponse().get();
-                    Assert.assertEquals(StatusCodes.NOT_FOUND, response.getResponseCode());
-
-                } finally {
-                    IoUtils.safeClose(connection);
-                }
-            }finally{
-                IoUtils.safeClose(client);
-            }
-        }
-    }
-
-    @Test
-    public void testRejectHttpContinue() throws Exception {
-        //
-        final HttpContinueAcceptingHandler handler = new HttpContinueAcceptingHandler() {
-            @Override
-            protected boolean acceptRequest(HttpServerExchange exchange) {
-                return false;
-            }
-        };
-        DefaultServer.setRootHandler(handler);
-        final UndertowClient client = createClient();
-        try {
-            {
-                final ClientConnection connection = client.connect(ADDRESS, worker, new ByteBufferSlicePool(1024, 1024), OptionMap.EMPTY).get();
-                try {
-                    final UndertowClientRequest request = connection.createRequest(Methods.POST_STRING, new URI("/"));
-                    request.getRequestHeaders().add(Headers.EXPECT, "100-continue");
-                    final StreamSinkChannel channel = request.writeRequestBody(message.length());
-
-                    final StringWriteChannelListener listener = new StringWriteChannelListener(message);
-                    listener.setup(channel);
-
-                    final UndertowClientResponse response = request.getResponse().get();
-                    Assert.assertEquals(StatusCodes.EXPECTATION_FAILED, response.getResponseCode());
-                    Assert.assertTrue(listener.hasRemaining());
-
-                } finally {
-                    IoUtils.safeClose(connection);
-                }
-            }finally{
-                IoUtils.safeClose(client);
-            }
-        }
-    }
- */
-
     private ClientCallback<ClientExchange> createClientCallback(final List<ClientResponse> responses, final CountDownLatch latch) {
         return new ClientCallback<ClientExchange>() {
             @Override
@@ -343,40 +277,5 @@ public class HttpClientTestCase {
             }
         };
     }
-
-    /*
-    @Test
-    public void testHttpPipeline() throws Exception {
-        final OptionMap options = OptionMap.create(UndertowClientOptions.HTTP_PIPELINING, true);
-        //
-        DefaultServer.setRootHandler(SIMPLE_MESSAGE_HANDLER);
-        final UndertowClient client = createClient();
-        try {
-            final ClientConnection connection = client.connect(ADDRESS, options).get();
-            try {
-                final List<IoFuture<UndertowClientResponse>> responses = new ArrayList<IoFuture<UndertowClientResponse>>();
-                for(int i = 0; i < 10; i++) {
-                    final UndertowClientRequest request = connection.createRequest(Methods.GET, new URI("/"));
-                    responses.add(request.writeRequest());
-                }
-                Assert.assertEquals(10, responses.size());
-                for(final IoFuture<UndertowClientResponse> future : responses) {
-                    UndertowClientResponse response = future.get();
-                    final StreamSourceChannel channel = response.readReplyBody();
-                    try {
-                        final InputStream is = new ChannelInputStream(channel);
-                        Assert.assertEquals(message, UndertowClientUtils.readResponse(is));
-                    } finally {
-                        IoUtils.safeClose(channel);
-                    }
-                }
-            } finally {
-                IoUtils.safeClose(connection);
-            }
-        } finally {
-            IoUtils.safeClose(client);
-        }
-    }
-    */
 
 }

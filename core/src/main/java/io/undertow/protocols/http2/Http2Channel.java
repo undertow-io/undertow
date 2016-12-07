@@ -187,7 +187,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     }
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, ByteBuffer initialOtherSideSettings, OptionMap settings) {
-        super(connectedStreamChannel, bufferPool, Http2FramePriority.INSTANCE, data, settings);
+        super(connectedStreamChannel, bufferPool, new Http2FramePriority(clientSide ? (fromUpgrade ? 3 : 1) : 2), data, settings);
         streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
 
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
