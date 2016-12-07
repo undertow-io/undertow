@@ -127,7 +127,7 @@ public class Http2ClientConnection implements ClientConnection {
     }
 
     @Override
-    public synchronized void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
+    public void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
         request.getRequestHeaders().put(METHOD, request.getMethod().toString());
         boolean connectRequest = request.getMethod().equals(Methods.CONNECT);
         if(!connectRequest) {
