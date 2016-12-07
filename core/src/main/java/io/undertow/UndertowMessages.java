@@ -497,4 +497,10 @@ public interface UndertowMessages {
 
     @Message(id = 155, value = "Framed channel body was set when it was not ready for flush")
     IllegalStateException bodyIsSetAndNotReadyForFlush();
+
+    @Message(id = 156, value = "Invalid GZIP header")
+    IOException invalidGzipHeader();
+
+    @Message(id = 157, value = "Invalid GZIP footer")
+    IOException invalidGZIPFooter();
 }

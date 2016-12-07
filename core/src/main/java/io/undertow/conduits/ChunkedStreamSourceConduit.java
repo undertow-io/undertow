@@ -132,6 +132,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         }
     }
 
+    @Override
     public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
         try {
             return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
@@ -141,6 +142,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         }
     }
 
+    @Override
     public long read(final ByteBuffer[] dsts, final int offset, final int length) throws IOException {
         for (int i = offset; i < length; ++i) {
             if (dsts[i].hasRemaining()) {
@@ -159,6 +161,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         }
     }
 
+    @Override
     public int read(final ByteBuffer dst) throws IOException {
         try {
             long chunkRemaining = chunkReader.getChunkRemaining();
