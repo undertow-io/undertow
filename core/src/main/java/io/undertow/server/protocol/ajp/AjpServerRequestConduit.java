@@ -265,16 +265,13 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
                 remaining -= read;
             }
             this.totalRead += read;
-            if (remaining == 0) {
-                this.state = STATE_FINISHED;
-                if (finishListener != null) {
-                    finishListener.handleEvent(this);
+            if (remaining != 0) {
+                if (chunkRemaining == 0) {
+                    headerBuffer.clear();
+                    this.state = STATE_SEND_REQUIRED;
+                } else {
+                    this.state = (state & ~STATE_MASK) | chunkRemaining;
                 }
-            } else if (chunkRemaining == 0) {
-                headerBuffer.clear();
-                this.state = STATE_SEND_REQUIRED;
-            } else {
-                this.state = (state & ~STATE_MASK) | chunkRemaining;
             }
             return read;
         } finally {
