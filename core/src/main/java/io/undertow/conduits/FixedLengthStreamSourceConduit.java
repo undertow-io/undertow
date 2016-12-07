@@ -341,9 +341,6 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         }
         long newVal = oldVal - consumed;
         state = newVal;
-        if (anyAreSet(oldVal, MASK_COUNT) && allAreClear(newVal, MASK_COUNT)) {
-            invokeFinishListener();
-        }
     }
 
     private void invokeFinishListener() {

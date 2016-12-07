@@ -42,11 +42,7 @@ public class ContentEncodingRepository {
 
     private final Map<String, EncodingMapping> encodingMap = new CopyOnWriteMap<>();
 
-    /**
-     * Gets all allow
-     * @param exchange
-     * @return
-     */
+
     public AllowedContentEncodings getContentEncodings(final HttpServerExchange exchange) {
         final List<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
         if (res == null || res.isEmpty()) {

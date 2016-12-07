@@ -386,4 +386,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @Message(id = 5082, value = "Configured mod_cluster management host address cannot be a wildcard address (%s)!")
     IllegalArgumentException cannotUseWildcardAddressAsModClusterManagementHost(String providedAddress);
+
+    @Message(id = 5083, value = "Unexpected end of compressed input")
+    IOException unexpectedEndOfCompressedInput();
 }
