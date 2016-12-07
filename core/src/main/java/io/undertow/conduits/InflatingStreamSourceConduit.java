@@ -85,6 +85,7 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
             } else if (res == 0) {
                 compressed.close();
                 compressed = null;
+                return 0;
             } else {
                 buf.flip();
                 if (!headerDone) {
@@ -119,6 +120,8 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
             compressed.close();
             compressed = null;
             return 0;
+        } else if(compressed == null) {
+            throw new RuntimeException();
         }
         uncompressed = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate();
         try {
