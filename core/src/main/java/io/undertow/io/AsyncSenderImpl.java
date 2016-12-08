@@ -24,6 +24,7 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -123,10 +124,15 @@ public class AsyncSenderImpl implements Sender {
         if (this.buffer != null || this.fileChannel != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
+        long responseContentLength = exchange.getResponseContentLength();
+        if(responseContentLength > 0 && buffer.remaining() > responseContentLength) {
+            invokeOnException(callback, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(buffer.remaining(), responseContentLength));
+            return;
+        }
         StreamSinkChannel channel = this.channel;
         if (channel == null) {
             if (callback == IoCallback.END_EXCHANGE) {
-                if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(buffer.remaining());
                 }
             }
@@ -186,11 +192,16 @@ public class AsyncSenderImpl implements Sender {
         }
 
         long totalToWrite = Buffers.remaining(buffer);
+        long responseContentLength = exchange.getResponseContentLength();
+        if(responseContentLength > 0 && totalToWrite > responseContentLength) {
+            invokeOnException(callback, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(totalToWrite, responseContentLength));
+            return;
+        }
 
         StreamSinkChannel channel = this.channel;
         if (channel == null) {
             if (callback == IoCallback.END_EXCHANGE) {
-                if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(totalToWrite);
                 }
             }

@@ -390,4 +390,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @Message(id = 5083, value = "Unexpected end of compressed input")
     IOException unexpectedEndOfCompressedInput();
+
+    @Message(id = 5084, value = "Attempted to write %s bytes however content-length has been set to %s")
+    IOException dataLargerThanContentLength(long totalToWrite, long responseContentLength);
 }
