@@ -36,6 +36,7 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
 
     class ExistingSessionTarget implements ModClusterProxyTarget {
 
+        private final String session;
         private final String jvmRoute;
         private final VirtualHost.HostEntry entry;
         private final boolean forceStickySession;
@@ -43,7 +44,8 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
 
         private Context resolved;
 
-        public ExistingSessionTarget(String jvmRoute, VirtualHost.HostEntry entry, ModClusterContainer container, boolean forceStickySession) {
+        public ExistingSessionTarget(String session, String jvmRoute, VirtualHost.HostEntry entry, ModClusterContainer container, boolean forceStickySession) {
+            this.session = session;
             this.jvmRoute = jvmRoute;
             this.entry = entry;
             this.container = container;
@@ -59,7 +61,6 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
         }
 
         void resolveNode() {
-
             final Context context = entry.getContextForNode(jvmRoute);
             if (context != null && context.checkAvailable(true)) {
                 final Node node = context.getNode();
@@ -68,7 +69,7 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
                 return;
             }
             final String domain = context != null ? context.getNode().getNodeConfig().getDomain() : null;
-            this.resolved = container.findFailoverNode(entry, domain, jvmRoute, forceStickySession);
+            this.resolved = container.findFailoverNode(entry, domain, session, jvmRoute, forceStickySession);
         }
 
         @Override

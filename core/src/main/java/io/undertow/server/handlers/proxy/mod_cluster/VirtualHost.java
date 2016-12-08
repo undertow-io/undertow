@@ -171,16 +171,20 @@ public class VirtualHost {
          * Get a context for a jvmRoute.
          *
          * @param jvmRoute    the jvm route
-         * @return
          */
         protected Context getContextForNode(final String jvmRoute) {
             return contexts.get(jvmRoute);
         }
 
         /**
+         * Get list of nodes as jvmRoutes.
+         */
+        protected Collection<String> getNodes() {
+            return Collections.unmodifiableCollection(contexts.keySet());
+        }
+
+        /**
          * Get all registered contexts.
-         *
-         * @return
          */
         protected Collection<Context> getContexts() {
             return Collections.unmodifiableCollection(contexts.values());

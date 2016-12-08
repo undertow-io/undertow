@@ -213,4 +213,10 @@ class Context {
         }
     }
 
+    @Override
+    public String toString() {
+        return "Context{" +
+                ", path='" + path + '\'' +
+                '}';
+    }
 }
