@@ -70,7 +70,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
         if (channel instanceof SslChannel) {
             sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel), this);
         }
-        this.responseConduit = new HttpResponseConduit(channel.getSinkChannel().getConduit(), bufferPool);
+        this.responseConduit = new HttpResponseConduit(channel.getSinkChannel().getConduit(), bufferPool, this);
 
         fixedLengthStreamSinkConduit = new ServerFixedLengthStreamSinkConduit(responseConduit, false, false);
         readDataStreamSourceConduit = new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this);
@@ -107,7 +107,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
             @Override
             public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
 
-                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(new HttpResponseConduit(getSinkChannel().getConduit(), getByteBufferPool(), exchange), false, false);
+                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(new HttpResponseConduit(getSinkChannel().getConduit(), getByteBufferPool(), HttpServerConnection.this, exchange), false, false);
                 fixed.reset(0, exchange);
                 return fixed;
             }
@@ -272,7 +272,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     public void setPipelineBuffer(PipeliningBufferingStreamSinkConduit pipelineBuffer) {
         this.pipelineBuffer = pipelineBuffer;
-        this.responseConduit = new HttpResponseConduit(pipelineBuffer, bufferPool);
+        this.responseConduit = new HttpResponseConduit(pipelineBuffer, bufferPool, this);
         this.fixedLengthStreamSinkConduit = new ServerFixedLengthStreamSinkConduit(responseConduit, false, false);
     }
 

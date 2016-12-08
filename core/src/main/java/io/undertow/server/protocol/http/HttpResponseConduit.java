@@ -50,6 +50,7 @@ import static org.xnio.Bits.allAreSet;
 final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
     private final ByteBufferPool pool;
+    private final HttpServerConnection connection;
 
     private int state = STATE_START;
 
@@ -80,14 +81,16 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     private static final int MASK_STATE = 0x0000000F;
     private static final int FLAG_SHUTDOWN = 0x00000010;
 
-    HttpResponseConduit(final StreamSinkConduit next, final ByteBufferPool pool) {
+    HttpResponseConduit(final StreamSinkConduit next, final ByteBufferPool pool, HttpServerConnection connection) {
         super(next);
         this.pool = pool;
+        this.connection = connection;
     }
 
-    HttpResponseConduit(final StreamSinkConduit next, final ByteBufferPool pool, HttpServerExchange exchange) {
+    HttpResponseConduit(final StreamSinkConduit next, final ByteBufferPool pool, HttpServerConnection connection, HttpServerExchange exchange) {
         super(next);
         this.pool = pool;
+        this.connection = connection;
         this.exchange = exchange;
     }
     void reset(HttpServerExchange exchange) {
@@ -608,9 +611,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 this.state = oldState & ~MASK_STATE | state;
             }
         } catch(IOException|RuntimeException e) {
-            if(exchange != null) {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            IoUtils.safeClose(connection);
             throw e;
         }
     }
@@ -643,9 +644,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             }
             return length == 1 ? next.write(srcs[offset]) : next.write(srcs, offset, length);
         } catch (IOException | RuntimeException e) {
-            if(exchange != null) {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            IoUtils.safeClose(connection);
             throw e;
         } finally {
             this.state = oldVal & ~MASK_STATE | state;
@@ -695,18 +694,21 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 return next.transferFrom(src, position, count);
             }
         } catch (IOException | RuntimeException e) {
-            if(exchange != null) {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            IoUtils.safeClose(connection);
             throw e;
         }
     }
 
     public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
-        if (state != 0) {
-            return IoUtils.transfer(source, count, throughBuffer, new ConduitWritableByteChannel(this));
-        } else {
-            return next.transferFrom(source, count, throughBuffer);
+        try {
+            if (state != 0) {
+                return IoUtils.transfer(source, count, throughBuffer, new ConduitWritableByteChannel(this));
+            } else {
+                return next.transferFrom(source, count, throughBuffer);
+            }
+        } catch (IOException| RuntimeException e) {
+            IoUtils.safeClose(connection);
+            throw e;
         }
     }
 
@@ -715,9 +717,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         try {
             return Conduits.writeFinalBasic(this, src);
         } catch (IOException | RuntimeException e) {
-            if(exchange != null) {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            IoUtils.safeClose(connection);
             throw e;
         }
     }
@@ -727,9 +727,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         try {
             return Conduits.writeFinalBasic(this, srcs, offset, length);
         } catch (IOException | RuntimeException e) {
-            if(exchange != null) {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            IoUtils.safeClose(connection);
             throw e;
         }
     }
@@ -750,9 +748,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             }
             return next.flush();
         } catch (IOException | RuntimeException e) {
-            if(exchange != null) {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            IoUtils.safeClose(connection);
             throw e;
         } finally {
             this.state = oldVal & ~MASK_STATE | state;
@@ -769,9 +765,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             }
             this.state = oldVal | FLAG_SHUTDOWN;
         } catch (IOException | RuntimeException e) {
-            if(exchange != null) {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            IoUtils.safeClose(connection);
             throw e;
         }
     }
@@ -780,9 +774,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         try {
             next.truncateWrites();
         } catch (IOException | RuntimeException e) {
-            if(exchange != null) {
-                IoUtils.safeClose(exchange.getConnection());
-            }
+            IoUtils.safeClose(connection);
             throw e;
         } finally {
             if (pooledBuffer != null) {
