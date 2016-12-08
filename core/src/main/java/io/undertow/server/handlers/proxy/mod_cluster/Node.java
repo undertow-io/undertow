@@ -508,4 +508,11 @@ class Node {
         }
     }
 
+    @Override
+    public String toString() {
+        return "Node{" +
+                "jvmRoute='" + jvmRoute + '\'' +
+                ", contexts=" + contexts +
+                '}';
+    }
 }
