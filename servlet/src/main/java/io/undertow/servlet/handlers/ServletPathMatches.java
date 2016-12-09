@@ -252,6 +252,9 @@ public class ServletPathMatches {
                     //an extension match based servlet
                     String ext = path.substring(2);
                     extensionMatches.add(ext);
+                    if(extensionServlets.containsKey(ext)) {
+                        throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
+                    }
                     extensionServlets.put(ext, handler);
                 }
             }
