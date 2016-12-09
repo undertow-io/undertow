@@ -67,7 +67,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         firstFail = true;
     }
 
-    protected static final int IDLE_TIMEOUT = 100;
+    protected static final int IDLE_TIMEOUT = 1000;
 
     @AfterClass
     public static void teardown() {
