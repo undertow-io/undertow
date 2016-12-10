@@ -113,6 +113,9 @@ public class Http2Server {
             stream = Files.newInputStream(Paths.get(storeLoc));
         }
 
+        if(stream == null) {
+            throw new RuntimeException("Could not load keystore");
+        }
         try(InputStream is = stream) {
             KeyStore loadedKeystore = KeyStore.getInstance("JKS");
             loadedKeystore.load(is, password(name));
