@@ -155,6 +155,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static KeyStore loadKeyStore(final String name) throws IOException {
         final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(name);
+        if(stream == null) {
+            throw new RuntimeException("Could not load keystore");
+        }
         try {
             KeyStore loadedKeystore = KeyStore.getInstance("JKS");
             loadedKeystore.load(stream, STORE_PASSWORD);
