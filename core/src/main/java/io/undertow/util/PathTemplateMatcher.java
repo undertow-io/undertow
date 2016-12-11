@@ -64,15 +64,12 @@ public class PathTemplateMatcher<T> {
                     }
                 }
             } else if (pathLength < length) {
-                char c = path.charAt(pathLength);
-                if (c == '/') {
-                    String part = path.substring(0, pathLength);
-                    Set<PathTemplateHolder> entry = pathTemplateMap.get(part);
-                    if (entry != null) {
-                        PathMatchResult<T> res = handleStemMatch(entry, path, params);
-                        if (res != null) {
-                            return res;
-                        }
+                String part = path.substring(0, pathLength);
+                Set<PathTemplateHolder> entry = pathTemplateMap.get(part);
+                if (entry != null) {
+                    PathMatchResult<T> res = handleStemMatch(entry, path, params);
+                    if (res != null) {
+                        return res;
                     }
                 }
             }
@@ -118,10 +115,15 @@ public class PathTemplateMatcher<T> {
     }
 
     private String trimBase(PathTemplate template) {
+        String retval = template.getBase();
+
         if (template.getBase().endsWith("/") && !template.getParameterNames().isEmpty()) {
-            return template.getBase().substring(0, template.getBase().length() - 1);
+            return retval.substring(0, retval.length() - 1);
         }
-        return template.getBase();
+        if (retval.endsWith("*")) {
+            return retval.substring(0, retval.length() - 1);
+        }
+        return retval;
     }
 
     private void buildLengths() {
