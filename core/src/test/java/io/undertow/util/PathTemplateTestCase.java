@@ -104,7 +104,22 @@ public class PathTemplateTestCase {
         PathTemplate pathTemplate = PathTemplate.create(template);
         Assert.assertTrue("Failed. Template: " + pathTemplate, pathTemplate.matches(path, params));
         Assert.assertEquals(expected, params);
+        if(template.endsWith("*") && ! template.contains("{")){
+            Assert.assertEquals("Failed. Template: "+pathTemplate+"Must have a part representing the wildcard",1,new PathTemplateFriend(pathTemplate).getPartAmount());
+        }
 
+    }
+
+    static class PathTemplateFriend {
+        private final PathTemplate template;
+
+        PathTemplateFriend(PathTemplate template) {
+            this.template = template;
+        }
+
+        int getPartAmount() {
+            return template.parts.size();
+        }
     }
 
 }

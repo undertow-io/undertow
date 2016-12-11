@@ -45,7 +45,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
     private final String templateString;
     private final boolean template;
     private final String base;
-    private final List<Part> parts;
+    final List<Part> parts;
     private final Set<String> parameterNames;
 
     private PathTemplate(String templateString, final boolean template, final String base, final List<Part> parts, Set<String> parameterNames) {
@@ -87,6 +87,10 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 case 0: {
                     if (c == '/') {
                         state = 1;
+                    } else if (c == '*') {
+                        base = path.substring(0, i + 1);
+                        stringStart = i;
+                        state = 5;
                     } else {
                         state = 0;
                     }
@@ -97,6 +101,10 @@ public class PathTemplate implements Comparable<PathTemplate> {
                         base = path.substring(0, i);
                         stringStart = i + 1;
                         state = 2;
+                    } else if (c == '*') {
+                        base = path.substring(0, i + 1);
+                        stringStart = i;
+                        state = 5;
                     } else if (c != '/') {
                         state = 0;
                     }
@@ -162,7 +170,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 templates.add(part.part);
             }
         }
-        return new PathTemplate(path, state > 1, base, parts, templates);
+        return new PathTemplate(path, state > 1 && !base.contains("*"), base, parts, templates);
     }
 
     /**
