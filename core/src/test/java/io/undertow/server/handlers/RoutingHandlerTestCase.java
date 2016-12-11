@@ -96,6 +96,18 @@ public class RoutingHandlerTestCase {
                         exchange.getResponseSender().send("wild:" + exchange.getQueryParameters().get("test") + ":" + exchange.getQueryParameters().get("*"));
                     }
                 })
+                .add(Methods.GET, "/wilder/*", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("wilder:" + exchange.getQueryParameters().get("*"));
+                    }
+                })
+                .add(Methods.GET, "/wildest*", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("wildest:" + exchange.getQueryParameters().get("*"));
+                    }
+                })
                 .add(Methods.GET, "/foo", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -206,6 +218,15 @@ public class RoutingHandlerTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("wild:[test]:[card]", HttpClientUtils.readResponse(result));
 
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/wilder/test/card");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("wilder:[test/card]", HttpClientUtils.readResponse(result));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/wildestBeast");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("wildest:[Beast]", HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
         }
