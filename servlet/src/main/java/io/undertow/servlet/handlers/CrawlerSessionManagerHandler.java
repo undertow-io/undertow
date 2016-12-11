@@ -17,21 +17,22 @@
  */
 package io.undertow.servlet.handlers;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.api.CrawlerSessionManagerConfig;
-import io.undertow.util.Headers;
-
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSessionBindingEvent;
-import javax.servlet.http.HttpSessionBindingListener;
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpSessionBindingEvent;
+import javax.servlet.http.HttpSessionBindingListener;
+
+import io.undertow.UndertowLogger;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.api.CrawlerSessionManagerConfig;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
 
 /**
  * Web crawlers can trigger the creation of many thousands of sessions as they
@@ -73,37 +74,41 @@ public class CrawlerSessionManagerHandler implements HttpHandler {
         if ( src.getOriginalRequest().getSession(false) == null) {
 
             // Is this a crawler - check the UA headers
-            Iterator<String> uaHeaders = exchange.getRequestHeaders().get(Headers.USER_AGENT).iterator();
-            String uaHeader = null;
-            if (uaHeaders.hasNext()) {
-                uaHeader = uaHeaders.next();
-            }
+            HeaderValues userAgentHeaders = exchange.getRequestHeaders().get(Headers.USER_AGENT);
+            if (userAgentHeaders != null) {
+                Iterator<String> uaHeaders = userAgentHeaders.iterator();
+                String uaHeader = null;
+                if (uaHeaders.hasNext()) {
+                    uaHeader = uaHeaders.next();
+                }
 
-            // If more than one UA header - assume not a bot
-            if (uaHeader != null && !uaHeaders.hasNext()) {
+                // If more than one UA header - assume not a bot
+                if (uaHeader != null && !uaHeaders.hasNext()) {
 
-                if (uaPattern.matcher(uaHeader).matches()) {
-                    isBot = true;
+                    if (uaPattern.matcher(uaHeader).matches()) {
+                        isBot = true;
 
-                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        UndertowLogger.REQUEST_LOGGER.debug(exchange +
-                                ": Bot found. UserAgent=" + uaHeader);
+                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.REQUEST_LOGGER.debug(exchange +
+                                    ": Bot found. UserAgent=" + uaHeader);
+                        }
                     }
                 }
-            }
 
 
-            // If this is a bot, is the session ID known?
-            if (isBot) {
-                clientIp = src.getServletRequest().getRemoteAddr();
-                sessionId = clientIpSessionId.get(clientIp);
-                if (sessionId != null) {
-                    src.setOverridenSessionId(sessionId);
-                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        UndertowLogger.REQUEST_LOGGER.debug(exchange + ": SessionID=" +
-                                sessionId);
+                // If this is a bot, is the session ID known?
+                if (isBot) {
+                    clientIp = src.getServletRequest().getRemoteAddr();
+                    sessionId = clientIpSessionId.get(clientIp);
+                    if (sessionId != null) {
+                        src.setOverridenSessionId(sessionId);
+                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.REQUEST_LOGGER.debug(exchange + ": SessionID=" +
+                                    sessionId);
+                        }
                     }
                 }
+
             }
         }
         if (isBot) {
