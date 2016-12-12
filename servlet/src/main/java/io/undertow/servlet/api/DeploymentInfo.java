@@ -90,6 +90,7 @@ public class DeploymentInfo implements Cloneable {
     private int defaultCookieVersion = 0;
     private SessionPersistenceManager sessionPersistenceManager;
     private String defaultEncoding = "ISO-8859-1";
+    private boolean defaultEncodingExplicitlySet = false;
     private String urlEncoding = null;
     private boolean ignoreFlush = false;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
@@ -315,7 +316,17 @@ public class DeploymentInfo implements Cloneable {
      */
     public DeploymentInfo setDefaultEncoding(String defaultEncoding) {
         this.defaultEncoding = defaultEncoding;
+        this.defaultEncodingExplicitlySet = true;
         return this;
+    }
+
+    /**
+     * Determine whether default encoding was explicitly set
+     *
+     * @return true if default encoding was explicitly set
+     */
+    public boolean isDefaultEncodingExplicitlySet() {
+        return defaultEncodingExplicitlySet;
     }
 
     public String getUrlEncoding() {
@@ -1315,6 +1326,7 @@ public class DeploymentInfo implements Cloneable {
         info.identityManager = identityManager;
         info.confidentialPortManager = confidentialPortManager;
         info.defaultEncoding = defaultEncoding;
+        info.defaultEncodingExplicitlySet = defaultEncodingExplicitlySet;
         info.urlEncoding = urlEncoding;
         info.securityConstraints.addAll(securityConstraints);
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
