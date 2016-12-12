@@ -132,7 +132,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         while (it.hasNext()) {
             Holder holder = it.next();
             if (holder.channelListener == openListener) {
-                it.remove();
+                holders.remove(holder);
                 break;
             }
         }
@@ -157,7 +157,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         while (it.hasNext()) {
             Holder holder = it.next();
             if (holder.listener == upgradeListener) {
-                it.remove();
+                holders.remove(holder);
                 break;
             }
         }
