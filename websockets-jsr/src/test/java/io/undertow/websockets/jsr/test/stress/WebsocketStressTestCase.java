@@ -18,32 +18,6 @@
 
 package io.undertow.websockets.jsr.test.stress;
 
-import io.undertow.Handlers;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.websockets.jsr.ServerWebSocketContainer;
-import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.websocket.ClientEndpoint;
-import javax.websocket.CloseReason;
-import javax.websocket.ContainerProvider;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
-import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -55,6 +29,31 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.MessageHandler;
+import javax.websocket.SendHandler;
+import javax.websocket.SendResult;
+import javax.websocket.Session;
+import javax.websocket.WebSocketContainer;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import io.undertow.Handlers;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -68,9 +67,11 @@ public class WebsocketStressTestCase {
     private static ServerWebSocketContainer deployment;
 
     private static WebSocketContainer defaultContainer = ContainerProvider.getWebSocketContainer();
+    static ExecutorService executor;
 
     @BeforeClass
     public static void setup() throws Exception {
+        executor = Executors.newFixedThreadPool(NUM_THREADS);
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
@@ -104,49 +105,46 @@ public class WebsocketStressTestCase {
     public static void after() {
         StressEndpoint.MESSAGES.clear();
         deployment = null;
+        executor.shutdownNow();
+        executor = null;
     }
 
     @Test
     public void webSocketStringStressTestCase() throws Exception {
-        final ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
-        try {
-            List<CountDownLatch> latches = new ArrayList<>();
-            for (int i = 0; i < NUM_THREADS; ++i) {
-                final CountDownLatch latch = new CountDownLatch(1);
-                latches.add(latch);
-                final Session session = deployment.connectToServer(new Endpoint() {
-                    @Override
-                    public void onOpen(Session session, EndpointConfig config) {
-                    }
+        List<CountDownLatch> latches = new ArrayList<>();
+        for (int i = 0; i < NUM_THREADS; ++i) {
+            final CountDownLatch latch = new CountDownLatch(1);
+            latches.add(latch);
+            final Session session = deployment.connectToServer(new Endpoint() {
+                @Override
+                public void onOpen(Session session, EndpointConfig config) {
+                }
 
-                    @Override
-                    public void onClose(Session session, CloseReason closeReason) {
-                        latch.countDown();
-                    }
+                @Override
+                public void onClose(Session session, CloseReason closeReason) {
+                    latch.countDown();
+                }
 
-                    @Override
-                    public void onError(Session session, Throwable thr) {
-                        latch.countDown();
+                @Override
+                public void onError(Session session, Throwable thr) {
+                    latch.countDown();
+                }
+            }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
+            final int thread = i;
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        executor.submit(new SendRunnable(session, thread, executor));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
-                }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
-                final int thread = i;
-                executor.submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            executor.submit(new SendRunnable(session, thread, executor));
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
+                }
+            });
 
-            }
-            for (CountDownLatch future : latches) {
-                future.await();
-            }
-        } finally {
-            executor.shutdown();
+        }
+        for (CountDownLatch future : latches) {
+            future.await();
         }
         for (int t = 0; t < NUM_THREADS; ++t) {
             for (int i = 0; i < NUM_REQUESTS; ++i) {
@@ -202,7 +200,7 @@ public class WebsocketStressTestCase {
         }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
 
         OutputStream stream = session.getBasicRemote().getSendStream();
-        for(int i = 0; i < toSend.length(); ++i) {
+        for (int i = 0; i < toSend.length(); ++i) {
             stream.write(toSend.charAt(i));
             stream.flush();
         }
@@ -212,17 +210,11 @@ public class WebsocketStressTestCase {
 
     }
 
-
-    @ClientEndpoint
-    private static class ClientEndpointImpl {
-    }
-
     private static class SendRunnable implements Runnable {
         private final Session session;
         private final int thread;
         private final AtomicInteger count = new AtomicInteger();
         private final ExecutorService executor;
-        final CountDownLatch latch = new CountDownLatch(1);
 
         SendRunnable(Session session, int thread, ExecutorService executor) {
             this.session = session;
@@ -249,18 +241,7 @@ public class WebsocketStressTestCase {
                         executor.submit(new Runnable() {
                             @Override
                             public void run() {
-
                                 session.getAsyncRemote().sendText("close");
-                                try {
-                                    latch.await();
-                                } catch (InterruptedException e) {
-
-                                }
-                                try {
-                                    session.close();
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
                             }
                         });
                     }
