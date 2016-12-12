@@ -74,7 +74,7 @@ public class ManagedServlet implements Lifecycle {
 
     public void setupMultipart(ServletContextImpl servletContext) {
         FormEncodedDataDefinition formDataParser = new FormEncodedDataDefinition()
-                .setDefaultEncoding(servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding());
+                .setDefaultEncoding(servletContext.getDeployment().getDefaultCharset().name());
         MultipartConfigElement multipartConfig = servletInfo.getMultipartConfig();
         if(multipartConfig == null) {
             multipartConfig = servletContext.getDeployment().getDeploymentInfo().getDefaultMultipartConfig();
@@ -105,7 +105,7 @@ public class ManagedServlet implements Lifecycle {
             if(config.getMaxFileSize() > 0) {
                 multiPartParserDefinition.setMaxIndividualFileSize(config.getMaxFileSize());
             }
-            multiPartParserDefinition.setDefaultEncoding(servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding());
+            multiPartParserDefinition.setDefaultEncoding(servletContext.getDeployment().getDefaultCharset().name());
 
             formParserFactory = FormParserFactory.builder(false)
                     .addParser(formDataParser)
