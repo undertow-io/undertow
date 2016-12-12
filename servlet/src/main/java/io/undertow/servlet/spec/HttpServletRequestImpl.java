@@ -574,10 +574,25 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (characterEncoding != null) {
             return characterEncoding.name();
         }
+
+        String characterEncodingFromHeader = getCharacterEncodingFromHeader();
+        if (characterEncodingFromHeader != null) {
+            return characterEncodingFromHeader;
+        }
+
+        if (servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding() != null) {
+            return servletContext.getDeployment().getDefaultCharset().name();
+        }
+
+        return null;
+    }
+
+    private String getCharacterEncodingFromHeader() {
         String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (contentType == null) {
             return null;
         }
+
         return Headers.extractQuotedValueFromHeader(contentType, "charset");
     }
 
@@ -826,15 +841,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (characterEncoding != null) {
                 charSet = characterEncoding;
             } else {
-                String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
-                if (contentType != null) {
-                    String c = Headers.extractQuotedValueFromHeader(contentType, "charset");
-                    if (c != null) {
-                        try {
-                            charSet = Charset.forName(c);
-                        } catch (UnsupportedCharsetException e) {
-                            throw new UnsupportedEncodingException();
-                        }
+                String c = getCharacterEncodingFromHeader();
+                if (c != null) {
+                    try {
+                        charSet = Charset.forName(c);
+                    } catch (UnsupportedCharsetException e) {
+                        throw new UnsupportedEncodingException();
                     }
                 }
             }

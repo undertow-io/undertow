@@ -160,7 +160,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         deployment.getServletPaths().setWelcomePages(deploymentInfo.getWelcomePages());
 
-        deployment.setDefaultCharset(Charset.forName(deploymentInfo.getDefaultEncoding()));
+        if (deploymentInfo.getDefaultEncoding() != null) {
+            deployment.setDefaultCharset(Charset.forName(deploymentInfo.getDefaultEncoding()));
+        }
 
         handleDeploymentSessionConfig(deploymentInfo, servletContext);
 
@@ -341,9 +343,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
             if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
 
-                //we don't allow multipart requests, and always use the default encoding
+                //we don't allow multipart requests, and use the default encoding when it's set
+                FormEncodedDataDefinition formEncodedDataDefinition = new FormEncodedDataDefinition();
+                if (deploymentInfo.getDefaultEncoding() != null) {
+                    formEncodedDataDefinition.setDefaultEncoding(deploymentInfo.getDefaultEncoding());
+                }
                 FormParserFactory parser = FormParserFactory.builder(false)
-                        .addParser(new FormEncodedDataDefinition().setDefaultEncoding(deploymentInfo.getDefaultEncoding()))
+                        .addParser(formEncodedDataDefinition)
                         .build();
 
                 List<AuthMethodConfig> authMethods = Collections.<AuthMethodConfig>emptyList();

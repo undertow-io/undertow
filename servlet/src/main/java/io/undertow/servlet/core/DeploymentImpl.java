@@ -19,6 +19,7 @@
 package io.undertow.servlet.core;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -67,7 +68,7 @@ public class DeploymentImpl implements Deployment {
     private volatile ErrorPages errorPages;
     private volatile Map<String, String> mimeExtensionMappings;
     private volatile SessionManager sessionManager;
-    private volatile Charset defaultCharset;
+    private volatile Charset defaultCharset = StandardCharsets.ISO_8859_1;
     private volatile List<AuthenticationMechanism> authenticationMechanisms;
     private volatile List<ThreadSetupHandler> threadSetupActions;
 

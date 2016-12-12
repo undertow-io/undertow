@@ -89,7 +89,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean invalidateSessionOnLogout = false;
     private int defaultCookieVersion = 0;
     private SessionPersistenceManager sessionPersistenceManager;
-    private String defaultEncoding = "ISO-8859-1";
+    private String defaultEncoding;
     private String urlEncoding = null;
     private boolean ignoreFlush = false;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
@@ -202,9 +202,6 @@ public class DeploymentInfo implements Cloneable {
         }
         if (classIntrospecter == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("classIntrospecter");
-        }
-        if (defaultEncoding == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("defaultEncoding");
         }
 
         for (final ServletInfo servlet : this.servlets.values()) {

@@ -66,7 +66,7 @@ public class PartImpl implements Part {
             return new BufferedInputStream(Files.newInputStream(formValue.getPath()));
         } else {
             String requestedCharset = servletRequest.getCharacterEncoding();
-            String charset = requestedCharset != null ? requestedCharset : servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding();
+            String charset = requestedCharset != null ? requestedCharset : servletContext.getDeployment().getDefaultCharset().name();
             return new ByteArrayInputStream(formValue.getValue().getBytes(charset));
         }
     }
