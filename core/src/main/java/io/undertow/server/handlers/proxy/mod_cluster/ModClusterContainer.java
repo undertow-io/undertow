@@ -132,16 +132,17 @@ class ModClusterContainer implements ModClusterController {
             final Map<String, Cookie> cookies = exchange.getRequestCookies();
             if (balancer.isStickySession()) {
                 if (cookies.containsKey(balancer.getStickySessionCookie())) {
-                    final String jvmRoute = getJVMRoute(cookies.get(balancer.getStickySessionCookie()).getValue());
+                    final String session = cookies.get(balancer.getStickySessionCookie()).getValue();
+                    final String jvmRoute = getJVMRoute(session);
                     if (jvmRoute != null) {
-                        return new ModClusterProxyTarget.ExistingSessionTarget(jvmRoute, entry.getValue(), this, balancer.isStickySessionForce());
+                        return new ModClusterProxyTarget.ExistingSessionTarget(session, jvmRoute, entry.getValue(), this, balancer.isStickySessionForce());
                     }
                 }
                 if (exchange.getPathParameters().containsKey(balancer.getStickySessionPath())) {
-                    final String id = exchange.getPathParameters().get(balancer.getStickySessionPath()).getFirst();
-                    final String jvmRoute = getJVMRoute(id);
+                    final String session = exchange.getPathParameters().get(balancer.getStickySessionPath()).getFirst();
+                    final String jvmRoute = getJVMRoute(session);
                     if (jvmRoute != null) {
-                        return new ModClusterProxyTarget.ExistingSessionTarget(jvmRoute, entry.getValue(), this, balancer.isStickySessionForce());
+                        return new ModClusterProxyTarget.ExistingSessionTarget(session, jvmRoute, entry.getValue(), this, balancer.isStickySessionForce());
                     }
                 }
             }
@@ -392,12 +393,32 @@ class ModClusterContainer implements ModClusterController {
     /**
      * Try to find a failover node within the same load balancing group.
      *
-     * @param domain   the load balancing domain, if known
-     * @param jvmRoute the original jvmRoute
+     * @param entry              the resolved virtual host entry
+     * @param domain             the load balancing domain, if known
+     * @param session            the actual value of JSESSIONID/jsessionid cookie/parameter
+     * @param jvmRoute           the original jvmRoute
+     * @param forceStickySession whether sticky sessions are forced
      * @return the context, {@code null} if not found
-     * @oaram entry      the resolved virtual host entry
      */
-    Context findFailoverNode(final VirtualHost.HostEntry entry, final String domain, final String jvmRoute, final boolean forceStickySession) {
+    Context findFailoverNode(final VirtualHost.HostEntry entry, final String domain, final String session, final String jvmRoute, final boolean forceStickySession) {
+
+        // If configured, deterministically choose the failover target by calculating hash of the session ID modding by number of electable nodes
+        if (modCluster.isDeterministicFailover()) {
+            List<String> candidates = new ArrayList<>(entry.getNodes().size());
+            for (String route : entry.getNodes()) {
+                Node node = nodes.get(route);
+                if (node != null && !node.isInErrorState()) {
+                    candidates.add(route);
+                }
+            }
+            String sessionId = session.substring(0, session.indexOf('.'));
+            int index = Math.abs(sessionId.hashCode()) % candidates.size();
+            Collections.sort(candidates);
+            String electedRoute = candidates.get(index);
+            UndertowLogger.ROOT_LOGGER.debugf("Using deterministic failover target: %s", electedRoute);
+            return entry.getContextForNode(electedRoute);
+        }
+
         String failOverDomain = null;
         if (domain == null) {
             final Node node = nodes.get(jvmRoute);
@@ -428,7 +449,6 @@ class ModClusterContainer implements ModClusterController {
      * Map a request to virtual host.
      *
      * @param exchange the http exchange
-     * @return
      */
     private PathMatcher.PathMatch<VirtualHost.HostEntry> mapVirtualHost(final HttpServerExchange exchange) {
         final String context = exchange.getRelativePath();
