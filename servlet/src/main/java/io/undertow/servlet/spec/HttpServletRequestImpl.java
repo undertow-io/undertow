@@ -547,12 +547,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
 
         String characterEncodingFromHeader = getCharacterEncodingFromHeader();
-
         if (characterEncodingFromHeader != null) {
             return characterEncodingFromHeader;
         }
 
-        if (servletContext.getDeployment().getDeploymentInfo().isDefaultEncodingExplicitlySet()) {
+        if (servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding() != null) {
             return servletContext.getDeployment().getDefaultCharset().name();
         }
 

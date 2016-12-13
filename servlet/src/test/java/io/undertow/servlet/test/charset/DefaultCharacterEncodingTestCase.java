@@ -93,8 +93,7 @@ public class DefaultCharacterEncodingTestCase {
 
     @Test
     public void testDefaultEncodingSetEqualDefault() throws IOException, ServletException {
-        String defaultEncoding = new DeploymentInfo().getDefaultEncoding();
-        testDefaultEncoding(defaultEncoding, defaultEncoding, defaultEncoding);
+        testDefaultEncoding("ISO-8859-1", "ISO-8859-1", "ISO-8859-1");
     }
 
     @Test
