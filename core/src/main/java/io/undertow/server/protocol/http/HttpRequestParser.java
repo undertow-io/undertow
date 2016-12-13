@@ -164,6 +164,7 @@ public abstract class HttpRequestParser {
     private final boolean allowEncodedSlash;
     private final boolean decode;
     private final String charset;
+    private final int maxCachedHeaderSize;
 
     static {
         try {
@@ -180,6 +181,7 @@ public abstract class HttpRequestParser {
         allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         decode = options.get(UndertowOptions.DECODE_URL, true);
         charset = options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
+        maxCachedHeaderSize = options.get(UndertowOptions.MAX_CACHED_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_CACHED_HEADER_SIZE);
     }
 
     public static final HttpRequestParser instance(final OptionMap options) {
@@ -644,8 +646,8 @@ public abstract class HttpRequestParser {
     final void handleHeaderValue(ByteBuffer buffer, ParseState state, HttpServerExchange builder) throws BadRequestException {
         HttpString headerName = state.nextHeader;
         StringBuilder stringBuilder = state.stringBuilder;
-        HashMap<HttpString, String> headerValuesCache = state.headerValuesCache;
-        if (stringBuilder.length() == 0) {
+        CacheMap<HttpString, String> headerValuesCache = state.headerValuesCache;
+        if (headerName != null && stringBuilder.length() == 0 && headerValuesCache != null) {
             String existing = headerValuesCache.get(headerName);
             if (existing != null) {
                 if (handleCachedHeader(existing, buffer, state, builder)) {
@@ -657,7 +659,7 @@ public abstract class HttpRequestParser {
         handleHeaderValueCacheMiss(buffer, state, builder, headerName, headerValuesCache, stringBuilder);
     }
 
-    private void handleHeaderValueCacheMiss(ByteBuffer buffer, ParseState state, HttpServerExchange builder, HttpString headerName, HashMap<HttpString, String> headerValuesCache, StringBuilder stringBuilder) throws BadRequestException {
+    private void handleHeaderValueCacheMiss(ByteBuffer buffer, ParseState state, HttpServerExchange builder, HttpString headerName, CacheMap<HttpString, String> headerValuesCache, StringBuilder stringBuilder) throws BadRequestException {
 
         int parseState = state.parseState;
         while (buffer.hasRemaining() && parseState == NORMAL) {
@@ -721,9 +723,7 @@ public abstract class HttpRequestParser {
                         }
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
                         builder.getRequestHeaders().add(headerName, headerValue);
-                        if(headerValuesCache.size() < maxHeaders) {
-                            //we have a limit on how many we can cache
-                            //to prevent memory filling and hash collision attacks
+                        if(headerValuesCache != null && headerName.length() + headerValue.length() < maxCachedHeaderSize) {
                             headerValuesCache.put(headerName, headerValue);
                         }
 

@@ -66,7 +66,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     private static final String BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 
     private final HttpServerConnection connection;
-    private final ParseState state = new ParseState();
+    private final ParseState state;
     private final HttpRequestParser parser;
 
     private HttpServerExchange httpServerExchange;
@@ -104,6 +104,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection, requestParseTimeout, requestIdleTimeout);
             connection.addCloseListener(parseTimeoutUpdater);
         }
+        state = new ParseState(connection.getUndertowOptions().get(UndertowOptions.HTTP_HEADERS_CACHE_SIZE, UndertowOptions.DEFAULT_HTTP_HEADERS_CACHE_SIZE));
     }
 
     public void newRequest() {
