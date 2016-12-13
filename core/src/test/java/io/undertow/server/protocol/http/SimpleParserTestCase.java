@@ -46,13 +46,13 @@ import java.nio.ByteBuffer;
 @Category(UnitTest.class)
 public class SimpleParserTestCase {
 
-    private final ParseState parseState = new ParseState();
+    private final ParseState parseState = new ParseState(-1);
 
     @Test
     public void testEncodedSlashDisallowed() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath%2FotherPath HTTP/1.1\r\n\r\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
@@ -64,7 +64,7 @@ public class SimpleParserTestCase {
     public void testEncodedSlashAllowed() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath%2fotherPath HTTP/1.1\r\n\r\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
@@ -76,7 +76,7 @@ public class SimpleParserTestCase {
     public void testColonSlashInURL() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /a/http://myurl.com/b/c HTTP/1.1\r\n\r\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
@@ -88,7 +88,7 @@ public class SimpleParserTestCase {
     public void testColonSlashInFullURL() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET http://foo.com/a/http://myurl.com/b/c HTTP/1.1\r\n\r\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
@@ -100,7 +100,7 @@ public class SimpleParserTestCase {
     @Test
     public void testPathParameters() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /somepath;p1 HTTP/1.1\r\n\r\n".getBytes();
-        ParseState context = new ParseState();
+        ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
@@ -109,7 +109,7 @@ public class SimpleParserTestCase {
         Assert.assertTrue(result.getPathParameters().containsKey("p1"));
 
         in = "GET /somepath;p1=v1&p2=v2?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
-        context = new ParseState();
+        context = new ParseState(10);
         result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
@@ -125,7 +125,7 @@ public class SimpleParserTestCase {
     public void testFullUrlRootPath() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET http://myurl.com HTTP/1.1\r\n\r\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
@@ -176,7 +176,7 @@ public class SimpleParserTestCase {
     public void testCanonicalPath() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(5);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertEquals("/somepath", result.getRelativePath());
@@ -187,7 +187,7 @@ public class SimpleParserTestCase {
     public void testNoHeaders() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\t/aa\tHTTP/1.1\n\n\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(0);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertTrue(context.isComplete());
@@ -198,7 +198,7 @@ public class SimpleParserTestCase {
     public void testQueryParams() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\thttp://www.somehost.net/somepath?a=b&b=c&d&e&f=\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertEquals("/somepath", result.getRelativePath());
@@ -216,11 +216,11 @@ public class SimpleParserTestCase {
     public void testSameHttpStringReturned() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nAccept-Charset:\tsome\n \t  value\n\r\n".getBytes();
 
-        final ParseState context1 = new ParseState();
+        final ParseState context1 = new ParseState(10);
         HttpServerExchange result1 = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context1, result1);
 
-        final ParseState context2 = new ParseState();
+        final ParseState context2 = new ParseState(10);
         HttpServerExchange result2 = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context2, result2);
 
@@ -247,7 +247,7 @@ public class SimpleParserTestCase {
     public void testEmptyQueryParams() throws HttpRequestParser.BadRequestException {
         byte[] in = "GET /clusterbench/requestinfo//?;?=44&test=OK;devil=3&&&&&&&&&&&&&&&&&&&&&&&&&&&&777=666 HTTP/1.1\r\n\r\n".getBytes();
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
@@ -262,7 +262,7 @@ public class SimpleParserTestCase {
     public void testNonEncodedAsciiCharacters() throws UnsupportedEncodingException, HttpRequestParser.BadRequestException {
         byte[] in = "GET /bÃ¥r HTTP/1.1\r\n\r\n".getBytes("ISO-8859-1");
 
-        final ParseState context = new ParseState();
+        final ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
