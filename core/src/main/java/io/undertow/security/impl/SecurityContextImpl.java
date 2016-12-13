@@ -280,7 +280,6 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
         private Node<AuthenticationMechanism> currentMethod;
         private final HttpServerExchange exchange;
 
-        private boolean atLeastOneChallenge = false;
         private Integer chosenStatusCode = null;
 
         private ChallengeSender(Node<AuthenticationMechanism> currentMethod, final HttpServerExchange exchange) {
@@ -295,38 +294,32 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
                 ChallengeResult result = mechanism.sendChallenge(exchange, SecurityContextImpl.this);
 
                 if (result.isChallengeSent()) {
-                    atLeastOneChallenge = true;
                     Integer desiredCode = result.getDesiredResponseCode();
-                    if (chosenStatusCode == null) {
+                    if (desiredCode != null && chosenStatusCode == null || chosenStatusCode.equals(StatusCodes.OK)) {
                         chosenStatusCode = desiredCode;
-                    } else if (desiredCode != null) {
-                        if (chosenStatusCode.equals(StatusCodes.OK)) {
-                            // Allows a more specific code to be chosen.
-                            // TODO - Still need a more complex code resolution strategy if many different codes are
-                            // returned (Although those mechanisms may just never work together.)
-                            chosenStatusCode = desiredCode;
+                        if (chosenStatusCode.equals(StatusCodes.OK) == false) {
+                            if(!exchange.isResponseStarted()) {
+                                exchange.setStatusCode(chosenStatusCode);
+                            }
                         }
                     }
                 }
-
 
                 // We always transition so we can reach the end of the list and hit the else.
                 return transition();
 
             } else {
                 if(!exchange.isResponseStarted()) {
-                    // Iterated all mechanisms, now need to select a suitable status code.
-                    if (atLeastOneChallenge) {
-                        if (chosenStatusCode != null) {
-                            exchange.setStatusCode(chosenStatusCode);
-                        }
-                    } else {
+                    // Iterated all mechanisms, if OK it will not be set yet.
+                    if (chosenStatusCode == null) {
                         // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
                         exchange.setStatusCode(StatusCodes.FORBIDDEN);
+                    } else if (chosenStatusCode.equals(StatusCodes.OK)) {
+                        exchange.setStatusCode(chosenStatusCode);
                     }
                 }
-                return AuthenticationState.CHALLENGE_SENT;
 
+                return AuthenticationState.CHALLENGE_SENT;
             }
         }
 
