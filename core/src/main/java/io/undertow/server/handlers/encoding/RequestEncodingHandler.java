@@ -55,12 +55,13 @@ public class RequestEncodingHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         ConduitWrapper<StreamSourceConduit> encodings = requestEncodings.get(exchange.getRequestHeaders().getFirst(Headers.CONTENT_ENCODING));
-        if (encodings == null || !exchange.isRequestChannelAvailable()) {
-            next.handleRequest(exchange);
-        } else {
+        if (encodings != null && exchange.isRequestChannelAvailable()) {
             exchange.addRequestWrapper(encodings);
-            next.handleRequest(exchange);
+            // Nested handlers or even servlet filters may implement logic to decode encoded request data.
+            // Since the data is no longer encoded, we remove the encoding header.
+            exchange.getRequestHeaders().remove(Headers.CONTENT_ENCODING);
         }
+        next.handleRequest(exchange);
     }
 
     public RequestEncodingHandler addEncoding(String name, ConduitWrapper<StreamSourceConduit> wrapper) {

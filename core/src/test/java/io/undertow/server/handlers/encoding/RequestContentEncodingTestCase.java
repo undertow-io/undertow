@@ -55,9 +55,10 @@ public class RequestContentEncodingTestCase {
 
     @BeforeClass
     public static void setup() {
-        final EncodingHandler handler = new EncodingHandler(new ContentEncodingRepository()
+        final ContentEncodingRepository contentEncodingRepository = new ContentEncodingRepository()
                 .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50)
-                .addEncodingHandler("gzip", new GzipEncodingProvider(), 60))
+                .addEncodingHandler("gzip", new GzipEncodingProvider(), 60);
+        final EncodingHandler encode = new EncodingHandler(contentEncodingRepository)
                 .setNext(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -65,6 +66,7 @@ public class RequestContentEncodingTestCase {
                         exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
                     }
                 });
+        final EncodingHandler wrappedEncode = new EncodingHandler(contentEncodingRepository).setNext(encode);
 
         final HttpHandler decode = new RequestEncodingHandler(new HttpHandler() {
             @Override
@@ -78,9 +80,12 @@ public class RequestContentEncodingTestCase {
             }
         }).addEncoding("deflate", InflatingStreamSourceConduit.WRAPPER)
                 .addEncoding("gzip", GzipStreamSourceConduit.WRAPPER);
+        final HttpHandler wrappedDecode = new RequestEncodingHandler(decode)
+                .addEncoding("deflate", InflatingStreamSourceConduit.WRAPPER)
+                .addEncoding("gzip", GzipStreamSourceConduit.WRAPPER);
         PathHandler pathHandler = new PathHandler();
-        pathHandler.addPrefixPath("/encode", handler);
-        pathHandler.addPrefixPath("/decode", decode);
+        pathHandler.addPrefixPath("/encode", wrappedEncode);
+        pathHandler.addPrefixPath("/decode", wrappedDecode);
 
         DefaultServer.setRootHandler(pathHandler);
     }
