@@ -335,7 +335,7 @@ class Node {
         int oldState, newState;
         for (;;) {
             oldState = this.state;
-            newState = oldState | HOT_STANDBY;
+            newState = oldState & ~(ERROR | ERROR_MASK) | HOT_STANDBY;
             if (stateUpdater.compareAndSet(this, oldState, newState)) {
                 lbStatus.updateLoad(0);
                 return;
@@ -508,4 +508,11 @@ class Node {
         }
     }
 
+    @Override
+    public String toString() {
+        return "Node{" +
+                "jvmRoute='" + jvmRoute + '\'' +
+                ", contexts=" + contexts +
+                '}';
+    }
 }

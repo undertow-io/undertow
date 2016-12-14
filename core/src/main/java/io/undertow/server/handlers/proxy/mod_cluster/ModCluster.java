@@ -54,6 +54,7 @@ public class ModCluster {
     private final XnioWorker xnioWorker;
     private final ModClusterContainer container;
     private final int maxRetries;
+    private final boolean deterministicFailover;
 
     private final String serverID = UUID.randomUUID().toString(); // TODO
 
@@ -65,6 +66,7 @@ public class ModCluster {
         this.queueNewRequests = builder.queueNewRequests;
         this.healthCheckInterval = builder.healthCheckInterval;
         this.removeBrokenNodes = builder.removeBrokenNodes;
+        this.deterministicFailover = builder.deterministicFailover;
         this.healthChecker = builder.healthChecker;
         this.maxRequestTime = builder.maxRequestTime;
         this.ttl = builder.ttl;
@@ -119,6 +121,10 @@ public class ModCluster {
 
     public boolean isUseAlias() {
         return useAlias;
+    }
+
+    public boolean isDeterministicFailover() {
+        return deterministicFailover;
     }
 
     /**
@@ -206,8 +212,9 @@ public class ModCluster {
         private NodeHealthChecker healthChecker = NodeHealthChecker.NO_CHECK;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
         private long removeBrokenNodes = TimeUnit.MINUTES.toMillis(1);
-        public OptionMap clientOptions = OptionMap.EMPTY;
-        public int maxRetries;
+        private OptionMap clientOptions = OptionMap.EMPTY;
+        private int maxRetries;
+        private boolean deterministicFailover = false;
 
         private Builder(XnioWorker xnioWorker, UndertowClient client, XnioSsl xnioSsl) {
             this.xnioSsl = xnioSsl;
@@ -264,12 +271,14 @@ public class ModCluster {
             return this;
         }
 
-        public void setMaxRetries(int maxRetries) {
+        public Builder setMaxRetries(int maxRetries) {
             this.maxRetries = maxRetries;
+            return this;
         }
 
-        public long getTtl() {
-            return ttl;
+        public Builder setDeterministicFailover(boolean deterministicFailover) {
+            this.deterministicFailover = deterministicFailover;
+            return this;
         }
 
         public Builder setTtl(long ttl) {
