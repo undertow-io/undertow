@@ -19,6 +19,7 @@
 package io.undertow.server;
 
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -67,12 +68,14 @@ public class JvmRouteHandler implements HttpHandler {
         @Override
         public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
 
-            Cookie sessionId = exchange.getResponseCookies().get(sessionCookieName);
-            if (sessionId != null) {
-                StringBuilder sb = new StringBuilder(sessionId.getValue());
-                sb.append('.');
-                sb.append(jvmRoute);
-                sessionId.setValue(sb.toString());
+            Deque<Cookie> sessionCookies = exchange.getResponseCookies().get(sessionCookieName);
+            if (sessionCookies != null) {
+                for (Cookie sessionCookie : sessionCookies) {
+                    StringBuilder sb = new StringBuilder(sessionCookie.getValue());
+                    sb.append('.');
+                    sb.append(jvmRoute);
+                    sessionCookie.setValue(sb.toString());
+                }
             }
             return factory.create();
         }

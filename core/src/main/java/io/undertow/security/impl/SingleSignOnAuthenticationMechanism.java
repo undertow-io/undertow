@@ -108,7 +108,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
     }
 
     private void clearSsoCookie(HttpServerExchange exchange) {
-        exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName).setMaxAge(0).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain));
+        exchange.setResponseCookie(new CookieImpl(cookieName).setMaxAge(0).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain));
     }
 
     @Override
@@ -130,7 +130,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                 try (SingleSignOn sso = manager.createSingleSignOn(account, sc.getMechanismName())) {
                     Session session = getSession(exchange);
                     registerSessionIfRequired(sso, session);
-                    exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
+                    exchange.setResponseCookie(new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
                 }
             }
             return factory.create();
