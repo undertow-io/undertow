@@ -32,6 +32,7 @@ import io.undertow.predicate.PredicateBuilder;
 import io.undertow.protocols.http2.HpackException;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.server.protocol.http.HttpRequestParser;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
 
@@ -149,7 +150,7 @@ public interface UndertowMessages {
     String authenticationFailed(final String userName);
 
     @Message(id = 39, value = "To many query parameters, cannot have more than %s query parameters")
-    RuntimeException tooManyQueryParameters(int noParams);
+    HttpRequestParser.BadRequestException tooManyQueryParameters(int noParams);
 
     @Message(id = 40, value = "To many headers, cannot have more than %s header")
     String tooManyHeaders(int noParams);
