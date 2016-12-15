@@ -813,6 +813,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected void markReadsBroken(Throwable cause) {
         if (readsBrokenUpdater.compareAndSet(this, 0, 1)) {
+            if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
+                UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Marking reads broken on channel %s", this);
+            }
             if(receiver != null) {
                 receiver.markStreamBroken();
             }
@@ -846,6 +849,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected void markWritesBroken(Throwable cause) {
         if (writesBrokenUpdater.compareAndSet(this, 0, 1)) {
+            if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
+                UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Marking writes broken on channel %s", this);
+            }
             handleBrokenSinkChannel(cause);
             safeClose(channel.getSinkChannel());
             synchronized (this) {
