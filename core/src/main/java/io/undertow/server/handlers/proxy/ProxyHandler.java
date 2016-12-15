@@ -517,7 +517,7 @@ public final class ProxyHandler implements HttpHandler {
                 request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, exchange.getRequestHeaders().getFirst(Headers.HOST));
             }
             if(log.isDebugEnabled()) {
-                log.debugf("Sending request %s to target %s for exchange %s", request, remoteHost, exchange);
+                log.debugf("Sending request %s to target %s for exchange %s", request, clientConnection.getConnection().getPeerAddress(), exchange);
             }
             clientConnection.getConnection().sendRequest(request, new ClientCallback<ClientExchange>() {
                 @Override
@@ -534,7 +534,7 @@ public final class ProxyHandler implements HttpHandler {
                             @Override
                             public void handleContinue(final ClientExchange clientExchange) {
                                 if(log.isDebugEnabled()) {
-                                    log.debugf("Relieved continue response to request %s to target %s for exchange %s", request, remoteHost, exchange);
+                                    log.debugf("Relieved continue response to request %s to target %s for exchange %s", request, clientConnection.getConnection().getPeerAddress(), exchange);
                                 }
                                 HttpContinue.sendContinueResponse(exchange, new IoCallback() {
                                     @Override

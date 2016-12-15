@@ -63,4 +63,14 @@ public final class ClientResponse extends AbstractAttachable {
     public String getStatus() {
         return status;
     }
+
+    @Override
+    public String toString() {
+        return "ClientResponse{" +
+                "responseHeaders=" + responseHeaders +
+                ", responseCode=" + responseCode +
+                ", status='" + status + '\'' +
+                ", protocol=" + protocol +
+                '}';
+    }
 }
