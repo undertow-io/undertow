@@ -743,6 +743,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             return;
         }
         thisGoneAway = true;
+        if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
+            UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Sending goaway on channel %s", this);
+        }
         Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, status, lastGoodStreamId);
         try {
             goAway.shutdownWrites();
@@ -948,6 +951,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     public void sendRstStream(int streamId, int statusCode) {
         handleRstStream(streamId);
+        if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
+            UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Sending rststream on channel %s stream %s", this, streamId);
+        }
         Http2RstStreamSinkChannel channel = new Http2RstStreamSinkChannel(this, streamId, statusCode);
         flushChannelIgnoreFailure(channel);
     }
