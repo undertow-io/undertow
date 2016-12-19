@@ -44,6 +44,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -542,13 +543,25 @@ public class ProxyConnectionPool implements Closeable {
      *
      */
     void closeCurrentConnections() {
-        for(Map.Entry<XnioIoThread, HostThreadData> data : hostThreadData.entrySet()) {
-            ConnectionHolder d = data.getValue().availableConnections.poll();
-            while (d != null) {
-                IoUtils.safeClose(d.clientConnection);
-                d = data.getValue().availableConnections.poll();
-            }
-            data.getValue().connections = 0;
+        final CountDownLatch latch = new CountDownLatch(hostThreadData.size());
+        for(final Map.Entry<XnioIoThread, HostThreadData> data : hostThreadData.entrySet()) {
+            data.getKey().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ConnectionHolder d = data.getValue().availableConnections.poll();
+                    while (d != null) {
+                        IoUtils.safeClose(d.clientConnection);
+                        d = data.getValue().availableConnections.poll();
+                    }
+                    data.getValue().connections = 0;
+                    latch.countDown();
+                }
+            });
+        }
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
