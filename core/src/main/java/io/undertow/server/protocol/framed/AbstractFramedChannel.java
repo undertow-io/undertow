@@ -800,6 +800,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if(receiver != null) {
                 receiver.markStreamBroken();
             }
+
+            // make a defensive copy
+            Set<AbstractFramedStreamSourceChannel<C, R, S>> receivers = new HashSet<>(
+                    this.receivers);
             for(AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
                 r.markStreamBroken();
             }
