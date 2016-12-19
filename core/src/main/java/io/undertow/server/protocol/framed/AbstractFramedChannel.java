@@ -819,7 +819,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if(receiver != null) {
                 receiver.markStreamBroken();
             }
-            for(AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
+            for(AbstractFramedStreamSourceChannel<C, R, S> r : new ArrayList<>(receivers)) {
                 r.markStreamBroken();
             }
 
