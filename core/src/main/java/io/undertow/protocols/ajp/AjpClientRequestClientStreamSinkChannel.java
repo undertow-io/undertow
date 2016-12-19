@@ -57,7 +57,7 @@ public class AjpClientRequestClientStreamSinkChannel extends AbstractAjpClientSt
 
     private final ChannelListener<AjpClientRequestClientStreamSinkChannel> finishListener;
 
-    private static final int DEFAULT_MAX_DATA_SIZE = 8192;
+    public static final int DEFAULT_MAX_DATA_SIZE = 8192;
 
     private final HeaderMap headers;
     private final String path;
