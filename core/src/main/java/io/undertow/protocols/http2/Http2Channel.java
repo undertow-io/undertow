@@ -116,7 +116,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     static final int CONTINUATION_FLAG_END_HEADERS = 0x4;
 
-    static final int DEFAULT_INITIAL_WINDOW_SIZE = 65535;
+    public static final int DEFAULT_INITIAL_WINDOW_SIZE = 65535;
 
     static final byte[] PREFACE_BYTES = {
             0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,
