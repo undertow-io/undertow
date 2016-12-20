@@ -103,6 +103,10 @@ public class ExchangeAttributes {
         return ResponseCodeAttribute.INSTANCE;
     }
 
+    public static ExchangeAttribute responseReasonPhrase() {
+        return ResponseReasonPhraseAttribute.INSTANCE;
+    }
+
     public static ExchangeAttribute responseHeader(final HttpString header) {
         return new ResponseHeaderAttribute(header);
     }
