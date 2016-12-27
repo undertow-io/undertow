@@ -62,7 +62,7 @@ public class ListenerInfo {
         this.instanceFactory = instanceFactory;
     }
 
-    public Class<?> getListenerClass() {
+    public Class<? extends EventListener> getListenerClass() {
         return listenerClass;
     }
 
