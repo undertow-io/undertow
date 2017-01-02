@@ -33,3 +33,4 @@ io.undertow.attribute.RemoteHostAttribute$Builder
 io.undertow.attribute.RequestPathAttribute$Builder
 io.undertow.attribute.ResolvedPathAttribute$Builder
 io.undertow.attribute.NullAttribute$Builder
+io.undertow.attribute.StoredResponse$Builder
