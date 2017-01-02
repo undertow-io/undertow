@@ -194,12 +194,14 @@ public class ResourceHandler implements HttpHandler {
                         resource = resourceManager.getResource(canonicalize(exchange.getRelativePath()));
                     }
                 } catch (IOException e) {
+                    clearCacheHeaders(exchange);
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     exchange.endExchange();
                     return;
                 }
                 if (resource == null) {
+                    clearCacheHeaders(exchange);
                     //usually a 404 handler
                     next.handleRequest(exchange);
                     return;
@@ -330,8 +332,11 @@ public class ResourceHandler implements HttpHandler {
         } else {
             dispatchTask.handleRequest(exchange);
         }
+    }
 
-
+    private void clearCacheHeaders(HttpServerExchange exchange) {
+        exchange.getResponseHeaders().remove(Headers.CACHE_CONTROL);
+        exchange.getResponseHeaders().remove(Headers.EXPIRES);
     }
 
     private Resource getIndexFiles(ResourceManager resourceManager, final String base, List<String> possible) throws IOException {
