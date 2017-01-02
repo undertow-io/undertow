@@ -504,4 +504,7 @@ public interface UndertowMessages {
 
     @Message(id = 157, value = "Invalid GZIP footer")
     IOException invalidGZIPFooter();
+
+    @Message(id = 158, value = "Response of length %s is too large to buffer")
+    IllegalStateException responseTooLargeToBuffer(Long length);
 }
