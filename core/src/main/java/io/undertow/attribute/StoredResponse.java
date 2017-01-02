@@ -32,7 +32,7 @@ import io.undertow.util.Headers;
  */
 public class StoredResponse implements ExchangeAttribute {
 
-    public static ExchangeAttribute INSTANCE = new StoredResponse();
+    public static final ExchangeAttribute INSTANCE = new StoredResponse();
 
     private StoredResponse() {
 
