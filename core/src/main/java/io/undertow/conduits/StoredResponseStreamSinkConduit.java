@@ -51,7 +51,7 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
         super(next);
         this.exchange = exchange;
         long length = exchange.getResponseContentLength();
-        if (length > 0) {
+        if (length > 0L) {
             outputStream = new ByteArrayOutputStream();
         } else {
             if (length > Integer.MAX_VALUE) {
