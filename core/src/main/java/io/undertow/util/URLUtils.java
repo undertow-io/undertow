@@ -104,10 +104,24 @@ public class URLUtils {
                         }
                         int pos = 0;
 
-                        while ((i< numChars)) {
+                        while ((i < numChars)) {
                             if (c == '%') {
                                 char p1 = Character.toLowerCase(s.charAt(i + 1));
                                 char p2 = Character.toLowerCase(s.charAt(i + 2));
+
+                                if (!decodeSlash && p1 == '2' && p2 == 'f') {
+                                    bytes[pos++] = (byte) c;
+                                    // should be copied with preserved upper/lower case
+                                    bytes[pos++] = (byte) s.charAt(i + 1);
+                                    bytes[pos++] = (byte) s.charAt(i + 2);
+                                    i += 3;
+
+                                    if (i < numChars) {
+                                        c = s.charAt(i);
+                                    }
+                                    continue;
+                                }
+
                                 int v = 0;
                                 if (p1 >= '0' && p1 <= '9') {
                                     v = (p1 - '0') << 4;
@@ -135,7 +149,7 @@ public class URLUtils {
                                 if (i < numChars) {
                                     c = s.charAt(i);
                                 }
-                            }else if(c == '+') {
+                            } else if (c == '+') {
                                 bytes[pos++] = (byte) ' ';
                                 ++i;
                                 if (i < numChars) {
@@ -182,14 +196,14 @@ public class URLUtils {
                 default:
                     buffer.append(c);
                     i++;
-                    if(c > 127 && !needToChange) {
+                    if (c > 127 && !needToChange) {
                         //we have non-ascii data in our URL, which sucks
                         //its hard to know exactly what to do with this, but we assume that because this data
                         //has not been properly encoded none of the other data is either
                         try {
                             char[] carray = s.toCharArray();
                             byte[] buf = new byte[carray.length];
-                            for(int l = 0;l < buf.length; ++l) {
+                            for (int l = 0; l < buf.length; ++l) {
                                 buf[l] = (byte) carray[l];
                             }
                             return new String(buf, enc);
