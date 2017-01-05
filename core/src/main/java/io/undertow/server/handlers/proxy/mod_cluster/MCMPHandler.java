@@ -180,6 +180,8 @@ class MCMPHandler implements HttpHandler {
      */
     protected void handleRequest(final HttpString method, HttpServerExchange exchange) throws Exception {
         final RequestData requestData = parseFormData(exchange);
+        boolean persistent = exchange.isPersistent();
+        exchange.setPersistent(false); //UNDERTOW-947 MCMP should not use persistent connections
         if (CONFIG.equals(method)) {
             processConfig(exchange, requestData);
         } else if (ENABLE_APP.equals(method)) {
@@ -199,6 +201,7 @@ class MCMPHandler implements HttpHandler {
         } else if (PING.equals(method)) {
             processPing(exchange, requestData);
         } else {
+            exchange.setPersistent(persistent);
             next.handleRequest(exchange);
         }
     }
