@@ -18,10 +18,10 @@
 
 package io.undertow.util;
 
+import java.io.UnsupportedEncodingException;
+
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
-
-import java.io.UnsupportedEncodingException;
 
 /**
  * Utilities for dealing with URLs
@@ -71,7 +71,6 @@ public class URLUtils {
         boolean needToChange = false;
         int numChars = s.length();
         int i = 0;
-        boolean mightRequireSlashEscape = false;
 
         char c;
         byte[] bytes = null;
@@ -108,6 +107,18 @@ public class URLUtils {
                             if (c == '%') {
                                 char p1 = Character.toLowerCase(s.charAt(i + 1));
                                 char p2 = Character.toLowerCase(s.charAt(i + 2));
+                                if (!decodeSlash && ((p1 == '2' && p2 == 'f') || (p1 == '5' && p2 == 'c'))) {
+                                    bytes[pos++] = (byte) c;
+                                    // should be copied with preserved upper/lower case
+                                    bytes[pos++] = (byte) s.charAt(i + 1);
+                                    bytes[pos++] = (byte) s.charAt(i + 2);
+                                    i += 3;
+
+                                    if (i < numChars) {
+                                        c = s.charAt(i);
+                                    }
+                                    continue;
+                                }
                                 int v = 0;
                                 if (p1 >= '0' && p1 <= '9') {
                                     v = (p1 - '0') << 4;
@@ -125,9 +136,6 @@ public class URLUtils {
                                 }
                                 if (v < 0) {
                                     throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
-                                }
-                                if (v == '/' || v == '\\') {
-                                    mightRequireSlashEscape = true;
                                 }
 
                                 bytes[pos++] = (byte) v;
@@ -151,27 +159,7 @@ public class URLUtils {
                         }
 
                         String decoded = new String(bytes, 0, pos, enc);
-                        if (!decodeSlash && mightRequireSlashEscape) {
-                            //we need to re-encode slash characters
-                            //this is yuck, but a corner case
-                            int decPos = 0;
-                            for (int j = 0; j < decoded.length(); ++j) {
-                                char decChar = decoded.charAt(j);
-                                if (decChar == '/') {
-                                    buffer.append(decoded.substring(decPos, j));
-                                    buffer.append("%2F");
-                                    decPos = j + 1;
-                                } else if (decChar == '\\') {
-                                    buffer.append(decoded.substring(decPos, j));
-                                    buffer.append("%5C");
-                                    decPos = j + 1;
-                                }
-                            }
-                            buffer.append(decoded.substring(decPos));
-                        } else {
-                            buffer.append(decoded);
-                        }
-                        mightRequireSlashEscape = false;
+                        buffer.append(decoded);
                     } catch (NumberFormatException e) {
                         throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, e);
                     } catch (UnsupportedEncodingException e) {
