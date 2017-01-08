@@ -9,12 +9,19 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.server.handlers.encoding.ContentEncodedResource;
 import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
-import io.undertow.util.*;
+import io.undertow.util.ByteRange;
+import io.undertow.util.CanonicalPathUtils;
+import io.undertow.util.DateUtils;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
+import io.undertow.util.Headers;
+import io.undertow.util.MimeMappings;
+import io.undertow.util.RedirectBuilder;
+import io.undertow.util.StatusCodes;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractResourceHandler {

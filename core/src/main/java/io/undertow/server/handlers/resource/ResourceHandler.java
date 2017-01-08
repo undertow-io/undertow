@@ -18,42 +18,28 @@
 
 package io.undertow.server.handlers.resource;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowLogger;
-import io.undertow.io.IoCallback;
 import io.undertow.predicate.Predicate;
-import io.undertow.predicate.Predicates;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.server.handlers.cache.ResponseCache;
-import io.undertow.server.handlers.encoding.ContentEncodedResource;
 import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
-import io.undertow.util.ByteRange;
-import io.undertow.util.CanonicalPathUtils;
-import io.undertow.util.DateUtils;
-import io.undertow.util.ETag;
-import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.MimeMappings;
-import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 
 /**
