@@ -27,6 +27,9 @@ import java.io.File;
  */
 public class FileResourceManager extends PathResourceManager {
 
+    public FileResourceManager(final File base) {
+        this(base, 1024, true, false, null);
+    }
     public FileResourceManager(final File base, long transferMinSize) {
         this(base, transferMinSize, true, false, null);
     }
