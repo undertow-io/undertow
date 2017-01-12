@@ -30,6 +30,7 @@ import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -240,7 +241,11 @@ public class Connectors {
             if (!exchange.isResponseStarted()) {
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }
-            UndertowLogger.REQUEST_LOGGER.undertowRequestFailed(t, exchange);
+            if(t instanceof IOException) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) t);
+            } else {
+                UndertowLogger.REQUEST_LOGGER.undertowRequestFailed(t, exchange);
+            }
             exchange.endExchange();
         }
     }
