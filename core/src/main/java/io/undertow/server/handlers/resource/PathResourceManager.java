@@ -57,6 +57,10 @@ public class PathResourceManager implements ResourceManager  {
 
     private final boolean allowResourceChangeListeners;
 
+    public PathResourceManager(final Path base) {
+        this(base, 1024, true, false, null);
+    }
+
     public PathResourceManager(final Path base, long transferMinSize) {
         this(base, transferMinSize, true, false, null);
     }
