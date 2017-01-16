@@ -152,7 +152,8 @@ public final class Undertow {
                     AjpOpenListener openListener = new AjpOpenListener(buffers, serverOptions);
                     openListener.setRootHandler(rootHandler);
                     ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
+                    OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
+                    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptionsWithOverrides);
                     server.resumeAccepts();
                     channels.add(server);
                     listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), null, openListener));
@@ -162,7 +163,8 @@ public final class Undertow {
                         HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
                         openListener.setRootHandler(rootHandler);
                         ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                        AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
+                        OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
+                        AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptionsWithOverrides);
                         server.resumeAccepts();
                         channels.add(server);
                         listenerInfo.add(new ListenerInfo("http", server.getLocalAddress(), null, openListener));
@@ -193,7 +195,8 @@ public final class Undertow {
 
                             xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), JsseSslUtils.createSSLContext(listener.keyManagers, listener.trustManagers, new SecureRandom(), OptionMap.create(Options.USE_DIRECT_BUFFERS, true)));
                         }
-                        AcceptingChannel<SslConnection> sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptions);
+                        OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
+                        AcceptingChannel<SslConnection> sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptionsWithOverrides);
                         sslServer.resumeAccepts();
                         channels.add(sslServer);
                         listenerInfo.add(new ListenerInfo("https", sslServer.getLocalAddress(), listener.sslContext, openListener));
@@ -258,6 +261,7 @@ public final class Undertow {
         final TrustManager[] trustManagers;
         final SSLContext sslContext;
         final HttpHandler rootHandler;
+        final OptionMap overrideSocketOptions;
 
         private ListenerConfig(final ListenerType type, final int port, final String host, KeyManager[] keyManagers, TrustManager[] trustManagers, HttpHandler rootHandler) {
             this.type = type;
@@ -267,6 +271,7 @@ public final class Undertow {
             this.trustManagers = trustManagers;
             this.rootHandler = rootHandler;
             this.sslContext = null;
+            this.overrideSocketOptions = OptionMap.EMPTY;
         }
 
         private ListenerConfig(final ListenerType type, final int port, final String host, SSLContext sslContext, HttpHandler rootHandler) {
@@ -277,6 +282,69 @@ public final class Undertow {
             this.keyManagers = null;
             this.trustManagers = null;
             this.sslContext = sslContext;
+            this.overrideSocketOptions = OptionMap.EMPTY;
+        }
+
+        private ListenerConfig(final ListenerBuilder listenerBuilder) {
+            this.type = listenerBuilder.type;
+            this.port = listenerBuilder.port;
+            this.host = listenerBuilder.host;
+            this.rootHandler = listenerBuilder.rootHandler;
+            this.keyManagers = listenerBuilder.keyManagers;
+            this.trustManagers = listenerBuilder.trustManagers;
+            this.sslContext = listenerBuilder.sslContext;
+            this.overrideSocketOptions = listenerBuilder.overrideSocketOptions;
+        }
+    }
+
+    public static final class ListenerBuilder {
+        ListenerType type;
+        int port;
+        String host;
+        KeyManager[] keyManagers;
+        TrustManager[] trustManagers;
+        SSLContext sslContext;
+        HttpHandler rootHandler;
+        OptionMap overrideSocketOptions = OptionMap.EMPTY;
+
+        public ListenerBuilder setType(ListenerType type) {
+            this.type = type;
+            return this;
+        }
+
+        public ListenerBuilder setPort(int port) {
+            this.port = port;
+            return this;
+        }
+
+        public ListenerBuilder setHost(String host) {
+            this.host = host;
+            return this;
+        }
+
+        public ListenerBuilder setKeyManagers(KeyManager[] keyManagers) {
+            this.keyManagers = keyManagers;
+            return this;
+        }
+
+        public ListenerBuilder setTrustManagers(TrustManager[] trustManagers) {
+            this.trustManagers = trustManagers;
+            return this;
+        }
+
+        public ListenerBuilder setSslContext(SSLContext sslContext) {
+            this.sslContext = sslContext;
+            return this;
+        }
+
+        public ListenerBuilder setRootHandler(HttpHandler rootHandler) {
+            this.rootHandler = rootHandler;
+            return this;
+        }
+
+        public ListenerBuilder setOverrideSocketOptions(OptionMap overrideSocketOptions) {
+            this.overrideSocketOptions = overrideSocketOptions;
+            return this;
         }
     }
 
@@ -329,6 +397,11 @@ public final class Undertow {
         @Deprecated
         public Builder addListener(int port, String host, ListenerType listenerType) {
             listeners.add(new ListenerConfig(listenerType, port, host, null, null, null));
+            return this;
+        }
+
+        public Builder addListener(ListenerBuilder listenerBuilder) {
+            listeners.add(new ListenerConfig(listenerBuilder));
             return this;
         }
 
