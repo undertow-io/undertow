@@ -74,73 +74,77 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
             }
             return ret;
         }
-        if (compressed == null && !nextDone) {
-            compressed = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate();
-            ByteBuffer buf = compressed.getBuffer();
-            int res = next.read(buf);
-            if (res == -1) {
-                nextDone = true;
-                compressed.close();
-                compressed = null;
-            } else if (res == 0) {
+        for(;;) {
+            if (compressed == null && !nextDone) {
+                compressed = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate();
+                ByteBuffer buf = compressed.getBuffer();
+                int res = next.read(buf);
+                if (res == -1) {
+                    nextDone = true;
+                    compressed.close();
+                    compressed = null;
+                } else if (res == 0) {
+                    compressed.close();
+                    compressed = null;
+                    return 0;
+                } else {
+                    buf.flip();
+                    if (!headerDone) {
+                        headerDone = readHeader(buf);
+                    }
+                    inflater.setInput(buf.array(), buf.arrayOffset() + buf.position(), buf.remaining());
+                }
+            }
+            if (nextDone && inflater.needsInput() && !inflater.finished()) {
+                throw UndertowLogger.ROOT_LOGGER.unexpectedEndOfCompressedInput();
+            } else if (nextDone && inflater.finished()) {
+                done();
+                return -1;
+            } else if (inflater.finished()) {
+                int rem = inflater.getRemaining();
+                ByteBuffer buf = compressed.getBuffer();
+                buf.position(buf.limit() - rem);
+                readFooter(buf);
+                int res;
+                do {
+                    buf.clear();
+                    res = next.read(buf);
+                    buf.flip();
+                    if (res == -1) {
+                        done();
+                        nextDone = true;
+                        return -1;
+                    } else if (res > 0) {
+                        readFooter(buf);
+                    }
+                } while (res != 0);
                 compressed.close();
                 compressed = null;
                 return 0;
-            } else {
-                buf.flip();
-                if (!headerDone) {
-                    headerDone = readHeader(buf);
+            } else if (compressed == null) {
+                throw new RuntimeException();
+            }
+            uncompressed = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate();
+            try {
+                int read = inflater.inflate(uncompressed.getBuffer().array(), uncompressed.getBuffer().arrayOffset(), uncompressed.getBuffer().limit());
+                uncompressed.getBuffer().limit(read);
+                dataDeflated(uncompressed.getBuffer().array(), uncompressed.getBuffer().arrayOffset(), read);
+                if (inflater.needsInput()) {
+                    compressed.close();
+                    compressed = null;
                 }
-                inflater.setInput(buf.array(), buf.arrayOffset() + buf.position(), buf.remaining());
-            }
-        }
-        if (nextDone && inflater.needsInput() && !inflater.finished()) {
-            throw UndertowLogger.ROOT_LOGGER.unexpectedEndOfCompressedInput();
-        } else if (nextDone && inflater.finished()) {
-            done();
-            return -1;
-        } else if (inflater.finished()) {
-            int rem = inflater.getRemaining();
-            ByteBuffer buf = compressed.getBuffer();
-            buf.position(buf.limit() - rem);
-            readFooter(buf);
-            int res;
-            do {
-                buf.clear();
-                res = next.read(buf);
-                buf.flip();
-                if(res == -1) {
-                    done();
-                    nextDone = true;
-                    return -1;
-                } else if(res > 0) {
-                    readFooter(buf);
+                int ret = Buffers.copy(dst, uncompressed.getBuffer());
+                if (!uncompressed.getBuffer().hasRemaining()) {
+                    uncompressed.close();
+                    uncompressed = null;
                 }
-            } while (res != 0);
-            compressed.close();
-            compressed = null;
-            return 0;
-        } else if(compressed == null) {
-            throw new RuntimeException();
-        }
-        uncompressed = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate();
-        try {
-            int read = inflater.inflate(uncompressed.getBuffer().array(), uncompressed.getBuffer().arrayOffset(), uncompressed.getBuffer().limit());
-            uncompressed.getBuffer().limit(read);
-            dataDeflated(uncompressed.getBuffer().array(), uncompressed.getBuffer().arrayOffset(), read);
-            if (inflater.needsInput()) {
-                compressed.close();
-                compressed = null;
+                if(ret > 0) {
+                    return ret;
+                }
+            } catch (DataFormatException e) {
+                done();
+                throw new IOException(e);
             }
-            int ret = Buffers.copy(dst, uncompressed.getBuffer());
-            if (!uncompressed.getBuffer().hasRemaining()) {
-                uncompressed.close();
-                uncompressed = null;
-            }
-            return ret;
-        } catch (DataFormatException e) {
-            done();
-            throw new IOException(e);
         }
     }
 
