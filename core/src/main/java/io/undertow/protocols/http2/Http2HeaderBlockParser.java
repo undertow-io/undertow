@@ -80,20 +80,20 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
         }
         final boolean moreDataThisFrame = resource.remaining() < frameRemaining;
         final int pos = resource.position();
+        int readInBeforeHeader = 0;
         try {
             if (!beforeHeadersHandled) {
-                int start = resource.position();
                 if (!handleBeforeHeader(resource, header)) {
                     return;
                 }
                 currentPadding = getPaddingLength();
-                frameRemaining -= (resource.position() - start);
+                readInBeforeHeader = resource.position() - pos;
             }
             beforeHeadersHandled = true;
             decoder.setHeaderEmitter(this);
             int oldLimit = -1;
             if(currentPadding > 0) {
-                int actualData = frameRemaining - currentPadding;
+                int actualData = frameRemaining - readInBeforeHeader - currentPadding;
                 if(actualData < 0) {
                     throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR);
                 }
