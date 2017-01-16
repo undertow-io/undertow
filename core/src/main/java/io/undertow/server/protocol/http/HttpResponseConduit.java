@@ -653,43 +653,42 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
         try {
-            if (state != 0) {
-                if(pooledFileTransferBuffer != null) {
-                    try {
-                        return write(pooledFileTransferBuffer.getBuffer());
-                    } catch (IOException|RuntimeException e) {
-                        if(pooledFileTransferBuffer != null) {
+            if (pooledFileTransferBuffer != null) {
+                try {
+                    return write(pooledFileTransferBuffer.getBuffer());
+                } catch (IOException | RuntimeException e) {
+                    if (pooledFileTransferBuffer != null) {
+                        pooledFileTransferBuffer.close();
+                        pooledFileTransferBuffer = null;
+                    }
+                    throw e;
+                } finally {
+                    if (pooledFileTransferBuffer != null) {
+                        if (!pooledFileTransferBuffer.getBuffer().hasRemaining()) {
                             pooledFileTransferBuffer.close();
                             pooledFileTransferBuffer = null;
                         }
-                        throw e;
-                    } finally {
-                        if(pooledFileTransferBuffer != null) {
-                            if (!pooledFileTransferBuffer.getBuffer().hasRemaining()) {
-                                pooledFileTransferBuffer.close();
-                                pooledFileTransferBuffer = null;
-                            }
-                        }
-                    }
-                } else {
-                    final PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
-
-                    ByteBuffer buffer = pooled.getBuffer();
-                    try {
-                        int res = src.read(buffer);
-                        buffer.flip();
-                        if (res <= 0) {
-                            return res;
-                        }
-                        return write(buffer);
-                    } finally {
-                        if(buffer.hasRemaining()) {
-                            pooledFileTransferBuffer = pooled;
-                        } else {
-                            pooled.close();
-                        }
                     }
                 }
+            } else if (state != 0) {
+                final PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
+
+                ByteBuffer buffer = pooled.getBuffer();
+                try {
+                    int res = src.read(buffer);
+                    buffer.flip();
+                    if (res <= 0) {
+                        return res;
+                    }
+                    return write(buffer);
+                } finally {
+                    if (buffer.hasRemaining()) {
+                        pooledFileTransferBuffer = pooled;
+                    } else {
+                        pooled.close();
+                    }
+                }
+
             } else {
                 return next.transferFrom(src, position, count);
             }
