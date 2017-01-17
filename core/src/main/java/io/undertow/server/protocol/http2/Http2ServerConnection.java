@@ -52,6 +52,7 @@ import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceChannelWrappingConduit;
 import org.xnio.conduits.StreamSourceConduit;
+import org.xnio.conduits.WriteReadyHandler;
 
 import io.undertow.UndertowMessages;
 import io.undertow.protocols.http2.Http2Channel;
@@ -180,7 +181,10 @@ public class Http2ServerConnection extends ServerConnection {
                 headers.add(STATUS, exchange.getStatusCode());
                 Connectors.flattenCookies(exchange);
                 Http2HeadersStreamSinkChannel sink = new Http2HeadersStreamSinkChannel(channel, requestChannel.getStreamId(), headers);
-                return new StreamSinkChannelWrappingConduit(sink);
+
+                StreamSinkChannelWrappingConduit ret = new StreamSinkChannelWrappingConduit(sink);
+                ret.setWriteReadyHandler(new WriteReadyHandler.ChannelListenerHandler(Connectors.getConduitSinkChannel(exchange)));
+                return ret;
             }
         });
         continueSent = true;

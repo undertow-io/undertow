@@ -534,7 +534,7 @@ public final class ProxyHandler implements HttpHandler {
                             @Override
                             public void handleContinue(final ClientExchange clientExchange) {
                                 if(log.isDebugEnabled()) {
-                                    log.debugf("Relieved continue response to request %s to target %s for exchange %s", request, clientConnection.getConnection().getPeerAddress(), exchange);
+                                    log.debugf("Received continue response to request %s to target %s for exchange %s", request, clientConnection.getConnection().getPeerAddress(), exchange);
                                 }
                                 HttpContinue.sendContinueResponse(exchange, new IoCallback() {
                                     @Override

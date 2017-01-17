@@ -154,10 +154,6 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         return null;
     }
 
-    protected PooledByteBuffer createFrameFooter() {
-        return null;
-    }
-
     final synchronized void preWrite() {
         if(allAreClear(state, STATE_PRE_WRITE_CALLED)) {
             state |= STATE_PRE_WRITE_CALLED;
