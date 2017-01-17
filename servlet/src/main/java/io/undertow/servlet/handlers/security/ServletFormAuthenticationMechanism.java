@@ -52,7 +52,7 @@ import java.util.Map;
  */
 public class ServletFormAuthenticationMechanism extends FormAuthenticationMechanism {
 
-    private static final String SESSION_KEY = "io.undertow.servlet.form.auth.redirect.location";
+    public static final String SESSION_KEY = "io.undertow.servlet.form.auth.redirect.location";
 
     public static final String SAVE_ORIGINAL_REQUEST = "save-original-request";
 
