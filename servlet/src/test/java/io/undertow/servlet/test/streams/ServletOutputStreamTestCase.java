@@ -52,6 +52,9 @@ public class ServletOutputStreamTestCase {
     public static final String CONTENT_LENGTH_SERVLET = "contentLength";
     public static final String RESET = "reset";
 
+    public static final String START = "START";
+    public static final String END = "END";
+
     @BeforeClass
     public static void setup() throws ServletException {
         DeploymentUtils.setupServlet(new ServletExtension() {
@@ -114,13 +117,17 @@ public class ServletOutputStreamTestCase {
 
     @Test
     public void testBlockingServletOutputStream() throws IOException {
+        message = START +  HELLO_WORLD + END;
+        runTest(message, BLOCKING_SERVLET, false, true, 1, true, false);
+
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
+        builder.append(START);
         for (int i = 0; i < 10; ++i) {
             try {
                 for (int j = 0; j < 1000; ++j) {
                     builder.append(HELLO_WORLD);
                 }
-                String message = builder.toString();
+                String message = builder.toString() + END;
                 runTest(message, BLOCKING_SERVLET, false, false, 1, false, false);
                 runTest(message, BLOCKING_SERVLET, true, false, 10, false, false);
                 runTest(message, BLOCKING_SERVLET, false, true, 3, false, false);
@@ -129,26 +136,25 @@ public class ServletOutputStreamTestCase {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
-        message = HELLO_WORLD;
-        runTest(message, BLOCKING_SERVLET, false, true, 1, true, false);
     }
 
 
     @Test
     public void testChunkedResponseWithInitialFlush() throws IOException {
-        message = HELLO_WORLD;
+        message = START + HELLO_WORLD + END;
         runTest(message, BLOCKING_SERVLET, false, true, 1, true, false);
     }
 
     @Test
     public void testAsyncServletOutputStream() {
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
+        builder.append(START);
         for (int i = 0; i < 10; ++i) {
             try {
                 for (int j = 0; j < 10000; ++j) {
                     builder.append(HELLO_WORLD);
                 }
-                String message = builder.toString();
+                String message = builder.toString() + END;
                 runTest(message, ASYNC_SERVLET, false, false, 1, false, false);
                 runTest(message, ASYNC_SERVLET, true, false, 10, false, false);
                 runTest(message, ASYNC_SERVLET, false, true, 3, false, false);
@@ -163,12 +169,13 @@ public class ServletOutputStreamTestCase {
     @Test
     public void testAsyncServletOutputStreamWithPreable() {
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
+        builder.append(START);
         for (int i = 0; i < 10; ++i) {
             try {
                 for (int j = 0; j < 10000; ++j) {
                     builder.append(HELLO_WORLD);
                 }
-                String message = builder.toString();
+                String message = builder.toString() + END;
                 runTest(message, ASYNC_SERVLET, false, false, 1, false, true);
                 runTest(message, ASYNC_SERVLET, true, false, 10, false, true);
                 runTest(message, ASYNC_SERVLET, false, true, 3, false, true);
@@ -209,6 +216,8 @@ public class ServletOutputStreamTestCase {
             }
             final String response = HttpClientUtils.readResponse(result);
             String expected = builder.toString();
+            Assert.assertTrue("Must start with START", response.startsWith(START));
+            Assert.assertTrue("Must end with END", response.endsWith(END));
             Assert.assertEquals(expected.length(), response.length());
             Assert.assertEquals(expected, response);
         } finally {
