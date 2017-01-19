@@ -32,7 +32,7 @@ public class FormLoginServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        resp.getWriter().write("Login Page");
+        resp.getWriter().write(resp.encodeRedirectURL("j_security_check"));
     }
 
     @Override
