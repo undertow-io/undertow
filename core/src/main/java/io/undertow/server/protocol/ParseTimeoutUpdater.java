@@ -145,7 +145,11 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
             if(expireTime > now) {
                 handle = WorkerUtils.executeAfter(connection.getIoThread(), this, (expireTime - now) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
             } else {
-                UndertowLogger.REQUEST_LOGGER.parseRequestTimedOut(connection.getPeerAddress());
+                if(parsing) {
+                    UndertowLogger.REQUEST_LOGGER.parseRequestTimedOut(connection.getPeerAddress());
+                } else {
+                    UndertowLogger.REQUEST_LOGGER.debugf("Timing out idle connection from %s", connection.getPeerAddress());
+                }
                 closeTask.run();
             }
         }
