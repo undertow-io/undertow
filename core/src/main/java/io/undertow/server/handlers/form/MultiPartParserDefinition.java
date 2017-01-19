@@ -142,7 +142,6 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
         private final HttpServerExchange exchange;
         private final FormData data;
-        private final String boundary;
         private final List<Path> createdFiles = new ArrayList<>();
         private final long maxIndividualFileSize;
         private String defaultEncoding;
@@ -160,7 +159,6 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
         private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary, final long maxIndividualFileSize, final String defaultEncoding) {
             this.exchange = exchange;
-            this.boundary = boundary;
             this.maxIndividualFileSize = maxIndividualFileSize;
             this.defaultEncoding = defaultEncoding;
             this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
@@ -311,6 +309,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
         @Override
         public void close() throws IOException {
+            IoUtils.safeClose(fileChannel);
             //we have to dispatch this, as it may result in file IO
             final List<Path> files = new ArrayList<>(getCreatedFiles());
             exchange.getConnection().getWorker().execute(new Runnable() {
