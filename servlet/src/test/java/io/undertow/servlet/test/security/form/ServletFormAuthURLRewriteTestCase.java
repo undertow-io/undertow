@@ -18,29 +18,16 @@
 
 package io.undertow.servlet.test.security.form;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-
 import javax.servlet.ServletException;
+import javax.servlet.SessionTrackingMode;
 
-import io.undertow.security.api.AuthenticationMode;
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.LoginConfig;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.api.ServletSecurityInfo;
-import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.security.SendUsernameServlet;
-import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -56,14 +43,29 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import static org.junit.Assert.assertEquals;
+import io.undertow.security.api.AuthenticationMode;
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSecurityInfo;
+import io.undertow.servlet.api.ServletSessionConfig;
+import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.security.SendUsernameServlet;
+import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class ServletFormAuthTestCase {
+public class ServletFormAuthURLRewriteTestCase {
 
     public static final String HELLO_WORLD = "Hello World";
 
@@ -99,6 +101,7 @@ public class ServletFormAuthTestCase {
         identityManager.addUser("user1", "password1", "role1");
 
         DeploymentInfo builder = new DeploymentInfo()
+                .setServletSessionConfig(new ServletSessionConfig().setSessionTrackingModes(Collections.singleton(SessionTrackingMode.URL)))
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
@@ -138,7 +141,7 @@ public class ServletFormAuthTestCase {
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check;jsessionid=dsjahfklsahdfjklsa");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/" + response);
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
@@ -176,7 +179,7 @@ public class ServletFormAuthTestCase {
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
-            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/" + response);
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
@@ -215,7 +218,7 @@ public class ServletFormAuthTestCase {
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
-            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/" + response);
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
