@@ -82,6 +82,7 @@ public class LotsOfHeadersRequestTestCase {
 
     @BeforeClass
     public static void setup() {
+        Assume.assumeFalse(DefaultServer.isSpdy());
         Assume.assumeFalse(DefaultServer.isH2upgrade());
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
