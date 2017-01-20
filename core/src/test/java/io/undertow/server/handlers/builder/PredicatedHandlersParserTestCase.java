@@ -20,6 +20,7 @@ package io.undertow.server.handlers.builder;
 
 import io.undertow.predicate.ContainsPredicate;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.AllowedMethodsHandler;
 import io.undertow.server.handlers.RequestDumpingHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
@@ -27,6 +28,7 @@ import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.BlockNode;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.Node;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.PredicateOperatorNode;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.junit.Assert;
 import org.junit.Test;
@@ -179,6 +181,18 @@ public class PredicatedHandlersParserTestCase {
         predicate = (ContainsPredicate) ret.get(0).getPredicate();
         Assert.assertEquals("a", predicate.getAttribute().readAttribute(null));
         Assert.assertArrayEquals(new String[]{"b", "c"}, predicate.getValues());
+    }
+
+    @Test
+    public void testClearHeader() throws Exception {
+        String value = "set(attribute=%{i,User-Agent}, value=%{NULL})";
+
+        List<PredicatedHandler> ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
+        Assert.assertEquals(1, ret.size());
+        HttpServerExchange exchange = new HttpServerExchange(null);
+        exchange.getRequestHeaders().put(Headers.USER_AGENT, "firefox");
+        ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200).handleRequest(exchange);
+        Assert.assertNull(exchange.getRequestHeaders().get(Headers.USER_AGENT));
     }
 
 }
