@@ -18,6 +18,33 @@
 
 package io.undertow.server.handlers.proxy;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.channels.Channel;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.security.cert.CertificateEncodingException;
+import javax.security.cert.X509Certificate;
+
+import org.jboss.logging.Logger;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.StreamConnection;
+import org.xnio.XnioExecutor;
+import org.xnio.channels.StreamSinkChannel;
 import io.undertow.UndertowLogger;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
@@ -56,33 +83,6 @@ import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.Transfer;
 import io.undertow.util.WorkerUtils;
-import org.jboss.logging.Logger;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.StreamConnection;
-import org.xnio.XnioExecutor;
-import org.xnio.channels.StreamSinkChannel;
-
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.security.cert.CertificateEncodingException;
-import javax.security.cert.X509Certificate;
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.channels.Channel;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  * An HTTP handler which proxies content to a remote server.
@@ -866,17 +866,12 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-
-            final ProxyClient proxyClient;
-            if (uris.size() == 1) {
-                proxyClient = new SimpleProxyClientProvider(uris.get(0));
-            } else {
-                final LoadBalancingProxyClient loadBalancingProxyClient = new LoadBalancingProxyClient();
-                for (URI url : uris) {
-                    loadBalancingProxyClient.addHost(url);
-                }
-                proxyClient = loadBalancingProxyClient;
+            final LoadBalancingProxyClient loadBalancingProxyClient = new LoadBalancingProxyClient();
+            for (URI url : uris) {
+                loadBalancingProxyClient.addHost(url);
             }
+            final ProxyClient proxyClient = loadBalancingProxyClient;
+
             return new ProxyHandler(proxyClient, -1, handler, rewriteHostHeader, false);
         }
     }

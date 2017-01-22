@@ -37,8 +37,12 @@ import java.util.concurrent.TimeUnit;
  * Simple proxy client provider. This provider simply proxies to another server, using a a one to one
  * connection strategy.
  *
+ * {@link LoadBalancingProxyClient} should be used instead. This proxy client is too simplistic for
+ * real world use cases, and it not set up to use SSL.
+ *
  * @author Stuart Douglas
  */
+@Deprecated
 public class SimpleProxyClientProvider implements ProxyClient {
 
     private final URI uri;
