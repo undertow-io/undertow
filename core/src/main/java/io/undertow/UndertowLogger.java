@@ -392,4 +392,8 @@ public interface UndertowLogger extends BasicLogger {
 
     @Message(id = 5084, value = "Attempted to write %s bytes however content-length has been set to %s")
     IOException dataLargerThanContentLength(long totalToWrite, long responseContentLength);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5085, value = "Connection %s for exchange %s was not closed cleanly, forcibly closing connection")
+    void responseWasNotTerminated(ServerConnection connection, HttpServerExchange exchange);
 }
