@@ -1682,11 +1682,15 @@ public final class HttpServerExchange extends AbstractAttachable {
                             public void handleEvent(final StreamSinkChannel channel) {
                                 channel.suspendWrites();
                                 channel.getWriteSetter().set(null);
+                                //defensive programming, should never happen
+                                if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
+                                    UndertowLogger.ROOT_LOGGER.responseWasNotTerminated(connection, HttpServerExchange.this);
+                                    IoUtils.safeClose(connection);
+                                }
                             }
                         }, new ChannelExceptionHandler<Channel>() {
                             @Override
                             public void handleException(final Channel channel, final IOException exception) {
-
                                 //make sure the listeners have been invoked
                                 invokeExchangeCompleteListeners();
                                 UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
@@ -1695,6 +1699,12 @@ public final class HttpServerExchange extends AbstractAttachable {
                         }
                 ));
                 responseChannel.resumeWrites();
+            } else {
+                //defensive programming, should never happen
+                if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
+                    UndertowLogger.ROOT_LOGGER.responseWasNotTerminated(connection, this);
+                    IoUtils.safeClose(connection);
+                }
             }
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
