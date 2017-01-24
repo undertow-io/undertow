@@ -252,7 +252,14 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
         final long val = enterShutdown();
         if (anyAreSet(val, MASK_COUNT) && !broken) {
             UndertowLogger.REQUEST_IO_LOGGER.debugf("Fixed length stream closed with with %s bytes remaining", val & MASK_COUNT);
-            next.truncateWrites();
+            try {
+                next.truncateWrites();
+            } finally {
+                if (!anyAreSet(state, FLAG_FINISHED_CALLED)) {
+                    state |= FLAG_FINISHED_CALLED;
+                    channelFinished();
+                }
+            }
         } else if (allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
             next.terminateWrites();
         }

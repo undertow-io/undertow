@@ -382,4 +382,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5081, value = "Response has already been started, cannot proxy request %s")
     void cannotProxyStartedRequest(HttpServerExchange exchange);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5085, value = "Connection %s for exchange %s was not closed cleanly, forcibly closing connection")
+    void responseWasNotTerminated(ServerConnection connection, HttpServerExchange exchange);
 }
