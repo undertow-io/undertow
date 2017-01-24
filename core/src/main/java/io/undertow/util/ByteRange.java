@@ -147,15 +147,13 @@ public class ByteRange {
 
         if(start == -1 ) {
             //suffix range
-            long toWrite = end;
-            if(toWrite >= 0) {
-                rangeLength = toWrite;
-            } else {
+            if(end < 0){
                 //ignore the range request
                 return new RangeResponseResult(0, 0, 0, "bytes */" + resourceContentLength, StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE);
             }
-            start = resourceContentLength - end;
+            start = Math.max(resourceContentLength - end, 0);
             end = resourceContentLength - 1;
+            rangeLength = resourceContentLength - start;
         } else if(end == -1) {
             //prefix range
             long toWrite = resourceContentLength - start;
@@ -167,11 +165,11 @@ public class ByteRange {
             }
             end = resourceContentLength - 1;
         } else {
+            end = Math.min(end, resourceContentLength - 1);
             if(start >= resourceContentLength || start > end) {
                 return new RangeResponseResult(0, 0, 0, "bytes */" + resourceContentLength, StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE);
             }
-            long toWrite = end - start + 1;
-            rangeLength = toWrite;
+            rangeLength = end - start + 1;
         }
         return new RangeResponseResult(start, end, rangeLength,  "bytes " + start + "-" + end + "/" + resourceContentLength, StatusCodes.PARTIAL_CONTENT);
     }
