@@ -117,6 +117,21 @@ public class DefaultServletTestCase {
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("--", response);
 
+            get = new HttpGet(uri);
+            get.addHeader(Headers.RANGE_STRING, "bytes=3-100");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("3456789", response);
+            Assert.assertEquals("bytes 3-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+
+            get = new HttpGet(uri);
+            get.addHeader(Headers.RANGE_STRING, "bytes=3-9");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("3456789", response);
+            Assert.assertEquals("bytes 3-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
             get = new HttpGet(uri);
             get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
@@ -165,6 +180,14 @@ public class DefaultServletTestCase {
             response = EntityUtils.toString(result.getEntity());
             Assert.assertEquals("9", response);
             Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+
+            get = new HttpGet(uri);
+            get.addHeader(Headers.RANGE_STRING, "bytes=-100");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("0123456789", response);
+            Assert.assertEquals("bytes 0-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
             get = new HttpGet(uri);
             get.addHeader(Headers.RANGE_STRING, "bytes=99-100");
