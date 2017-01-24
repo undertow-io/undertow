@@ -29,6 +29,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,6 +56,7 @@ public class LotsOfQueryParametersTestCase {
 
     @BeforeClass
     public static void setup() {
+        Assume.assumeFalse(DefaultServer.isSpdy());
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new HttpHandler() {

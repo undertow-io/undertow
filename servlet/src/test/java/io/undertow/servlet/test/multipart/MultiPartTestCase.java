@@ -42,6 +42,7 @@ import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -172,6 +173,7 @@ public class MultiPartTestCase {
 
     @Test
     public void testMultiPartRequestToLarge() throws IOException {
+        Assume.assumeFalse(DefaultServer.isSpdy());
         TestHttpClient client = new TestHttpClient();
         try {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext/2";
