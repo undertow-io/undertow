@@ -426,9 +426,18 @@ public final class ProxyHandler implements HttpHandler {
                     outboundRequestHeaders.put(entry.getKey(), headerValue.replace('\n', ' '));
                 }
             }
-
+            final String remoteHost;
             final SocketAddress address = exchange.getConnection().getPeerAddress();
-            final String remoteHost = (address != null && address instanceof InetSocketAddress) ? ((InetSocketAddress) address).getHostString() : "localhost";
+            if (address != null && address instanceof InetSocketAddress) {
+                remoteHost = ((InetSocketAddress) address).getHostString();
+                if(!((InetSocketAddress) address).isUnresolved()) {
+                    request.putAttachment(ProxiedRequestAttachments.REMOTE_ADDRESS, ((InetSocketAddress) address).getAddress().getHostAddress());
+                }
+            } else {
+                //should never happen, unless this is some form of mock request
+                remoteHost = "localhost";
+            }
+
             request.putAttachment(ProxiedRequestAttachments.REMOTE_HOST, remoteHost);
 
             if (reuseXForwarded && request.getRequestHeaders().contains(Headers.X_FORWARDED_FOR)) {
