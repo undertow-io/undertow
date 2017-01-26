@@ -138,78 +138,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (listener == null) {
             ByteBuffer buffer = buffer();
             if (buffer.remaining() < len) {
-
-                //so what we have will not fit.
-                //We allocate multiple buffers up to MAX_BUFFERS_TO_ALLOCATE
-                //and put it in them
-                //if it still dopes not fit we loop, re-using these buffers
-
-                StreamSinkChannel channel = this.channel;
-                if (channel == null) {
-                    this.channel = channel = servletRequestContext.getExchange().getResponseChannel();
-                }
-                final ByteBufferPool bufferPool = servletRequestContext.getExchange().getConnection().getByteBufferPool();
-                ByteBuffer[] buffers = new ByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
-                PooledByteBuffer[] pooledBuffers = new PooledByteBuffer[MAX_BUFFERS_TO_ALLOCATE];
-                try {
-                    buffers[0] = buffer;
-                    int bytesWritten = 0;
-                    int rem = buffer.remaining();
-                    buffer.put(b, bytesWritten + off, rem);
-                    buffer.flip();
-                    bytesWritten += rem;
-                    int bufferCount = 1;
-                    for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
-                        PooledByteBuffer pooled = bufferPool.allocate();
-                        pooledBuffers[bufferCount - 1] = pooled;
-                        buffers[bufferCount++] = pooled.getBuffer();
-                        ByteBuffer cb = pooled.getBuffer();
-                        int toWrite = len - bytesWritten;
-                        if (toWrite > cb.remaining()) {
-                            rem = cb.remaining();
-                            cb.put(b, bytesWritten + off, rem);
-                            cb.flip();
-                            bytesWritten += rem;
-                        } else {
-                            cb.put(b, bytesWritten + off, toWrite);
-                            bytesWritten = len;
-                            cb.flip();
-                            break;
-                        }
-                    }
-                    Channels.writeBlocking(channel, buffers, 0, bufferCount);
-                    while (bytesWritten < len) {
-                        //ok, it did not fit, loop and loop and loop until it is done
-                        bufferCount = 0;
-                        for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE + 1; ++i) {
-                            ByteBuffer cb = buffers[i];
-                            cb.clear();
-                            bufferCount++;
-                            int toWrite = len - bytesWritten;
-                            if (toWrite > cb.remaining()) {
-                                rem = cb.remaining();
-                                cb.put(b, bytesWritten + off, rem);
-                                cb.flip();
-                                bytesWritten += rem;
-                            } else {
-                                cb.put(b, bytesWritten + off, toWrite);
-                                bytesWritten = len;
-                                cb.flip();
-                                break;
-                            }
-                        }
-                        Channels.writeBlocking(channel, buffers, 0, bufferCount);
-                    }
-                    buffer.clear();
-                } finally {
-                    for (int i = 0; i < pooledBuffers.length; ++i) {
-                        PooledByteBuffer p = pooledBuffers[i];
-                        if (p == null) {
-                            break;
-                        }
-                        p.close();
-                    }
-                }
+                writeTooLargeForBuffer(b, off, len, buffer);
             } else {
                 buffer.put(b, off, len);
                 if (buffer.remaining() == 0) {
@@ -218,44 +147,122 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
             updateWritten(len);
         } else {
-            if (anyAreClear(state, FLAG_READY)) {
-                throw UndertowServletMessages.MESSAGES.streamNotReady();
-            }
-            //even though we are in async mode we are still buffering
-            try {
-                ByteBuffer buffer = buffer();
-                if (buffer.remaining() > len) {
-                    buffer.put(b, off, len);
-                } else {
-                    buffer.flip();
-                    final ByteBuffer userBuffer = ByteBuffer.wrap(b, off, len);
-                    final ByteBuffer[] bufs = new ByteBuffer[]{buffer, userBuffer};
-                    long toWrite = Buffers.remaining(bufs);
-                    long res;
-                    long written = 0;
-                    createChannel();
-                    state |= FLAG_WRITE_STARTED;
-                    do {
-                        res = channel.write(bufs);
-                        written += res;
-                        if (res == 0) {
-                            //write it out with a listener
-                            //but we need to copy any extra data
-                            final ByteBuffer copy = ByteBuffer.allocate(userBuffer.remaining());
-                            copy.put(userBuffer);
-                            copy.flip();
+            writeAsync(b, off, len);
+        }
+    }
 
-                            this.buffersToWrite = new ByteBuffer[]{buffer, copy};
-                            state &= ~FLAG_READY;
-                            channel.resumeWrites();
-                            return;
-                        }
-                    } while (written < toWrite);
-                    buffer.clear();
+    private void writeTooLargeForBuffer(byte[] b, int off, int len, ByteBuffer buffer) throws IOException {
+        //so what we have will not fit.
+        //We allocate multiple buffers up to MAX_BUFFERS_TO_ALLOCATE
+        //and put it in them
+        //if it still dopes not fit we loop, re-using these buffers
+
+        StreamSinkChannel channel = this.channel;
+        if (channel == null) {
+            this.channel = channel = servletRequestContext.getExchange().getResponseChannel();
+        }
+        final ByteBufferPool bufferPool = servletRequestContext.getExchange().getConnection().getByteBufferPool();
+        ByteBuffer[] buffers = new ByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
+        PooledByteBuffer[] pooledBuffers = new PooledByteBuffer[MAX_BUFFERS_TO_ALLOCATE];
+        try {
+            buffers[0] = buffer;
+            int bytesWritten = 0;
+            int rem = buffer.remaining();
+            buffer.put(b, bytesWritten + off, rem);
+            buffer.flip();
+            bytesWritten += rem;
+            int bufferCount = 1;
+            for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
+                PooledByteBuffer pooled = bufferPool.allocate();
+                pooledBuffers[bufferCount - 1] = pooled;
+                buffers[bufferCount++] = pooled.getBuffer();
+                ByteBuffer cb = pooled.getBuffer();
+                int toWrite = len - bytesWritten;
+                if (toWrite > cb.remaining()) {
+                    rem = cb.remaining();
+                    cb.put(b, bytesWritten + off, rem);
+                    cb.flip();
+                    bytesWritten += rem;
+                } else {
+                    cb.put(b, bytesWritten + off, toWrite);
+                    bytesWritten = len;
+                    cb.flip();
+                    break;
                 }
-            } finally {
-                updateWrittenAsync(len);
             }
+            Channels.writeBlocking(channel, buffers, 0, bufferCount);
+            while (bytesWritten < len) {
+                //ok, it did not fit, loop and loop and loop until it is done
+                bufferCount = 0;
+                for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE + 1; ++i) {
+                    ByteBuffer cb = buffers[i];
+                    cb.clear();
+                    bufferCount++;
+                    int toWrite = len - bytesWritten;
+                    if (toWrite > cb.remaining()) {
+                        rem = cb.remaining();
+                        cb.put(b, bytesWritten + off, rem);
+                        cb.flip();
+                        bytesWritten += rem;
+                    } else {
+                        cb.put(b, bytesWritten + off, toWrite);
+                        bytesWritten = len;
+                        cb.flip();
+                        break;
+                    }
+                }
+                Channels.writeBlocking(channel, buffers, 0, bufferCount);
+            }
+            buffer.clear();
+        } finally {
+            for (int i = 0; i < pooledBuffers.length; ++i) {
+                PooledByteBuffer p = pooledBuffers[i];
+                if (p == null) {
+                    break;
+                }
+                p.close();
+            }
+        }
+    }
+
+    private void writeAsync(byte[] b, int off, int len) throws IOException {
+        if (anyAreClear(state, FLAG_READY)) {
+            throw UndertowServletMessages.MESSAGES.streamNotReady();
+        }
+        //even though we are in async mode we are still buffering
+        try {
+            ByteBuffer buffer = buffer();
+            if (buffer.remaining() > len) {
+                buffer.put(b, off, len);
+            } else {
+                buffer.flip();
+                final ByteBuffer userBuffer = ByteBuffer.wrap(b, off, len);
+                final ByteBuffer[] bufs = new ByteBuffer[]{buffer, userBuffer};
+                long toWrite = Buffers.remaining(bufs);
+                long res;
+                long written = 0;
+                createChannel();
+                state |= FLAG_WRITE_STARTED;
+                do {
+                    res = channel.write(bufs);
+                    written += res;
+                    if (res == 0) {
+                        //write it out with a listener
+                        //but we need to copy any extra data
+                        final ByteBuffer copy = ByteBuffer.allocate(userBuffer.remaining());
+                        copy.put(userBuffer);
+                        copy.flip();
+
+                        this.buffersToWrite = new ByteBuffer[]{buffer, copy};
+                        state &= ~FLAG_READY;
+                        channel.resumeWrites();
+                        return;
+                    }
+                } while (written < toWrite);
+                buffer.clear();
+            }
+        } finally {
+            updateWrittenAsync(len);
         }
     }
 
