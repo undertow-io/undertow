@@ -134,10 +134,10 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                 log.tracef("SSO_SESSION_ATTRIBUTE not found. Creating it with SSO ID %s as value.", sso.getId());
             }
             session.setAttribute(SSO_SESSION_ATTRIBUTE, sso.getId());
-            SessionManager manager = session.getSessionManager();
-            if (seenSessionManagers.add(manager)) {
-                manager.registerSessionListener(listener);
-            }
+        }
+        SessionManager manager = session.getSessionManager();
+        if (seenSessionManagers.add(manager)) {
+            manager.registerSessionListener(listener);
         }
     }
 
