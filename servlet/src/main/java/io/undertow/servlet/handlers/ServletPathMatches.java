@@ -18,6 +18,21 @@
 
 package io.undertow.servlet.handlers;
 
+import static io.undertow.servlet.handlers.ServletPathMatch.Type.REDIRECT;
+import static io.undertow.servlet.handlers.ServletPathMatch.Type.REWRITE;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.servlet.DispatcherType;
+import javax.servlet.http.MappingMatch;
+
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.cache.LRUCache;
@@ -33,21 +48,6 @@ import io.undertow.servlet.core.ManagedFilters;
 import io.undertow.servlet.core.ManagedServlet;
 import io.undertow.servlet.core.ManagedServlets;
 import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.http.MappingMatch;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static io.undertow.servlet.handlers.ServletPathMatch.Type.REDIRECT;
-import static io.undertow.servlet.handlers.ServletPathMatch.Type.REWRITE;
 
 /**
  * Facade around {@link ServletPathMatchesData}. This facade is responsible for re-generating the matches if anything changes.
@@ -292,18 +292,18 @@ public class ServletPathMatches {
                 ManagedFilter filter = filters.getManagedFilter(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
                     if (targetServletMatch.handler != null) {
-                        if (filterMapping.getMapping().equals(targetServletMatch.handler.getManagedServlet().getServletInfo().getName())) {
+                        if (filterMapping.getMapping().equals(targetServletMatch.handler.getManagedServlet().getServletInfo().getName()) || filterMapping.getMapping().equals("*")) {
                             addToListMap(noExtension, filterMapping.getDispatcher(), filter);
                         }
                     }
-                    for(Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
-                    ServletHandler pathServlet = targetServletMatch.handler;
-                    boolean defaultServletMatch = targetServletMatch.defaultServlet;
+                    for (Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
+                        ServletHandler pathServlet = targetServletMatch.handler;
+                        boolean defaultServletMatch = targetServletMatch.defaultServlet;
                         if (defaultServletMatch && extensionServlets.containsKey(entry.getKey())) {
                             pathServlet = extensionServlets.get(entry.getKey());
                         }
 
-                        if (filterMapping.getMapping().equals(pathServlet.getManagedServlet().getServletInfo().getName())) {
+                        if (filterMapping.getMapping().equals(pathServlet.getManagedServlet().getServletInfo().getName()) || filterMapping.getMapping().equals("*")) {
                             addToListMap(extension.get(entry.getKey()), filterMapping.getDispatcher(), filter);
                         }
                     }
