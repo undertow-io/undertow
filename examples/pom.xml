@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>1.4.10.Final-SNAPSHOT</version>
+        <version>1.4.10.Final</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-examples</artifactId>
-    <version>1.4.10.Final-SNAPSHOT</version>
+    <version>1.4.10.Final</version>
 
     <name>Undertow Examples</name>
 
