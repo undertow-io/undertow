@@ -97,7 +97,10 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             if(forwardedPort != null) {
                 try {
                     port = Integer.parseInt(forwardedPort);
-                    hostHeader += ":" + port;
+                    if ((!"HTTP".equalsIgnoreCase(exchange.getRequestScheme()) || port != 80)
+                        && (!"HTTPS".equalsIgnoreCase(exchange.getRequestScheme()) || port != 443)) {
+                        hostHeader += ":" + port;
+                    }
                 } catch (NumberFormatException ignore) {
                     UndertowLogger.REQUEST_LOGGER.debugf("Cannot parse port: %s", forwardedPort);
                 }
