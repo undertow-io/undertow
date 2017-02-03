@@ -755,6 +755,23 @@
             </dependencies>
         </profile>
         <profile>
+            <id>jdk8.112</id>
+            <activation>
+                <jdk>1.8.0_112</jdk>
+            </activation>
+            <properties>
+                <version.org.mortbay.jetty.alpn>${version.org.mortbay.jetty.alpn.jdk8.101}</version.org.mortbay.jetty.alpn>
+                <alpn-boot-string>-Xbootclasspath/p:${org.mortbay.jetty.alpn:alpn-boot:jar}</alpn-boot-string>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.mortbay.jetty.alpn</groupId>
+                    <artifactId>alpn-boot</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
             <id>jdk8.121</id>
             <activation>
                 <jdk>1.8.0_121</jdk>
