@@ -88,7 +88,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         if (cookie != null) {
             final String ssoId = cookie.getValue();
             log.tracef("Found SSO cookie %s", ssoId);
-            try (final SingleSignOn sso = this.singleSignOnManager.findSingleSignOn(ssoId)) {
+            try (SingleSignOn sso = this.singleSignOnManager.findSingleSignOn(ssoId)) {
                 if (sso != null) {
                     if(log.isTraceEnabled()) {
                         log.tracef("SSO session with ID: %s found.", ssoId);

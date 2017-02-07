@@ -40,7 +40,7 @@ import javax.tools.JavaFileObject;
 @SupportedAnnotationTypes("io.undertow.annotationprocessor.HttpParserConfig")
 @SupportedOptions({
 })
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class HttpParserAnnotationProcessor extends AbstractProcessor {
 
     private Filer filer;
