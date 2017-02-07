@@ -124,7 +124,7 @@ public class ServletCustomAuthTestCase {
             HttpResponse result = client.execute(get);
             assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Login Page", response);
+            Assert.assertTrue(response.startsWith("j_security_check"));
 
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
