@@ -31,7 +31,7 @@ import io.undertow.util.Headers;
  *
  * @author Stuart Douglas
  */
-class MinContentSizePredicate implements Predicate {
+public class MinContentSizePredicate implements Predicate {
 
     private final long minSize;
 

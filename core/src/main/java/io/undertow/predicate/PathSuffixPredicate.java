@@ -27,7 +27,7 @@ import io.undertow.server.HttpServerExchange;
 /**
  * @author Stuart Douglas
  */
-class PathSuffixPredicate implements Predicate {
+public class PathSuffixPredicate implements Predicate {
 
     private final String suffix;
 

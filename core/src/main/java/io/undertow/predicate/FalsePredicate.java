@@ -23,7 +23,7 @@ import io.undertow.server.HttpServerExchange;
 /**
  * @author Stuart Douglas
  */
-class FalsePredicate implements Predicate {
+public class FalsePredicate implements Predicate {
 
     public static final FalsePredicate INSTANCE = new FalsePredicate();
 

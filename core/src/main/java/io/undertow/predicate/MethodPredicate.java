@@ -18,17 +18,17 @@
 
 package io.undertow.predicate;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HttpString;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HttpString;
+
 /**
  * @author Stuart Douglas
  */
-class MethodPredicate implements Predicate {
+public class MethodPredicate implements Predicate {
 
     private final HttpString[] methods;
 
