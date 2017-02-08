@@ -31,7 +31,7 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-class ExistsPredicate implements Predicate {
+public class ExistsPredicate implements Predicate {
 
     private final ExchangeAttribute attribute;
 

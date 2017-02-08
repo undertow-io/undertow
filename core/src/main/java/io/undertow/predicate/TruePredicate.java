@@ -23,7 +23,7 @@ import io.undertow.server.HttpServerExchange;
 /**
  * @author Stuart Douglas
  */
-class TruePredicate implements Predicate {
+public class TruePredicate implements Predicate {
 
     public static final TruePredicate INSTANCE = new TruePredicate();
 

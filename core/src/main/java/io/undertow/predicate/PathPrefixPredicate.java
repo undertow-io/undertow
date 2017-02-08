@@ -29,7 +29,7 @@ import io.undertow.util.PathMatcher;
 /**
  * @author Stuart Douglas
  */
-class PathPrefixPredicate implements Predicate {
+public class PathPrefixPredicate implements Predicate {
 
     private final PathMatcher<Boolean> pathMatcher;
 
