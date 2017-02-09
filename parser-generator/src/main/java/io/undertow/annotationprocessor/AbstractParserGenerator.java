@@ -114,7 +114,7 @@ public abstract class AbstractParserGenerator {
         return file.toBytecode();
     }
 
-    protected abstract void createStateMachines(final String[] httpVerbs, final String[] httpVersions, final String[] standardHeaders, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter);
+    protected abstract void createStateMachines(String[] httpVerbs, String[] httpVersions, String[] standardHeaders, String className, ClassFile file, ClassMethod sctor, AtomicInteger fieldCounter);
 
     protected void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine) {
 
@@ -732,9 +732,9 @@ public abstract class AbstractParserGenerator {
 
         boolean isHeader();
 
-        void handleStateMachineMatchedToken(final CodeAttribute c);
+        void handleStateMachineMatchedToken(CodeAttribute c);
 
-        void handleOtherToken(final CodeAttribute c);
+        void handleOtherToken(CodeAttribute c);
 
         void updateParseState(CodeAttribute c);
 

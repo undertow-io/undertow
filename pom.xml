@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>21</version>
+        <version>22</version>
     </parent>
 
     <groupId>io.undertow</groupId>
@@ -64,7 +64,7 @@
         <version.easymock>3.2</version.easymock>
         <version.io.undertow.jastow>2.0.0.Beta2</version.io.undertow.jastow>
         <version.junit>4.12</version.junit>
-        <version.netty>4.1.4.Final</version.netty>
+        <version.netty>4.1.8.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpmime>4.2.6</version.org.apache.httpmime>
         <version.org.apache.httpcomponents>4.2.6</version.org.apache.httpcomponents>
@@ -90,8 +90,7 @@
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.1.Final</version.io.undertow.build.checkstyle-config>
-        <version.org.codehaus.mojo.findbugs-maven-plugin>2.5.5</version.org.codehaus.mojo.findbugs-maven-plugin>
-        <version.org.codehaus.mojo.findbugs-maven-plugin_java8>3.0.4</version.org.codehaus.mojo.findbugs-maven-plugin_java8>
+        <version.org.codehaus.mojo.findbugs-maven-plugin>3.0.4</version.org.codehaus.mojo.findbugs-maven-plugin>
         <version.org.mortbay.jetty.alpn.jdk7>7.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk7>
         <version.org.mortbay.jetty.alpn.jdk8>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8>
         <version.org.mortbay.jetty.alpn.jdk8.25>8.1.2.v20141202</version.org.mortbay.jetty.alpn.jdk8.25>
@@ -103,15 +102,11 @@
         <version.org.mortbay.jetty.alpn>8.1.7.v20160121</version.org.mortbay.jetty.alpn>
         <version.org.eclipse.jetty.alpn>1.0.0</version.org.eclipse.jetty.alpn>
 
-        <jdk.min.version>1.8</jdk.min.version>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
         <version.com.twitter.hpack>0.10.1</version.com.twitter.hpack>
 
         <!-- Non-default maven plugin versions and configuration -->
-        <version.org.zanata.plugin>3.7.4</version.org.zanata.plugin>
         <version.org.wildfly.openssl>1.0.0.Alpha1</version.org.wildfly.openssl>
-        <version.jar.plugin>3.0.2</version.jar.plugin>
+        <version.checkstyle>7.1</version.checkstyle>
     </properties>
 
     <modules>
@@ -134,7 +129,7 @@
             <plugin>
                 <groupId>org.zanata</groupId>
                 <artifactId>zanata-maven-plugin</artifactId>
-                <version>${version.org.zanata.plugin}</version>
+                <version>${version.zanata.plugin}</version>
                 <configuration>
                     <!-- Process sub-modules separately, sharing parent config -->
                     <enableModules>true</enableModules>
@@ -496,24 +491,14 @@
                                 <!-- fork is needed so compiler args can be used -->
                                 <fork>true</fork>
                                 <compilerArgs>
-                                    <arg>-J--add-modules</arg>
-                                    <arg>-Jjava.annotations.common</arg>
+                                    <arg>-J--add-modules=java.annotations.common</arg>
+                                    <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
                                 </compilerArgs>
                             </configuration>
                         </plugin>
                     </plugins>
                 </pluginManagement>
             </build>
-        </profile>
-
-        <profile>
-            <id>jdk8</id>
-            <activation>
-                <jdk>[1.8,)</jdk>
-            </activation>
-            <properties>
-                <version.org.codehaus.mojo.findbugs-maven-plugin>${version.org.codehaus.mojo.findbugs-maven-plugin_java8}</version.org.codehaus.mojo.findbugs-maven-plugin>
-            </properties>
         </profile>
 
         <profile>
