@@ -136,7 +136,7 @@ public class WebSockets {
     public static <T> void sendText(final ByteBuffer message, final WebSocketChannel wsChannel, final WebSocketCallback<T> callback, T context, long timeoutmillis) {
         sendInternal(message, WebSocketFrameType.TEXT, wsChannel, callback, context, timeoutmillis);
     }
-    
+
     /**
      * Sends a complete text message, invoking the callback when complete
      * Automatically frees the pooled byte buffer when done.
@@ -209,7 +209,7 @@ public class WebSockets {
     public static void sendTextBlocking(final ByteBuffer message, final WebSocketChannel wsChannel) throws IOException {
         sendBlockingInternal(message, WebSocketFrameType.TEXT, wsChannel);
     }
-    
+
     /**
      * Sends a complete text message, invoking the callback when complete
      * Automatically frees the pooled byte buffer when done.
@@ -316,7 +316,7 @@ public class WebSockets {
     public static <T> void sendPing(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<T> callback, T context, long timeoutmillis) {
         sendInternal(mergeBuffers(data), WebSocketFrameType.PING, wsChannel, callback, context, timeoutmillis);
     }
-    
+
     /**
      * Sends a complete ping message, invoking the callback when complete
      * Automatically frees the pooled byte buffer when done.
@@ -388,7 +388,7 @@ public class WebSockets {
     public static void sendPingBlocking(final ByteBuffer[] data, final WebSocketChannel wsChannel) throws IOException {
         sendBlockingInternal(mergeBuffers(data), WebSocketFrameType.PING, wsChannel);
     }
-    
+
     /**
      * Sends a complete ping message using blocking IO
      * Automatically frees the pooled byte buffer when done.
@@ -567,7 +567,7 @@ public class WebSockets {
     public static void sendPongBlocking(final ByteBuffer[] data, final WebSocketChannel wsChannel) throws IOException {
         sendBlockingInternal(mergeBuffers(data), WebSocketFrameType.PONG, wsChannel);
     }
-    
+
     /**
      * Sends a complete pong message using blocking IO
      * Automatically frees the pooled byte buffer when done.
@@ -674,7 +674,7 @@ public class WebSockets {
     public static <T> void sendBinary(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<T> callback, T context, long timeoutmillis) {
         sendInternal(mergeBuffers(data), WebSocketFrameType.BINARY, wsChannel, callback, context, timeoutmillis);
     }
-    
+
     /**
      * Sends a complete binary message, invoking the callback when complete
      * Automatically frees the pooled byte buffer when done.
@@ -746,7 +746,7 @@ public class WebSockets {
     public static void sendBinaryBlocking(final ByteBuffer[] data, final WebSocketChannel wsChannel) throws IOException {
         sendBlockingInternal(mergeBuffers(data), WebSocketFrameType.BINARY, wsChannel);
     }
-    
+
     /**
      * Sends a complete binary message using blocking IO
      * Automatically frees the pooled byte buffer when done.
@@ -895,7 +895,7 @@ public class WebSockets {
     public static void sendCloseBlocking(final ByteBuffer[] data, final WebSocketChannel wsChannel) throws IOException {
         sendCloseBlocking(new CloseMessage(data), wsChannel);
     }
-    
+
     private static <T> void sendInternal(final ByteBuffer data, WebSocketFrameType type, final WebSocketChannel wsChannel, final WebSocketCallback<T> callback, T context, long timeoutmillis) {
         sendInternal(new ImmediatePooledByteBuffer(data), type, wsChannel, callback, context, timeoutmillis);
     }
@@ -985,7 +985,7 @@ public class WebSockets {
     private static void sendBlockingInternal(final ByteBuffer data, WebSocketFrameType type, final WebSocketChannel wsChannel) throws IOException {
         sendBlockingInternal(new ImmediatePooledByteBuffer(data), type, wsChannel);
     }
-    
+
     private static void sendBlockingInternal(final PooledByteBuffer pooledData, WebSocketFrameType type, final WebSocketChannel wsChannel) throws IOException {
         boolean closePooledData = true;
         try {
@@ -995,7 +995,6 @@ public class WebSockets {
             if(!channel.send(pooledData)) {
                 throw WebSocketMessages.MESSAGES.unableToSendOnNewChannel();
             }
-            
             channel.shutdownWrites();
             while (!channel.flush()) {
                 channel.awaitWritable();
