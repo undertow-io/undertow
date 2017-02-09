@@ -31,7 +31,7 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-class EqualsPredicate implements Predicate {
+public class EqualsPredicate implements Predicate {
 
     private final ExchangeAttribute[] attributes;
 

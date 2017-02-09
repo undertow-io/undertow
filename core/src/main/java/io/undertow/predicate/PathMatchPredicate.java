@@ -28,7 +28,7 @@ import io.undertow.util.PathMatcher;
 /**
  * @author Stuart Douglas
  */
-class PathMatchPredicate implements Predicate {
+public class PathMatchPredicate implements Predicate {
 
     private final PathMatcher<Boolean> pathMatcher;
 

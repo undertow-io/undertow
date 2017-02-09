@@ -31,7 +31,7 @@ import io.undertow.util.Headers;
  *
  * @author Stuart Douglas
  */
-class MaxContentSizePredicate implements Predicate {
+public class MaxContentSizePredicate implements Predicate {
 
     private final long maxSize;
 

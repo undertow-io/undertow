@@ -23,7 +23,7 @@ import io.undertow.server.HttpServerExchange;
 /**
  * @author Stuart Douglas
  */
-class NotPredicate implements Predicate {
+public class NotPredicate implements Predicate {
 
     private final Predicate predicate;
 

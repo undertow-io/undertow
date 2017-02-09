@@ -15,7 +15,6 @@ io.undertow.server.handlers.error.FileErrorPageHandler$Builder
 io.undertow.server.handlers.HttpTraceHandler$Builder
 io.undertow.server.JvmRouteHandler$Builder
 io.undertow.server.handlers.PeerNameResolvingHandler$Builder
-io.undertow.server.handlers.RedirectHandler$Builder
 io.undertow.server.handlers.RequestDumpingHandler$Builder
 io.undertow.server.handlers.RequestLimitingHandler$Builder
 io.undertow.server.handlers.resource.ResourceHandler$Builder
