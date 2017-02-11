@@ -37,7 +37,7 @@ import java.util.NoSuchElementException;
 import sun.misc.Unsafe;
 
 /**
- * A modified version of ConcurrentLinkedDequeue which includes direct
+ * A modified version of ConcurrentLinkedDeque which includes direct
  * removal. Like the original, it relies on Unsafe for better performance.
  *
  * More specifically, an unbounded concurrent {@linkplain Deque deque} based on linked nodes.
@@ -80,6 +80,9 @@ import sun.misc.Unsafe;
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
+ *
+ * Based on revision 1.32 of ConcurrentLinkedDeque
+ * (see http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/concurrent/ConcurrentLinkedDeque.java?revision=1.32&view=markup)
  *
  * @since 1.7
  * @author Doug Lea
