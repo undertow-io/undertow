@@ -132,6 +132,7 @@ public class JettyAlpnProvider implements ALPNProvider {
 
         @Override
         public void unsupported() {
+            ALPN.remove(sslEngine);
             selected = "";
         }
 
