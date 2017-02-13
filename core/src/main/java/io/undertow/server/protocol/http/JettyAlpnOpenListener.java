@@ -147,6 +147,7 @@ class JettyAlpnOpenListener implements ChannelListener<StreamConnection>, AlpnOp
         ALPN.put(sslEngine, new ALPN.ServerProvider() {
             @Override
             public void unsupported() {
+                ALPN.remove(sslEngine);
                 final String existing = (String) sslEngine.getHandshakeSession().getValue(PROTOCOL_KEY);
                 if (existing == null || !listeners.containsKey(existing)) {
                     if(fallbackProtocol == null) {
@@ -161,9 +162,7 @@ class JettyAlpnOpenListener implements ChannelListener<StreamConnection>, AlpnOp
 
             @Override
             public String select(List<String> strings) {
-
                 ALPN.remove(sslEngine);
-
                 String match = null;
                 int lastWeight = -1;
                 for (String s : strings) {

@@ -169,6 +169,7 @@ public class JettyALPNClientProvider implements ALPNClientSelector.ClientSelecto
 
         @Override
         public void unsupported() {
+            ALPN.remove(sslEngine);
             selected = "";
         }
 
