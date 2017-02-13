@@ -283,10 +283,16 @@ public final class Headers {
      * @param key    The key that identifies the token to extract
      * @return The token, or null if it was not found
      */
+    @Deprecated
     public static String extractTokenFromHeader(final String header, final String key) {
-        int pos = header.indexOf(key + '=');
+        int pos = header.indexOf(' ' + key + '=');
         if (pos == -1) {
-            return null;
+            if(!header.startsWith(key + '=')) {
+                return null;
+            }
+            pos = 0;
+        } else {
+            pos++;
         }
         int end;
         int start = pos + key.length() + 1;
@@ -305,6 +311,7 @@ public final class Headers {
      * content-disposition=form-data; name="my field"
      * and the key is name then "my field" will be returned without the quotes.
      *
+     *
      * @param header The header
      * @param key    The key that identifies the token to extract
      * @return The token, or null if it was not found
@@ -313,6 +320,7 @@ public final class Headers {
 
         int keypos = 0;
         int pos = -1;
+        boolean whiteSpace = true;
         boolean inQuotes = false;
         for (int i = 0; i < header.length() - 1; ++i) { //-1 because we need room for the = at the end
             //TODO: a more efficient matching algorithm
@@ -322,13 +330,20 @@ public final class Headers {
                     inQuotes = false;
                 }
             } else {
-                if (key.charAt(keypos) == c) {
+                if (key.charAt(keypos) == c && (whiteSpace || keypos > 0)) {
                     keypos++;
+                    whiteSpace = false;
                 } else if (c == '"') {
                     keypos = 0;
                     inQuotes = true;
+                    whiteSpace = false;
                 } else {
                     keypos = 0;
+                    if(c == ' ') {
+                        whiteSpace = true;
+                    } else {
+                        whiteSpace = false;
+                    }
                 }
                 if (keypos == key.length()) {
                     if (header.charAt(i + 1) == '=') {
