@@ -140,6 +140,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private int receiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int unackedReceiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE; //the old max frame size, this gets updated when our setting frame is acked
     private final int maxHeaders;
+    private final int maxHeaderListSize;
 
     /**
      * How much data we have told the remote endpoint we are prepared to accept.
@@ -199,6 +200,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
         receiveMaxFrameSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_FRAME_SIZE, DEFAULT_MAX_FRAME_SIZE);
         maxPadding = settings.get(UndertowOptions.HTTP2_PADDING_SIZE, 0);
+        maxHeaderListSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE, settings.get(UndertowOptions.MAX_HEADER_SIZE, -1));
         if(maxPadding > 0) {
             paddingRandom = new SecureRandom();
         } else {
@@ -274,6 +276,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         }
         settings.add(new Http2Setting(Http2Setting.SETTINGS_MAX_FRAME_SIZE, receiveMaxFrameSize));
         settings.add(new Http2Setting(Http2Setting.SETTINGS_INITIAL_WINDOW_SIZE, initialReceiveWindowSize));
+        if(maxHeaderListSize > 0) {
+            settings.add(new Http2Setting(Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, maxHeaderListSize));
+        }
         Http2SettingsStreamSinkChannel stream = new Http2SettingsStreamSinkChannel(this, settings);
         flushChannelIgnoreFailure(stream);
     }
@@ -1048,6 +1053,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         } else {
             return streamNo > lastGoodStreamId;
         }
+    }
+
+    int getMaxHeaderListSize() {
+        return maxHeaderListSize;
     }
 
     private static final class StreamHolder {

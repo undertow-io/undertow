@@ -507,4 +507,7 @@ public interface UndertowMessages {
 
     @Message(id = 158, value = "Response of length %s is too large to buffer")
     IllegalStateException responseTooLargeToBuffer(Long length);
+
+    @Message(id = 159, value = "HTTP/2 header block is too large")
+    String headerBlockTooLarge();
 }
