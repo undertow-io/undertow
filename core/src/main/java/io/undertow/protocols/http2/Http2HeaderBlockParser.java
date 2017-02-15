@@ -48,9 +48,11 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     private boolean processingPseudoHeaders = true;
     private final boolean client;
     private final int maxHeaders;
+    private final int maxHeaderListSize;
 
     private int currentPadding;
     private final int streamId;
+    private int headerSize;
 
     //headers the server is allowed to receive
     private static final Set<HttpString> SERVER_HEADERS;
@@ -64,12 +66,13 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
         SERVER_HEADERS = Collections.unmodifiableSet(server);
     }
 
-    Http2HeaderBlockParser(int frameLength, HpackDecoder decoder, boolean client, int maxHeaders, int streamId) {
+    Http2HeaderBlockParser(int frameLength, HpackDecoder decoder, boolean client, int maxHeaders, int streamId, int maxHeaderListSize) {
         super(frameLength);
         this.decoder = decoder;
         this.client = client;
         this.maxHeaders = maxHeaders;
         this.streamId = streamId;
+        this.maxHeaderListSize = maxHeaderListSize;
     }
 
     @Override
@@ -136,6 +139,12 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
 
     @Override
     public void emitHeader(HttpString name, String value, boolean neverIndex) throws HpackException {
+        if(maxHeaderListSize > 0) {
+            headerSize += (name.length() + value.length() + 32);
+            if (headerSize > maxHeaderListSize) {
+                throw new HpackException();
+            }
+        }
         if(maxHeaders > 0 && headerMap.size() > maxHeaders) {
             return;
         }

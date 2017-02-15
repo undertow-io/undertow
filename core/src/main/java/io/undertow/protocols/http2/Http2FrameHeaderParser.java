@@ -79,7 +79,7 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     if (streamId == 0) {
                         throw new ConnectionErrorException(Http2Channel.ERROR_PROTOCOL_ERROR, UndertowMessages.MESSAGES.streamIdMustNotBeZeroForFrameType(Http2Channel.FRAME_TYPE_HEADERS));
                     }
-                    parser = new Http2HeadersParser(length, http2Channel.getDecoder(), http2Channel.isClient(), http2Channel.getMaxHeaders(), streamId);
+                    parser = new Http2HeadersParser(length, http2Channel.getDecoder(), http2Channel.isClient(), http2Channel.getMaxHeaders(), streamId, http2Channel.getMaxHeaderListSize());
                     if(allAreClear(flags, Http2Channel.HEADERS_FLAG_END_HEADERS)) {
                         continuationParser = (Http2HeadersParser) parser;
                     }
@@ -99,7 +99,7 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     break;
                 }
                 case FRAME_TYPE_PUSH_PROMISE: {
-                    parser = new Http2PushPromiseParser(length, http2Channel.getDecoder(), http2Channel.isClient(), http2Channel.getMaxHeaders(), streamId);
+                    parser = new Http2PushPromiseParser(length, http2Channel.getDecoder(), http2Channel.isClient(), http2Channel.getMaxHeaders(), streamId, http2Channel.getMaxHeaderListSize());
                     if(allAreClear(flags, Http2Channel.HEADERS_FLAG_END_HEADERS)) {
                         continuationParser = (Http2HeadersParser) parser;
                     }
