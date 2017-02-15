@@ -20,9 +20,11 @@ package io.undertow.protocols.ssl;
 
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Options;
+import io.undertow.UndertowLogger;
 import io.undertow.connector.ByteBufferPool;
 import org.xnio.Sequence;
 import org.xnio.SslClientAuthMode;
@@ -135,50 +137,57 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         if (tcpConnection == null) {
             return null;
         }
-        final InetSocketAddress peerAddress = tcpConnection.getPeerAddress(InetSocketAddress.class);
-        final SSLEngine engine = ssl.getSslContext().createSSLEngine(getHostNameNoResolve(peerAddress), peerAddress.getPort());
-        final boolean clientMode = useClientMode != 0;
-        engine.setUseClientMode(clientMode);
-        if (! clientMode) {
-            final SslClientAuthMode clientAuthMode = UndertowAcceptingSslChannel.this.clientAuthMode;
-            if (clientAuthMode != null) switch (clientAuthMode) {
-                case NOT_REQUESTED:
-                    engine.setNeedClientAuth(false);
-                    engine.setWantClientAuth(false);
-                    break;
-                case REQUESTED:
-                    engine.setWantClientAuth(true);
-                    break;
-                case REQUIRED:
-                    engine.setNeedClientAuth(true);
-                    break;
-                default: throw new IllegalStateException();
-            }
-        }
-        engine.setEnableSessionCreation(enableSessionCreation != 0);
-        final String[] cipherSuites = UndertowAcceptingSslChannel.this.cipherSuites;
-        if (cipherSuites != null) {
-            final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedCipherSuites()));
-            final List<String> finalList = new ArrayList<>();
-            for (String name : cipherSuites) {
-                if (supported.contains(name)) {
-                    finalList.add(name);
+        try {
+            final InetSocketAddress peerAddress = tcpConnection.getPeerAddress(InetSocketAddress.class);
+            final SSLEngine engine = ssl.getSslContext().createSSLEngine(getHostNameNoResolve(peerAddress), peerAddress.getPort());
+            final boolean clientMode = useClientMode != 0;
+            engine.setUseClientMode(clientMode);
+            if (!clientMode) {
+                final SslClientAuthMode clientAuthMode = UndertowAcceptingSslChannel.this.clientAuthMode;
+                if (clientAuthMode != null) switch (clientAuthMode) {
+                    case NOT_REQUESTED:
+                        engine.setNeedClientAuth(false);
+                        engine.setWantClientAuth(false);
+                        break;
+                    case REQUESTED:
+                        engine.setWantClientAuth(true);
+                        break;
+                    case REQUIRED:
+                        engine.setNeedClientAuth(true);
+                        break;
+                    default:
+                        throw new IllegalStateException();
                 }
             }
-            engine.setEnabledCipherSuites(finalList.toArray(new String[finalList.size()]));
-        }
-        final String[] protocols = UndertowAcceptingSslChannel.this.protocols;
-        if (protocols != null) {
-            final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedProtocols()));
-            final List<String> finalList = new ArrayList<>();
-            for (String name : protocols) {
-                if (supported.contains(name)) {
-                    finalList.add(name);
+            engine.setEnableSessionCreation(enableSessionCreation != 0);
+            final String[] cipherSuites = UndertowAcceptingSslChannel.this.cipherSuites;
+            if (cipherSuites != null) {
+                final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedCipherSuites()));
+                final List<String> finalList = new ArrayList<>();
+                for (String name : cipherSuites) {
+                    if (supported.contains(name)) {
+                        finalList.add(name);
+                    }
                 }
+                engine.setEnabledCipherSuites(finalList.toArray(new String[finalList.size()]));
             }
-            engine.setEnabledProtocols(finalList.toArray(new String[finalList.size()]));
+            final String[] protocols = UndertowAcceptingSslChannel.this.protocols;
+            if (protocols != null) {
+                final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedProtocols()));
+                final List<String> finalList = new ArrayList<>();
+                for (String name : protocols) {
+                    if (supported.contains(name)) {
+                        finalList.add(name);
+                    }
+                }
+                engine.setEnabledProtocols(finalList.toArray(new String[finalList.size()]));
+            }
+            return accept(tcpConnection, engine);
+        } catch (Exception e) {
+            IoUtils.safeClose(tcpConnection);
+            UndertowLogger.REQUEST_LOGGER.failedToAcceptSSLRequest(e);
+            return null;
         }
-        return accept(tcpConnection, engine);
     }
 
     protected UndertowSslConnection accept(StreamConnection tcpServer, SSLEngine sslEngine) throws IOException {

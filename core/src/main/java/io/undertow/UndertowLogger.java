@@ -396,4 +396,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5085, value = "Connection %s for exchange %s was not closed cleanly, forcibly closing connection")
     void responseWasNotTerminated(ServerConnection connection, HttpServerExchange exchange);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5086, value = "Failed to accept SSL request")
+    void failedToAcceptSSLRequest(@Cause Exception e);
 }
