@@ -18,14 +18,14 @@
 
 package io.undertow.protocols.ssl;
 
+import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import io.undertow.UndertowLogger;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.Sequence;
 import org.xnio.SslClientAuthMode;
 import org.xnio.StreamConnection;
@@ -36,7 +36,6 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -49,6 +48,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import javax.net.ssl.SSLEngine;
 
 import static org.xnio._private.Messages.msg;
 
@@ -183,7 +183,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
                 engine.setEnabledProtocols(finalList.toArray(new String[finalList.size()]));
             }
             return accept(tcpConnection, engine);
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             IoUtils.safeClose(tcpConnection);
             UndertowLogger.REQUEST_LOGGER.failedToAcceptSSLRequest(e);
             return null;
