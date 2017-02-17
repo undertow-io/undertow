@@ -26,7 +26,9 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.ConduitListener;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
@@ -227,6 +229,35 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
                 }
                 throw new ClosedChannelException();
             } else if (headerBuffer.hasRemaining()) {
+                if(headerBuffer.remaining() <= 2) {
+                    //mod_jk can send 12 34 00 00 rather than 12 34 00 02 00 00
+
+                    byte b1 = headerBuffer.get(0); //0x12
+                    byte b2 = headerBuffer.get(1); //0x34
+                    if (b1 != 0x12 || b2 != 0x34) {
+                        throw UndertowMessages.MESSAGES.wrongMagicNumber((b1 & 0xFF) << 8 | (b2 & 0xFF));
+                    }
+                    b1 = headerBuffer.get(2);//the length headers, two more than the string length header
+                    b2 = headerBuffer.get(3);
+                    int totalSize = ((b1 & 0xFF) << 8) | (b2 & 0xFF);
+                    if(totalSize == 0) {
+                        if(headerBuffer.remaining() < 2) {
+                            byte[] data = new byte[1];
+                            ByteBuffer bb = ByteBuffer.wrap(data);
+                            bb.put(headerBuffer.get(4));
+                            bb.flip();
+                            Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(bb));
+                        }
+                        this.remaining = 0;
+                        this.state = STATE_FINISHED;
+
+                        if (finishListener != null) {
+                            finishListener.handleEvent(this);
+                        }
+                        return -1;
+                    }
+                }
+
                 return 0;
             } else {
                 headerBuffer.flip();
@@ -235,8 +266,24 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
                 if (b1 != 0x12 || b2 != 0x34) {
                     throw UndertowMessages.MESSAGES.wrongMagicNumber(b1 << 8 | b2);
                 }
-                headerBuffer.get();//the length headers, two more than the string length header
-                headerBuffer.get();
+                b1 = headerBuffer.get();//the length headers, two more than the string length header
+                b2 = headerBuffer.get();
+                int totalSize = ((b1 & 0xFF) << 8) | (b2 & 0xFF);
+                if(totalSize == 0) {
+                    byte[] data = new byte[2];
+                    ByteBuffer bb = ByteBuffer.wrap(data);
+                    bb.put(headerBuffer);
+                    bb.flip();
+                    Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(bb));
+                    this.remaining = 0;
+                    this.state = STATE_FINISHED;
+
+                    if (finishListener != null) {
+                        finishListener.handleEvent(this);
+                    }
+                    return -1;
+                }
+
                 b1 = headerBuffer.get();
                 b2 = headerBuffer.get();
                 chunkRemaining = ((b1 & 0xFF) << 8) | (b2 & 0xFF);
