@@ -1,18 +1,20 @@
 package io.undertow.server.handlers.file;
 
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.server.handlers.resource.PathResourceManager;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-import io.undertow.server.handlers.resource.PathResourceManager;
-
 /**
  * @author Tomaz Cerar (c) 2016 Red Hat Inc.
  */
-
+@Category(UnitTest.class)
 public class PathResourceManagerTestCase {
 
 

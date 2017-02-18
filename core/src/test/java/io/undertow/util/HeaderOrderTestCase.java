@@ -18,6 +18,11 @@
 
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -25,15 +30,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 /**
  * Tests that the headers in the Headers class have the correct order. The headers
  * are assigned an explicit ordering integer to allow for super fast comparisons.
  *
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class HeaderOrderTestCase {
 
     @Test

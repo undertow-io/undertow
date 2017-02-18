@@ -18,17 +18,20 @@
 
 package io.undertow.predicate;
 
-import java.util.HashMap;
-
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import java.util.HashMap;
 
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class PredicateParsingTestCase {
 
     @Test

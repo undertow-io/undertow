@@ -17,16 +17,17 @@
  */
 package io.undertow.server.security;
 
-import static org.junit.Assert.assertEquals;
-
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.security.idm.DigestAlgorithm;
 import io.undertow.security.impl.DigestAuthorizationToken;
 import io.undertow.security.impl.DigestQop;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.EnumMap;
 import java.util.Map;
 
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test case to test the parsing of the Authorization header for Digest requests.
@@ -39,6 +40,7 @@ import org.junit.Test;
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
+@Category(UnitTest.class)
 public class ParseDigestAuthorizationTokenTestCase {
 
     private void doTest(final String header, final Map<DigestAuthorizationToken, String> expected) {

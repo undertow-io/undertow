@@ -1,7 +1,9 @@
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test the path matcher to ensure that it can handle different cases and
@@ -11,6 +13,7 @@ import org.junit.Test;
  * @author Chris Ruffalo
  *
  */
+@Category(UnitTest.class)
 public class PathMatcherTestCase {
 
     /**

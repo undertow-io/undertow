@@ -19,6 +19,10 @@
 package io.undertow.util;
 
 import io.undertow.server.handlers.Cookie;
+import io.undertow.testutils.category.UnitTest;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.Arrays;
 import java.util.Calendar;
@@ -26,12 +30,10 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class CookiesTestCase {
 
     @Test

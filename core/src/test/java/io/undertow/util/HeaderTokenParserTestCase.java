@@ -19,14 +19,17 @@
 package io.undertow.util;
 
 import io.undertow.security.impl.DigestAuthorizationToken;
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.Collections;
 
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class HeaderTokenParserTestCase {
 
     @Test

@@ -18,14 +18,17 @@
 
 package io.undertow.protocols.http2;
 
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.nio.ByteBuffer;
 
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class HpackHuffmanEncodingUnitTestCase {
 
     @Test
