@@ -19,12 +19,15 @@
 package io.undertow.util;
 
 import io.undertow.Version;
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * @author <a href="mailto:tomaz.cerar@redhat.com">Tomaz Cerar</a> (c) 2013 Red Hat Inc.
  */
+@Category(UnitTest.class)
 public class TestVersion {
 
     @Test

@@ -20,8 +20,10 @@ package io.undertow.util;
 
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,6 +34,7 @@ import java.util.List;
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class MimeDecodingTestCase {
 
     @Test

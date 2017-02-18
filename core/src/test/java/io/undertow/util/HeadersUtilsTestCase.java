@@ -18,14 +18,17 @@
 
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests param extraction of a header
  *
  * @author Tim Terlegård
  */
+@Category(UnitTest.class)
 public class HeadersUtilsTestCase {
 
     @Test

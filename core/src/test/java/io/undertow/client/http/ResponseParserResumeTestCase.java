@@ -18,11 +18,13 @@
 
 package io.undertow.client.http;
 
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.nio.ByteBuffer;
 
@@ -31,6 +33,7 @@ import java.nio.ByteBuffer;
  *
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class ResponseParserResumeTestCase {
 
     public static final String DATA = "HTTP/1.1 200 OK\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";

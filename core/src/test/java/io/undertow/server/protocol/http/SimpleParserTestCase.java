@@ -18,10 +18,8 @@
 
 package io.undertow.server.protocol.http;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-
 import io.undertow.UndertowOptions;
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -29,7 +27,11 @@ import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.xnio.OptionMap;
+
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 
 /**
  * Basic test of the HTTP parser functionality.
@@ -41,6 +43,7 @@ import org.xnio.OptionMap;
  *
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class SimpleParserTestCase {
 
     private final ParseState parseState = new ParseState();

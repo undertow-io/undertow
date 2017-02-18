@@ -18,19 +18,22 @@
 
 package io.undertow.server.handlers;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.server.handlers.builder.HandlerParser;
 import io.undertow.util.StatusCodes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * Unit tests for peer security handler
  *
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class IPAddressAccessControlHandlerUnitTestCase {
 
     @Test

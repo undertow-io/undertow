@@ -18,13 +18,16 @@
 
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Category(UnitTest.class)
 public final class HeaderValuesTestCase {
 
     @Test

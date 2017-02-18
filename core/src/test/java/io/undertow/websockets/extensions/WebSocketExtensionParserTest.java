@@ -18,17 +18,20 @@
 
 package io.undertow.websockets.extensions;
 
-import java.util.List;
-
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.websockets.WebSocketExtension;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import java.util.List;
 
 /**
  * A test class for WebSocket Extensions parsing operations.
  *
  * @author Lucas Ponce
  */
+@Category(UnitTest.class)
 public class WebSocketExtensionParserTest {
 
     @Test

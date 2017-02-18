@@ -18,14 +18,17 @@
 
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests canonicalization of the path
  *
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class CanonicalPathUtilsTestCase {
 
     @Test

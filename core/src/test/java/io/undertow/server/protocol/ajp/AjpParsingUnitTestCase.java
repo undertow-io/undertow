@@ -18,22 +18,25 @@
 
 package io.undertow.server.protocol.ajp;
 
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.xnio.IoUtils;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.xnio.IoUtils;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class AjpParsingUnitTestCase {
 
     private static final ByteBuffer buffer;
