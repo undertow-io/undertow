@@ -18,18 +18,20 @@
 
 package io.undertow.util;
 
-import java.nio.charset.Charset;
-
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.nio.charset.Charset;
 
 import static org.junit.Assert.assertEquals;
 /**
  * @author Oleksandr Radchykov
  */
 @RunWith(Parameterized.class)
+@Category(UnitTest.class)
 public class URLUtilsTestCase {
 
     @Parameterized.Parameters

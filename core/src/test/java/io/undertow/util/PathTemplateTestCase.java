@@ -18,8 +18,10 @@
 
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +30,7 @@ import java.util.TreeSet;
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class PathTemplateTestCase {
 
     @Test

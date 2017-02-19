@@ -86,6 +86,8 @@
         <!-- Surefire args -->
         <surefire.jpda.args/>
         <surefire.system.args>-ea ${surefire.jpda.args} -Xmx1024m</surefire.system.args>
+        <!--by default run all tests-->
+        <test.categories>io.undertow.testutils.category.UnitTest OR NOT io.undertow.testutils.category.UnitTest</test.categories>
 
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
@@ -198,6 +200,7 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
+                        <groups>${test.categories}</groups>
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     </configuration>
                 </plugin>
@@ -544,6 +547,30 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+
+        <profile>
+            <id>only-unit-tests</id>
+            <activation>
+                <property>
+                    <name>onlyUnitTests</name>
+                </property>
+            </activation>
+            <properties>
+                <test.categories>io.undertow.testutils.category.UnitTest</test.categories>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>skip-unit-tests</id>
+            <activation>
+                <property>
+                    <name>skipUnitTests</name>
+                </property>
+            </activation>
+            <properties>
+                <test.categories>NOT io.undertow.testutils.category.UnitTest</test.categories>
+            </properties>
         </profile>
     </profiles>
 

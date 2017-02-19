@@ -17,19 +17,23 @@
  */
 package io.undertow.server.handlers;
 
-import static io.undertow.attribute.ExchangeAttributes.requestHeader;
-import static io.undertow.util.Headers.USER_AGENT;
-import static org.junit.Assert.*;
+import io.undertow.testutils.category.UnitTest;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.net.UnknownHostException;
 
-import org.junit.Test;
+import static io.undertow.attribute.ExchangeAttributes.requestHeader;
+import static io.undertow.util.Headers.USER_AGENT;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for peer security handler
  *
  * @author Andre Dietisheim
  */
+@Category(UnitTest.class)
 public class UserAgentAccessControlHandlerUnitTestCase {
 
     private static final String PATTERN_IE_ALL = "Mozilla.+\\(compatible; MSIE .+";

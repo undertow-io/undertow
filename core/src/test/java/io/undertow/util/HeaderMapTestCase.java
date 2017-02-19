@@ -18,16 +18,23 @@
 
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Category(UnitTest.class)
 public final class HeaderMapTestCase {
 
     private static final List<HttpString> HTTP_STRING_LIST = Arrays.asList(Headers.CONNECTION, Headers.HOST, Headers.UPGRADE, Headers.CONTENT_MD5, Headers.KEEP_ALIVE, Headers.RESPONSE_AUTH, Headers.CONTENT_DISPOSITION, Headers.DEFLATE, Headers.NEGOTIATE, Headers.USER_AGENT, Headers.REFERER, Headers.TRANSFER_ENCODING, Headers.FROM);

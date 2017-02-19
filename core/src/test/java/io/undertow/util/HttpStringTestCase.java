@@ -18,8 +18,10 @@
 
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,6 +32,7 @@ import java.io.ObjectOutputStream;
 /**
  * @author Matej Lazar
  */
+@Category(UnitTest.class)
 public class HttpStringTestCase {
 
     @Test

@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.builder;
 
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.predicate.ContainsPredicate;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -32,6 +33,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -40,6 +42,7 @@ import java.util.List;
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class PredicatedHandlersParserTestCase {
 
     @Test

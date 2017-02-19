@@ -18,8 +18,10 @@
 
 package io.undertow.util;
 
+import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -30,6 +32,7 @@ import java.util.Set;
 /**
  * @author Stuart Douglas
  */
+@Category(UnitTest.class)
 public class SubstringMapTestCase {
 
     public static final int NUM_TEST_VALUES = 1000;
