@@ -207,7 +207,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             paddingRandom = null;
         }
 
-        this.decoder = new HpackDecoder(Hpack.DEFAULT_TABLE_SIZE);
+        this.decoder = new HpackDecoder(encoderHeaderTableSize);
         this.encoder = new HpackEncoder(encoderHeaderTableSize);
         if(!prefaceRequired) {
             prefaceCount = PREFACE_BYTES.length;
@@ -333,13 +333,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         AbstractHttp2StreamSourceChannel channel;
         if (frameParser.type == FRAME_TYPE_DATA) {
             //DATA frames must be already associated with a connection. If it gets here then something is wrong
-            if (frameParser.streamId == 0 || isIdle(frameParser.streamId)) {
-                //spec explicitly calls this out as a connection error
-                sendGoAway(ERROR_PROTOCOL_ERROR);
-            } else {
-                //the spec says we may send the RST_STREAM in this situation, it seems safest to do so
-                sendRstStream(frameParser.streamId, ERROR_STREAM_CLOSED);
-            }
+            //spec explicitly calls this out as a connection error
+            sendGoAway(ERROR_PROTOCOL_ERROR);
             UndertowLogger.REQUEST_LOGGER.tracef("Dropping Frame of length %s for stream %s", frameParser.getFrameLength(), frameParser.streamId);
             return null;
         }
@@ -368,7 +363,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     //make sure it exists
                     StreamHolder existing = currentStreams.get(frameParser.streamId);
                     if(existing == null || existing.sourceClosed) {
-                        sendRstStream(frameParser.streamId, ERROR_STREAM_CLOSED);
+                        sendGoAway(ERROR_PROTOCOL_ERROR);
                         frameData.close();
                         return null;
                     } else if (existing.sourceChannel != null ){
@@ -381,6 +376,11 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                         }
                     }
                 } else {
+                    if(frameParser.streamId < lastGoodStreamId) {
+                        sendGoAway(ERROR_PROTOCOL_ERROR);
+                        frameData.close();
+                        return null;
+                    }
                     if(frameParser.streamId % 2 == (isClient() ? 1 : 0)) {
                         sendGoAway(ERROR_PROTOCOL_ERROR);
                         frameData.close();
@@ -544,7 +544,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             }
         }
         this.frameParser = null;
-        if (frameParser.getFrameLength() > receiveMaxFrameSize && frameParser.getFrameLength() > unackedReceiveMaxFrameSize) {
+        if (frameParser.getActualLength() > receiveMaxFrameSize && frameParser.getActualLength() > unackedReceiveMaxFrameSize) {
             sendGoAway(ERROR_FRAME_SIZE_ERROR);
             throw UndertowMessages.MESSAGES.http2FrameTooLarge();
         }
@@ -639,6 +639,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     return false;
                 }
                 initialSendWindowSize = (int) setting.getValue();
+
             } else if (setting.getId() == Http2Setting.SETTINGS_MAX_FRAME_SIZE) {
                 if(setting.getValue() > MAX_FRAME_SIZE || setting.getValue() < DEFAULT_MAX_FRAME_SIZE) {
                     UndertowLogger.REQUEST_IO_LOGGER.debug("Invalid value received for SETTINGS_MAX_FRAME_SIZE " + setting.getValue());
@@ -843,6 +844,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
      * @return The actual amount of bytes the sender can send
      */
     synchronized int grabFlowControlBytes(int bytesToGrab) {
+        if(bytesToGrab <= 0) {
+            return 0;
+        }
         int min = (int) Math.min(bytesToGrab, sendWindowSize);
         if(bytesToGrab > FLOW_CONTROL_MIN_WINDOW && min <= FLOW_CONTROL_MIN_WINDOW) {
             //this can cause problems with padding, so we just return 0

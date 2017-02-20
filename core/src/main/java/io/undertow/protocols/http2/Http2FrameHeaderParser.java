@@ -206,6 +206,10 @@ class Http2FrameHeaderParser implements FrameHeaderData {
         return length;
     }
 
+    int getActualLength() {
+        return length;
+    }
+
     @Override
     public AbstractFramedStreamSourceChannel<?, ?, ?> getExistingChannel() {
         Http2StreamSourceChannel http2StreamSourceChannel;
