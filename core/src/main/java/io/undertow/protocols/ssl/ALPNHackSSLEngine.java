@@ -204,8 +204,8 @@ public class ALPNHackSSLEngine extends SSLEngine {
                 try {
                     List<String> result = ALPNHackClientHelloExplorer.exploreClientHello(dataToUnwrap.duplicate());
                     if(result != null) {
-                        for(String protocol : result) {
-                            if(applicationProtocols.contains(protocol)) {
+                        for(String protocol : applicationProtocols) {
+                            if(result.contains(protocol)) {
                                 selectedApplicationProtocol = protocol;
                                 break;
                             }
