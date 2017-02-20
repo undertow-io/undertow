@@ -54,7 +54,14 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
     protected CRC32 crc = new CRC32();
 
     public GzipStreamSinkConduit(ConduitFactory<StreamSinkConduit> conduitFactory, HttpServerExchange exchange) {
-        super(conduitFactory, exchange, Deflater.DEFAULT_COMPRESSION);
+        this(conduitFactory, exchange, Deflater.DEFAULT_COMPRESSION);
+    }
+
+    public GzipStreamSinkConduit(
+            ConduitFactory<StreamSinkConduit> conduitFactory,
+            HttpServerExchange exchange,
+            int deflateLevel) {
+        super(conduitFactory, exchange, deflateLevel);
         writeHeader();
         Connectors.updateResponseBytesSent(exchange, HEADER.length);
     }
