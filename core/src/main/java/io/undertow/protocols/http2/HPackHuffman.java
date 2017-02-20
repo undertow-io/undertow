@@ -378,35 +378,42 @@ public class HPackHuffman {
         assert data.remaining() >= length;
         int treePos = 0;
         boolean eosBits = true;
+        int eosCount = 0;
         for (int i = 0; i < length; ++i) {
             byte b = data.get();
             int bitPos = 7;
             while (bitPos >= 0) {
                 int val = DECODING_TABLE[treePos];
                 if (((1 << bitPos) & b) == 0) {
-                    eosBits = false;
                     //bit not set, we want the lower part of the tree
                     if ((val & LOW_TERMINAL_BIT) == 0) {
                         treePos = val & LOW_MASK;
+                        eosBits = false;
+                        eosCount = 0;
                     } else {
                         target.append((char) (val & LOW_MASK));
                         treePos = 0;
                         eosBits = true;
+                        eosCount = 0;
                     }
                 } else {
                     //bit not set, we want the lower part of the tree
                     if ((val & HIGH_TERMINAL_BIT) == 0) {
                         treePos = (val >> 16) & LOW_MASK;
+                        if(eosBits) {
+                            eosCount++;
+                        }
                     } else {
                         target.append((char) ((val >> 16) & LOW_MASK));
                         treePos = 0;
+                        eosCount = 0;
                         eosBits = true;
                     }
                 }
                 bitPos--;
             }
         }
-        if (!eosBits) {
+        if (!eosBits || eosCount > 7) {
             throw UndertowMessages.MESSAGES.huffmanEncodedHpackValueDidNotEndWithEOS();
         }
     }

@@ -38,8 +38,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -48,8 +46,6 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -57,11 +53,14 @@ import org.xnio.channels.CloseableChannel;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-
-import io.undertow.UndertowMessages;
-import io.undertow.conduits.IdleTimeoutConduit;
-import io.undertow.util.ReferenceCountedPooled;
 import org.xnio.channels.SuspendableWriteChannel;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.conduits.IdleTimeoutConduit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.ReferenceCountedPooled;
 
 /**
  * A {@link org.xnio.channels.ConnectedChannel} which can be used to send and receive Frames.
@@ -1012,23 +1011,33 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
                     ChannelListeners.invokeChannelListener(receiver, ((SimpleSetter) receiver.getReadSetter()).get());
                 }
+                final List<S> pendingFrames;
+                final List<S> newFrames;
+                final List<S> heldFrames;
+                final List<AbstractFramedStreamSourceChannel<C, R, S>> receivers;
                 synchronized (AbstractFramedChannel.this) {
-                    for (final S channel : pendingFrames) {
-                        //if this was a clean shutdown there should not be any senders
-                        channel.markBroken();
-                    }
-                    for (final S channel : newFrames) {
-                        //if this was a clean shutdown there should not be any senders
-                        channel.markBroken();
-                    }
-                    for (final S channel : heldFrames) {
-                        //if this was a clean shutdown there should not be any senders
-                        channel.markBroken();
-                    }
-                    for(AbstractFramedStreamSourceChannel<C, R, S> r : new ArrayList<>(receivers)) {
-                        IoUtils.safeClose(r);
-                    }
+                    pendingFrames = new ArrayList<>(AbstractFramedChannel.this.pendingFrames);
+                    newFrames = new ArrayList<>(AbstractFramedChannel.this.newFrames);
+                    heldFrames = new ArrayList<>(AbstractFramedChannel.this.heldFrames);
+                    receivers = new ArrayList<>(AbstractFramedChannel.this.receivers);
                 }
+                for (final S channel : pendingFrames) {
+                    //if this was a clean shutdown there should not be any senders
+                    channel.markBroken();
+                }
+
+                for (final S channel : newFrames) {
+                    //if this was a clean shutdown there should not be any senders
+                    channel.markBroken();
+                }
+                for (final S channel : heldFrames) {
+                    //if this was a clean shutdown there should not be any senders
+                    channel.markBroken();
+                }
+                for (AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
+                    IoUtils.safeClose(r);
+                }
+
             } finally {
                 try {
                     for (ChannelListener<C> task : closeTasks) {

@@ -62,16 +62,22 @@ public class HpackDecoder {
     private int currentMemorySize = 0;
 
     /**
-     * The maximum allowed memory size
+     * The current memory size, as specified by the client
      */
-    private int maxMemorySize;
+    private int specifiedMemorySize;
+
+    /**
+     * The maximum allowed memory size, as specified by us. If the client tries to increase beyond this amount it is an error
+     */
+    private final int maxAllowedMemorySize;
 
     private boolean first = true;
 
     private final StringBuilder stringBuilder = new StringBuilder();
 
-    public HpackDecoder(int maxMemorySize) {
-        this.maxMemorySize = maxMemorySize;
+    public HpackDecoder(int maxAllowedMemorySize) {
+        this.specifiedMemorySize = Math.min(Hpack.DEFAULT_TABLE_SIZE, maxAllowedMemorySize);
+        this.maxAllowedMemorySize = maxAllowedMemorySize;
         headerTable = new HeaderField[DEFAULT_RING_BUFFER_SIZE];
     }
 
@@ -187,12 +193,15 @@ public class HpackDecoder {
             buffer.position(originalPos);
             return false;
         }
-        maxMemorySize = size;
-        if (currentMemorySize > maxMemorySize) {
+        if(size > maxAllowedMemorySize) {
+            throw new HpackException(Http2Channel.ERROR_PROTOCOL_ERROR);
+        }
+        specifiedMemorySize = size;
+        if (currentMemorySize > specifiedMemorySize) {
             int newTableSlots = filledTableSlots;
             int tableLength = headerTable.length;
             int newSize = currentMemorySize;
-            while (newSize > maxMemorySize) {
+            while (newSize > specifiedMemorySize) {
                 int clearIndex = firstSlotPosition;
                 firstSlotPosition++;
                 if (firstSlotPosition == tableLength) {
@@ -304,16 +313,12 @@ public class HpackDecoder {
 
     private void addStaticTableEntry(int index) throws HpackException {
         //adds an entry from the static table.
-        //this must be an entry with a value as far as I can determine
         HeaderField entry = Hpack.STATIC_TABLE[index];
-        if (entry.value == null) {
-            throw new HpackException();
-        }
-        headerEmitter.emitHeader(entry.name, entry.value, false);
+        headerEmitter.emitHeader(entry.name, entry.value == null ? "" : entry.value, false);
     }
 
     private void addEntryToHeaderTable(HeaderField entry) {
-        if (entry.size > maxMemorySize) {
+        if (entry.size > specifiedMemorySize) {
             //it is to big to fit, so we just completely clear the table.
             while (filledTableSlots > 0) {
                 headerTable[firstSlotPosition] = null;
@@ -332,7 +337,7 @@ public class HpackDecoder {
         int index = (firstSlotPosition + filledTableSlots) % tableLength;
         headerTable[index] = entry;
         int newSize = currentMemorySize + entry.size;
-        while (newSize > maxMemorySize) {
+        while (newSize > specifiedMemorySize) {
             int clearIndex = firstSlotPosition;
             firstSlotPosition++;
             if (firstSlotPosition == tableLength) {
@@ -391,7 +396,7 @@ public class HpackDecoder {
         return currentMemorySize;
     }
 
-    int getMaxMemorySize() {
-        return maxMemorySize;
+    int getSpecifiedMemorySize() {
+        return specifiedMemorySize;
     }
 }
