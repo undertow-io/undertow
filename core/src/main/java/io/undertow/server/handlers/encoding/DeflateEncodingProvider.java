@@ -25,6 +25,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import org.xnio.conduits.StreamSinkConduit;
 
+import java.util.zip.Deflater;
+
 /**
  * Content coding for 'deflate'
  *
@@ -32,13 +34,23 @@ import org.xnio.conduits.StreamSinkConduit;
  */
 public class DeflateEncodingProvider implements ContentEncodingProvider {
 
+    private final int deflateLevel;
+
+    public DeflateEncodingProvider() {
+        this(Deflater.DEFLATED);
+    }
+
+    public DeflateEncodingProvider(int deflateLevel) {
+        this.deflateLevel = deflateLevel;
+    }
+
     @Override
     public ConduitWrapper<StreamSinkConduit> getResponseWrapper() {
         return new ConduitWrapper<StreamSinkConduit>() {
             @Override
             public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
                 UndertowLogger.REQUEST_LOGGER.tracef("Created DEFLATE response conduit for %s", exchange);
-                return new DeflatingStreamSinkConduit(factory, exchange);
+                return new DeflatingStreamSinkConduit(factory, exchange, deflateLevel);
             }
         };
     }

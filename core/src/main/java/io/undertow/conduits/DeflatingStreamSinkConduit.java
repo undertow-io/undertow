@@ -82,7 +82,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         this(conduitFactory, exchange, Deflater.DEFLATED);
     }
 
-    protected DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange, int deflateLevel) {
+    public DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange, int deflateLevel) {
         deflater = new Deflater(deflateLevel, true);
         this.currentBuffer = exchange.getConnection().getByteBufferPool().allocate();
         this.exchange = exchange;
