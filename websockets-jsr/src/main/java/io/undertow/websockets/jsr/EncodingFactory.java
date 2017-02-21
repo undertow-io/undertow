@@ -157,7 +157,7 @@ public class EncodingFactory {
             if (Decoder.Binary.class.isAssignableFrom(decoder)) {
                 try {
                     Method method = decoder.getMethod("decode", ByteBuffer.class);
-                    final Class<?> type = method.getReturnType();
+                    final Class<?> type = resolveReturnType(method, decoder);
                     List<InstanceFactory<? extends Decoder>> list = binaryDecoders.get(type);
                     if (list == null) {
                         binaryDecoders.put(type, list = new ArrayList<>());
@@ -169,7 +169,7 @@ public class EncodingFactory {
             } else if (Decoder.BinaryStream.class.isAssignableFrom(decoder)) {
                 try {
                     Method method = decoder.getMethod("decode", InputStream.class);
-                    final Class<?> type = method.getReturnType();
+                    final Class<?> type = resolveReturnType(method, decoder);
                     List<InstanceFactory<? extends Decoder>> list = binaryDecoders.get(type);
                     if (list == null) {
                         binaryDecoders.put(type, list = new ArrayList<>());
@@ -193,7 +193,7 @@ public class EncodingFactory {
             } else if (Decoder.TextStream.class.isAssignableFrom(decoder)) {
                 try {
                     Method method = decoder.getMethod("decode", Reader.class);
-                    final Class<?> type = method.getReturnType();
+                    final Class<?> type = resolveReturnType(method, decoder);
                     List<InstanceFactory<? extends Decoder>> list = textDecoders.get(type);
                     if (list == null) {
                         textDecoders.put(type, list = new ArrayList<>());
