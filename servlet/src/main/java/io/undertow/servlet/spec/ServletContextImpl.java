@@ -782,12 +782,29 @@ public class ServletContextImpl implements ServletContext {
             } else if (create) {
 
                 String existing = c.findSessionId(exchange);
+
                 if (originalServletContext != this) {
                     //this is a cross context request
                     //we need to make sure there is a top level session
                     originalServletContext.getSession(originalServletContext, exchange, true);
                 } else if (existing != null) {
-                    c.clearSession(exchange, existing);
+                    if(deploymentInfo.isCheckOtherSessionManagers()) {
+                        boolean found = false;
+                        for (String deploymentName : deployment.getServletContainer().listDeployments()) {
+                            DeploymentManager deployment = this.deployment.getServletContainer().getDeployment(deploymentName);
+                            if (deployment != null) {
+                                if (deployment.getDeployment().getSessionManager().getSession(existing) != null) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!found) {
+                            c.clearSession(exchange, existing);
+                        }
+                    } else {
+                        c.clearSession(exchange, existing);
+                    }
                 }
 
                 final Session newSession = sessionManager.createSession(exchange, c);

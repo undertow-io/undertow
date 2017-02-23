@@ -91,6 +91,47 @@ public class CrossContextServletSessionTestCase {
 
 
     @Test
+    public void testSharedSessionCookieMultipleDeployments() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/servlet");
+            HttpGet direct2 = new HttpGet(DefaultServer.getDefaultServerURL() + "/2/servlet");
+            HttpResponse result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("1", response);
+
+            result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("2", response);
+
+            result = client.execute(direct2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("1", response);
+
+            result = client.execute(direct2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("2", response);
+
+            result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("3", response);
+
+            result = client.execute(direct2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("3", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
     public void testCrossContextSessionForwardInvocation() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
