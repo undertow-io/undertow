@@ -180,6 +180,8 @@ public class DeploymentInfo implements Cloneable {
 
     private boolean securityDisabled;
 
+    private boolean checkOtherSessionManagers = true;
+
     public void validate() {
         if (deploymentName == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("deploymentName");
@@ -1238,6 +1240,20 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+
+    public boolean isCheckOtherSessionManagers() {
+        return checkOtherSessionManagers;
+    }
+
+    /**
+     * If this is true then when an existing invalid session id is found all other deployments in the container will have their
+     * session managers checked to see if it represents a valid session. If it does then the session id will be re-used.
+     */
+    public DeploymentInfo setCheckOtherSessionManagers(boolean checkOtherSessionManagers) {
+        this.checkOtherSessionManagers = checkOtherSessionManagers;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1323,6 +1339,7 @@ public class DeploymentInfo implements Cloneable {
         info.crawlerSessionManagerConfig = crawlerSessionManagerConfig;
         info.securityDisabled = securityDisabled;
         info.useCachedAuthenticationMechanism = useCachedAuthenticationMechanism;
+        info.checkOtherSessionManagers = checkOtherSessionManagers;
         return info;
     }
 
