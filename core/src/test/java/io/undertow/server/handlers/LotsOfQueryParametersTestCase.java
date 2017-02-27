@@ -80,6 +80,7 @@ public class LotsOfQueryParametersTestCase {
                 qs.append(URLEncoder.encode(MESSAGE + i, "UTF-8"));
                 qs.append("&");
             }
+            qs.deleteCharAt(qs.length()-1); // delete last useless '&'
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs.toString());
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
@@ -104,6 +105,7 @@ public class LotsOfQueryParametersTestCase {
                 qs.append(URLEncoder.encode(MESSAGE + i, "UTF-8"));
                 qs.append("&");
             }
+            qs.deleteCharAt(qs.length()-1); // delete last useless '&'
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs.toString());
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
@@ -124,6 +126,7 @@ public class LotsOfQueryParametersTestCase {
                 qs.append(URLEncoder.encode(MESSAGE + i, "UTF-8"));
                 qs.append("&");
             }
+            qs.deleteCharAt(qs.length()-1); // delete last useless '&'
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs.toString());
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_PARAMETERS, TEST_MAX_PARAMETERS));
             HttpResponse result = client.execute(get);
@@ -151,6 +154,7 @@ public class LotsOfQueryParametersTestCase {
                 qs.append(URLEncoder.encode(MESSAGE + i, "UTF-8"));
                 qs.append("&");
             }
+            qs.deleteCharAt(qs.length()-1); // delete last useless '&'
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs.toString());
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_PARAMETERS, TEST_MAX_PARAMETERS));
             HttpResponse result = client.execute(get);
