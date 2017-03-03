@@ -325,7 +325,9 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
         ois.defaultReadObject();
         try {
+            hashCodeField.setAccessible(true);
             hashCodeField.setInt(this, calcHashCode(bytes));
+            hashCodeField.setAccessible(false);
         } catch (IllegalAccessException e) {
             throw new IllegalAccessError(e.getMessage());
         }
