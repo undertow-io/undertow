@@ -494,11 +494,23 @@ class ModClusterContainer implements ModClusterController {
             for(Map.Entry<String, VirtualHost> host : hosts.entrySet()) {
                 PathMatcher.PathMatch<VirtualHost.HostEntry> result = host.getValue().match(context);
                 if (result.getValue() != null) {
+                    //ignore default-host
+                    if(host.getKey().equals("default-host"))
+                        continue;
+                    //check if current server can process the request
+                    for(Context hostContext : result.getValue().getContexts()) {
+                        if(hostContext.getNode().getJvmRoute().equals(getJBossNodeName()))
+                            return null;
+                    }
                     return result;
                 }
             }
         }
         return null;
+    }
+
+    static String getJBossNodeName() {
+        return System.getProperty("jboss.node.name");
     }
 
     OptionMap getClientOptions() {
