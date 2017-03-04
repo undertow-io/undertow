@@ -2,6 +2,8 @@ package io.undertow.server.handlers.file;
 
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.server.handlers.resource.PathResourceManager;
+import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.util.ETag;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -67,5 +69,23 @@ public class PathResourceManagerTestCase {
             Files.deleteIfExists(newDir);
         }
 
+    }
+
+    @Test
+    public void testETagFunction() throws Exception {
+        final String fileName = "page.html";
+        final Path rootPath = Paths.get(getClass().getResource(fileName).toURI()).getParent();
+        final ResourceManager resourceManager = PathResourceManager.builder()
+                .setBase(rootPath)
+                .setETagFunction(new PathResourceManager.ETagFunction() {
+                    @Override
+                    public ETag generate(Path path) {
+                        return new ETag(true, path.getFileName().toString());
+                    }
+                })
+                .build();
+        ETag expected = new ETag(true, fileName);
+        ETag actual = resourceManager.getResource("page.html").getETag();
+        Assert.assertEquals(expected, actual);
     }
 }

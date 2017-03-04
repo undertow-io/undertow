@@ -35,12 +35,18 @@ public class PathResource implements RangeAwareResource {
 
     private final Path file;
     private final String path;
+    private final ETag eTag;
     private final PathResourceManager manager;
 
-    public PathResource(final Path file, final PathResourceManager manager, String path) {
+    public PathResource(final Path file, final PathResourceManager manager, String path, ETag eTag) {
         this.file = file;
         this.path = path;
         this.manager = manager;
+        this.eTag = eTag;
+    }
+
+    public PathResource(final Path file, final PathResourceManager manager, String path) {
+        this(file, manager, path, null);
     }
 
     @Override
@@ -64,7 +70,7 @@ public class PathResource implements RangeAwareResource {
 
     @Override
     public ETag getETag() {
-        return null;
+        return eTag;
     }
 
     @Override
