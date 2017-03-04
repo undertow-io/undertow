@@ -38,6 +38,8 @@ public class ContentTypeParsingTestCase {
         Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html; charset=\"UTF-8\"; foo=bar", "charset"));
         Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html; charset=UTF-8 foo=bar", "charset"));
         Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html; badcharset=bad charset=UTF-8 foo=bar", "charset"));
+        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html;charset=UTF-8", "charset"));
+        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html;\tcharset=UTF-8", "charset"));
     }
 
 }

@@ -339,11 +339,7 @@ public final class Headers {
                     whiteSpace = false;
                 } else {
                     keypos = 0;
-                    if(c == ' ') {
-                        whiteSpace = true;
-                    } else {
-                        whiteSpace = false;
-                    }
+                    whiteSpace = c == ' ' || c == ';' || c == '\t';
                 }
                 if (keypos == key.length()) {
                     if (header.charAt(i + 1) == '=') {
