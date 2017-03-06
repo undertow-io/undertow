@@ -86,7 +86,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5005, value = "Cannot remove uploaded file %s")
     void cannotRemoveUploadedFile(Path file);
 
-    @LogMessage(level = ERROR)
+    @LogMessage(level = DEBUG)
     @Message(id = 5006, value = "Connection from %s terminated as request header was larger than %s")
     void requestHeaderWasTooLarge(SocketAddress address, int size);
 
