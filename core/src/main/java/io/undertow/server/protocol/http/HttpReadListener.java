@@ -191,7 +191,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 read = total;
                 if (read > maxRequestSize) {
                     UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
-                    IoUtils.safeClose(connection);
+                    sendBadRequestAndClose(connection.getChannel(), null);
                     return;
                 }
             } while (!state.isComplete());
