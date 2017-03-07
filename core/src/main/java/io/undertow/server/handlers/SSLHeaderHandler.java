@@ -80,20 +80,19 @@ public class SSLHeaderHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         HeaderMap requestHeaders = exchange.getRequestHeaders();
         final String sessionId = requestHeaders.getFirst(SSL_SESSION_ID);
-        if (sessionId != null) {
-            final String cipher = requestHeaders.getFirst(SSL_CIPHER);
-            String clientCert = requestHeaders.getFirst(SSL_CLIENT_CERT);
-            //the proxy client replaces \n with ' '
-            if (clientCert != null && clientCert.length() > 28) {
-                StringBuilder sb = new StringBuilder(clientCert.length() + 1);
-                sb.append(Certificates.BEGIN_CERT);
-                sb.append('\n');
-                sb.append(clientCert.replace(' ', '\n').substring(28, clientCert.length() - 26));//core certificate data
-                sb.append('\n');
-                sb.append(Certificates.END_CERT);
-                clientCert = sb.toString();
-            }
-
+        final String cipher = requestHeaders.getFirst(SSL_CIPHER);
+        String clientCert = requestHeaders.getFirst(SSL_CLIENT_CERT);
+        //the proxy client replaces \n with ' '
+        if (clientCert != null && clientCert.length() > 28) {
+            StringBuilder sb = new StringBuilder(clientCert.length() + 1);
+            sb.append(Certificates.BEGIN_CERT);
+            sb.append('\n');
+            sb.append(clientCert.replace(' ', '\n').substring(28, clientCert.length() - 26));//core certificate data
+            sb.append('\n');
+            sb.append(Certificates.END_CERT);
+            clientCert = sb.toString();
+        }
+        if (clientCert != null || sessionId != null || cipher != null) {
             try {
                 SSLSessionInfo info = new BasicSSLSessionInfo(sessionId, cipher, clientCert);
                 exchange.setRequestScheme(HTTPS);
