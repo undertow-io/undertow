@@ -133,7 +133,8 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
             }
             return sessionIdData;
         } catch (IOException e) {
-            throw new RuntimeException(e); //won't happen
+            //can happen if the session id is invalid
+            return null;
         }
     }
 }
