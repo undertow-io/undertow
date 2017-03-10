@@ -95,6 +95,7 @@ public class ResourceHandler implements HttpHandler {
     private volatile MimeMappings mimeMappings = MimeMappings.DEFAULT;
     private volatile Predicate cachable = Predicates.truePredicate();
     private volatile Predicate allowed = Predicates.truePredicate();
+    private volatile ResourceSupplier resourceSupplier;
     private volatile ResourceManager resourceManager;
     /**
      * If this is set this will be the maximum time (in seconds) the client will cache the resource.
@@ -115,12 +116,22 @@ public class ResourceHandler implements HttpHandler {
      */
     private final HttpHandler next;
 
-    public ResourceHandler(ResourceManager resourceManager) {
-        this(resourceManager, ResponseCodeHandler.HANDLE_404);
+    public ResourceHandler(ResourceManager resourceSupplier) {
+        this(resourceSupplier, ResponseCodeHandler.HANDLE_404);
     }
 
     public ResourceHandler(ResourceManager resourceManager, HttpHandler next) {
+        this.resourceSupplier = new DefaultResourceSupplier(resourceManager);
         this.resourceManager = resourceManager;
+        this.next = next;
+    }
+
+    public ResourceHandler(ResourceSupplier resourceSupplier) {
+        this(resourceSupplier, ResponseCodeHandler.HANDLE_404);
+    }
+
+    public ResourceHandler(ResourceSupplier resourceManager, HttpHandler next) {
+        this.resourceSupplier = resourceManager;
         this.next = next;
     }
 
@@ -191,7 +202,7 @@ public class ResourceHandler implements HttpHandler {
                     if (File.separatorChar == '/' || !exchange.getRelativePath().contains(File.separator)) {
                         //we don't process resources that contain the sperator character if this is not /
                         //this prevents attacks where people use windows path seperators in file URLS's
-                        resource = resourceManager.getResource(canonicalize(exchange.getRelativePath()));
+                        resource = resourceSupplier.getResource(exchange, canonicalize(exchange.getRelativePath()));
                     }
                 } catch (IOException e) {
                     clearCacheHeaders(exchange);
@@ -210,7 +221,7 @@ public class ResourceHandler implements HttpHandler {
                 if (resource.isDirectory()) {
                     Resource indexResource;
                     try {
-                        indexResource = getIndexFiles(resourceManager, resource.getPath(), welcomeFiles);
+                        indexResource = getIndexFiles(exchange, resourceSupplier, resource.getPath(), welcomeFiles);
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
@@ -339,7 +350,7 @@ public class ResourceHandler implements HttpHandler {
         exchange.getResponseHeaders().remove(Headers.EXPIRES);
     }
 
-    private Resource getIndexFiles(ResourceManager resourceManager, final String base, List<String> possible) throws IOException {
+    private Resource getIndexFiles(HttpServerExchange exchange, ResourceSupplier resourceManager, final String base, List<String> possible) throws IOException {
         String realBase;
         if (base.endsWith("/")) {
             realBase = base;
@@ -347,7 +358,7 @@ public class ResourceHandler implements HttpHandler {
             realBase = base + "/";
         }
         for (String possibility : possible) {
-            Resource index = resourceManager.getResource(canonicalize(realBase + possibility));
+            Resource index = resourceManager.getResource(exchange, canonicalize(realBase + possibility));
             if (index != null) {
                 return index;
             }
@@ -409,12 +420,23 @@ public class ResourceHandler implements HttpHandler {
         return this;
     }
 
+    public ResourceSupplier getResourceSupplier() {
+        return resourceSupplier;
+    }
+
+    public ResourceHandler setResourceSupplier(final ResourceSupplier resourceSupplier) {
+        this.resourceSupplier = resourceSupplier;
+        this.resourceManager = null;
+        return this;
+    }
+
     public ResourceManager getResourceManager() {
         return resourceManager;
     }
 
     public ResourceHandler setResourceManager(final ResourceManager resourceManager) {
         this.resourceManager = resourceManager;
+        this.resourceSupplier = new DefaultResourceSupplier(resourceManager);
         return this;
     }
 
@@ -500,6 +522,19 @@ public class ResourceHandler implements HttpHandler {
             ResourceHandler resourceHandler = new ResourceHandler(rm);
             resourceHandler.setDirectoryListingEnabled(allowDirectoryListing);
             return resourceHandler;
+        }
+    }
+
+    private static class DefaultResourceSupplier implements ResourceSupplier {
+        private final ResourceManager resourceManager;
+
+        DefaultResourceSupplier(ResourceManager resourceManager) {
+            this.resourceManager = resourceManager;
+        }
+
+        @Override
+        public Resource getResource(HttpServerExchange exchange, String path) throws IOException {
+            return resourceManager.getResource(path);
         }
     }
 }
