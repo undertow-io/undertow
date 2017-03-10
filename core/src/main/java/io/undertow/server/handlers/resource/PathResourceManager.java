@@ -3,6 +3,7 @@ package io.undertow.server.handlers.resource;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.util.ETag;
 import org.xnio.FileChangeCallback;
 import org.xnio.FileChangeEvent;
 import org.xnio.FileSystemWatcher;
@@ -26,6 +27,13 @@ import java.util.TreeSet;
 public class PathResourceManager implements ResourceManager  {
 
     private static final boolean DEFAULT_CHANGE_LISTENERS_ALLOWED = !Boolean.getBoolean("io.undertow.disable-file-system-watcher");
+    private static final long DEFAULT_TRANSFER_MIN_SIZE = 1024;
+    private static final ETagFunction NULL_ETAG_FUNCTION = new ETagFunction() {
+        @Override
+        public ETag generate(Path path) {
+            return null;
+        }
+    };
 
     private final List<ResourceChangeListener> listeners = new ArrayList<>();
 
@@ -55,10 +63,12 @@ public class PathResourceManager implements ResourceManager  {
      */
     private final TreeSet<String> safePaths = new TreeSet<>();
 
+    private final ETagFunction eTagFunction;
+
     private final boolean allowResourceChangeListeners;
 
     public PathResourceManager(final Path base) {
-        this(base, 1024, true, false, null);
+        this(base, DEFAULT_TRANSFER_MIN_SIZE, true, false, null);
     }
 
     public PathResourceManager(final Path base, long transferMinSize) {
@@ -93,6 +103,7 @@ public class PathResourceManager implements ResourceManager  {
             }
             this.safePaths.addAll(Arrays.asList(safePaths));
         }
+        this.eTagFunction = NULL_ETAG_FUNCTION;
     }
 
     public PathResourceManager(final Path base, long transferMinSize, boolean caseSensitive, boolean followLinks, final String... safePaths) {
@@ -100,29 +111,40 @@ public class PathResourceManager implements ResourceManager  {
     }
 
     public PathResourceManager(final Path base, long transferMinSize, boolean caseSensitive, boolean followLinks, boolean allowResourceChangeListeners, final String... safePaths) {
-        this.allowResourceChangeListeners = allowResourceChangeListeners;
-        if (base == null) {
+        this(builder()
+                .setBase(base)
+                .setTransferMinSize(transferMinSize)
+                .setCaseSensitive(caseSensitive)
+                .setFollowLinks(followLinks)
+                .setAllowResourceChangeListeners(allowResourceChangeListeners)
+                .setSafePaths(safePaths));
+    }
+
+    private PathResourceManager(Builder builder) {
+        this.allowResourceChangeListeners = builder.allowResourceChangeListeners;
+        if (builder.base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
-        String basePath = base.normalize().toAbsolutePath().toString();
+        String basePath = builder.base.normalize().toAbsolutePath().toString();
         if (!basePath.endsWith(File.separator)) {
             basePath = basePath + File.separatorChar;
         }
         this.base = basePath;
-        this.transferMinSize = transferMinSize;
-        this.caseSensitive = caseSensitive;
-        this.followLinks = followLinks;
+        this.transferMinSize = builder.transferMinSize;
+        this.caseSensitive = builder.caseSensitive;
+        this.followLinks = builder.followLinks;
         if (this.followLinks) {
-            if (safePaths == null) {
+            if (builder.safePaths == null) {
                 throw UndertowMessages.MESSAGES.argumentCannotBeNull("safePaths");
             }
-            for (final String safePath : safePaths) {
+            for (final String safePath : builder.safePaths) {
                 if (safePath == null) {
                     throw UndertowMessages.MESSAGES.argumentCannotBeNull("safePaths");
                 }
             }
-            this.safePaths.addAll(Arrays.asList(safePaths));
+            this.safePaths.addAll(Arrays.asList(builder.safePaths));
         }
+        this.eTagFunction = builder.eTagFunction;
     }
 
     public Path getBasePath() {
@@ -340,16 +362,16 @@ public class PathResourceManager implements ResourceManager  {
                     relative = relative.substring(1);
                 }
                 if (relative.equals(compare)) {
-                    return new PathResource(file, this, path);
+                    return new PathResource(file, this, path, eTagFunction.generate(file));
                 }
                 return null;
             } else if (isFileSameCase(file, normalizedFile)) {
-                return new PathResource(file, this, path);
+                return new PathResource(file, this, path, eTagFunction.generate(file));
             } else {
                 return null;
             }
         } else {
-            return new PathResource(file, this, path);
+            return new PathResource(file, this, path, eTagFunction.generate(file));
         }
     }
 
@@ -360,6 +382,74 @@ public class PathResourceManager implements ResourceManager  {
         private SymlinkResult(boolean requiresCheck, Path path) {
             this.requiresCheck = requiresCheck;
             this.path = path;
+        }
+    }
+
+    public interface ETagFunction {
+
+        /**
+         * Generates an {@link ETag} for the provided {@link Path}.
+         *
+         * @param path Path for which to generate an ETag
+         * @return ETag representing the provided path, or null
+         */
+        ETag generate(Path path);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+
+        private Path base;
+        private long transferMinSize = DEFAULT_TRANSFER_MIN_SIZE;
+        private boolean caseSensitive = true;
+        private boolean followLinks = false;
+        private boolean allowResourceChangeListeners = DEFAULT_CHANGE_LISTENERS_ALLOWED;
+        private ETagFunction eTagFunction = NULL_ETAG_FUNCTION;
+        private String[] safePaths;
+
+        private Builder() {
+        }
+
+        public Builder setBase(Path base) {
+            this.base = base;
+            return this;
+        }
+
+        public Builder setTransferMinSize(long transferMinSize) {
+            this.transferMinSize = transferMinSize;
+            return this;
+        }
+
+        public Builder setCaseSensitive(boolean caseSensitive) {
+            this.caseSensitive = caseSensitive;
+            return this;
+        }
+
+        public Builder setFollowLinks(boolean followLinks) {
+            this.followLinks = followLinks;
+            return this;
+        }
+
+        public Builder setAllowResourceChangeListeners(boolean allowResourceChangeListeners) {
+            this.allowResourceChangeListeners = allowResourceChangeListeners;
+            return this;
+        }
+
+        public Builder setETagFunction(ETagFunction eTagFunction) {
+            this.eTagFunction = eTagFunction;
+            return this;
+        }
+
+        public Builder setSafePaths(String[] safePaths) {
+            this.safePaths = safePaths;
+            return this;
+        }
+
+        public ResourceManager build() {
+            return new PathResourceManager(this);
         }
     }
 }
