@@ -171,6 +171,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
                 setExtraBytes(new ImmediatePooledByteBuffer(newBuffer));
             }
         }
+        if(channel.getSourceChannel().isReadResumed()) {
+            channel.getSourceChannel().wakeupReads();
+        }
     }
 
     @Override
