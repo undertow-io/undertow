@@ -162,7 +162,12 @@ public class ProxyConnectionPool implements Closeable {
         for (HostThreadData data : hostThreadData.values()) {
             final ConnectionHolder holder = data.availableConnections.poll();
             if (holder != null) {
-                IoUtils.safeClose(holder.clientConnection);
+                holder.clientConnection.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        IoUtils.safeClose(holder.clientConnection);
+                    }
+                });
             }
         }
     }
