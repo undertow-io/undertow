@@ -69,6 +69,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -178,6 +179,14 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
                 for(ChannelListener<ClientConnection> listener : closeListeners) {
                     listener.handleEvent(HttpClientConnection.this);
+                }
+                HttpClientExchange pending = pendingQueue.poll();
+                while (pending != null) {
+                    pending.setFailed(new ClosedChannelException());
+                    pending = pendingQueue.poll();
+                }
+                if(currentRequest != null) {
+                    currentRequest.setFailed(new ClosedChannelException());
                 }
             }
         });

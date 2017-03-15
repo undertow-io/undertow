@@ -100,6 +100,10 @@ public class Http2ClientConnection implements ClientConnection {
                 for(ChannelListener<ClientConnection> listener : closeListeners) {
                     listener.handleEvent(Http2ClientConnection.this);
                 }
+                for(Map.Entry<Integer, Http2ClientExchange> entry : currentExchanges.entrySet()) {
+                    entry.getValue().failed(new ClosedChannelException());
+                }
+                currentExchanges.clear();
             }
         });
         this.initialUpgradeRequest = initialUpgradeRequest;

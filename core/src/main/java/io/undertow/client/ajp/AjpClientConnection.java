@@ -113,6 +113,14 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 for(ChannelListener<ClientConnection> listener : closeListeners) {
                     listener.handleEvent(AjpClientConnection.this);
                 }
+                AjpClientExchange pending = pendingQueue.poll();
+                while (pending != null) {
+                    pending.setFailed(new ClosedChannelException());
+                    pending = pendingQueue.poll();
+                }
+                if(currentRequest != null) {
+                    currentRequest.setFailed(new ClosedChannelException());
+                }
             }
         });
         connection.getReceiveSetter().set(new ClientReceiveListener());
