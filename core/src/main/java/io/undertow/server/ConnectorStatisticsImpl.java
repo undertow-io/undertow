@@ -64,7 +64,7 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
                     processingTimeUpdater.addAndGet(ConnectorStatisticsImpl.this, elapsed);
                     long oldMax;
                     do {
-                        oldMax = maxProcessingTimeUpdater.get(ConnectorStatisticsImpl.this);
+                        oldMax = maxProcessingTime;
                         if (oldMax >= elapsed) {
                             break;
                         }
@@ -79,32 +79,32 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
 
     @Override
     public long getRequestCount() {
-        return requestCountUpdater.get(this);
+        return requestCount;
     }
 
     @Override
     public long getBytesSent() {
-        return bytesSentUpdater.get(this);
+        return bytesSent;
     }
 
     @Override
     public long getBytesReceived() {
-        return bytesReceivedUpdater.get(this);
+        return bytesReceived;
     }
 
     @Override
     public long getErrorCount() {
-        return errorCountUpdater.get(this);
+        return errorCount;
     }
 
     @Override
     public long getProcessingTime() {
-        return processingTimeUpdater.get(this);
+        return processingTime;
     }
 
     @Override
     public long getMaxProcessingTime() {
-        return maxProcessingTimeUpdater.get(this);
+        return maxProcessingTime;
     }
 
     @Override
