@@ -38,6 +38,7 @@ import io.undertow.util.Methods;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.Cookies;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -157,15 +158,6 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
             return;
         }
-        try {
-            Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
-        } catch (ParameterLimitException e) {
-            //this can happen if max parameters is exceeded
-            UndertowLogger.REQUEST_IO_LOGGER.debug("Failed to set request path", e);
-            exchange.setStatusCode(StatusCodes.BAD_REQUEST);
-            exchange.endExchange();
-            return;
-        }
         SSLSession session = channel.getSslSession();
         if(session != null) {
             connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
@@ -188,6 +180,26 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         }
         if(connectorStatistics != null) {
             connectorStatistics.setup(exchange);
+        }
+        try {
+            Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
+        } catch (ParameterLimitException e) {
+            //this can happen if max parameters is exceeded
+            UndertowLogger.REQUEST_IO_LOGGER.debug("Failed to set request path", e);
+            exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+            exchange.endExchange();
+            return;
+        }
+        // Check if the number of cookies sent exceeded the maximum
+        try {
+            Cookies.parseRequestCookies(connection.getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
+                                        connection.getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
+                                        exchange.getRequestHeaders().get(Headers.COOKIE));
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
+            exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+            exchange.endExchange();
+            return;
         }
 
         //TODO: we should never actually put these into the map in the first place

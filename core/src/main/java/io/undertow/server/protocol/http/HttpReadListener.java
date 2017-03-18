@@ -36,6 +36,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.StringWriteChannelListener;
+import io.undertow.util.Cookies;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -245,6 +246,17 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.invalidHeaders());
                 return;
             }
+
+            // Check if the number of cookies sent exceeded the maximum
+            try {
+                Cookies.parseRequestCookies(connection.getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
+                                            connection.getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
+                                            httpServerExchange.getRequestHeaders().get(Headers.COOKIE));
+            } catch (IllegalStateException | IllegalArgumentException e) {
+                sendBadRequestAndClose(connection.getChannel(), e);
+                return;
+            }
+
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);
