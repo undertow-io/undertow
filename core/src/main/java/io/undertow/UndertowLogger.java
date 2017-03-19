@@ -116,7 +116,7 @@ public interface UndertowLogger extends BasicLogger {
     void ioException(@Cause IOException e);
 
     @LogMessage(level = DEBUG)
-    @Message(id = 5014, value = "Failed to parse HTTP request")
+    @Message(id = 5014, value = "Failed to parse request")
     void failedToParseRequest(@Cause Exception e);
 
     @LogMessage(level = ERROR)

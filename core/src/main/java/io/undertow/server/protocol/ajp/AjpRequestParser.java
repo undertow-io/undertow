@@ -52,6 +52,7 @@ import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.util.TreeMap;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.impl.ExternalAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
@@ -259,6 +260,7 @@ public class AjpRequestParser {
                         try {
                             URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
                         } catch (ParameterLimitException e) {
+                            UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                             state.badRequest = true;
                         }
                     }
@@ -324,6 +326,7 @@ public class AjpRequestParser {
                 } else {
                     state.numHeaders = result.value;
                     if(state.numHeaders > maxHeaders) {
+                        UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders)));
                         state.badRequest = true;
                     }
                 }
@@ -412,6 +415,7 @@ public class AjpRequestParser {
                         try {
                             URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode, maxParameters);
                         } catch (ParameterLimitException e) {
+                            UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                             state.badRequest = true;
                         }
                     } else if (state.currentAttribute.equals(REMOTE_USER)) {
