@@ -193,7 +193,7 @@ public class AjpRequestParser {
                     return;
                 } else {
                     if (result.value != 0x1234) {
-                        throw UndertowMessages.MESSAGES.wrongMagicNumber(result.value);
+                        throw new BadRequestException(UndertowMessages.MESSAGES.wrongMagicNumber(result.value));
                     }
                 }
             }
@@ -228,7 +228,7 @@ public class AjpRequestParser {
                     if (method > 0 && method < 28) {
                         exchange.setRequestMethod(HTTP_METHODS[method]);
                     } else if((method & 0xFF) != 0xFF) {
-                        throw new IllegalArgumentException("Unknown method type " + method);
+                        throw new BadRequestException("Unknown method type " + method);
                     }
                 }
             }
