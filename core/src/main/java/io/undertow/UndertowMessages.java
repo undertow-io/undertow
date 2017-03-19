@@ -32,9 +32,9 @@ import io.undertow.predicate.PredicateBuilder;
 import io.undertow.protocols.http2.HpackException;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.server.protocol.http.HttpRequestParser;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
+import io.undertow.util.BadRequestException;
 
 /**
  * @author Stuart Douglas
@@ -150,7 +150,7 @@ public interface UndertowMessages {
     String authenticationFailed(final String userName);
 
     @Message(id = 39, value = "To many query parameters, cannot have more than %s query parameters")
-    HttpRequestParser.BadRequestException tooManyQueryParameters(int noParams);
+    BadRequestException tooManyQueryParameters(int noParams);
 
     @Message(id = 40, value = "To many headers, cannot have more than %s header")
     String tooManyHeaders(int noParams);
@@ -274,7 +274,7 @@ public interface UndertowMessages {
     IllegalArgumentException notAValidRegularExpressionPattern(String pattern);
 
     @Message(id = 81, value = "Bad request")
-    RuntimeException badRequest();
+    BadRequestException badRequest();
 
     @Message(id = 82, value = "Host %s already registered")
     RuntimeException hostAlreadyRegistered(Object host);

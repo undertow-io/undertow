@@ -35,6 +35,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.URLUtils;
+import io.undertow.util.BadRequestException;
 import org.xnio.OptionMap;
 
 import static io.undertow.util.Headers.ACCEPT_CHARSET_STRING;
@@ -795,7 +796,7 @@ public abstract class HttpRequestParser {
         return true;
     }
 
-    protected void handleAfterVersion(ByteBuffer buffer, ParseState state) {
+    protected void handleAfterVersion(ByteBuffer buffer, ParseState state) throws BadRequestException {
         boolean newLine = state.leftOver == '\n';
         while (buffer.hasRemaining()) {
             final byte next = buffer.get();
@@ -852,12 +853,6 @@ public abstract class HttpRequestParser {
         }
         return results;
 
-    }
-
-    public static class BadRequestException extends Exception {
-        public BadRequestException(String msg) {
-            super(msg);
-        }
     }
 
 }
