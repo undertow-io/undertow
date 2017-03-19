@@ -35,6 +35,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.URLUtils;
+import io.undertow.util.BadRequestException;
 import org.xnio.OptionMap;
 
 import static io.undertow.util.Headers.ACCEPT_CHARSET_STRING;
@@ -337,7 +338,7 @@ public abstract class HttpRequestParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final void handlePath(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) {
+    final void handlePath(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) throws BadRequestException {
         StringBuilder stringBuilder = state.stringBuilder;
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
@@ -428,7 +429,7 @@ public abstract class HttpRequestParser {
         state.urlDecodeRequired = false;
     }
 
-    private void beginQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange, StringBuilder stringBuilder, int parseState, int canonicalPathStart, boolean urlDecodeRequired) {
+    private void beginQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange, StringBuilder stringBuilder, int parseState, int canonicalPathStart, boolean urlDecodeRequired) throws BadRequestException {
         final String path = stringBuilder.toString();
         if (parseState == SECOND_SLASH) {
             exchange.setRequestPath("/");
@@ -467,7 +468,7 @@ public abstract class HttpRequestParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final void handleQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) {
+    final void handleQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) throws BadRequestException {
         StringBuilder stringBuilder = state.stringBuilder;
         int queryParamPos = state.pos;
         int mapCount = state.mapCount;
@@ -547,7 +548,7 @@ public abstract class HttpRequestParser {
     }
 
 
-    final void handlePathParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) {
+    final void handlePathParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) throws BadRequestException {
         StringBuilder stringBuilder = state.stringBuilder;
         int queryParamPos = state.pos;
         int mapCount = state.mapCount;
@@ -795,7 +796,7 @@ public abstract class HttpRequestParser {
         return true;
     }
 
-    protected void handleAfterVersion(ByteBuffer buffer, ParseState state) {
+    protected void handleAfterVersion(ByteBuffer buffer, ParseState state) throws BadRequestException {
         boolean newLine = state.leftOver == '\n';
         while (buffer.hasRemaining()) {
             final byte next = buffer.get();
@@ -852,12 +853,6 @@ public abstract class HttpRequestParser {
         }
         return results;
 
-    }
-
-    public static class BadRequestException extends Exception {
-        public BadRequestException(String msg) {
-            super(msg);
-        }
     }
 
 }

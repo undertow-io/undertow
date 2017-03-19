@@ -58,6 +58,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.URLUtils;
 
 /**
@@ -575,9 +576,4 @@ public class AjpRequestParser {
         OTHER
     }
 
-    public static class BadRequestException extends Exception {
-        public BadRequestException(String msg) {
-            super(msg);
-        }
-    }
 }

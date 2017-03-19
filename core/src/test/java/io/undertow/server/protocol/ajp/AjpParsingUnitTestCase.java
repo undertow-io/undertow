@@ -30,6 +30,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
+import io.undertow.util.BadRequestException;
 
 /**
  * @author Stuart Douglas
@@ -59,7 +60,7 @@ public class AjpParsingUnitTestCase {
 
 
     @Test
-    public void testAjpParsing() throws IOException, AjpRequestParser.BadRequestException {
+    public void testAjpParsing() throws IOException, BadRequestException {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
         HttpServerExchange result = new HttpServerExchange(null);
         final AjpRequestParseState state = new AjpRequestParseState();
@@ -72,7 +73,7 @@ public class AjpParsingUnitTestCase {
     }
 
     @Test
-    public void testByteByByteAjpParsing() throws IOException, AjpRequestParser.BadRequestException {
+    public void testByteByByteAjpParsing() throws IOException, BadRequestException {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
 
         HttpServerExchange result = new HttpServerExchange(null);
