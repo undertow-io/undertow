@@ -104,7 +104,7 @@ public class ChunkedRequestTransferCodingTestCase {
             HttpClientUtils.readResponse(result);
 
             final Random random = new Random();
-            final int seed =  -964339432;
+            final int seed =  random.nextInt();
             System.out.print("Using Seed " + seed);
             random.setSeed(seed);
 
