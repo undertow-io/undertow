@@ -61,7 +61,7 @@ public class ChunkedRequestNotConsumedTestCase {
                 exchange.setResponseContentLength("message".length());
                 exchange.getResponseSender().send("message", new IoCallback() {
                     @Override
-                    public void onComplete(HttpServerExchange exchange, Sender sender) {
+                    public void onComplete(final HttpServerExchange exchange, Sender sender) {
                         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
                             @Override
                             public void run() {
