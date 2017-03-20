@@ -85,21 +85,21 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
             HttpSessionImpl httpSession = servletContext.getSession(notification.getExchange(), false);
             switch (eventType) {
                 case AUTHENTICATED:
-                    if(servletContext.getDeployment().getDeploymentInfo().isChangeSessionIdOnLogin()) {
-                        if (httpSession != null) {
-                            Session session = underlyingSession(httpSession);
-                            if (!httpSession.isNew() &&
-                                    !httpSession.isInvalid() &&
-                                    session.getAttribute(NO_ID_CHANGE_REQUIRED) == null) {
-                                ServletRequestContext src = notification.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-                                src.getOriginalRequest().changeSessionId();
-                            }
-                            if(session.getAttribute(NO_ID_CHANGE_REQUIRED) == null) {
-                                session.setAttribute(NO_ID_CHANGE_REQUIRED, true);
+                    if (isCacheable(notification)) {
+                        if(servletContext.getDeployment().getDeploymentInfo().isChangeSessionIdOnLogin()) {
+                            if (httpSession != null) {
+                                Session session = underlyingSession(httpSession);
+                                if (!httpSession.isNew() &&
+                                        !httpSession.isInvalid() &&
+                                        session.getAttribute(NO_ID_CHANGE_REQUIRED) == null) {
+                                    ServletRequestContext src = notification.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                                    src.getOriginalRequest().changeSessionId();
+                                }
+                                if(session.getAttribute(NO_ID_CHANGE_REQUIRED) == null) {
+                                    session.setAttribute(NO_ID_CHANGE_REQUIRED, true);
+                                }
                             }
                         }
-                    }
-                    if (isCacheable(notification)) {
                         if(httpSession == null) {
                             httpSession = servletContext.getSession(notification.getExchange(), true);
                         }
