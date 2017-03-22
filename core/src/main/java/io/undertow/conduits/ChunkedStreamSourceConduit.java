@@ -188,6 +188,9 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                 if (chunkRemaining == 0) {
                     chunkRemaining = chunkReader.readChunk(buf);
                     if (chunkRemaining <= 0) {
+                        if(buf.hasRemaining()) {
+                            free = false;
+                        }
                         return (int) chunkRemaining;
                     }
                 }
