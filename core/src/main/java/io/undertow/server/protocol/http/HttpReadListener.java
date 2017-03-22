@@ -249,7 +249,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
             // Check if the number of cookies sent exceeded the maximum
             try {
-                Cookies.parseRequestCookies(connection.getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
+                Cookies.parseRequestCookies(connection.getUndertowOptions().get(UndertowOptions.MAX_COOKIES, UndertowOptions.DEFAULT_MAX_COOKIES),
                                             connection.getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
                                             httpServerExchange.getRequestHeaders().get(Headers.COOKIE));
             } catch (IllegalStateException | IllegalArgumentException e) {
