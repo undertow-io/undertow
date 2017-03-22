@@ -161,6 +161,14 @@ public class Connectors {
                 header.append(DateUtils.toOldCookieDateString(expires));
             }
         }
+        if (cookie.isSameSite()) {
+            if (cookie.getSameSiteMode() != null && !cookie.getSameSiteMode().isEmpty()) {
+                header.append("; SameSite=");
+                header.append(cookie.getSameSiteMode());
+            } else {
+                header.append("; SameSite");
+            }
+        }
         return header.toString();
 
     }
@@ -201,6 +209,14 @@ public class Connectors {
         if (cookie.getComment() != null && !cookie.getComment().isEmpty()) {
             header.append("; Comment=");
             header.append(cookie.getComment());
+        }
+        if (cookie.isSameSite()) {
+            if (cookie.getSameSiteMode() != null && !cookie.getSameSiteMode().isEmpty()) {
+                header.append("; SameSite=");
+                header.append(cookie.getSameSiteMode());
+            } else {
+                header.append("; SameSite");
+            }
         }
         return header.toString();
     }
