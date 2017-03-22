@@ -34,6 +34,7 @@ import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.protocol.http2.Http2UpgradeHandler;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
@@ -159,9 +160,14 @@ public final class Undertow {
                     listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), null, openListener));
                 } else {
                     OptionMap undertowOptions = OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap();
+                    boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, false);
                     if (listener.type == ListenerType.HTTP) {
                         HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
-                        openListener.setRootHandler(rootHandler);
+                        HttpHandler handler = rootHandler;
+                        if(http2) {
+                            handler = new Http2UpgradeHandler(handler);
+                        }
+                        openListener.setRootHandler(handler);
                         ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                         OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
                         AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptionsWithOverrides);
@@ -174,7 +180,6 @@ public final class Undertow {
                         HttpOpenListener httpOpenListener = new HttpOpenListener(buffers, undertowOptions);
                         httpOpenListener.setRootHandler(rootHandler);
 
-                        boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, false);
                         if(http2) {
                             AlpnOpenListener alpn = new AlpnOpenListener(buffers, undertowOptions, httpOpenListener);
                             if(http2) {
