@@ -121,7 +121,6 @@ public class Http2ClientTestCase {
     static UndertowHttp2Client createClient(final OptionMap options) {
         return UndertowHttp2Client.getInstance();
     }
-
     /*
     @Test
     public void testSimpleHttp() throws Exception {
@@ -129,7 +128,7 @@ public class Http2ClientTestCase {
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -155,7 +154,6 @@ public class Http2ClientTestCase {
         }
     }
     */
-
     @Test
     public void testVoid() throws Exception {
         //Thread.sleep(100000);
@@ -169,7 +167,7 @@ public class Http2ClientTestCase {
         final CountDownLatch latch = new CountDownLatch(10);
         SSLContext clientSslContext = createSSLContext(loadKeyStore("client.keystore"), loadKeyStore("client.truststore"));
         XnioSsl ssl = new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, clientSslContext);
-        final ClientConnection connection = client.connect(new URI("https://localhost:7778"), worker, ssl, pool, OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(new URI("https://localhost:7778"), worker, ssl, pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -200,13 +198,13 @@ public class Http2ClientTestCase {
     }
     */
 
-    /*
+
     @Test
-    public void testConnectionClose() throws Exception {
+    public void testHttpConnectionClose() throws Exception {
         final UndertowHttp2Client client = createClient();
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
             ClientRequest request = new ClientRequest().setPath("/1324").setMethod(Methods.GET);
             request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
@@ -217,12 +215,12 @@ public class Http2ClientTestCase {
             final ClientResponse response = responses.iterator().next();
             System.out.println(response.getProtocol());
             Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
-            Assert.assertEquals(false, connection.isOpen());
+            Assert.assertEquals(true, connection.isOpen());
         } finally {
             IoUtils.safeClose(connection);
         }
     }
-    */
+
 
     @Test
     public void testHttpsConnectionClose() throws Exception {
@@ -231,7 +229,7 @@ public class Http2ClientTestCase {
         final CountDownLatch latch = new CountDownLatch(1);
         SSLContext clientSslContext = createSSLContext(loadKeyStore("client.keystore"), loadKeyStore("client.truststore"));
         XnioSsl ssl = new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, clientSslContext);
-        final ClientConnection connection = client.connect(new URI("https://localhost:7778"), worker, ssl, pool, OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(new URI("https://localhost:7778"), worker, ssl, pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
             ClientRequest request = new ClientRequest().setPath("/1234").setMethod(Methods.GET);
             request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
