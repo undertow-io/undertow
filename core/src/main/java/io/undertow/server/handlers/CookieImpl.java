@@ -19,6 +19,8 @@
 package io.undertow.server.handlers;
 
 import java.util.Date;
+import java.util.Locale;
+
 import io.undertow.UndertowMessages;
 
 /**
@@ -163,7 +165,7 @@ public class CookieImpl implements Cookie {
     @Override
     public Cookie setSameSiteMode(final String sameSiteMode) {
         if (sameSiteMode != null) {
-            switch (sameSiteMode.toLowerCase()) {
+            switch (sameSiteMode.toLowerCase(Locale.ENGLISH)) {
                 case "strict":
                     this.setSameSite(true);
                     this.sameSiteMode = "Strict";
