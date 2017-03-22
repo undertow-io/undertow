@@ -144,7 +144,7 @@ public class WebsocketStressTestCase {
 
         }
         for (CountDownLatch future : latches) {
-            future.await();
+            future.await(40, TimeUnit.SECONDS);
         }
         for (int t = 0; t < NUM_THREADS; ++t) {
             for (int i = 0; i < NUM_REQUESTS; ++i) {
