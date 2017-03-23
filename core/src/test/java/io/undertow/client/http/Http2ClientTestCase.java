@@ -1,5 +1,6 @@
 package io.undertow.client.http;
 
+import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
@@ -45,8 +46,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Steve Hu
@@ -54,11 +57,14 @@ import java.util.concurrent.CountDownLatch;
 public class Http2ClientTestCase {
     static Undertow server;
 
-    private static final String message = "Hello World!";
+    private static final String responseMessage = "Hello World!";
+    private static final String requestMessage = "Hi";
+
+    private static final String http2 = "HTTP/2.0";
     private static XnioWorker worker;
 
     private static final OptionMap DEFAULT_OPTIONS;
-    private static final HttpHandler SIMPLE_MESSAGE_HANDLER;
+    private static final HttpHandler HTTP2_HANDLER;
     private static final char[] STORE_PASSWORD = "password".toCharArray();
     private static final DebuggingSlicePool pool = new DebuggingSlicePool(new DefaultByteBufferPool(true, 8192 * 3, 1000, 10, 100));
 
@@ -75,19 +81,37 @@ public class Http2ClientTestCase {
 
         DEFAULT_OPTIONS = builder.getMap();
 
-        SIMPLE_MESSAGE_HANDLER = new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                sendMessage(exchange);
-            }
-        };
+        HTTP2_HANDLER = Handlers.routing()
+                .add(Methods.GET, "/", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        sendMessage(exchange);
+                    }
+                })
+                .add(Methods.POST, "/", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        InputStream is = exchange.getInputStream();
+                        if (is != null) {
+                            try {
+                                if (is.available() != -1) {
+                                    String s = new Scanner(is, "UTF-8").useDelimiter("\\A").next();
+                                    Assert.assertEquals(requestMessage, s);
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        sendMessage(exchange);
+                    }
+                });
     }
 
     static void sendMessage(final HttpServerExchange exchange) {
         exchange.setStatusCode(StatusCodes.OK);
-        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, responseMessage.length() + "");
         final Sender sender = exchange.getResponseSender();
-        sender.send(message);
+        sender.send(responseMessage);
     }
 
     @BeforeClass
@@ -97,7 +121,7 @@ public class Http2ClientTestCase {
                 .addHttpListener(7777, "localhost")
                 .addHttpsListener(7778, "localhost", sslContext)
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
-                .setHandler(SIMPLE_MESSAGE_HANDLER)
+                .setHandler(HTTP2_HANDLER)
                 .build();
         server.start();
 
@@ -121,7 +145,7 @@ public class Http2ClientTestCase {
     static UndertowHttp2Client createClient(final OptionMap options) {
         return UndertowHttp2Client.getInstance();
     }
-    /*
+
     @Test
     public void testSimpleHttp() throws Exception {
         final UndertowHttp2Client client = createClient();
@@ -146,20 +170,16 @@ public class Http2ClientTestCase {
 
             Assert.assertEquals(10, responses.size());
             for (final ClientResponse response : responses) {
-                System.out.println(response.getProtocol());
-                Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
+                Assert.assertEquals(http2, response.getProtocol().toString());
+                Assert.assertEquals(responseMessage, response.getAttachment(RESPONSE_BODY));
             }
+            Assert.assertEquals(true, connection.isOpen());
         } finally {
             IoUtils.safeClose(connection);
         }
     }
-    */
-    @Test
-    public void testVoid() throws Exception {
-        //Thread.sleep(100000);
-    }
 
-    /*
+
     @Test
     public void testSimpleHttps() throws Exception {
         final UndertowHttp2Client client = createClient();
@@ -184,9 +204,10 @@ public class Http2ClientTestCase {
 
             Assert.assertEquals(10, responses.size());
             for (final ClientResponse response : responses) {
-                System.out.println(response.getProtocol());
-                Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
+                Assert.assertEquals(http2, response.getProtocol().toString());
+                Assert.assertEquals(responseMessage, response.getAttachment(RESPONSE_BODY));
             }
+            Assert.assertEquals(true, connection.isOpen());
         } finally {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -196,25 +217,46 @@ public class Http2ClientTestCase {
             });
         }
     }
-    */
-
 
     @Test
-    public void testHttpConnectionClose() throws Exception {
+    public void testHttpGet() throws Exception {
         final UndertowHttp2Client client = createClient();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
-            ClientRequest request = new ClientRequest().setPath("/1324").setMethod(Methods.GET);
+            ClientRequest request = new ClientRequest().setPath("/").setMethod(Methods.GET);
             request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
             final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
             request.getRequestHeaders().add(Headers.CONNECTION, Headers.CLOSE.toString());
             connection.sendRequest(request, createClientCallback(responses, latch));
             latch.await();
             final ClientResponse response = responses.iterator().next();
-            System.out.println(response.getProtocol());
-            Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
+            Assert.assertEquals(http2, response.getProtocol().toString());
+            Assert.assertEquals(responseMessage, response.getAttachment(RESPONSE_BODY));
+            Assert.assertEquals(true, connection.isOpen());
+        } finally {
+            IoUtils.safeClose(connection);
+        }
+    }
+
+    @Test
+    public void testHttpPost() throws Exception {
+        final UndertowHttp2Client client = createClient();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        try {
+            ClientRequest request = new ClientRequest().setPath("/").setMethod(Methods.POST);
+            request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+
+            final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
+            request.getRequestHeaders().add(Headers.CONNECTION, Headers.CLOSE.toString());
+            connection.sendRequest(request, createClientCallback(responses, latch));
+            latch.await();
+            final ClientResponse response = responses.iterator().next();
+            Assert.assertEquals(http2, response.getProtocol().toString());
+            Assert.assertEquals(responseMessage, response.getAttachment(RESPONSE_BODY));
             Assert.assertEquals(true, connection.isOpen());
         } finally {
             IoUtils.safeClose(connection);
@@ -223,7 +265,7 @@ public class Http2ClientTestCase {
 
 
     @Test
-    public void testHttpsConnectionClose() throws Exception {
+    public void testHttpsGet() throws Exception {
         final UndertowHttp2Client client = createClient();
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -231,15 +273,15 @@ public class Http2ClientTestCase {
         XnioSsl ssl = new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, clientSslContext);
         final ClientConnection connection = client.connect(new URI("https://localhost:7778"), worker, ssl, pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
-            ClientRequest request = new ClientRequest().setPath("/1234").setMethod(Methods.GET);
+            ClientRequest request = new ClientRequest().setPath("/").setMethod(Methods.GET);
             request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
             final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
             request.getRequestHeaders().add(Headers.CONNECTION, Headers.CLOSE.toString());
             connection.sendRequest(request, createClientCallback(responses, latch));
             latch.await();
             final ClientResponse response = responses.iterator().next();
-            System.out.println(response.getProtocol());
-            Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
+            Assert.assertEquals(http2, response.getProtocol().toString());
+            Assert.assertEquals(responseMessage, response.getAttachment(RESPONSE_BODY));
             Assert.assertEquals(true, connection.isOpen());
         } finally {
             IoUtils.safeClose(connection);
