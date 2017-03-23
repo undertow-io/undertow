@@ -8,7 +8,9 @@ import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
+import io.undertow.client.UndertowClient;
 import io.undertow.client.UndertowHttp2Client;
+import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.DefaultByteBufferPool;
@@ -21,6 +23,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
+import io.undertow.util.StringWriteChannelListener;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -91,18 +94,13 @@ public class Http2ClientTestCase {
                 .add(Methods.POST, "/", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        InputStream is = exchange.getInputStream();
-                        if (is != null) {
-                            try {
-                                if (is.available() != -1) {
-                                    String s = new Scanner(is, "UTF-8").useDelimiter("\\A").next();
-                                    Assert.assertEquals(requestMessage, s);
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                        exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
+                            @Override
+                            public void handle(HttpServerExchange exchange, String requestMessage) {
+                                System.out.println("requestMessage = " + requestMessage);
+                                exchange.getResponseSender().send(responseMessage);
                             }
-                        }
-                        sendMessage(exchange);
+                        });
                     }
                 });
     }
@@ -241,6 +239,78 @@ public class Http2ClientTestCase {
     }
 
     @Test
+    public void testPostRequest() throws Exception {
+        //
+        final UndertowHttp2Client client = createClient();
+
+        final List<String> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(10);
+        final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        try {
+            connection.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < 10; i++) {
+                        final ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath("/");
+                        request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                        request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+                        connection.sendRequest(request, new ClientCallback<ClientExchange>() {
+                            @Override
+                            public void completed(ClientExchange result) {
+                                new StringWriteChannelListener(requestMessage).setup(result.getRequestChannel());
+                                result.setResponseListener(new ClientCallback<ClientExchange>() {
+                                    @Override
+                                    public void completed(ClientExchange result) {
+                                        new StringReadChannelListener(DefaultServer.getBufferPool()) {
+
+                                            @Override
+                                            protected void stringDone(String string) {
+                                                responses.add(string);
+                                                latch.countDown();
+                                            }
+
+                                            @Override
+                                            protected void error(IOException e) {
+                                                e.printStackTrace();
+                                                latch.countDown();
+                                            }
+                                        }.setup(result.getResponseChannel());
+                                    }
+
+                                    @Override
+                                    public void failed(IOException e) {
+                                        e.printStackTrace();
+                                        latch.countDown();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void failed(IOException e) {
+                                e.printStackTrace();
+                                latch.countDown();
+                            }
+                        });
+                    }
+                }
+
+            });
+
+            latch.await(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(10, responses.size());
+            for (final String response : responses) {
+                System.out.println("response = " + response);
+                Assert.assertEquals(responseMessage, response);
+            }
+        } finally {
+            IoUtils.safeClose(connection);
+        }
+    }
+
+    /*
+
+    @Test
     public void testHttpPost() throws Exception {
         final UndertowHttp2Client client = createClient();
 
@@ -249,20 +319,53 @@ public class Http2ClientTestCase {
         try {
             ClientRequest request = new ClientRequest().setPath("/").setMethod(Methods.POST);
             request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+            request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+            connection.sendRequest(request, new ClientCallback<ClientExchange>() {
+                @Override
+                public void completed(ClientExchange result) {
+                    new StringWriteChannelListener(requestMessage).setup(result.getRequestChannel());
+                    result.setResponseListener(new ClientCallback<ClientExchange>() {
+                        @Override
+                        public void completed(ClientExchange result) {
+                            new StringReadChannelListener(DefaultServer.getBufferPool()) {
 
-            final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
-            request.getRequestHeaders().add(Headers.CONNECTION, Headers.CLOSE.toString());
-            connection.sendRequest(request, createClientCallback(responses, latch));
-            latch.await();
-            final ClientResponse response = responses.iterator().next();
-            Assert.assertEquals(http2, response.getProtocol().toString());
-            Assert.assertEquals(responseMessage, response.getAttachment(RESPONSE_BODY));
+                                @Override
+                                protected void stringDone(String string) {
+                                    Assert.assertEquals(responseMessage, string);
+                                    System.out.println("string = " + string);
+                                    latch.countDown();
+                                }
+
+                                @Override
+                                protected void error(IOException e) {
+                                    e.printStackTrace();
+                                    latch.countDown();
+                                }
+                            }.setup(result.getResponseChannel());
+                        }
+
+                        @Override
+                        public void failed(IOException e) {
+                            e.printStackTrace();
+                            latch.countDown();
+                        }
+                    });
+                }
+
+                @Override
+                public void failed(IOException e) {
+                    e.printStackTrace();
+                    latch.countDown();
+                }
+            });
+            latch.await(2, TimeUnit.SECONDS);
+
             Assert.assertEquals(true, connection.isOpen());
         } finally {
             IoUtils.safeClose(connection);
         }
     }
-
+    */
 
     @Test
     public void testHttpsGet() throws Exception {
