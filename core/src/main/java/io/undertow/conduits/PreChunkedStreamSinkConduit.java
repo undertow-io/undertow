@@ -65,7 +65,7 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
     public PreChunkedStreamSinkConduit(final StreamSinkConduit next, final ConduitListener<? super PreChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
         super(next);
         //we don't want the reader to call the finish listener, so we pass null
-        this.chunkReader = new ChunkReader<>(attachable, HttpAttachments.RESPONSE_TRAILERS, null, this);
+        this.chunkReader = new ChunkReader<>(attachable, HttpAttachments.RESPONSE_TRAILERS, this);
         this.finishListener = finishListener;
     }
 

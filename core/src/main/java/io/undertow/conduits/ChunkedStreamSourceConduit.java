@@ -59,6 +59,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     private final HttpServerExchange exchange;
 
     private boolean closed;
+    private boolean finishListenerInvoked;
 
     private long remainingAllowed;
     private final ChunkReader chunkReader;
@@ -96,7 +97,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         this.bufferWrapper = bufferWrapper;
         this.finishListener = finishListener;
         this.remainingAllowed = Long.MIN_VALUE;
-        this.chunkReader = new ChunkReader<>(attachable, HttpAttachments.REQUEST_TRAILERS, finishListener, this);
+        this.chunkReader = new ChunkReader<>(attachable, HttpAttachments.REQUEST_TRAILERS, this);
         this.exchange = exchange;
     }
 
@@ -163,10 +164,14 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
     @Override
     public int read(final ByteBuffer dst) throws IOException {
+        boolean invokeFinishListener = false;
         try {
             long chunkRemaining = chunkReader.getChunkRemaining();
             //we have read the last chunk, we just return EOF
             if (chunkRemaining == -1) {
+                if(!finishListenerInvoked) {
+                    invokeFinishListener = true;
+                }
                 return -1;
             }
             if (closed) {
@@ -190,6 +195,9 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                     if (chunkRemaining <= 0) {
                         if(buf.hasRemaining()) {
                             free = false;
+                        }
+                        if(!finishListenerInvoked && chunkRemaining < 0) {
+                            invokeFinishListener = true;
                         }
                         return (int) chunkRemaining;
                     }
@@ -268,6 +276,10 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                     bufferWrapper.pushBack(pooled);
                 } else {
                     pooled.close();
+                }
+                if(invokeFinishListener) {
+                    finishListenerInvoked = true;
+                    finishListener.handleEvent(this);
                 }
             }
         } catch (IOException | RuntimeException e) {
