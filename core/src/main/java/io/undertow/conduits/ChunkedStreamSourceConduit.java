@@ -274,14 +274,15 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                 } else {
                     pooled.close();
                 }
-                if(invokeFinishListener) {
-                    finishListenerInvoked = true;
-                    finishListener.handleEvent(this);
-                }
             }
         } catch (IOException | RuntimeException e) {
             IoUtils.safeClose(exchange.getConnection());
             throw e;
+        } finally {
+            if(invokeFinishListener) {
+                finishListenerInvoked = true;
+                finishListener.handleEvent(this);
+            }
         }
 
     }
