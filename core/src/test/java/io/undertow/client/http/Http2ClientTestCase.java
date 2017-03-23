@@ -239,13 +239,86 @@ public class Http2ClientTestCase {
     }
 
     @Test
-    public void testPostRequest() throws Exception {
+    public void testHttpPostRequest() throws Exception {
         //
         final UndertowHttp2Client client = createClient();
 
         final List<String> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
         final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        try {
+            connection.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < 10; i++) {
+                        final ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath("/");
+                        request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                        request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+                        connection.sendRequest(request, new ClientCallback<ClientExchange>() {
+                            @Override
+                            public void completed(ClientExchange result) {
+                                new StringWriteChannelListener(requestMessage).setup(result.getRequestChannel());
+                                result.setResponseListener(new ClientCallback<ClientExchange>() {
+                                    @Override
+                                    public void completed(ClientExchange result) {
+                                        new StringReadChannelListener(DefaultServer.getBufferPool()) {
+
+                                            @Override
+                                            protected void stringDone(String string) {
+                                                responses.add(string);
+                                                latch.countDown();
+                                            }
+
+                                            @Override
+                                            protected void error(IOException e) {
+                                                e.printStackTrace();
+                                                latch.countDown();
+                                            }
+                                        }.setup(result.getResponseChannel());
+                                    }
+
+                                    @Override
+                                    public void failed(IOException e) {
+                                        e.printStackTrace();
+                                        latch.countDown();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void failed(IOException e) {
+                                e.printStackTrace();
+                                latch.countDown();
+                            }
+                        });
+                    }
+                }
+
+            });
+
+            latch.await(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(10, responses.size());
+            for (final String response : responses) {
+                System.out.println("response = " + response);
+                Assert.assertEquals(responseMessage, response);
+            }
+        } finally {
+            IoUtils.safeClose(connection);
+        }
+    }
+
+    @Test
+    public void testHttpsPostRequest() throws Exception {
+        //
+        final UndertowHttp2Client client = createClient();
+
+        final List<String> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(10);
+        SSLContext clientSslContext = createSSLContext(loadKeyStore("client.keystore"), loadKeyStore("client.truststore"));
+        XnioSsl ssl = new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, clientSslContext);
+
+        final ClientConnection connection = client.connect(new URI("https://localhost:7778"), worker, ssl, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
