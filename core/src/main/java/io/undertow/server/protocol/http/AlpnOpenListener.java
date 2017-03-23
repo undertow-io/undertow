@@ -216,7 +216,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         final SslConduit sslConduit = UndertowXnioSsl.getSslConduit((SslConnection) channel);
         final SSLEngine sslEngine = sslConduit.getSSLEngine();
         if (!engineSupportsHTTP2(sslEngine)) {
-            UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however %s is not present, falling back to default protocol", REQUIRED_CIPHER);
+            UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however %s is not present or TLS1.2 is not enabled, falling back to default protocol", REQUIRED_CIPHER);
             if (fallbackProtocol != null) {
                 ListenerEntry listener = listeners.get(fallbackProtocol);
                 if (listener != null) {
