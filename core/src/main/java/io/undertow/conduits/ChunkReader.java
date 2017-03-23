@@ -18,20 +18,19 @@
 
 package io.undertow.conduits;
 
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
+import static org.xnio.Bits.longBitMask;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import org.xnio.conduits.Conduit;
 import io.undertow.UndertowMessages;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
-import org.xnio.conduits.Conduit;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreSet;
-import static org.xnio.Bits.longBitMask;
 
 /**
  * Utility class for reading chunked streams.
@@ -57,13 +56,11 @@ class ChunkReader<T extends Conduit> {
      */
     private TrailerParser trailerParser;
 
-    private final ConduitListener<? super T> finishListener;
     private final T conduit;
 
-    ChunkReader(final Attachable attachable, final AttachmentKey<HeaderMap> trailerAttachmentKey, ConduitListener<? super T> finishListener, T conduit) {
+    ChunkReader(final Attachable attachable, final AttachmentKey<HeaderMap> trailerAttachmentKey, T conduit) {
         this.attachable = attachable;
         this.trailerAttachmentKey = trailerAttachmentKey;
-        this.finishListener = finishListener;
         this.conduit = conduit;
         this.state = FLAG_READING_LENGTH;
     }
@@ -143,12 +140,6 @@ class ChunkReader<T extends Conduit> {
             return chunkRemaining;
         } finally {
             state = newVal | chunkRemaining;
-
-            if (allAreClear(oldVal, FLAG_FINISHED) && allAreSet(newVal, FLAG_FINISHED)) {
-                if (finishListener != null) {
-                    finishListener.handleEvent(conduit);
-                }
-            }
         }
     }
 
@@ -156,14 +147,14 @@ class ChunkReader<T extends Conduit> {
         if (anyAreSet(state, FLAG_FINISHED)) {
             return -1;
         }
-        if(anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
+        if (anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
             return 0;
         }
         return state & MASK_COUNT;
     }
 
     public void setChunkRemaining(final long remaining) {
-        if (remaining < 0  || anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
+        if (remaining < 0 || anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
             return;
         }
         long old = state;
