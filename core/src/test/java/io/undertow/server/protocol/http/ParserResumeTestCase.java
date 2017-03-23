@@ -42,7 +42,7 @@ public class ParserResumeTestCase {
     public static final String DATA = "GET http://www.somehost.net/apath+with+spaces%20and%20I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n?key1=value1&key2=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
     public static final HttpRequestParser PARSER = HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
 
-    final ParseState context = new ParseState();
+    final ParseState context = new ParseState(10);
     @Test
     public void testMethodSplit() {
         byte[] in = DATA.getBytes();

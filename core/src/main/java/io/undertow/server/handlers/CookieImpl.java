@@ -19,6 +19,9 @@
 package io.undertow.server.handlers;
 
 import java.util.Date;
+import java.util.Locale;
+
+import io.undertow.UndertowMessages;
 
 /**
  * @author Stuart Douglas
@@ -36,6 +39,8 @@ public class CookieImpl implements Cookie {
     private boolean httpOnly;
     private int version = 0;
     private String comment;
+    private boolean sameSite;
+    private String sameSiteMode;
 
 
     public CookieImpl(final String name, final String value) {
@@ -138,6 +143,41 @@ public class CookieImpl implements Cookie {
 
     public Cookie setComment(final String comment) {
         this.comment = comment;
+        return this;
+    }
+
+    @Override
+    public boolean isSameSite() {
+        return sameSite;
+    }
+
+    @Override
+    public Cookie setSameSite(final boolean sameSite) {
+        this.sameSite = sameSite;
+        return this;
+    }
+
+    @Override
+    public String getSameSiteMode() {
+        return sameSiteMode;
+    }
+
+    @Override
+    public Cookie setSameSiteMode(final String sameSiteMode) {
+        if (sameSiteMode != null) {
+            switch (sameSiteMode.toLowerCase(Locale.ENGLISH)) {
+                case "strict":
+                    this.setSameSite(true);
+                    this.sameSiteMode = "Strict";
+                    break;
+                case "lax":
+                    this.setSameSite(true);
+                    this.sameSiteMode = "Lax";
+                    break;
+                default:
+                    throw UndertowMessages.MESSAGES.invalidSameSiteMode(sameSiteMode);
+            }
+        }
         return this;
     }
 }

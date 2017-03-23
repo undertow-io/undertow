@@ -69,4 +69,20 @@ public interface Cookie {
     String getComment();
 
     Cookie setComment(final String comment);
+
+    default boolean isSameSite() {
+        return false;
+    }
+
+    default Cookie setSameSite(final boolean sameSite) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    default String getSameSiteMode() {
+        return null;
+    }
+
+    default Cookie setSameSiteMode(final String sameSiteMode) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 }
