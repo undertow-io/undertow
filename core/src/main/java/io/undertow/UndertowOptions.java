@@ -271,14 +271,14 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_AJP_PACKET_SIZE = Option.simple(UndertowOptions.class, "MAX_AJP_PACKET_SIZE", Integer.class);
 
-    public static int DEFAULT_MAX_CACHED_HEADER_SIZE = 150;
+    public static final int DEFAULT_MAX_CACHED_HEADER_SIZE = 150;
 
     /**
      * The maximum size of a header name+value combo that is cached in the per connection cache. Defaults to 150
      */
     public static final Option<Integer> MAX_CACHED_HEADER_SIZE = Option.simple(UndertowOptions.class, "MAX_CACHED_HEADER_SIZE", Integer.class);
 
-    public static int DEFAULT_HTTP_HEADERS_CACHE_SIZE = 15;
+    public static final int DEFAULT_HTTP_HEADERS_CACHE_SIZE = 15;
 
     /**
      * The maximum number of headers that are cached per connection. Defaults to 15. If this is set to zero the cache is disabled.
