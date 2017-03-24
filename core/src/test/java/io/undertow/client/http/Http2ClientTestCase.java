@@ -8,7 +8,6 @@ import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
-import io.undertow.client.UndertowClient;
 import io.undertow.client.UndertowHttp2Client;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
@@ -49,7 +48,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.util.List;
-import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -96,8 +94,8 @@ public class Http2ClientTestCase {
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
                             @Override
-                            public void handle(HttpServerExchange exchange, String requestMessage) {
-                                System.out.println("requestMessage = " + requestMessage);
+                            public void handle(HttpServerExchange exchange, String message) {
+                                Assert.assertEquals(requestMessage, message);
                                 exchange.getResponseSender().send(responseMessage);
                             }
                         });
@@ -300,7 +298,6 @@ public class Http2ClientTestCase {
 
             Assert.assertEquals(10, responses.size());
             for (final String response : responses) {
-                System.out.println("response = " + response);
                 Assert.assertEquals(responseMessage, response);
             }
         } finally {
@@ -373,7 +370,6 @@ public class Http2ClientTestCase {
 
             Assert.assertEquals(10, responses.size());
             for (final String response : responses) {
-                System.out.println("response = " + response);
                 Assert.assertEquals(responseMessage, response);
             }
         } finally {
@@ -381,64 +377,6 @@ public class Http2ClientTestCase {
         }
     }
 
-    /*
-
-    @Test
-    public void testHttpPost() throws Exception {
-        final UndertowHttp2Client client = createClient();
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection = client.connect(new URI("http://localhost:7777"), worker, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
-        try {
-            ClientRequest request = new ClientRequest().setPath("/").setMethod(Methods.POST);
-            request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
-            request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
-            connection.sendRequest(request, new ClientCallback<ClientExchange>() {
-                @Override
-                public void completed(ClientExchange result) {
-                    new StringWriteChannelListener(requestMessage).setup(result.getRequestChannel());
-                    result.setResponseListener(new ClientCallback<ClientExchange>() {
-                        @Override
-                        public void completed(ClientExchange result) {
-                            new StringReadChannelListener(DefaultServer.getBufferPool()) {
-
-                                @Override
-                                protected void stringDone(String string) {
-                                    Assert.assertEquals(responseMessage, string);
-                                    System.out.println("string = " + string);
-                                    latch.countDown();
-                                }
-
-                                @Override
-                                protected void error(IOException e) {
-                                    e.printStackTrace();
-                                    latch.countDown();
-                                }
-                            }.setup(result.getResponseChannel());
-                        }
-
-                        @Override
-                        public void failed(IOException e) {
-                            e.printStackTrace();
-                            latch.countDown();
-                        }
-                    });
-                }
-
-                @Override
-                public void failed(IOException e) {
-                    e.printStackTrace();
-                    latch.countDown();
-                }
-            });
-            latch.await(2, TimeUnit.SECONDS);
-
-            Assert.assertEquals(true, connection.isOpen());
-        } finally {
-            IoUtils.safeClose(connection);
-        }
-    }
-    */
 
     @Test
     public void testHttpsGet() throws Exception {
