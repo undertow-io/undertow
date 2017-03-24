@@ -787,8 +787,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     @Override
     public void close() throws IOException {
-        if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
-            UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Channel %s is being closed", this);
+        if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+            UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Channel %s is being closed", this);
         }
         safeClose(channel);
         if(readData != null) {

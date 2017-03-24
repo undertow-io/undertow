@@ -749,8 +749,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             return;
         }
         thisGoneAway = true;
-        if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
-            UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Sending goaway on channel %s", this);
+        if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+            UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Sending goaway on channel %s", this);
         }
         Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, status, lastGoodStreamId);
         try {
