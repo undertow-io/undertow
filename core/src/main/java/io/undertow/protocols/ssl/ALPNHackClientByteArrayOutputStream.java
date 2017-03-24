@@ -62,9 +62,18 @@ class ALPNHackClientByteArrayOutputStream extends ByteArrayOutputStream {
                     }
                 } else {
                     newData = new byte[len];
-                    System.arraycopy(b, 0, newData, 0, len);
+                    System.arraycopy(b, off, newData, 0, len);
                 }
                 ALPNHackSSLEngine.regenerateHashes(sslEngine, this, sentClientHello, newData);
+                for(int i = 0; i < sentClientHello.length; ++i) {
+                    String s = Integer.toHexString(sentClientHello[i] & 0xFF);
+                    System.out.print(((s.length() == 1? ("0" + s) : s) + " "));
+                }
+                System.out.println();
+                for(int i = 0; i < newData.length; ++i) {
+                    String s = Integer.toHexString(newData[i] & 0xFF);
+                    System.out.print(((s.length() == 1? ("0" + s) : s) + " "));
+                }
                 return;
             }
         }
