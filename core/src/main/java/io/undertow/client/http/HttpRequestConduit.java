@@ -713,4 +713,11 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     public XnioWorker getWorker() {
         return next.getWorker();
     }
+
+    public void freeBuffers() {
+        if(pooledBuffer != null) {
+            pooledBuffer.close();
+            pooledBuffer = null;
+        }
+    }
 }
