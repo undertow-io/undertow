@@ -227,7 +227,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         }
 
 
-        ALPNProvider provider = alpnManager.getProvider(sslEngine);
+        final ALPNProvider provider = alpnManager.getProvider(sslEngine);
         if (provider == null) {
             if (fallbackProtocol != null) {
                 ListenerEntry listener = listeners.get(fallbackProtocol);
@@ -241,10 +241,13 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
             return;
         }
 
-        SSLEngine newEngine = provider.setProtocols(sslEngine, protocols);
-        if (newEngine != sslEngine) {
-            sslConduit.setSslEngine(newEngine);
-        }
+        final SSLEngine newEngine = provider.setProtocols(sslEngine, protocols);
+        sslConduit.setSslEngine(new ALPNLimitingSSLEngine(newEngine, new Runnable() {
+            @Override
+            public void run() {
+                provider.setProtocols(newEngine, new String[]{fallbackProtocol});
+            }
+        }));
         final AlpnConnectionListener potentialConnection = new AlpnConnectionListener(channel, newEngine, provider);
         channel.getSourceChannel().setReadListener(potentialConnection);
         potentialConnection.handleEvent(channel.getSourceChannel());

@@ -52,6 +52,7 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     private ClientResponse response;
     private ClientResponse continueResponse;
     private IOException failedReason;
+    private HttpRequestConduit requestConduit;
 
     private int state = 0;
     private static final int REQUEST_TERMINATED = 1;
@@ -70,6 +71,10 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
             }
         }
         this.requiresContinue = reqContinue;
+    }
+
+    public void setRequestConduit(HttpRequestConduit requestConduit) {
+        this.requestConduit = requestConduit;
     }
 
     void terminateRequest() {
@@ -147,6 +152,9 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
         if (responseCallback != null) {
             responseCallback.failed(e);
             responseCallback = null;
+        }
+        if(requestConduit != null) {
+            requestConduit.freeBuffers();
         }
     }
 

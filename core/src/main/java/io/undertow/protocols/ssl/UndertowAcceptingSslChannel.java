@@ -19,6 +19,7 @@
 package io.undertow.protocols.ssl;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -37,6 +38,8 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.SslConnection;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -49,6 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 
 import static org.xnio._private.Messages.msg;
 
@@ -56,6 +60,19 @@ import static org.xnio._private.Messages.msg;
  * @author Stuart Douglas
  */
 class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
+
+    static final Method USE_CIPHER_SUITES_METHOD;
+
+    static {
+        Method method = null;
+        try {
+            method = SSLParameters.class.getDeclaredMethod("setUseCipherSuitesOrder", boolean.class);
+            method.setAccessible(true);
+        } catch (NoSuchMethodException e) {
+        }
+        USE_CIPHER_SUITES_METHOD = method;
+    }
+
     private final UndertowXnioSsl ssl;
     private final AcceptingChannel<? extends StreamConnection> tcpServer;
 
@@ -76,6 +93,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
     private final ChannelListener.Setter<AcceptingChannel<SslConnection>> acceptSetter;
     protected final boolean startTls;
     protected final ByteBufferPool applicationBufferPool;
+    private final boolean useCipherSuitesOrder;
 
     UndertowAcceptingSslChannel(final UndertowXnioSsl ssl, final AcceptingChannel<? extends StreamConnection> tcpServer, final OptionMap optionMap, final ByteBufferPool applicationBufferPool, final boolean startTls) {
         this.tcpServer = tcpServer;
@@ -93,6 +111,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         closeSetter = ChannelListeners.<AcceptingChannel<SslConnection>>getDelegatingSetter(tcpServer.getCloseSetter(), this);
         //noinspection ThisEscapedInObjectConstruction
         acceptSetter = ChannelListeners.<AcceptingChannel<SslConnection>>getDelegatingSetter(tcpServer.getAcceptSetter(), this);
+        useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, false);
     }
 
     private static final Set<Option<?>> SUPPORTED_OPTIONS = Option.setBuilder()
@@ -140,6 +159,16 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         try {
             final InetSocketAddress peerAddress = tcpConnection.getPeerAddress(InetSocketAddress.class);
             final SSLEngine engine = ssl.getSslContext().createSSLEngine(getHostNameNoResolve(peerAddress), peerAddress.getPort());
+
+            if(USE_CIPHER_SUITES_METHOD != null && useCipherSuitesOrder) {
+                SSLParameters sslParameters = engine.getSSLParameters();
+                try {
+                    USE_CIPHER_SUITES_METHOD.invoke(sslParameters, true);
+                    engine.setSSLParameters(sslParameters);
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    UndertowLogger.ROOT_LOGGER.failedToUseServerOrder(e);
+                }
+            }
             final boolean clientMode = useClientMode != 0;
             engine.setUseClientMode(clientMode);
             if (!clientMode) {

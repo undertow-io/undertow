@@ -378,7 +378,9 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
         ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
         StreamSinkConduit conduit = originalSinkConduit;
-        conduit = new HttpRequestConduit(conduit, bufferPool, request);
+        HttpRequestConduit httpRequestConduit = new HttpRequestConduit(conduit, bufferPool, request);
+        httpClientExchange.setRequestConduit(httpRequestConduit);
+        conduit = httpRequestConduit;
 
         String fixedLengthString = request.getRequestHeaders().getFirst(CONTENT_LENGTH);
         String transferEncodingString = request.getRequestHeaders().getLast(TRANSFER_ENCODING);

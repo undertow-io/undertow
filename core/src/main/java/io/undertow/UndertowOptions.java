@@ -298,6 +298,11 @@ public class UndertowOptions {
      */
     public static final Option<Integer> HTTP_HEADERS_CACHE_SIZE = Option.simple(UndertowOptions.class, "HTTP_HEADERS_CACHE_SIZE", Integer.class);
 
+    /**
+     * If the SSLEngine should prefer the servers cipher version. Only applicable on JDK8+.
+     */
+    public static final Option<Boolean> SSL_USER_CIPHER_SUITES_ORDER = Option.simple(UndertowOptions.class, "SSL_USER_CIPHER_SUITES_ORDER", Boolean.class);
+
     private UndertowOptions() {
 
     }

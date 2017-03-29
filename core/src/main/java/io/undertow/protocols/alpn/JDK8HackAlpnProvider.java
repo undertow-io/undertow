@@ -38,7 +38,7 @@ public class JDK8HackAlpnProvider implements ALPNProvider {
 
     @Override
     public SSLEngine setProtocols(SSLEngine engine, String[] protocols) {
-        ALPNHackSSLEngine newEngine = new ALPNHackSSLEngine(engine);
+        ALPNHackSSLEngine newEngine = engine instanceof ALPNHackSSLEngine ? (ALPNHackSSLEngine) engine : new ALPNHackSSLEngine(engine);
         newEngine.setApplicationProtocols(Arrays.asList(protocols));
         return newEngine;
     }
