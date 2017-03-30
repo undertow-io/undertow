@@ -303,6 +303,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         current = new SSLInformationAssociationHandler(current);
 
         final SecurityPathMatches securityPathMatches = buildSecurityConstraints();
+        securityPathMatches.logWarningsAboutUncoveredMethods();
         current = new ServletAuthenticationCallHandler(current);
 
         for(HandlerWrapper wrapper : deploymentInfo.getSecurityWrappers()) {

@@ -21,6 +21,7 @@ package io.undertow.servlet;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Date;
+import java.util.Set;
 import javax.servlet.ServletException;
 import javax.servlet.UnavailableException;
 
@@ -32,6 +33,7 @@ import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 
 import static org.jboss.logging.Logger.Level.ERROR;
+import static org.jboss.logging.Logger.Level.WARN;
 
 /**
  * log messages start at 15000
@@ -120,4 +122,8 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 15019, value = "Failed to destroy %s")
     void failedToDestroy(Object object, @Cause Exception e);
+
+    @LogMessage(level = WARN)
+    @Message(id = 15020, value = "Path %s is secured for some HTTP methods, however it is not secured for %s")
+    void unsecuredMethodsOnPath(String path, Set<String> missing);
 }
