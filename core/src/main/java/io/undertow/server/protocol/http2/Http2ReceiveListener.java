@@ -145,6 +145,11 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setProtocol(Protocols.HTTP_2_0);
         exchange.setRequestMethod(Methods.fromString(exchange.getRequestHeaders().getFirst(METHOD)));
         exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
+        if(!Connectors.areRequestHeadersValid(exchange.getRequestHeaders())) {
+            UndertowLogger.REQUEST_IO_LOGGER.debugf("Invalid headers in HTTP/2 request, closing connection. Remote peer %s", connection.getPeerAddress());
+            channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
+            return;
+        }
 
         final String path = exchange.getRequestHeaders().getFirst(PATH);
         if(path == null || path.isEmpty()) {
