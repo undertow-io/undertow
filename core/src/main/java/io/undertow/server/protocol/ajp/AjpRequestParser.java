@@ -55,6 +55,7 @@ import java.util.TreeMap;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.impl.ExternalAuthenticationMechanism;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -345,6 +346,7 @@ public class AjpRequestParser {
                             state.currentHeader = result.header;
                         } else {
                             state.currentHeader = HttpString.tryFromString(result.value);
+                            Connectors.verifyToken(state.currentHeader);
                         }
                     }
                     StringHolder result = parseString(buf, state, StringType.OTHER);
@@ -423,7 +425,9 @@ public class AjpRequestParser {
                     } else if (state.currentAttribute.equals(AUTH_TYPE)) {
                         exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_AUTHENTICATION_TYPE, result);
                     } else if (state.currentAttribute.equals(STORED_METHOD)) {
-                        exchange.setRequestMethod(new HttpString(result));
+                        HttpString requestMethod = new HttpString(result);
+                        Connectors.verifyToken(requestMethod);
+                        exchange.setRequestMethod(requestMethod);
                     } else if (state.currentAttribute.equals(AJP_REMOTE_PORT)) {
                         state.remotePort = Integer.parseInt(result);
                     } else if (state.currentAttribute.equals(SSL_SESSION)) {

@@ -231,6 +231,11 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 //so we just suspend every time (the overhead is likely much less than the general SSL overhead anyway)
                 channel.suspendReads();
             }
+
+            if(!Connectors.areRequestHeadersValid(httpServerExchange.getRequestHeaders())) {
+                sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.invalidHeaders());
+                return;
+            }
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);

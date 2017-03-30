@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -35,6 +37,7 @@ import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import junit.textui.TestRunner;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -77,7 +80,7 @@ public class FormDataParserTestCase {
                         while (it.hasNext()) {
                             String fd = it.next();
                             for (FormData.FormValue val : data.get(fd)) {
-                                exchange.getResponseHeaders().add(new HttpString(fd), val.getValue());
+                                exchange.getResponseHeaders().add(new HttpString("res"), fd + ":" + val.getValue());
                             }
                         }
                     }
@@ -100,7 +103,7 @@ public class FormDataParserTestCase {
                     while (it.hasNext()) {
                         String fd = it.next();
                         for (FormData.FormValue val : data.get(fd)) {
-                            exchange.getResponseHeaders().add(new HttpString(fd), val.getValue());
+                            exchange.getResponseHeaders().add(new HttpString("res"), fd + ":" + val.getValue());
                         }
                     }
                 } catch (IOException e) {
@@ -144,8 +147,15 @@ public class FormDataParserTestCase {
     }
 
     private void checkResult(final List<NameValuePair> data, final HttpResponse result) {
+        Map<String, String> res = new HashMap<>();
+        for(Header d : result.getHeaders("res")) {
+            String[] split = d.getValue().split(":");
+            res.put(split[0], split.length == 1 ? "" : split[1]);
+        }
+
+
         for (NameValuePair vp : data) {
-            Assert.assertEquals(vp.getValue() == null ? "" : vp.getValue(), result.getHeaders(vp.getName())[0].getValue());
+            Assert.assertEquals(vp.getValue() == null ? "" : vp.getValue(), res.get(vp.getName()));
         }
     }
 

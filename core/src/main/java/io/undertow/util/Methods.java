@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.undertow.server.Connectors;
+
 /**
  * NOTE: If you add a new method here you must also add it to {@link io.undertow.server.protocol.http.HttpRequestParser}
  *
@@ -135,7 +137,9 @@ public final class Methods {
     public static HttpString fromString(String method) {
         HttpString res = METHODS.get(method);
         if(res == null) {
-            return new HttpString(method);
+            HttpString httpString = new HttpString(method);
+            Connectors.verifyToken(httpString);
+            return httpString;
         }
         return res;
     }

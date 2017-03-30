@@ -448,4 +448,13 @@ public interface UndertowMessages {
 
     @Message(id = 149, value = "HttpString is not allowed to contain newlines. value: %s")
     IllegalArgumentException newlineNotSupportedInHttpString(String value);
+
+    @Message(id = 163, value = "Invalid token %s")
+    IllegalArgumentException invalidToken(byte c);
+
+    @Message(id = 164, value = "Request contained invalid headers")
+    IllegalArgumentException invalidHeaders();
+
+    @Message(id = 165, value = "Invalid character %s in request-target")
+    String invalidCharacterInRequestTarget(char next);
 }

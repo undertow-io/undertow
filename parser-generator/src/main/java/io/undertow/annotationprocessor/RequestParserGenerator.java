@@ -32,6 +32,7 @@ public class RequestParserGenerator extends AbstractParserGenerator {
     public static final String PARSE_STATE_CLASS = "io.undertow.server.protocol.http.ParseState";
     public static final String HTTP_EXCHANGE_CLASS = "io.undertow.server.HttpServerExchange";
     public static final String HTTP_EXCHANGE_DESCRIPTOR = "Lio/undertow/server/HttpServerExchange;";
+    private static final String CONNECTORS_CLASS = "io.undertow.server.Connectors";
 
 
     //parsing states
@@ -66,6 +67,8 @@ public class RequestParserGenerator extends AbstractParserGenerator {
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(PARSE_STATE_VAR);
             c.swap();
+            c.dup();
+            c.invokestatic(CONNECTORS_CLASS, "verifyToken", "(" + HTTP_STRING_DESCRIPTOR + ")V");
             c.putfield(parseStateClass, "nextHeader", HTTP_STRING_DESCRIPTOR);
         }
 
@@ -150,6 +153,8 @@ public class RequestParserGenerator extends AbstractParserGenerator {
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(HTTP_RESULT);
             c.swap();
+            c.dup();
+            c.invokestatic(CONNECTORS_CLASS, "verifyToken", "(" + HTTP_STRING_DESCRIPTOR + ")V");
             c.invokevirtual(resultClass, "setRequestMethod", "(" + HTTP_STRING_DESCRIPTOR + ")" + HTTP_EXCHANGE_DESCRIPTOR);
             c.pop();
         }
