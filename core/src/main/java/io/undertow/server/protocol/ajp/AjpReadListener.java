@@ -238,6 +238,10 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 if(connectorStatistics != null) {
                     connectorStatistics.setup(httpServerExchange);
                 }
+                if(!Connectors.areRequestHeadersValid(httpServerExchange.getRequestHeaders())) {
+                    oldState.badRequest = true;
+                    UndertowLogger.REQUEST_IO_LOGGER.debugf("Invalid AJP request from %s, request contained invalid headers", connection.getPeerAddress());
+                }
 
                 if(oldState.badRequest) {
                     httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);

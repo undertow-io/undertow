@@ -167,12 +167,36 @@ public abstract class HttpRequestParser {
     private final String charset;
     private final int maxCachedHeaderSize;
 
+    private static final boolean[] ALLOWED_TARGET_CHARACTER = new boolean[256];
+
     static {
         try {
             HTTP = "HTTP/1.".getBytes("ASCII");
             HTTP_LENGTH = HTTP.length;
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
+        }
+        for(int i = 0; i < 256; ++i) {
+            if(i < 32 || i > 126) {
+                ALLOWED_TARGET_CHARACTER[i] = false;
+            } else {
+                switch ((char)i) {
+                    case '\"':
+                    case '#':
+                    case '<':
+                    case '>':
+                    case '\\':
+                    case '^':
+                    case '`':
+                    case '{':
+                    case '|':
+                    case '}':
+                        ALLOWED_TARGET_CHARACTER[i] = false;
+                        break;
+                    default:
+                        ALLOWED_TARGET_CHARACTER[i] = true;
+                }
+            }
         }
     }
 
@@ -348,6 +372,9 @@ public abstract class HttpRequestParser {
 
         while (buffer.hasRemaining()) {
             char next = (char) (buffer.get() & 0xFF);
+            if(!ALLOWED_TARGET_CHARACTER[next]) {
+                throw new BadRequestException(UndertowMessages.MESSAGES.invalidCharacterInRequestTarget(next));
+            }
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();

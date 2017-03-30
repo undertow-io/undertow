@@ -241,6 +241,10 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     return;
                 }
             }
+            if(!Connectors.areRequestHeadersValid(httpServerExchange.getRequestHeaders())) {
+                sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.invalidHeaders());
+                return;
+            }
             Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);

@@ -513,4 +513,16 @@ public interface UndertowMessages {
 
     @Message(id = 161, value = "HTTP/2 header block is too large")
     String headerBlockTooLarge();
+
+    @Message(id = 162, value = "Same-site attribute %s is invalid. It must be Strict or Lax")
+    IllegalArgumentException invalidSameSiteMode(String mode);
+
+    @Message(id = 163, value = "Invalid token %s")
+    IllegalArgumentException invalidToken(byte c);
+
+    @Message(id = 164, value = "Request contained invalid headers")
+    IllegalArgumentException invalidHeaders();
+
+    @Message(id = 165, value = "Invalid character %s in request-target")
+    String invalidCharacterInRequestTarget(char next);
 }
