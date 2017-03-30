@@ -513,22 +513,22 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         } else {
             StringBuilder sb = new StringBuilder(super.testName(method));
             if (isProxy()) {
-                sb.append("{proxy}");
+                sb.append("[proxy]");
             }
             if (ajp) {
-                sb.append("{ajp}");
+                sb.append("[ajp]");
             }
             if (https) {
-                sb.append("{https}");
+                sb.append("[https]");
             }
             if (h2) {
-                sb.append("{http2}");
+                sb.append("[http2]");
             }
             if (h2c) {
-                sb.append("{http2-clear}");
+                sb.append("[http2-clear]");
             }
             if (h2cUpgrade) {
-                sb.append("{http2-clear-upgrade}");
+                sb.append("[http2-clear-upgrade]");
             }
             return sb.toString();
         }
