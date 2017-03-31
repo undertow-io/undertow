@@ -189,7 +189,6 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
      */
     @Test
     public void testDigestSuccess() throws Exception {
-        setAuthenticationChain();
         _testDigestSuccess();
     }
 
@@ -248,7 +247,6 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
      */
     @Test
     public void testBadUsername() throws Exception {
-        setAuthenticationChain();
         _testBadUsername();
     }
 
@@ -290,7 +288,6 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
      */
     @Test
     public void testBadPassword() throws Exception {
-        setAuthenticationChain();
         _testBadPassword();
     }
 
@@ -332,7 +329,6 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
      */
     @Test
     public void testBadNonce() throws Exception {
-        setAuthenticationChain();
         _testBadNonce();
     }
 
@@ -376,7 +372,6 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
      */
     @Test
     public void testNonceCountReUse() throws Exception {
-        setAuthenticationChain();
         _testNonceCountReUse();
     }
 

@@ -49,31 +49,26 @@ public class SpnegoDigestAuthenticationTestCase extends SpnegoAuthenticationTest
 
     @Test
     public void testDigestSuccess() throws Exception {
-        setAuthenticationChain();
         _testDigestSuccess();
     }
 
     @Test
     public void testBadUsername() throws Exception {
-        setAuthenticationChain();
         _testBadUsername();
     }
 
     @Test
     public void testBadPassword() throws Exception {
-        setAuthenticationChain();
         _testBadPassword();
     }
 
     @Test
     public void testBadNonce() throws Exception {
-        setAuthenticationChain();
         _testBadNonce();
     }
 
     @Test
     public void testNonceCountReUse() throws Exception {
-        setAuthenticationChain();
         _testNonceCountReUse();
     }
 

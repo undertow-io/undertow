@@ -106,7 +106,6 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
      */
     @Test
     public void testDigestSuccess() throws Exception {
-        setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -179,8 +178,6 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
      */
     @Test
     public void testBadUserName() throws Exception {
-        setAuthenticationChain();
-
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
@@ -218,7 +215,6 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
      */
     @Test
     public void testBadPassword() throws Exception {
-        setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -258,7 +254,6 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
      */
     @Test
     public void testDifferentNonce() throws Exception {
-        setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -328,7 +323,6 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
      */
     @Test
     public void testNonceReUse() throws Exception {
-        setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());

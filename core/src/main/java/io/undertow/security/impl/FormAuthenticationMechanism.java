@@ -148,7 +148,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 exchange.addDefaultResponseListener(new DefaultResponseListener() {
                     @Override
                     public boolean handleDefaultResponse(final HttpServerExchange exchange) {
-                        FormAuthenticationMechanism.sendRedirect(exchange, location);
+                        exchange.getResponseHeaders().put(Headers.LOCATION, location);
                         exchange.setStatusCode(StatusCodes.FOUND);
                         exchange.endExchange();
                         return true;
