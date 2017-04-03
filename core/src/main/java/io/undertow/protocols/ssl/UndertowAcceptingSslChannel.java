@@ -54,8 +54,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
-import static org.xnio._private.Messages.msg;
-
 /**
  * @author Stuart Douglas
  */
@@ -144,7 +142,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         } else {
             return tcpServer.setOption(option, value);
         }
-        throw msg.nullParameter("value");
+        throw UndertowLogger.ROOT_LOGGER.nullParameter("value");
     }
 
     public XnioWorker getWorker() {

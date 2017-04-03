@@ -274,6 +274,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
         }
+
+        for (ServletExtension extension : ServletExtensionHolder.getServletExtensions()) {
+            if (!loadedExtensions.contains(extension.getClass())) {
+                extension.handleDeployment(deploymentInfo, servletContext);
+            }
+        }
+
         for(ServletExtension extension : deploymentInfo.getServletExtensions()) {
             extension.handleDeployment(deploymentInfo, servletContext);
         }
