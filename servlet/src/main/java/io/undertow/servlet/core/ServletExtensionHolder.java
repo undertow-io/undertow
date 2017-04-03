@@ -23,6 +23,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.servlet.ServletExtension;
 
+/**
+ * Holder for global ServletExtension services.
+ * This is particularly useful in an OSGi environment where classloader constraints
+ * lead to the ServiceLoader not able to see ServletExtension implementations.
+ */
 public class ServletExtensionHolder {
 
     private static List<ServletExtension> extensions = new CopyOnWriteArrayList<>();

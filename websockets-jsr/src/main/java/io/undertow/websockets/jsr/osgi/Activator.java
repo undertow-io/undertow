@@ -24,17 +24,23 @@ import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
+/**
+ * OSGi Activator.  This activator will be called when the bundle is started.
+ * Its purpose is to register the ServletExtension to support websockets.
+ */
 public class Activator implements BundleActivator {
 
     ServiceRegistration<ServletExtension> registration;
 
     @Override
     public void start(BundleContext context) throws Exception {
+        // Register the service in the OSGi registry.
         registration = context.registerService(ServletExtension.class, new Bootstrap(), null);
     }
 
     @Override
     public void stop(BundleContext context) throws Exception {
+        // Now, unregister the service.
         registration.unregister();
     }
 }

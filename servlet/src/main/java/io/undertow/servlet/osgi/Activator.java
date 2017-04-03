@@ -26,6 +26,13 @@ import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 
+/**
+ * OSGi Activator.
+ * The activator is called when the bundle is started.
+ * It tracks ServletExtension services registered in the OSGi registry
+ * and will update the {@link ServletExtensionHolder#getServletExtensions()}
+ * list accordingly.
+ */
 public class Activator implements BundleActivator, ServiceTrackerCustomizer<ServletExtension, ServletExtension> {
 
     BundleContext bundleContext;
