@@ -70,14 +70,16 @@
         <version.org.apache.httpcomponents>4.2.6</version.org.apache.httpcomponents>
         <version.org.glassfish.el>3.0.1-b08</version.org.glassfish.el>
         <version.org.jboss.classfilewriter>1.0.5.Final</version.org.jboss.classfilewriter>
-        <version.org.jboss.logging>3.2.1.Final</version.org.jboss.logging>
+        <version.org.jboss.logging>3.3.0.Final</version.org.jboss.logging>
         <version.org.jboss.logging.processor>2.0.0.Final</version.org.jboss.logging.processor>
         <version.org.jboss.logmanager>2.0.0.Final</version.org.jboss.logmanager>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>1.0.0.Alpha3</version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.0.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.1.0.Final</version.org.jboss.spec.javax.websockets>
-        <version.xnio>3.3.6.Final</version.xnio>
+        <version.xnio>3.5.0.Beta7</version.xnio>
+        <version.org.wildfly.client.config>1.0.0.Beta5</version.org.wildfly.client.config> <!-- TODO: remove this once XNIO has been updated to include this version -->
+        <version.org.osgi.core>6.0.0</version.org.osgi.core>
 
         <!-- jacoco -->
         <version.org.jacoco>0.7.9</version.org.jacoco>
@@ -117,6 +119,7 @@
         <module>servlet</module>
         <module>examples</module>
         <module>websockets-jsr</module>
+        <module>karaf</module>
     </modules>
 
     <build>
@@ -238,6 +241,11 @@
                             </pluginExecutions>
                         </lifecycleMappingMetadata>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.felix</groupId>
+                    <artifactId>maven-bundle-plugin</artifactId>
+                    <version>3.2.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -411,6 +419,18 @@
                 <groupId>org.jboss.xnio</groupId>
                 <artifactId>xnio-nio</artifactId>
                 <version>${version.xnio}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.wildfly.client</groupId>
+                <artifactId>wildfly-client-config</artifactId>
+                <version>${version.org.wildfly.client.config}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.core</artifactId>
+                <version>${version.org.osgi.core}</version>
             </dependency>
 
             <dependency>

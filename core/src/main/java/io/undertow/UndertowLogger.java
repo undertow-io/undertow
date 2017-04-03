@@ -409,4 +409,7 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5088, value = "Failed to execute ServletOutputStream.closeAsync() on IO thread")
     void closeAsyncFailed(@Cause IOException e);
+
+    @Message(id = 5089, value = "Method parameter '%s' cannot be null")
+    IllegalArgumentException nullParameter(String name);
 }
