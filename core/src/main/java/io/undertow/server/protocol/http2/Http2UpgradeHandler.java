@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.http2;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -29,13 +30,16 @@ import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.io.Receiver;
 import io.undertow.protocols.http2.Http2Channel;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
+import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.util.Protocols;
 
 /**
@@ -71,17 +75,50 @@ public class Http2UpgradeHandler implements HttpHandler {
                 if(exchange.isRequestComplete()) {
                     handleHttp2Upgrade(exchange, upgrade, settings, null);
                 } else {
-                    exchange.getRequestReceiver().receiveFullBytes(new Receiver.FullBytesCallback() {
-                        @Override
-                        public void handle(HttpServerExchange exchange, byte[] message) {
-                            try {
-                                handleHttp2Upgrade(exchange, upgrade, settings, message);
-                            } catch (IOException e) {
-                                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                                exchange.endExchange();
+                    final int maxBufferedSize = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, UndertowOptions.DEFAULT_MAX_BUFFERED_REQUEST_SIZE);
+                    if(exchange.getRequestContentLength() > maxBufferedSize) {
+                        //request is too big to buffer
+                        //we don't upgrade to HTTP/2
+                        next.handleRequest(exchange);
+                        return;
+                    } else if(exchange.getRequestContentLength() > 0 && exchange.getRequestContentLength() < maxBufferedSize) {
+                        //we know it is fine to buffer
+                        exchange.getRequestReceiver().receiveFullBytes(new Receiver.FullBytesCallback() {
+                            @Override
+                            public void handle(HttpServerExchange exchange, byte[] message) {
+                                try {
+                                    handleHttp2Upgrade(exchange, upgrade, settings, message);
+                                } catch (IOException e) {
+                                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                                    exchange.endExchange();
+                                }
                             }
-                        }
-                    });
+                        });
+                    } else {
+                        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                        exchange.getRequestReceiver().receivePartialBytes(new Receiver.PartialBytesCallback() {
+                            @Override
+                            public void handle(HttpServerExchange exchange, byte[] message, boolean last) {
+                                try {
+                                    outputStream.write(message);
+                                    if(last) {
+                                        handleHttp2Upgrade(exchange, upgrade, settings, message);
+                                    } else if(outputStream.size() >= maxBufferedSize) {
+                                        exchange.getRequestReceiver().pause();
+                                        Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(ByteBuffer.wrap(outputStream.toByteArray())));
+                                        next.handleRequest(exchange);
+                                    }
+                                } catch (IOException e) {
+                                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                                    exchange.endExchange();
+                                } catch (RuntimeException e) {
+                                    throw e;
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        });
+                    }
                 }
 
                 return;

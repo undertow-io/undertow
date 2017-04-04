@@ -139,7 +139,7 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
     }
 
     public void renegotiateBufferRequest(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {
-        int maxSize = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, 16384);
+        int maxSize = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, UndertowOptions.DEFAULT_MAX_BUFFERED_REQUEST_SIZE);
         if (maxSize <= 0) {
             throw new SSLPeerUnverifiedException("");
         }
