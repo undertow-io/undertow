@@ -69,7 +69,7 @@ public class SavedRequest implements Serializable {
     }
 
     public static void trySaveRequest(final HttpServerExchange exchange) {
-        int maxSize = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, 16384);
+        int maxSize = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, UndertowOptions.DEFAULT_MAX_BUFFERED_REQUEST_SIZE);
         if (maxSize > 0) {
             //if this request has a body try and cache the response
             if (!exchange.isRequestComplete()) {

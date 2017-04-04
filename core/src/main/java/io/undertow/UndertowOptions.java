@@ -161,6 +161,8 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_BUFFERED_REQUEST_SIZE = Option.simple(UndertowOptions.class, "MAX_BUFFERED_REQUEST_SIZE", Integer.class);
 
+    public static final int DEFAULT_MAX_BUFFERED_REQUEST_SIZE = 16384;
+
     /**
      * If this is true then Undertow will record the request start time, to allow for request time to be logged
      *
