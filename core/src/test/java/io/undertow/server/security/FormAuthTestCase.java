@@ -18,27 +18,6 @@
 
 package io.undertow.server.security;
 
-import static org.junit.Assert.assertEquals;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.http.Header;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.ProtocolException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultRedirectStrategy;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HttpContext;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import io.undertow.predicate.Predicates;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
@@ -53,6 +32,28 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import org.apache.http.Header;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.ProtocolException;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultRedirectStrategy;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HttpContext;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 /**
  * @author Stuart Douglas
@@ -83,6 +84,14 @@ public class FormAuthTestCase extends AuthenticationTestBase {
         client.setRedirectStrategy(new DefaultRedirectStrategy() {
             @Override
             public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
+                Header[] locationHeaders = response.getHeaders("Location");
+                if (locationHeaders != null && locationHeaders.length > 0) {
+                    for (Header locationHeader : locationHeaders) {
+                        assertFalse("Location header incorrectly computed resulting in wrong request URI upon redirect, " +
+                                        "failed probably due UNDERTOW-884",
+                                locationHeader.getValue().startsWith(DefaultServer.getDefaultServerURL() + DefaultServer.getDefaultServerURL()));
+                    }
+                }
                 if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
                     return true;
                 }
