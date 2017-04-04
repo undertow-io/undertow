@@ -173,10 +173,12 @@ public class Http2ClientConnection implements ClientConnection {
             request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, peer);
         }
         Boolean proto = request.getAttachment(ProxiedRequestAttachments.IS_SSL);
-        if(proto == null || !proto) {
-            request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, "http");
-        } else {
-            request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, "https");
+        if(proto != null) {
+            if (proto) {
+                request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, "https");
+            } else {
+                request.getRequestHeaders().put(Headers.X_FORWARDED_PROTO, "http");
+            }
         }
         String hn = request.getAttachment(ProxiedRequestAttachments.SERVER_NAME);
         if(hn != null) {
