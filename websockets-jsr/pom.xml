@@ -63,6 +63,7 @@
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
+            <optional>true</optional>
             <scope>provided</scope>
         </dependency>
 
