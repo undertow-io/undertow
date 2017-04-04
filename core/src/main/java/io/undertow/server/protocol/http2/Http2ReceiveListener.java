@@ -33,6 +33,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.util.Methods;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.Protocols;
@@ -43,6 +44,7 @@ import org.xnio.OptionMap;
 import org.xnio.channels.Channels;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.net.ssl.SSLSession;
@@ -199,7 +201,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
      *
      * @param initial The initial upgrade request that started the HTTP2 connection
      */
-    void handleInitialRequest(HttpServerExchange initial, Http2Channel channel) {
+    void handleInitialRequest(HttpServerExchange initial, Http2Channel channel, byte[] data) {
 
         //we have a request
         Http2HeadersStreamSinkChannel sink = channel.createInitialUpgradeResponseStream();
@@ -215,6 +217,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setProtocol(initial.getProtocol());
         exchange.setRequestMethod(initial.getRequestMethod());
         exchange.setQueryString(initial.getQueryString());
+        if(data != null) {
+            Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(ByteBuffer.wrap(data)));
+        }
         String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
         try {
             Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
