@@ -78,8 +78,8 @@
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.1.0.Final</version.org.jboss.spec.javax.websockets>
         <version.xnio>3.5.0.Beta1</version.xnio>
-        <version.org.wildfly.common>1.2.0.Beta6-SNAPSHOT</version.org.wildfly.common>
-        <version.org.wildfly.client.config>1.0.0.Beta2-SNAPSHOT</version.org.wildfly.client.config>
+        <version.org.wildfly.common>1.2.0.Beta8</version.org.wildfly.common>
+        <version.org.wildfly.client.config>1.0.0.Beta4-SNAPSHOT</version.org.wildfly.client.config>
         <version.org.osgi.core>6.0.0</version.org.osgi.core>
 
         <!-- jacoco -->
