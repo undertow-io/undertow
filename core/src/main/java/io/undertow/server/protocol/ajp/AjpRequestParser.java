@@ -52,12 +52,14 @@ import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.util.TreeMap;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.impl.ExternalAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.URLUtils;
 
 /**
@@ -191,7 +193,7 @@ public class AjpRequestParser {
                     return;
                 } else {
                     if (result.value != 0x1234) {
-                        throw UndertowMessages.MESSAGES.wrongMagicNumber(result.value);
+                        throw new BadRequestException(UndertowMessages.MESSAGES.wrongMagicNumber(result.value));
                     }
                 }
             }
@@ -226,7 +228,7 @@ public class AjpRequestParser {
                     if (method > 0 && method < 28) {
                         exchange.setRequestMethod(HTTP_METHODS[method]);
                     } else if((method & 0xFF) != 0xFF) {
-                        throw new IllegalArgumentException("Unknown method type " + method);
+                        throw new BadRequestException("Unknown method type " + method);
                     }
                 }
             }
@@ -258,6 +260,7 @@ public class AjpRequestParser {
                         try {
                             URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
                         } catch (ParameterLimitException e) {
+                            UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                             state.badRequest = true;
                         }
                     }
@@ -323,6 +326,7 @@ public class AjpRequestParser {
                 } else {
                     state.numHeaders = result.value;
                     if(state.numHeaders > maxHeaders) {
+                        UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders)));
                         state.badRequest = true;
                     }
                 }
@@ -411,6 +415,7 @@ public class AjpRequestParser {
                         try {
                             URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode, maxParameters);
                         } catch (ParameterLimitException e) {
+                            UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                             state.badRequest = true;
                         }
                     } else if (state.currentAttribute.equals(REMOTE_USER)) {
@@ -575,9 +580,4 @@ public class AjpRequestParser {
         OTHER
     }
 
-    public static class BadRequestException extends Exception {
-        public BadRequestException(String msg) {
-            super(msg);
-        }
-    }
 }

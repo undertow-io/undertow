@@ -25,6 +25,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
+import io.undertow.util.BadRequestException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xnio.OptionMap;
@@ -53,7 +54,7 @@ public class ParserResumeTestCase {
     }
 
     @Test
-    public void testOneCharacterAtATime() throws HttpRequestParser.BadRequestException {
+    public void testOneCharacterAtATime() throws BadRequestException {
         context.reset();
         byte[] in = DATA.getBytes();
         HttpServerExchange result = new HttpServerExchange(null);
@@ -70,7 +71,7 @@ public class ParserResumeTestCase {
         runAssertions(result);
     }
 
-    private void testResume(final int split, byte[] in) throws HttpRequestParser.BadRequestException {
+    private void testResume(final int split, byte[] in) throws BadRequestException {
         context.reset();
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
