@@ -42,7 +42,7 @@ public class RequestSchemeAttribute implements ExchangeAttribute {
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        throw new ReadOnlyAttributeException("Request scheme", newValue);
+        exchange.setRequestScheme(newValue);
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
