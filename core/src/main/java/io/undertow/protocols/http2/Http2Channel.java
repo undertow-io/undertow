@@ -558,19 +558,15 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     protected void lastDataRead() {
         lastDataRead = true;
-        if(!peerGoneAway && !thisGoneAway) {
-            //the peer has performed an unclean close
-            //if they have streams that are still expecting data then this is an error condition
-            if(currentStreams.size() > 0) {
-                //we assume something happened to the underlying connection
-                //we attempt to send our own GOAWAY, however it will probably fail,
-                //which will trigger a forces close of our write side
-                sendGoAway(ERROR_CONNECT_ERROR);
-            } else {
-                //we just close the connection, as the peer has performed an unclean close
-                IoUtils.safeClose(this);
-            }
+        if(!peerGoneAway) {
+            //we just close the connection, as the peer has performed an unclean close
+            IoUtils.safeClose(this);
+        } else {
             peerGoneAway = true;
+            if(!thisGoneAway) {
+                //we send a goaway message, and then close
+                sendGoAway(ERROR_CONNECT_ERROR);
+            }
         }
     }
 
@@ -609,10 +605,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             StreamHolder holder = e.getValue();
             AbstractHttp2StreamSourceChannel receiver = holder.sourceChannel;
             if(receiver != null) {
-                if (receiver.isReadResumed()) {
-                    ChannelListeners.invokeChannelListener(receiver.getIoThread(), receiver, ((ChannelListener.SimpleSetter) receiver.getReadSetter()).get());
-                }
-                IoUtils.safeClose(receiver);
+                receiver.markStreamBroken();
             }
             Http2StreamSinkChannel sink = holder.sinkChannel;
             if(sink != null) {
@@ -959,6 +952,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     }
 
     public void sendRstStream(int streamId, int statusCode) {
+        if(!isOpen()) {
+            //no point sending if the channel is closed
+            return;
+        }
         handleRstStream(streamId);
         if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
             UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Sending rststream on channel %s stream %s", this, streamId);

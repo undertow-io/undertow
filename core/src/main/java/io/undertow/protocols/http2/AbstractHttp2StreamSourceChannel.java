@@ -64,6 +64,8 @@ public class AbstractHttp2StreamSourceChannel extends AbstractFramedStreamSource
     void rstStream(int error) {
         //noop by default
     }
-
+    protected void markStreamBroken() {
+        super.markStreamBroken();
+    }
 
 }
