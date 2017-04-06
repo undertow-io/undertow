@@ -795,6 +795,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             readData.close();
             readData = null;
         }
+        closeSubChannels();
     }
 
     @Override
