@@ -113,7 +113,7 @@ public class ProxyPeerAddressHandler implements HttpHandler {
     }
 
     private static boolean standardPort(int port, String scheme) {
-        return (port == 80 && "http".equals(scheme)) || (port == 443 & "https".equals(scheme));
+        return (port == 80 && "http".equals(scheme)) || (port == 443 && "https".equals(scheme));
     }
 
     public static class Builder implements HandlerBuilder {
