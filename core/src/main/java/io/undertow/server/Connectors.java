@@ -177,6 +177,10 @@ public class Connectors {
             header.append("; Domain=");
             header.append(cookie.getDomain());
         }
+        if (cookie.getComment() != null) {
+            header.append("; Comment=");
+            header.append(cookie.getComment());
+        }
         if (cookie.isDiscard()) {
             header.append("; Discard");
         }
