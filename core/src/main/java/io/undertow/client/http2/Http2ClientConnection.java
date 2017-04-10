@@ -450,8 +450,6 @@ public class Http2ClientConnection implements ClientConnection {
 
                 } else if (result instanceof Http2GoAwayStreamSourceChannel) {
                     close();
-                } else if(!channel.isOpen()) {
-                    throw UndertowMessages.MESSAGES.channelIsClosed();
                 } else if(result != null) {
                     Channels.drain(result, Long.MAX_VALUE);
                 }
