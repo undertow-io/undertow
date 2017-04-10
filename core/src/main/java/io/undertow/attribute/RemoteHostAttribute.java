@@ -46,14 +46,14 @@ public class RemoteHostAttribute implements ExchangeAttribute {
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        throw new ReadOnlyAttributeException("Remote IP", newValue);
+        throw new ReadOnlyAttributeException("Remote host", newValue);
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override
         public String name() {
-            return "Remote IP";
+            return "Remote host";
         }
 
         @Override
