@@ -102,7 +102,7 @@ public class Http2UpgradeHandler implements HttpHandler {
                                 try {
                                     outputStream.write(message);
                                     if(last) {
-                                        handleHttp2Upgrade(exchange, upgrade, settings, message);
+                                        handleHttp2Upgrade(exchange, upgrade, settings, outputStream.toByteArray());
                                     } else if(outputStream.size() >= maxBufferedSize) {
                                         exchange.getRequestReceiver().pause();
                                         Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(ByteBuffer.wrap(outputStream.toByteArray())));
