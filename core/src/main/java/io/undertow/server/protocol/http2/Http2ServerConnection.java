@@ -45,9 +45,11 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
+import org.xnio.channels.Configurable;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
+import org.xnio.conduits.EmptyStreamSourceConduit;
 import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceChannelWrappingConduit;
@@ -129,7 +131,7 @@ public class Http2ServerConnection extends ServerConnection {
         originalSinkConduit = new StreamSinkChannelWrappingConduit(responseChannel);
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
-        this.conduitStreamSourceChannel = null;
+        this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(getIoThread()));
     }
     @Override
     public Pool<ByteBuffer> getBufferPool() {

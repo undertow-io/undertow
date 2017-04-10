@@ -219,6 +219,8 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setQueryString(initial.getQueryString());
         if(data != null) {
             Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(ByteBuffer.wrap(data)));
+        } else {
+            Connectors.terminateRequest(exchange);
         }
         String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
         try {
@@ -233,7 +235,6 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         if(session != null) {
             connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
         }
-        Connectors.terminateRequest(exchange);
         sink.setCompletionListener(new ChannelListener<Http2DataStreamSinkChannel>() {
             @Override
             public void handleEvent(Http2DataStreamSinkChannel channel) {
