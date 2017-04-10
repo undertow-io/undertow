@@ -85,7 +85,7 @@ public class SpdyClientConnection implements ClientConnection {
     }
 
     @Override
-    public synchronized void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
+    public void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback) {
         request.getRequestHeaders().put(PATH, request.getPath());
         request.getRequestHeaders().put(SCHEME, "https");
         request.getRequestHeaders().put(VERSION, request.getProtocol().toString());
