@@ -221,27 +221,6 @@ public class Http2ClientConnection implements ClientConnection {
             } catch (IOException e) {
                 handleError(e);
             }
-        } else if (!sinkChannel.isWriteResumed()) {
-            try {
-                //TODO: this needs some more thought
-                if (!sinkChannel.flush()) {
-                    sinkChannel.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
-                        @Override
-                        public void handleEvent(StreamSinkChannel channel) {
-                            try {
-                                if (channel.flush()) {
-                                    channel.suspendWrites();
-                                }
-                            } catch (IOException e) {
-                                handleError(e);
-                            }
-                        }
-                    });
-                    sinkChannel.resumeWrites();
-                }
-            } catch (IOException e) {
-                handleError(e);
-            }
         }
     }
 
