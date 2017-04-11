@@ -113,4 +113,9 @@ public class OpenSSLAlpnProvider implements ALPNProvider {
     public int getPriority() {
         return 400;
     }
+
+    @Override
+    public String toString() {
+        return "OpenSSLAlpnProvider";
+    }
 }
