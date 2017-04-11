@@ -143,4 +143,9 @@ public class JettyAlpnProvider implements ALPNProvider {
             sslEngine.getHandshakeSession().putValue(PROTOCOL_KEY, selected);
         }
     }
+
+    @Override
+    public String toString() {
+        return "JettyAlpnProvider{}";
+    }
 }

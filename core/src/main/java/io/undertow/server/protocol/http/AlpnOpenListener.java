@@ -75,6 +75,9 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
     private volatile OptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
 
+    private volatile boolean providerLogged;
+    private volatile boolean alpnFailLogged;
+
     public AlpnOpenListener(Pool<ByteBuffer> bufferPool, OptionMap undertowOptions, DelegateOpenListener httpListener) {
         this(bufferPool, undertowOptions, "http/1.1", httpListener);
     }
@@ -216,7 +219,14 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         final SslConduit sslConduit = UndertowXnioSsl.getSslConduit((SslConnection) channel);
         final SSLEngine sslEngine = sslConduit.getSSLEngine();
         if (!engineSupportsHTTP2(sslEngine)) {
-            UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however %s is not present or TLS1.2 is not enabled, falling back to default protocol", REQUIRED_CIPHER);
+            if(!alpnFailLogged) {
+                synchronized (this) {
+                    if(!alpnFailLogged) {
+                        UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however %s is not present or TLS1.2 is not enabled, falling back to default protocol", REQUIRED_CIPHER);
+                        alpnFailLogged = true;
+                    }
+                }
+            }
             if (fallbackProtocol != null) {
                 ListenerEntry listener = listeners.get(fallbackProtocol);
                 if (listener != null) {
@@ -229,6 +239,14 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
 
         final ALPNProvider provider = alpnManager.getProvider(sslEngine);
         if (provider == null) {
+            if(!providerLogged) {
+                synchronized (this) {
+                    if(!providerLogged) {
+                        UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however no provider could be found for engine %s for connector at %s", sslEngine, channel.getLocalAddress());
+                        providerLogged = true;
+                    }
+                }
+            }
             if (fallbackProtocol != null) {
                 ListenerEntry listener = listeners.get(fallbackProtocol);
                 if (listener != null) {
@@ -239,6 +257,15 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
             UndertowLogger.REQUEST_LOGGER.debugf("No ALPN provider available and no fallback defined");
             IoUtils.safeClose(channel);
             return;
+        }
+
+        if(!providerLogged) {
+            synchronized (this) {
+                if(!providerLogged) {
+                    UndertowLogger.REQUEST_LOGGER.debugf("Using ALPN provider %s for connector at %s", provider, channel.getLocalAddress());
+                    providerLogged = true;
+                }
+            }
         }
 
         final SSLEngine newEngine = provider.setProtocols(sslEngine, protocols);

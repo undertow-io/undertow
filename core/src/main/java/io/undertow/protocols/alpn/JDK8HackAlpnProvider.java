@@ -52,4 +52,9 @@ public class JDK8HackAlpnProvider implements ALPNProvider {
     public int getPriority() {
         return 200;
     }
+
+    @Override
+    public String toString() {
+        return "JDK8AlpnProvider";
+    }
 }

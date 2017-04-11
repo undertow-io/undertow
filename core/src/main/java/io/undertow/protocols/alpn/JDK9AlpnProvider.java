@@ -104,4 +104,9 @@ public class JDK9AlpnProvider implements ALPNProvider {
     public int getPriority() {
         return 300;
     }
+
+    @Override
+    public String toString() {
+        return "JDK9AlpnProvider";
+    }
 }
