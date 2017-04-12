@@ -48,6 +48,9 @@ public class MetricsHandlerTestCase {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 Thread.sleep(100);
+                if(exchange.getQueryString().contains("error")) {
+                    throw new RuntimeException();
+                }
                 exchange.getResponseSender().send("Hello");
             }
         })));
@@ -75,6 +78,19 @@ public class MetricsHandlerTestCase {
 
             metrics = metricsHandler.getMetrics();
             Assert.assertEquals(2, metrics.getTotalRequests());
+            Assert.assertEquals(0, metrics.getTotalErrors());
+
+
+            result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path?error=true"));
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            latchHandler.await();
+            latchHandler.reset();
+
+            metrics = metricsHandler.getMetrics();
+            Assert.assertEquals(3, metrics.getTotalRequests());
+            Assert.assertEquals(1, metrics.getTotalErrors());
 
         } finally {
 

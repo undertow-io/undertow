@@ -55,7 +55,7 @@ public class MetricsHandler implements HttpHandler {
             @Override
             public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
                 long time = System.currentTimeMillis() - start;
-                totalResult.update((int)time);
+                totalResult.update((int)time, exchange.getStatusCode());
                 nextListener.proceed();
             }
         });
@@ -76,6 +76,7 @@ public class MetricsHandler implements HttpHandler {
         private static final AtomicIntegerFieldUpdater<MetricResult> maxRequestTimeUpdater = AtomicIntegerFieldUpdater.newUpdater(MetricResult.class, "maxRequestTime");
         private static final AtomicIntegerFieldUpdater<MetricResult> minRequestTimeUpdater = AtomicIntegerFieldUpdater.newUpdater(MetricResult.class, "minRequestTime");
         private static final AtomicLongFieldUpdater<MetricResult> invocationsUpdater = AtomicLongFieldUpdater.newUpdater(MetricResult.class, "totalRequests");
+        private static final AtomicLongFieldUpdater<MetricResult> errorsUpdater = AtomicLongFieldUpdater.newUpdater(MetricResult.class, "totalErrors");
 
         private final Date metricsStartDate;
 
@@ -83,6 +84,7 @@ public class MetricsHandler implements HttpHandler {
         private volatile int maxRequestTime;
         private volatile int minRequestTime = -1;
         private volatile long totalRequests;
+        private volatile long totalErrors;
 
         public MetricResult(Date metricsStartDate) {
             this.metricsStartDate = metricsStartDate;
@@ -94,9 +96,10 @@ public class MetricsHandler implements HttpHandler {
             this.maxRequestTime = copy.maxRequestTime;
             this.minRequestTime = copy.minRequestTime;
             this.totalRequests = copy.totalRequests;
+            this.totalErrors = copy.totalErrors;
         }
 
-        void update(final int requestTime) {
+        void update(final int requestTime, int statusCode) {
             totalRequestTimeUpdater.addAndGet(this, requestTime);
             int maxRequestTime;
             do {
@@ -114,6 +117,9 @@ public class MetricsHandler implements HttpHandler {
                 }
             } while (!minRequestTimeUpdater.compareAndSet(this, minRequestTime, requestTime));
             invocationsUpdater.incrementAndGet(this);
+            if(statusCode >= 400) {
+                errorsUpdater.incrementAndGet(this);
+            }
 
 
         }
@@ -136,6 +142,10 @@ public class MetricsHandler implements HttpHandler {
 
         public long getTotalRequests() {
             return totalRequests;
+        }
+
+        public long getTotalErrors() {
+            return totalErrors;
         }
     }
 }
