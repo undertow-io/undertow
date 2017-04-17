@@ -18,6 +18,7 @@
 
 package io.undertow.protocols.http2;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import io.undertow.util.ImmediatePooledByteBuffer;
@@ -237,7 +238,17 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
         if (finalFrame) {
             if (completionListener != null) {
                 ChannelListeners.invokeChannelListener(this, completionListener);
+                completionListener = null;
             }
+        }
+    }
+
+    @Override
+    protected void channelForciblyClosed() throws IOException {
+        super.channelForciblyClosed();
+        if (completionListener != null) {
+            ChannelListeners.invokeChannelListener(this, completionListener);
+            completionListener = null;
         }
     }
 
