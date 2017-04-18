@@ -27,8 +27,10 @@ import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.ExceptionHandler;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.handlers.ServletDebugPageHandler;
@@ -407,19 +409,32 @@ public class AsyncContextImpl implements AsyncContext {
                 exchange.getResponseHeaders().clear();
             }
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
-            try {
-                boolean errorPage = servletRequestContext.displayStackTraces();
-                if (errorPage) {
-                    ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, error);
-                } else {
-                    if (servletResponse instanceof HttpServletResponse) {
-                        ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            if(!exchange.isResponseStarted()) {
+                try {
+                    boolean errorPage = servletRequestContext.displayStackTraces();
+                    if (errorPage) {
+                        ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, error);
                     } else {
-                        servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        if (servletResponse instanceof HttpServletResponse) {
+                            ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        } else {
+                            servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        }
                     }
+                } catch (IOException e) {
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 }
-            } catch (IOException e) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            } else if (error instanceof IOException) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) error);
+            } else {
+                ExceptionHandler exceptionHandler = servletRequestContext.getDeployment().getDeploymentInfo().getExceptionHandler();
+                if(exceptionHandler == null) {
+                    exceptionHandler = LoggingExceptionHandler.DEFAULT;
+                }
+                boolean handled = exceptionHandler.handleThrowable(exchange, getRequest(), getResponse(), error);
+                if(!handled) {
+                    exchange.endExchange();
+                }
             }
             if (!dispatched) {
                 complete();
