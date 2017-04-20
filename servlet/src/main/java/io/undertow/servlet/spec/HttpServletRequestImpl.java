@@ -24,6 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
+import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.servlet.UndertowServletMessages;
@@ -42,6 +43,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
@@ -86,9 +88,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
-import javax.servlet.http.Mapping;
 import javax.servlet.http.Part;
 import javax.servlet.http.PushBuilder;
+import javax.servlet.http.ServletMapping;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -222,7 +224,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public Mapping getMapping() {
+    public ServletMapping getServletMapping() {
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         ServletPathMatch match = src.getOriginalServletPathMatch();
         String matchValue;
@@ -245,7 +247,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             default:
                 matchValue = match.getRemaining();
         }
-        return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch());
+        return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch(), match.getServletChain().getManagedServlet().getServletInfo().getName());
     }
 
     @Override
@@ -580,8 +582,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             return characterEncodingFromHeader;
         }
 
-        if (servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding() != null) {
-            return servletContext.getDeployment().getDefaultCharset().name();
+        if (servletContext.getDeployment().getDeploymentInfo().getDefaultRequestEncoding() != null ||
+                servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding() != null) {
+            return servletContext.getDeployment().getDefaultRequestCharset().name();
         }
 
         return null;
@@ -837,7 +840,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (servletInputStream != null) {
                 throw UndertowServletMessages.MESSAGES.getInputStreamAlreadyCalled();
             }
-            Charset charSet = servletContext.getDeployment().getDefaultCharset();
+            Charset charSet = servletContext.getDeployment().getDefaultRequestCharset();
             if (characterEncoding != null) {
                 charSet = characterEncoding;
             } else {
@@ -1151,7 +1154,23 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public PushBuilder getPushBuilder() {
-        return new PushBuilderImpl(this);
+    public PushBuilder newPushBuilder() {
+        if(exchange.getConnection().isPushSupported()) {
+            return new PushBuilderImpl(this);
+        }
+        return null;
+    }
+
+    @Override
+    public Map<String, String> getTrailers() {
+        HeaderMap trailers = exchange.getAttachment(HttpAttachments.REQUEST_TRAILERS);
+        if(trailers == null) {
+            return null;
+        }
+        Map<String, String> ret = new HashMap<>();
+        for(HeaderValues entry : trailers) {
+            ret.put(entry.getHeaderName().toString(), entry.getFirst());
+        }
+        return ret;
     }
 }

@@ -60,11 +60,8 @@ public class PushBuilderImpl implements PushBuilder {
     private String method;
     private String queryString;
     private String sessionId;
-    private boolean conditional;
     private final HeaderMap headers = new HeaderMap();
     private String path;
-    private String etag;
-    private String lastModified;
 
     public PushBuilderImpl(HttpServletRequestImpl servletRequest) {
         //TODO: auth
@@ -78,7 +75,6 @@ public class PushBuilderImpl implements PushBuilder {
             this.sessionId = servletRequest.getRequestedSessionId();
         }
 
-        this.conditional = servletRequest.getHeader(Headers.IF_NONE_MATCH_STRING) != null || servletRequest.getHeader(Headers.IF_MODIFIED_SINCE_STRING) != null;
         for(HeaderValues header : servletRequest.getExchange().getRequestHeaders()) {
             if(!IGNORE.contains(header.getHeaderName())) {
                 headers.addAll(header.getHeaderName(), header);
@@ -90,7 +86,6 @@ public class PushBuilderImpl implements PushBuilder {
             this.headers.add(Headers.REFERER, servletRequest.getRequestURL()  + "?" + servletRequest.getQueryString());
         }
         this.path = null;
-        this.etag = servletRequest.getHeader(Headers.ETAG_STRING);
         for(Map.Entry<String, Cookie> cookie : servletRequest.getExchange().getResponseCookies().entrySet()) {
             if(Objects.equals(0, cookie.getValue().getMaxAge())) {
                 //remove cookie
@@ -108,8 +103,6 @@ public class PushBuilderImpl implements PushBuilder {
                 headers.add(Headers.COOKIE, cookie.getKey() + "=" + cookie.getValue());
             }
         }
-        this.lastModified = null;
-        this.etag = null;
 
     }
 
@@ -129,12 +122,6 @@ public class PushBuilderImpl implements PushBuilder {
     @Override
     public PushBuilder sessionId(String sessionId) {
         this.sessionId = sessionId;
-        return this;
-    }
-
-    @Override
-    public PushBuilder conditional(boolean conditional) {
-        this.conditional = conditional;
         return this;
     }
 
@@ -163,18 +150,6 @@ public class PushBuilderImpl implements PushBuilder {
     }
 
     @Override
-    public PushBuilder etag(String etag) {
-        this.etag = etag;
-        return this;
-    }
-
-    @Override
-    public PushBuilder lastModified(String lastModified) {
-        this.lastModified = lastModified;
-        return this;
-    }
-
-    @Override
     public void push() {
         if(path == null) {
             throw UndertowServletMessages.MESSAGES.pathWasNotSet();
@@ -184,13 +159,6 @@ public class PushBuilderImpl implements PushBuilder {
             HeaderMap newHeaders = new HeaderMap();
             for (HeaderValues entry : headers) {
                 newHeaders.addAll(entry.getHeaderName(), entry);
-            }
-            if (conditional) {
-                if (etag != null) {
-                    newHeaders.put(Headers.IF_NONE_MATCH, etag);
-                } else if (lastModified != null) {
-                    newHeaders.put(Headers.IF_MODIFIED_SINCE, lastModified);
-                }
             }
             if (sessionId != null) {
                 newHeaders.put(Headers.COOKIE, "JSESSIONID=" + sessionId); //TODO: do this properly, may be a different tracking method or a different cookie name
@@ -202,8 +170,6 @@ public class PushBuilderImpl implements PushBuilder {
             con.pushResource(path, new HttpString(method), newHeaders);
         }
         path = null;
-        etag = null;
-        lastModified = null;
     }
 
     @Override
@@ -219,11 +185,6 @@ public class PushBuilderImpl implements PushBuilder {
     @Override
     public String getSessionId() {
         return sessionId;
-    }
-
-    @Override
-    public boolean isConditional() {
-        return conditional;
     }
 
     @Override
@@ -245,13 +206,4 @@ public class PushBuilderImpl implements PushBuilder {
         return path;
     }
 
-    @Override
-    public String getEtag() {
-        return etag;
-    }
-
-    @Override
-    public String getLastModified() {
-        return lastModified;
-    }
 }

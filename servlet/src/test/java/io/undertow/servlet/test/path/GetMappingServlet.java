@@ -21,7 +21,7 @@ package io.undertow.servlet.test.path;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Mapping;
+import javax.servlet.http.ServletMapping;
 import java.io.IOException;
 
 /**
@@ -30,10 +30,10 @@ import java.io.IOException;
 public class GetMappingServlet extends HttpServlet {
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Mapping mapping = request.getMapping();
+        ServletMapping mapping = request.getServletMapping();
         response.getWriter()
                 .append("Mapping match:")
-                .append(mapping.getMatchType().name())
+                .append(mapping.getMappingMatch().name())
                 .append("\n")
                 .append("Match value:")
                 .append(mapping.getMatchValue())

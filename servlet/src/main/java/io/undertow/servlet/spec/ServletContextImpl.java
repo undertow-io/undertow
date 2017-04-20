@@ -747,6 +747,53 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
+    public ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
+        return null;
+    }
+
+    @Override
+    public int getSessionTimeout() {
+        return 0;
+    }
+
+    @Override
+    public void setSessionTimeout(int sessionTimeout) {
+
+    }
+
+    @Override
+    public String getRequestCharacterEncoding() {
+        String enconding = deploymentInfo.getDefaultRequestEncoding();
+        if(enconding != null) {
+            return enconding;
+        }
+        return deploymentInfo.getDefaultEncoding();
+    }
+
+    @Override
+    public void setRequestCharacterEncoding(String encoding) {
+        ensureNotInitialized();
+        ensureNotProgramaticListener();
+        deploymentInfo.setDefaultRequestEncoding(getContextPath());
+    }
+
+    @Override
+    public String getResponseCharacterEncoding() {
+        String enconding = deploymentInfo.getDefaultResponseEncoding();
+        if(enconding != null) {
+            return enconding;
+        }
+        return deploymentInfo.getDefaultEncoding();
+    }
+
+    @Override
+    public void setResponseCharacterEncoding(String encoding) {
+        ensureNotInitialized();
+        ensureNotProgramaticListener();
+        deploymentInfo.setDefaultResponseEncoding(encoding);
+    }
+
+    @Override
     public String getVirtualServerName() {
         return deployment.getDeploymentInfo().getHostName();
     }

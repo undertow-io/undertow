@@ -18,22 +18,24 @@
 
 package io.undertow.servlet.spec;
 
-import javax.servlet.http.Mapping;
 import javax.servlet.http.MappingMatch;
+import javax.servlet.http.ServletMapping;
 
 /**
  * @author Stuart Douglas
  */
-public class MappingImpl implements Mapping {
+public class MappingImpl implements ServletMapping {
 
     private final String matchValue;
     private final String pattern;
     private final MappingMatch matchType;
+    private final String servletName;
 
-    public MappingImpl(String matchValue, String pattern, MappingMatch matchType) {
+    public MappingImpl(String matchValue, String pattern, MappingMatch matchType, String servletName) {
         this.matchValue = matchValue;
         this.pattern = pattern;
         this.matchType = matchType;
+        this.servletName = servletName;
     }
 
     @Override
@@ -47,7 +49,12 @@ public class MappingImpl implements Mapping {
     }
 
     @Override
-    public MappingMatch getMatchType() {
+    public String getServletName() {
+        return servletName;
+    }
+
+    @Override
+    public MappingMatch getMappingMatch() {
         return matchType;
     }
 }

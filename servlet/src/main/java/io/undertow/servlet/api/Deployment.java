@@ -82,7 +82,13 @@ public interface Deployment {
      */
     Executor getAsyncExecutor();
 
+
+    @Deprecated
     Charset getDefaultCharset();
+
+    Charset getDefaultRequestCharset();
+
+    Charset getDefaultResponseCharset();
 
     /**
      *

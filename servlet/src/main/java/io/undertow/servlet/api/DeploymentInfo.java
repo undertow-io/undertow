@@ -90,6 +90,8 @@ public class DeploymentInfo implements Cloneable {
     private int defaultCookieVersion = 0;
     private SessionPersistenceManager sessionPersistenceManager;
     private String defaultEncoding;
+    private String defaultRequestEncoding;
+    private String defaultResponseEncoding;
     private String urlEncoding = null;
     private boolean ignoreFlush = false;
     private AuthorizationManager authorizationManager = DefaultAuthorizationManager.INSTANCE;
@@ -1286,6 +1288,24 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public String getDefaultRequestEncoding() {
+        return defaultRequestEncoding;
+    }
+
+    public DeploymentInfo setDefaultRequestEncoding(String defaultRequestEncoding) {
+        this.defaultRequestEncoding = defaultRequestEncoding;
+        return this;
+    }
+
+    public String getDefaultResponseEncoding() {
+        return defaultResponseEncoding;
+    }
+
+    public DeploymentInfo setDefaultResponseEncoding(String defaultResponseEncoding) {
+        this.defaultResponseEncoding = defaultResponseEncoding;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1373,6 +1393,8 @@ public class DeploymentInfo implements Cloneable {
         info.securityDisabled = securityDisabled;
         info.useCachedAuthenticationMechanism = useCachedAuthenticationMechanism;
         info.checkOtherSessionManagers = checkOtherSessionManagers;
+        info.defaultRequestEncoding = defaultRequestEncoding;
+        info.defaultResponseEncoding = defaultResponseEncoding;
         return info;
     }
 

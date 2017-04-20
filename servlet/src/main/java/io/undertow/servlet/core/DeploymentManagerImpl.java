@@ -345,8 +345,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
                 //we don't allow multipart requests, and use the default encoding when it's set
                 FormEncodedDataDefinition formEncodedDataDefinition = new FormEncodedDataDefinition();
-                if (deploymentInfo.getDefaultEncoding() != null) {
-                    formEncodedDataDefinition.setDefaultEncoding(deploymentInfo.getDefaultEncoding());
+                String reqEncoding = deploymentInfo.getDefaultRequestEncoding();
+                if(reqEncoding == null) {
+                    deploymentInfo.getDefaultEncoding();
+                }
+                if (reqEncoding != null) {
+                    formEncodedDataDefinition.setDefaultEncoding(reqEncoding);
                 }
                 FormParserFactory parser = FormParserFactory.builder(false)
                         .addParser(formEncodedDataDefinition)

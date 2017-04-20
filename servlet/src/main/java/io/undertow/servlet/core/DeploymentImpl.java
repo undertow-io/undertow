@@ -68,7 +68,9 @@ public class DeploymentImpl implements Deployment {
     private volatile ErrorPages errorPages;
     private volatile Map<String, String> mimeExtensionMappings;
     private volatile SessionManager sessionManager;
+    @Deprecated
     private volatile Charset defaultCharset = StandardCharsets.ISO_8859_1;
+
     private volatile List<AuthenticationMechanism> authenticationMechanisms;
     private volatile List<ThreadSetupHandler> threadSetupActions;
 
@@ -200,6 +202,7 @@ public class DeploymentImpl implements Deployment {
         return deploymentInfo.getAsyncExecutor();
     }
 
+    @Deprecated
     public Charset getDefaultCharset() {
         return defaultCharset;
     }
@@ -218,6 +221,7 @@ public class DeploymentImpl implements Deployment {
         return deploymentManager.getState();
     }
 
+    @Deprecated
     public void setDefaultCharset(Charset defaultCharset) {
         this.defaultCharset = defaultCharset;
     }
