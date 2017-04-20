@@ -70,6 +70,10 @@ public class DeploymentImpl implements Deployment {
     private volatile SessionManager sessionManager;
     @Deprecated
     private volatile Charset defaultCharset = StandardCharsets.ISO_8859_1;
+    private volatile Charset defaultRequestCharset = StandardCharsets.ISO_8859_1;
+    private volatile Charset defaultResponseCharset = StandardCharsets.ISO_8859_1;
+
+
 
     private volatile List<AuthenticationMechanism> authenticationMechanisms;
     private volatile List<ThreadSetupHandler> threadSetupActions;
@@ -207,6 +211,16 @@ public class DeploymentImpl implements Deployment {
         return defaultCharset;
     }
 
+    @Override
+    public Charset getDefaultRequestCharset() {
+        return defaultRequestCharset;
+    }
+
+    @Override
+    public Charset getDefaultResponseCharset() {
+        return defaultResponseCharset;
+    }
+
     public void setAuthenticationMechanisms(List<AuthenticationMechanism> authenticationMechanisms) {
         this.authenticationMechanisms = authenticationMechanisms;
     }
@@ -224,6 +238,14 @@ public class DeploymentImpl implements Deployment {
     @Deprecated
     public void setDefaultCharset(Charset defaultCharset) {
         this.defaultCharset = defaultCharset;
+    }
+
+    public void setDefaultRequestCharset(Charset defaultRequestCharset) {
+        this.defaultRequestCharset = defaultRequestCharset;
+    }
+
+    public void setDefaultResponseCharset(Charset defaultResponseCharset) {
+        this.defaultResponseCharset = defaultResponseCharset;
     }
 
     void destroy(){

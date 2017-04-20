@@ -163,6 +163,16 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (deploymentInfo.getDefaultEncoding() != null) {
             deployment.setDefaultCharset(Charset.forName(deploymentInfo.getDefaultEncoding()));
         }
+        if(deploymentInfo.getDefaultRequestEncoding() != null) {
+            deployment.setDefaultRequestCharset(Charset.forName(deploymentInfo.getDefaultRequestEncoding()));
+        } else if (deploymentInfo.getDefaultEncoding() != null) {
+            deployment.setDefaultRequestCharset(Charset.forName(deploymentInfo.getDefaultEncoding()));
+        }
+        if(deploymentInfo.getDefaultResponseEncoding() != null) {
+            deployment.setDefaultResponseCharset(Charset.forName(deploymentInfo.getDefaultResponseEncoding()));
+        } else if (deploymentInfo.getDefaultEncoding() != null) {
+            deployment.setDefaultResponseCharset(Charset.forName(deploymentInfo.getDefaultEncoding()));
+        }
 
         handleDeploymentSessionConfig(deploymentInfo, servletContext);
 
