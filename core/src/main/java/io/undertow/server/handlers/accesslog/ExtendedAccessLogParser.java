@@ -407,7 +407,7 @@ public class ExtendedAccessLogParser {
             UndertowLogger.ROOT_LOGGER.extendedAccessLogBadXParam();
             return null;
         }
-        String parameter = tokenizer.getParameter();
+        final String parameter = tokenizer.getParameter();
         if (parameter == null) {
             UndertowLogger.ROOT_LOGGER.extendedAccessLogMissingClosing();
             return null;
