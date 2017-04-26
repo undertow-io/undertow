@@ -50,15 +50,17 @@ public class ExtendedAccessLogFileTestCase {
 
     private static final Path logDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "logs");
 
-    public static final String PATTERN = "cs-uri cs(test-header) x-O(Connection)";
+    public static final String PATTERN = "cs-uri cs(test-header) x-O(Connection) x-H(secure)";
 
     @Before
     public void before() throws IOException {
         Files.createDirectories(logDirectory);
+        DefaultServer.startSSLServer();
     }
 
     @After
     public void after() throws IOException {
+        DefaultServer.stopSSLServer();
         FileUtils.deleteRecursive(logDirectory);
     }
 
@@ -85,8 +87,9 @@ public class ExtendedAccessLogFileTestCase {
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, PATTERN, new ExtendedAccessLogParser( ExtendedAccessLogFileTestCase.class.getClassLoader()).parse(PATTERN))));
         TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/path");
             get.addHeader("test-header", "single-val");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
@@ -99,7 +102,7 @@ public class ExtendedAccessLogFileTestCase {
             Assert.assertEquals("#Version: 2.0", lines[1]);
             Assert.assertEquals("#Software: " + Version.getFullVersionString(), lines[2]);
             Assert.assertEquals("", lines[3]);
-            Assert.assertEquals("/path 'single-val' 'keep-alive'", lines[4]);
+            Assert.assertEquals("/path 'single-val' 'keep-alive' true", lines[4]);
         } finally {
             client.getConnectionManager().shutdown();
         }
