@@ -40,6 +40,14 @@ public interface SessionManagerStatistics {
 
     /**
      *
+     * @return the highest number of sessions that have been active at a single time, or -1 if this statistic is not supported
+     */
+    default long getHighestSessionCount() {
+        return -1;
+    }
+
+    /**
+     *
      * @return The number of active sessions
      */
     long getActiveSessionCount();

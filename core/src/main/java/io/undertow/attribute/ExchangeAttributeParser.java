@@ -118,7 +118,14 @@ public class ExchangeAttributeParser {
                 case 3: {
                     if (c == '{') {
                         state = 4;
+                    } else if (c == '$') {
+                        //literal dollars
+                        attributes.add(wrap(new ConstantExchangeAttribute("$")));
+                        pos = i + 1;
+                        state = 0;
                     } else {
+                        attributes.add(wrap(parseSingleToken(valueString.substring(pos, i + 1))));
+                        pos = i + 1;
                         state = 0;
                     }
                     break;
