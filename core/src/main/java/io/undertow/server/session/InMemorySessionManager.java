@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -75,6 +76,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     private volatile long longestSessionLifetime = 0;
     private volatile long expiredSessionCount = 0;
     private volatile BigInteger totalSessionLifetime = BigInteger.ZERO;
+    private final AtomicInteger highestSessionCount = new AtomicInteger();
 
     private final boolean statisticsEnabled;
 
@@ -178,9 +180,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         } else {
             evictionToken = null;
         }
-        if(statisticsEnabled) {
-            createdSessionCount.incrementAndGet();
-        }
         final SessionImpl session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken, defaultSessionTimeout);
 
         UndertowLogger.SESSION_LOGGER.debugf("Created session with id %s for exchange %s", sessionID, serverExchange);
@@ -190,6 +189,19 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         session.bumpTimeout();
         sessionListeners.sessionCreated(session, serverExchange);
         serverExchange.putAttachment(NEW_SESSION, session);
+
+        if(statisticsEnabled) {
+            createdSessionCount.incrementAndGet();
+            int highest;
+            int sessionSize;
+            do {
+                highest = highestSessionCount.get();
+                sessionSize = sessions.size();
+                if(sessionSize <= highest) {
+                    break;
+                }
+            } while (!highestSessionCount.compareAndSet(highest, sessionSize));
+        }
         return session;
     }
 
@@ -285,6 +297,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public long getMaxActiveSessions() {
         return maxSize;
+    }
+
+    public long getHighestSessionCount() {
+        return highestSessionCount.get();
     }
 
     @Override
