@@ -26,6 +26,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.CompletionLatchHandler;
 import io.undertow.util.FileUtils;
+import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -50,7 +51,7 @@ public class ExtendedAccessLogFileTestCase {
 
     private static final Path logDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "logs");
 
-    public static final String PATTERN = "cs-uri cs(test-header) x-O(Connection) x-H(secure)";
+    public static final String PATTERN = "cs-uri cs(test-header) x-O(aa) x-H(secure)";
 
     @Before
     public void before() throws IOException {
@@ -67,6 +68,7 @@ public class ExtendedAccessLogFileTestCase {
     private static final HttpHandler HELLO_HANDLER = new HttpHandler() {
         @Override
         public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            exchange.getResponseHeaders().put(new HttpString("aa"), "bb");
             exchange.getResponseSender().send("Hello");
         }
     };
@@ -102,7 +104,7 @@ public class ExtendedAccessLogFileTestCase {
             Assert.assertEquals("#Version: 2.0", lines[1]);
             Assert.assertEquals("#Software: " + Version.getFullVersionString(), lines[2]);
             Assert.assertEquals("", lines[3]);
-            Assert.assertEquals("/path 'single-val' 'keep-alive' true", lines[4]);
+            Assert.assertEquals("/path 'single-val' 'bb' true", lines[4]);
         } finally {
             client.getConnectionManager().shutdown();
         }
