@@ -413,17 +413,17 @@ public class ExtendedAccessLogParser {
             return null;
         }
         if ("A".equals(token)) {
-            parser.parse("%{sc," + parameter + "}");
+            return parser.parse("%{sc," + parameter + "}");
         } else if ("C".equals(token)) {
             return new QuotingExchangeAttribute(new CookieAttribute(parameter));
         } else if ("R".equals(token)) {
-            parser.parse("%{r," + parameter + "}");
+            return parser.parse("%{r," + parameter + "}");
         } else if ("S".equals(token)) {
-            parser.parse("%{s," + parameter + "}");
+            return parser.parse("%{s," + parameter + "}");
         } else if ("H".equals(token)) {
             return getServletRequestElement(parameter);
         } else if ("P".equals(token)) {
-            parser.parse("%{rp," + parameter + "}");
+            return parser.parse("%{rp," + parameter + "}");
         } else if ("O".equals(token)) {
             return new QuotingExchangeAttribute(new ExchangeAttribute() {
                 @Override
