@@ -187,6 +187,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 }
                 if(currentRequest != null) {
                     currentRequest.setFailed(new ClosedChannelException());
+                    currentRequest = null;
                 }
             }
         });
@@ -537,8 +538,12 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                         if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
                             UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException");
                         }
-                        safeClose(channel, HttpClientConnection.this);
-                        currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
+                        try {
+                            currentRequest.setFailed(e);
+                            currentRequest = null;
+                        } finally {
+                            safeClose(channel, HttpClientConnection.this);
+                        }
                         return;
                     }
 
@@ -550,9 +555,13 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                         return;
                     } else if (res == -1) {
                         channel.suspendReads();
-                        safeClose(HttpClientConnection.this);
-                        // Cancel the current active request
-                        currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
+                        try {
+                            // Cancel the current active request
+                            currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
+                            currentRequest = null;
+                        } finally {
+                            safeClose(HttpClientConnection.this);
+                        }
                         return;
                     }
 
