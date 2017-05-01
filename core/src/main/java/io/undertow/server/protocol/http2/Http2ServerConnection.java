@@ -241,7 +241,7 @@ public class Http2ServerConnection extends ServerConnection {
 
     @Override
     public void close() throws IOException {
-        channel.close();
+        channel.sendRstStream(requestChannel.getStreamId(), Http2Channel.ERROR_CANCEL);
     }
 
     @Override
