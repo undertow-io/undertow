@@ -393,7 +393,7 @@ public class Http2ClientConnection implements ClientConnection {
                     Http2RstStreamStreamSourceChannel rstStream = (Http2RstStreamStreamSourceChannel) result;
                     int stream = rstStream.getStreamId();
                     UndertowLogger.REQUEST_LOGGER.debugf("Client received RST_STREAM for stream %s", stream);
-                    Http2ClientExchange exchange = currentExchanges.get(stream);
+                    Http2ClientExchange exchange = currentExchanges.remove(stream);
 
                     if(exchange != null) {
                         //if we have not yet received a response we treat this as an error
