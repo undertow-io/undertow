@@ -404,6 +404,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     //this is yuck
                     if(!isClient() || !"100".equals(parser.getHeaderMap().getFirst(STATUS))) {
                         holder.sourceClosed = true;
+                        if(holder.sinkClosed) {
+                            currentStreams.remove(frameParser.streamId);
+                        }
                     }
                 }
                 if(parser.isInvalid()) {
