@@ -43,6 +43,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
     private ChannelListener<Http2DataStreamSinkChannel> completionListener;
 
     private final int frameType;
+    private boolean completionListenerReady;
 
     Http2DataStreamSinkChannel(Http2Channel channel, int streamId, int frameType) {
         this(channel, streamId, new HeaderMap(), frameType);
@@ -218,7 +219,14 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
 
     }
 
-
+    @Override
+    public boolean flush() throws IOException {
+        if(completionListenerReady && completionListener != null) {
+            ChannelListeners.invokeChannelListener(this, completionListener);
+            completionListener = null;
+        }
+        return super.flush();
+    }
 
     protected void writeBeforeHeaderBlock(ByteBuffer buffer) {
 
@@ -237,8 +245,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
         super.handleFlushComplete(finalFrame);
         if (finalFrame) {
             if (completionListener != null) {
-                ChannelListeners.invokeChannelListener(this, completionListener);
-                completionListener = null;
+                completionListenerReady = true;
             }
         }
     }
