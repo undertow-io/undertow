@@ -22,6 +22,7 @@ import static io.undertow.Handlers.jvmRoute;
 import static io.undertow.Handlers.path;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -45,6 +46,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.Headers;
+import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -56,6 +59,7 @@ import io.undertow.util.StatusCodes;
 public abstract class AbstractLoadBalancingProxyTestCase {
 
     private static final String COUNT = "count";
+    public static final String RESPONSE_BODY = "This is a response body";
 
     protected static Undertow server1;
     protected static Undertow server2;
@@ -103,6 +107,21 @@ public abstract class AbstractLoadBalancingProxyTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("/url/foo=bar", HttpClientUtils.readResponse(result));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testOldBackend() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            for(int i = 0; i < 10; ++i) {
+                HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/old");
+                HttpResponse result = client.execute(get);
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(RESPONSE_BODY, HttpClientUtils.readResponse(result));
+            }
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -276,6 +295,19 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                         } else {
                             exchange.getResponseSender().send("true");
                         }
+                    }
+                }).addPrefixPath("/old", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        if(exchange.isInIoThread()) {
+                            exchange.dispatch(this);
+                            return;
+                        }
+                        exchange.startBlocking();
+                        exchange.setProtocol(Protocols.HTTP_1_0);
+                        exchange.getResponseHeaders().put(Headers.CONNECTION, "asdf");
+                        exchange.getOutputStream().write(RESPONSE_BODY.getBytes(StandardCharsets.US_ASCII));
+                        exchange.getOutputStream().flush();
                     }
                 }));
     }
