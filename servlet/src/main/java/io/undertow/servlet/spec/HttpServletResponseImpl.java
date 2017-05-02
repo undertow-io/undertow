@@ -162,11 +162,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             setContentType("text/html");
             setCharacterEncoding("UTF-8");
             if(servletContext.getDeployment().getDeploymentInfo().isEscapeErrorMessage()) {
-                getWriter().write("<html><head><title>Error</title></head><body>" + escapeHtml(error) + "</body></html>");
+                write("<html><head><title>Error</title></head><body>" + escapeHtml(error) + "</body></html>");
             } else {
-                getWriter().write("<html><head><title>Error</title></head><body>" + error + "</body></html>");
+                write("<html><head><title>Error</title></head><body>" + error + "</body></html>");
             }
-            getWriter().close();
+            close();
         }
         responseDone();
     }
@@ -614,6 +614,42 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             return originalServletContext.getSessionConfig().rewriteUrl(url, servletContext.getSession(originalServletContext, exchange, true).getId());
         } else {
             return url;
+        }
+    }
+
+    /**
+     * <p>
+     * Writes the given {@code String} to the response.
+     * </p>
+     *
+     * <p>
+     * {@link #getWriter()} is used by default but if {@link #getOutputStream()} has been already called, the method
+     * will use it to prevent any exception.
+     * </p>
+     *
+     * @param message the message to write
+     * @throws IOException if any I/O error occurs
+     */
+    public void write(final String message) throws IOException {
+        if (responseState == ResponseState.STREAM) {
+            getOutputStream().print(message);
+        } else {
+            getWriter().write(message);
+        }
+    }
+
+    /**
+     * <p>
+     * Closes the stream.
+     * </p>
+     *
+     * @throws IOException if any I/O error occurs
+     */
+    public void close() throws IOException {
+        if (responseState == ResponseState.STREAM) {
+            getOutputStream().close();
+        } else {
+            getWriter().close();
         }
     }
 

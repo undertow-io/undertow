@@ -20,10 +20,10 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.spec.HttpServletResponseImpl;
 
 import javax.servlet.ServletOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -111,9 +111,9 @@ public class ServletDebugPageHandler {
             out.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             out.close();
         } catch (IllegalStateException e) {
-            PrintWriter writer = servletRequestContext.getOriginalResponse().getWriter();
-            writer.write(sb.toString());
-            writer.close();
+            HttpServletResponseImpl res = servletRequestContext.getOriginalResponse();
+            res.write(sb.toString());
+            res.close();
         }
     }
 
