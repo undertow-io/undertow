@@ -262,7 +262,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
 
     public void wakeupReads() {
         long val = state;
-        if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
+        if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED)) {
             return;
         }
         next.wakeupReads();
