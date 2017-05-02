@@ -47,6 +47,7 @@ import io.undertow.util.Methods;
 import io.undertow.util.PooledAdaptor;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
+import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -104,6 +105,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             currentRequest.terminateResponse();
         }
     };
+
+    private static final Logger log = Logger.getLogger(HttpClientConnection.class);
 
     private final Deque<HttpClientExchange> pendingQueue = new ArrayDeque<>();
     private HttpClientExchange currentRequest;
@@ -169,6 +172,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         connection.getCloseSetter().set(new ChannelListener<StreamConnection>() {
 
             public void handleEvent(StreamConnection channel) {
+                log.debugf("connection to %s closed", getPeerAddress());
                 HttpClientConnection.this.state |= CLOSED;
                 ChannelListeners.invokeChannelListener(HttpClientConnection.this, closeSetter.get());
                 try {
@@ -437,6 +441,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
 
     public StreamConnection performUpgrade() throws IOException {
+        log.debugf("connection to %s is being upgraded", getPeerAddress());
         // Upgrade the connection
         // Set the upgraded flag already to prevent new requests after this one
         if (allAreSet(state, UPGRADED | CLOSE_REQ | CLOSED)) {
@@ -449,6 +454,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
 
     public void close() throws IOException {
+        log.debugf("close called on connection to %s", getPeerAddress());
         if(http2Delegate != null) {
             http2Delegate.close();
         }
@@ -463,6 +469,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
      * Notification that the current request is finished
      */
     public void exchangeDone() {
+        log.debugf("exchange complete in connection to %s", getPeerAddress());
 
         connection.getSinkChannel().setConduit(originalSinkConduit);
         connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
