@@ -87,6 +87,7 @@ import static org.xnio.Bits.intBitMask;
  * fully parsed.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author Stuart Douglas
  */
 public final class HttpServerExchange extends AbstractAttachable {
 
