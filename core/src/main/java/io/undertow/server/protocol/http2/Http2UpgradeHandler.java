@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.undertow.server.protocol.http.HttpContinue;
 import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
@@ -69,7 +70,7 @@ public class Http2UpgradeHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         final String upgrade = exchange.getRequestHeaders().getFirst(Headers.UPGRADE);
-        if(upgrade != null && upgradeStrings.contains(upgrade)) {
+        if(upgrade != null && upgradeStrings.contains(upgrade) && !HttpContinue.requiresContinueResponse(exchange)) {
             final String settings = exchange.getRequestHeaders().getFirst("HTTP2-Settings");
             if(settings != null) {
                 if(exchange.isRequestComplete()) {
