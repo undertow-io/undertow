@@ -44,6 +44,7 @@ import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
@@ -112,7 +113,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         }
     }
 
-    @Test
+    @Test @HttpOneOnly
     public void testOldBackend() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -305,7 +306,6 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                         }
                         exchange.startBlocking();
                         exchange.setProtocol(Protocols.HTTP_1_0);
-                        exchange.getResponseHeaders().put(Headers.CONNECTION, "asdf");
                         exchange.getOutputStream().write(RESPONSE_BODY.getBytes(StandardCharsets.US_ASCII));
                         exchange.getOutputStream().flush();
                     }
