@@ -47,7 +47,6 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.Headers;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 
