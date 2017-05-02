@@ -98,7 +98,7 @@ public class SSLMetaDataTestCase {
 
     @Test
     public void testCert() throws IOException {
-        internalTest("/cert");
+        internalTest("/cert")
     }
 
     private void internalTest(final String path) throws IOException {
