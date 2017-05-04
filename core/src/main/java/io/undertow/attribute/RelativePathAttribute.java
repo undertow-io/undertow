@@ -52,8 +52,8 @@ public class RelativePathAttribute implements ExchangeAttribute {
         } else {
             final String path = newValue.substring(0, pos);
             exchange.setRelativePath(path);
-            exchange.setRequestURI(exchange.getResolvedPath() + newValue);
-            exchange.setRequestPath(exchange.getResolvedPath() + newValue);
+            exchange.setRequestURI(exchange.getResolvedPath() + path);
+            exchange.setRequestPath(exchange.getResolvedPath() + path);
 
             final String newQueryString = newValue.substring(pos);
             exchange.setQueryString(newQueryString);
