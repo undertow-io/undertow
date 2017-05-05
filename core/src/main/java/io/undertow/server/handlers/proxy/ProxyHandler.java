@@ -528,6 +528,16 @@ public final class ProxyHandler implements HttpHandler {
             if(log.isDebugEnabled()) {
                 log.debugf("Sending request %s to target %s for exchange %s", request, clientConnection.getConnection().getPeerAddress(), exchange);
             }
+            //handle content
+            //if the frontend is HTTP/2 then we may need to add a Transfer-Encoding header, to indicate to the backend
+            //that there is content
+            if(!request.getRequestHeaders().contains(Headers.TRANSFER_ENCODING) && !request.getRequestHeaders().contains(Headers.CONTENT_LENGTH)) {
+                if(!exchange.isRequestComplete()) {
+                    request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
+                }
+            }
+
+
             clientConnection.getConnection().sendRequest(request, new ClientCallback<ClientExchange>() {
                 @Override
                 public void completed(final ClientExchange result) {
