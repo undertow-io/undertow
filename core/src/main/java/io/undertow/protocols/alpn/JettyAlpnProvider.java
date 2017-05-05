@@ -146,6 +146,6 @@ public class JettyAlpnProvider implements ALPNProvider {
 
     @Override
     public String toString() {
-        return "JettyAlpnProvider{}";
+        return "JettyAlpnProvider";
     }
 }
