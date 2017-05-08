@@ -36,7 +36,17 @@ public class SecureRandomSessionIdGenerator implements SessionIdGenerator {
 
     private volatile int length = 30;
 
-    private static final char[] SESSION_ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".toCharArray();
+    private static final char[] SESSION_ID_ALPHABET;
+
+    private static final String ALPHABET_PROPERTY = "io.undertow.server.session.SecureRandomSessionIdGenerator.ALPHABET";
+
+    static {
+        String alphabet = System.getProperty(ALPHABET_PROPERTY, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_");
+        if(alphabet.length() != 64) {
+            throw new RuntimeException("io.undertow.server.session.SecureRandomSessionIdGenerator must be exactly 64 characters long");
+        }
+        SESSION_ID_ALPHABET = alphabet.toCharArray();
+    }
 
     @Override
     public String createSessionId() {
