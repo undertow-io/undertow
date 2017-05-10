@@ -203,6 +203,35 @@ public class RoutingHandler implements HttpHandler {
         return this;
     }
 
+    /**
+     *
+     * Removes the specified route from the handler
+     *
+     * @param method The method to remove
+     * @param path the path tempate to remove
+     * @return this handler
+     */
+    public RoutingHandler remove(HttpString method, String path) {
+        PathTemplateMatcher<RoutingMatch> handler = matches.get(method);
+        if(handler != null) {
+            handler.remove(path);
+        }
+        return this;
+    }
+
+
+    /**
+     *
+     * Removes the specified route from the handler
+     *
+     * @param path the path tempate to remove
+     * @return this handler
+     */
+    public RoutingHandler remove(String path) {
+        allMethodsMatcher.remove(path);
+        return this;
+    }
+
     Map<HttpString, PathTemplateMatcher<RoutingMatch>> getMatches() {
         return matches;
     }
