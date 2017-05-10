@@ -205,7 +205,7 @@ public class DateUtils {
      * @return
      */
     public static boolean handleIfUnmodifiedSince(final HttpServerExchange exchange, final Date lastModified) {
-        return handleIfModifiedSince(exchange.getRequestHeaders().getFirst(Headers.IF_UNMODIFIED_SINCE), lastModified);
+        return handleIfUnmodifiedSince(exchange.getRequestHeaders().getFirst(Headers.IF_UNMODIFIED_SINCE), lastModified);
     }
 
     /**
