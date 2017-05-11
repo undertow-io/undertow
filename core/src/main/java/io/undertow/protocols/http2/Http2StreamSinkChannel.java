@@ -20,9 +20,9 @@ package io.undertow.protocols.http2;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
 import org.xnio.IoUtils;
 import io.undertow.connector.PooledByteBuffer;
-
 import io.undertow.server.protocol.framed.SendFrameHeader;
 
 /**
@@ -38,6 +38,8 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
     private int initialWindowSize; //we track the initial window size, and then re-query it to get any delta
 
     private SendFrameHeader header;
+
+    private static final Object flowControlLock = new Object();
 
     Http2StreamSinkChannel(Http2Channel channel, int streamId) {
         super(channel);
@@ -107,32 +109,37 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
      *
      * @return The number of bytes that can be sent
      */
-    protected synchronized int grabFlowControlBytes(int toSend) {
-        if (toSend == 0) {
-            return 0;
-        }
-        int newWindowSize = this.getChannel().getInitialSendWindowSize();
-        int settingsDelta = newWindowSize - this.initialWindowSize;
-        //first adjust for any settings frame updates
-        this.initialWindowSize = newWindowSize;
-        this.flowControlWindow += settingsDelta;
+    protected int grabFlowControlBytes(int toSend) {
+        synchronized (flowControlLock) {
+            if (toSend == 0) {
+                return 0;
+            }
+            int newWindowSize = this.getChannel().getInitialSendWindowSize();
+            int settingsDelta = newWindowSize - this.initialWindowSize;
+            //first adjust for any settings frame updates
+            this.initialWindowSize = newWindowSize;
+            this.flowControlWindow += settingsDelta;
 
-        int min = Math.min(toSend, this.flowControlWindow);
-        int actualBytes = this.getChannel().grabFlowControlBytes(min);
-        this.flowControlWindow -= actualBytes;
-        return actualBytes;
+            int min = Math.min(toSend, this.flowControlWindow);
+            int actualBytes = this.getChannel().grabFlowControlBytes(min);
+            this.flowControlWindow -= actualBytes;
+            return actualBytes;
+        }
     }
 
-    synchronized void updateFlowControlWindow(final int delta) throws IOException {
-        boolean exhausted = flowControlWindow <= 0;
-        long ld = delta;
-        ld += flowControlWindow;
-        if(ld > Integer.MAX_VALUE) {
-            getChannel().sendRstStream(streamId, Http2Channel.ERROR_FLOW_CONTROL_ERROR);
-            markBroken();
-            return;
+    void updateFlowControlWindow(final int delta) throws IOException {
+        boolean exhausted;
+        synchronized (flowControlLock) {
+            exhausted = flowControlWindow <= 0;
+            long ld = delta;
+            ld += flowControlWindow;
+            if (ld > Integer.MAX_VALUE) {
+                getChannel().sendRstStream(streamId, Http2Channel.ERROR_FLOW_CONTROL_ERROR);
+                markBroken();
+                return;
+            }
+            flowControlWindow += delta;
         }
-        flowControlWindow += delta;
         if (exhausted) {
             getChannel().notifyFlowControlAllowed();
             if (isWriteResumed()) {

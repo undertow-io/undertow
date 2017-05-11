@@ -133,24 +133,14 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     //local
     private int encoderHeaderTableSize;
-    private boolean pushEnabled;
-    private volatile int initialSendWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
+    private volatile boolean pushEnabled;
     private volatile int initialReceiveWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
-    private int sendMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private volatile int sendMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int receiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int unackedReceiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE; //the old max frame size, this gets updated when our setting frame is acked
     private final int maxHeaders;
     private final int maxHeaderListSize;
 
-    /**
-     * How much data we have told the remote endpoint we are prepared to accept.
-     */
-    private volatile int receiveWindowSize = initialReceiveWindowSize;
-
-    /**
-     * How much data we can send to the remote endpoint, at the connection level.
-     */
-    private volatile long sendWindowSize = initialSendWindowSize;
 
     private boolean thisGoneAway = false;
     private boolean peerGoneAway = false;
@@ -178,6 +168,22 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
     private ParseTimeoutUpdater parseTimeoutUpdater;
+
+    private final Object flowControlLock = new Object();
+
+    /**
+     * The initial window size for newly created channels, guarded by {@link #flowControlLock}
+     */
+    private volatile int initialSendWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
+    /**
+     * How much data we can send to the remote endpoint, at the connection level, guarded by {@link #flowControlLock}
+     */
+    private volatile long sendWindowSize = initialSendWindowSize;
+
+    /**
+     * How much data we have told the remote endpoint we are prepared to accept, guarded by {@link #flowControlLock}
+     */
+    private volatile int receiveWindowSize = initialReceiveWindowSize;
 
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
@@ -626,15 +632,17 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
      *
      * @param settings
      */
-    synchronized boolean updateSettings(List<Http2Setting> settings) {
+    boolean updateSettings(List<Http2Setting> settings) {
         for (Http2Setting setting : settings) {
             if (setting.getId() == Http2Setting.SETTINGS_INITIAL_WINDOW_SIZE) {
-                int old = initialSendWindowSize;
-                if(setting.getValue() > Integer.MAX_VALUE) {
-                    sendGoAway(ERROR_FLOW_CONTROL_ERROR);
-                    return false;
+                synchronized (flowControlLock) {
+                    int old = initialSendWindowSize;
+                    if (setting.getValue() > Integer.MAX_VALUE) {
+                        sendGoAway(ERROR_FLOW_CONTROL_ERROR);
+                        return false;
+                    }
+                    initialSendWindowSize = (int) setting.getValue();
                 }
-                initialSendWindowSize = (int) setting.getValue();
 
             } else if (setting.getId() == Http2Setting.SETTINGS_MAX_FRAME_SIZE) {
                 if(setting.getValue() > MAX_FRAME_SIZE || setting.getValue() < DEFAULT_MAX_FRAME_SIZE) {
@@ -644,7 +652,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 }
                 sendMaxFrameSize = (int) setting.getValue();
             } else if (setting.getId() == Http2Setting.SETTINGS_HEADER_TABLE_SIZE) {
-                encoder.setMaxTableSize((int) setting.getValue());
+                synchronized (this) {
+                    encoder.setMaxTableSize((int) setting.getValue());
+                }
             } else if (setting.getId() == Http2Setting.SETTINGS_ENABLE_PUSH) {
 
                 int result = (int) setting.getValue();
@@ -676,7 +686,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         return initialReceiveWindowSize;
     }
 
-    public synchronized void handleWindowUpdate(int streamId, int deltaWindowSize) throws IOException {
+    public void handleWindowUpdate(int streamId, int deltaWindowSize) throws IOException {
         if (streamId == 0) {
             if (deltaWindowSize == 0) {
                 UndertowLogger.REQUEST_IO_LOGGER.debug("Invalid flow-control window increment of 0 received with WINDOW_UPDATE frame for connection");
@@ -684,14 +694,16 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 return;
             }
 
-            boolean exhausted = sendWindowSize <= FLOW_CONTROL_MIN_WINDOW; //
+            synchronized (flowControlLock) {
+                boolean exhausted = sendWindowSize <= FLOW_CONTROL_MIN_WINDOW; //
 
-            sendWindowSize += deltaWindowSize;
-            if (exhausted) {
-                notifyFlowControlAllowed();
-            }
-            if(sendWindowSize > Integer.MAX_VALUE) {
-                sendGoAway(ERROR_FLOW_CONTROL_ERROR);
+                sendWindowSize += deltaWindowSize;
+                if (exhausted) {
+                    notifyFlowControlAllowed();
+                }
+                if (sendWindowSize > Integer.MAX_VALUE) {
+                    sendGoAway(ERROR_FLOW_CONTROL_ERROR);
+                }
             }
         } else {
             if (deltaWindowSize == 0) {
@@ -781,16 +793,21 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         return null;
     }
 
-    public synchronized void updateReceiveFlowControlWindow(int read) throws IOException {
+    public void updateReceiveFlowControlWindow(int read) throws IOException {
         if (read <= 0) {
             return;
         }
-        receiveWindowSize -= read;
-        //TODO: make this configurable, we should be able to set the policy that is used to determine when to update the window size
-        int initialWindowSize = this.initialReceiveWindowSize;
-        if (receiveWindowSize < (initialWindowSize / 2)) {
-            int delta = initialWindowSize - receiveWindowSize;
-            receiveWindowSize += delta;
+        int delta = -1;
+        synchronized (flowControlLock) {
+            receiveWindowSize -= read;
+            //TODO: make this configurable, we should be able to set the policy that is used to determine when to update the window size
+            int initialWindowSize = this.initialReceiveWindowSize;
+            if (receiveWindowSize < (initialWindowSize / 2)) {
+                delta = initialWindowSize - receiveWindowSize;
+                receiveWindowSize += delta;
+            }
+        }
+        if(delta > 0) {
             sendUpdateWindowSize(0, delta);
         }
     }
@@ -839,17 +856,20 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
      * @param bytesToGrab The amount of bytes the sender is trying to send
      * @return The actual amount of bytes the sender can send
      */
-    synchronized int grabFlowControlBytes(int bytesToGrab) {
+    int grabFlowControlBytes(int bytesToGrab) {
         if(bytesToGrab <= 0) {
             return 0;
         }
-        int min = (int) Math.min(bytesToGrab, sendWindowSize);
-        if(bytesToGrab > FLOW_CONTROL_MIN_WINDOW && min <= FLOW_CONTROL_MIN_WINDOW) {
-            //this can cause problems with padding, so we just return 0
-            return 0;
+        int min;
+        synchronized (flowControlLock) {
+            min = (int) Math.min(bytesToGrab, sendWindowSize);
+            if (bytesToGrab > FLOW_CONTROL_MIN_WINDOW && min <= FLOW_CONTROL_MIN_WINDOW) {
+                //this can cause problems with padding, so we just return 0
+                return 0;
+            }
+            min = Math.min(sendMaxFrameSize, min);
+            sendWindowSize -= min;
         }
-        min = Math.min(sendMaxFrameSize, min);
-        sendWindowSize -= min;
         return min;
     }
 
