@@ -69,7 +69,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
         if(fcWindow <= dataPaddingBytes + 1) {
             //so we won't actually be able to send any data, just padding, which is obviously not what we want
             if(getBuffer().remaining() >= fcWindow) {
-                //easy fix, we just don't send any data
+                //easy fix, we just don't send any padding
                 dataPaddingBytes = 0;
             } else if (getBuffer().remaining() == dataPaddingBytes ){
                 //corner case.
@@ -79,7 +79,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             }
         }
 
-        final boolean finalFrame = isWritesShutdown() && fcWindow >= getBuffer().remaining();
+        final boolean finalFrame = isFinalFrameQueued() && fcWindow >= (getBuffer().remaining() + (dataPaddingBytes > 0 ? dataPaddingBytes + 1 : 0));
         PooledByteBuffer firstHeaderBuffer = getChannel().getBufferPool().allocate();
         PooledByteBuffer[] allHeaderBuffers = null;
         ByteBuffer firstBuffer = firstHeaderBuffer.getBuffer();
@@ -109,7 +109,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             firstBuffer.put(0, (byte) ((headerFrameLength >> 16) & 0xFF));
             firstBuffer.put(1, (byte) ((headerFrameLength >> 8) & 0xFF));
             firstBuffer.put(2, (byte) (headerFrameLength & 0xFF));
-            firstBuffer.put(4, (byte) ((isWritesShutdown() && !getBuffer().hasRemaining() && frameType == Http2Channel.FRAME_TYPE_HEADERS ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ) | (paddingBytes > 0 ? Http2Channel.HEADERS_FLAG_PADDED : 0))); //flags
+            firstBuffer.put(4, (byte) ((isFinalFrameQueued() && !getBuffer().hasRemaining() && frameType == Http2Channel.FRAME_TYPE_HEADERS ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ) | (paddingBytes > 0 ? Http2Channel.HEADERS_FLAG_PADDED : 0))); //flags
             ByteBuffer currentBuffer = firstBuffer;
 
             if(currentBuffer.remaining() < paddingBytes) {
