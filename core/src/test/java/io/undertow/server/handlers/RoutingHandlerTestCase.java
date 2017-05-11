@@ -18,17 +18,8 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.Handlers;
-import io.undertow.predicate.Predicates;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.RoutingHandler;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Methods;
+import java.io.IOException;
 
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -39,7 +30,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
+import io.undertow.Handlers;
+import io.undertow.predicate.Predicates;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RoutingHandler;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas
@@ -62,6 +62,14 @@ public class RoutingHandlerTestCase {
                             exchange.getResponseSender().send("baz-path" + exchange.getQueryParameters().get("foo"));
                         }
                     });
+
+        RoutingHandler pathParamHandler = Handlers.routing()
+                .add(Methods.GET, "/path/{param}", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("path-param" + exchange.getPathParameters().get("foo"));
+                    }
+                });
 
         RoutingHandler convienceHandler = Handlers.routing()
                 .get("/bar", new HttpHandler() {
@@ -133,7 +141,8 @@ public class RoutingHandlerTestCase {
                     }
                 })
                 .addAll(commonHandler)
-                .addAll(convienceHandler));
+                .addAll(convienceHandler)
+                .addAll(pathParamHandler));
     }
 
     @Test
@@ -182,6 +191,11 @@ public class RoutingHandlerTestCase {
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("baz-path[a]", HttpClientUtils.readResponse(result));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/foo");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("path-param[foo]", HttpClientUtils.readResponse(result));
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/bar");
             result = client.execute(get);
