@@ -1071,7 +1071,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         return protocol;
     }
 
-    private boolean isIdle(int streamNo) {
+    private synchronized boolean isIdle(int streamNo) {
         if(streamNo % 2 == streamIdCounter % 2) {
             return streamNo >= streamIdCounter;
         } else {
