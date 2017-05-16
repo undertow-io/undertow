@@ -61,7 +61,14 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
             ConduitFactory<StreamSinkConduit> conduitFactory,
             HttpServerExchange exchange,
             int deflateLevel) {
-        super(conduitFactory, exchange, deflateLevel);
+        this(conduitFactory, exchange, new NewInstanceDeflaterPool(deflateLevel, true));
+    }
+
+    public GzipStreamSinkConduit(
+            ConduitFactory<StreamSinkConduit> conduitFactory,
+            HttpServerExchange exchange,
+            DeflaterPool deflaterPool) {
+        super(conduitFactory, exchange, deflaterPool);
         writeHeader();
         Connectors.updateResponseBytesSent(exchange, HEADER.length);
     }
