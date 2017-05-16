@@ -43,7 +43,11 @@ import org.xnio.conduits.WriteReadyHandler;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
+import io.undertow.util.NewInstanceObjectPool;
+import io.undertow.util.ObjectPool;
 import io.undertow.util.Headers;
+import io.undertow.util.PooledObject;
+import io.undertow.util.SimpleObjectPool;
 
 /**
  * Channel that handles deflate compression
@@ -52,7 +56,10 @@ import io.undertow.util.Headers;
  */
 public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
-    protected final Deflater deflater;
+    protected volatile Deflater deflater;
+
+    protected final PooledObject<Deflater> pooledObject;
+    private final ObjectPool<Deflater> deflaterPool;
     private final ConduitFactory<StreamSinkConduit> conduitFactory;
     private final HttpServerExchange exchange;
 
@@ -83,12 +90,27 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     }
 
     public DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange, int deflateLevel) {
-        deflater = new Deflater(deflateLevel, true);
+        this(conduitFactory, exchange, newInstanceDeflaterPool(deflateLevel));
+    }
+
+    public DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange, ObjectPool<Deflater> deflaterPool) {
+        this.deflaterPool = deflaterPool;
+        this.pooledObject = deflaterPool.allocate();
+        this.deflater = pooledObject.getObject();
         this.currentBuffer = exchange.getConnection().getByteBufferPool().allocate();
         this.exchange = exchange;
         this.conduitFactory = conduitFactory;
         setWriteReadyHandler(new WriteReadyHandler.ChannelListenerHandler<>(Connectors.getConduitSinkChannel(exchange)));
     }
+
+    public static ObjectPool<Deflater> newInstanceDeflaterPool(int deflateLevel) {
+        return new NewInstanceObjectPool<Deflater>(() -> new Deflater(deflateLevel, true), Deflater::end);
+    }
+
+    public static ObjectPool<Deflater> simpleDeflaterPool(int poolSize, int deflateLevel) {
+        return new SimpleObjectPool<Deflater>(poolSize, () -> new Deflater(deflateLevel, true), Deflater::end);
+    }
+
 
     @Override
     public int write(final ByteBuffer src) throws IOException {
@@ -515,6 +537,8 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             currentBuffer = null;
             state = state & ~FLUSHING_BUFFER;
         }
-        deflater.end();
+        if (deflater != null) {
+            pooledObject.close();
+        }
     }
 }

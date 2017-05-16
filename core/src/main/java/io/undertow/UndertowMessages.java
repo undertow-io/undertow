@@ -525,4 +525,7 @@ public interface UndertowMessages {
 
     @Message(id = 165, value = "Invalid character %s in request-target")
     String invalidCharacterInRequestTarget(char next);
+
+    @Message(id = 166, value = "Pooled object is closed")
+    IllegalStateException objectIsClosed();
 }

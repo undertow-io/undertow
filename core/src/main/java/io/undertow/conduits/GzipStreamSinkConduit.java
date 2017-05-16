@@ -21,6 +21,7 @@ package io.undertow.conduits;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
+import io.undertow.util.ObjectPool;
 import org.xnio.conduits.StreamSinkConduit;
 
 import java.util.zip.CRC32;
@@ -61,7 +62,14 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
             ConduitFactory<StreamSinkConduit> conduitFactory,
             HttpServerExchange exchange,
             int deflateLevel) {
-        super(conduitFactory, exchange, deflateLevel);
+        this(conduitFactory, exchange, newInstanceDeflaterPool(deflateLevel));
+    }
+
+    public GzipStreamSinkConduit(
+            ConduitFactory<StreamSinkConduit> conduitFactory,
+            HttpServerExchange exchange,
+            ObjectPool deflaterPool) {
+        super(conduitFactory, exchange, deflaterPool);
         writeHeader();
         Connectors.updateResponseBytesSent(exchange, HEADER.length);
     }
