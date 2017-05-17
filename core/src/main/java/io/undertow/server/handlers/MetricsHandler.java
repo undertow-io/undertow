@@ -50,15 +50,17 @@ public class MetricsHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        final long start = System.currentTimeMillis();
-        exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
-            @Override
-            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                long time = System.currentTimeMillis() - start;
-                totalResult.update((int)time, exchange.getStatusCode());
-                nextListener.proceed();
-            }
-        });
+        if(!exchange.isComplete()) {
+            final long start = System.currentTimeMillis();
+            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                @Override
+                public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                    long time = System.currentTimeMillis() - start;
+                    totalResult.update((int) time, exchange.getStatusCode());
+                    nextListener.proceed();
+                }
+            });
+        }
         next.handleRequest(exchange);
     }
 
