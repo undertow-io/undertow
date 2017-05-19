@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>1.4.15.Final-SNAPSHOT</version>
+        <version>1.4.15.Final</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-dist</artifactId>
-    <version>1.4.15.Final-SNAPSHOT</version>
+    <version>1.4.15.Final</version>
 
     <name>Undertow: Distribution</name>
 
