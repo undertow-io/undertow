@@ -585,7 +585,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                 }
 
-            } catch (IOException e) {
+            } catch (IOException|RuntimeException e) {
                 safeClose(channel);
                 markWritesBroken(e);
             }
