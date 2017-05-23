@@ -18,16 +18,6 @@
 
 package io.undertow.server.handlers.resource;
 
-import io.undertow.UndertowLogger;
-import io.undertow.io.IoCallback;
-import io.undertow.io.Sender;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.DateUtils;
-import io.undertow.util.ETag;
-import io.undertow.util.MimeMappings;
-import io.undertow.util.StatusCodes;
-import org.xnio.IoUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,18 +33,35 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.xnio.IoUtils;
+import io.undertow.UndertowLogger;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.DateUtils;
+import io.undertow.util.ETag;
+import io.undertow.util.MimeMappings;
+import io.undertow.util.StatusCodes;
+
 /**
  * @author Stuart Douglas
  */
 public class URLResource implements Resource, RangeAwareResource {
 
     private final URL url;
-    private final URLConnection connection;
     private final String path;
 
-    public URLResource(final URL url, final URLConnection connection, String path) {
+    private boolean connectionOpened = false;
+    private Date lastModified;
+    private Long contentLength;
+
+    @Deprecated
+    public URLResource(final URL url, URLConnection connection, String path) {
+        this(url, path);
+    }
+
+    public URLResource(final URL url, String path) {
         this.url = url;
-        this.connection = connection;
         this.path = path;
     }
 
@@ -65,7 +72,34 @@ public class URLResource implements Resource, RangeAwareResource {
 
     @Override
     public Date getLastModified() {
-        return new Date(connection.getLastModified());
+        openConnection();
+        return lastModified;
+    }
+
+    private void openConnection() {
+        if (!connectionOpened) {
+            connectionOpened = true;
+            URLConnection connection = null;
+            try {
+                try {
+                    connection = url.openConnection();
+                } catch (IOException e) {
+                    lastModified = null;
+                    contentLength = null;
+                    return;
+                }
+                lastModified =  new Date(connection.getLastModified());
+                contentLength = connection.getContentLengthLong();
+            } finally {
+                if (connection != null) {
+                    try {
+                        IoUtils.safeClose(connection.getInputStream());
+                    } catch (IOException e) {
+                        //ignore
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -108,9 +142,9 @@ public class URLResource implements Resource, RangeAwareResource {
         Path file = getFilePath();
         try {
             if (file != null) {
-                try(DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
+                try (DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
                     for (Path child : stream) {
-                        result.add(new URLResource(child.toUri().toURL(), connection, child.toString()));
+                        result.add(new URLResource(child.toUri().toURL(), child.toString()));
                     }
                 }
             }
@@ -229,7 +263,8 @@ public class URLResource implements Resource, RangeAwareResource {
 
     @Override
     public Long getContentLength() {
-        return (long) connection.getContentLength();
+        openConnection();
+        return contentLength;
     }
 
     @Override
