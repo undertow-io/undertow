@@ -67,7 +67,7 @@ public class ClassPathResourceManager implements ResourceManager {
         if(resource == null) {
             return null;
         } else {
-            return new URLResource(resource, resource.openConnection(), path);
+            return new URLResource(resource, path);
         }
 
     }
