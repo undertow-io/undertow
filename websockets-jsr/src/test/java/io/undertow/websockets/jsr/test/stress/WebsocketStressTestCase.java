@@ -42,7 +42,6 @@ import javax.websocket.WebSocketContainer;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import io.undertow.Handlers;
@@ -86,6 +85,7 @@ public class WebsocketStressTestCase {
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorker())
                                 .addEndpoint(StressEndpoint.class)
+                                .setDispatchToWorkerThread(true)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override
                                     public void ready(ServerWebSocketContainer container) {
@@ -110,7 +110,7 @@ public class WebsocketStressTestCase {
         executor = null;
     }
 
-    @Test @Ignore
+    @Test
     public void webSocketStringStressTestCase() throws Exception {
         List<CountDownLatch> latches = new ArrayList<>();
         for (int i = 0; i < NUM_THREADS; ++i) {
