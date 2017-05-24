@@ -41,18 +41,27 @@ public final class BinaryOutputStream extends OutputStream {
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
         checkClosed();
+        if(Thread.currentThread() == sender.getIoThread()) {
+            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        }
         Channels.writeBlocking(sender, ByteBuffer.wrap(b, off, len));
     }
 
     @Override
     public void write(int b) throws IOException {
         checkClosed();
+        if(Thread.currentThread() == sender.getIoThread()) {
+            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        }
         Channels.writeBlocking(sender, ByteBuffer.wrap(new byte[]{(byte) b}));
     }
 
     @Override
     public void flush() throws IOException {
         checkClosed();
+        if(Thread.currentThread() == sender.getIoThread()) {
+            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        }
         sender.flush();
     }
 
