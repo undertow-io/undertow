@@ -82,6 +82,7 @@ public class JsrWebsocketExtensionTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
+                                .setDispatchToWorkerThread(true)
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorker())
                                 .addExtension(new PerMessageDeflateHandshake())
