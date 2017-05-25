@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import javax.net.ssl.SSLSession;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
@@ -139,6 +141,10 @@ public class Http2ServerConnection extends ServerConnection {
             poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
         }
         return poolAdaptor;
+    }
+
+    public SSLSession getSslSession() {
+        return channel.getSslSession();
     }
 
     @Override
