@@ -37,6 +37,7 @@ import org.xnio.conduits.StreamSinkConduit;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import javax.net.ssl.SSLSession;
 
 /**
  * A server connection.
@@ -114,6 +115,19 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
     public abstract <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException;
 
     public abstract void close() throws IOException;
+
+    /**
+     *
+     * Gets the SSLSession of the underlying connection, or null if SSL is not in use.
+     *
+     * Note that for client cert auth {@link #getSslSessionInfo()} should be used instead, as it
+     * takes into account other information potentially provided by load balancers that terminate SSL
+     *
+     * @return The SSLSession of the connection
+     */
+    public SSLSession getSslSession() {
+        return null;
+    }
 
     /**
      * Returns the actual address of the remote connection. This will not take things like X-Forwarded-for
