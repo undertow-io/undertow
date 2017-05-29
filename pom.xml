@@ -80,7 +80,7 @@
         <version.xnio>3.3.6.Final</version.xnio>
 
         <!-- jacoco -->
-        <version.org.jacoco>0.7.1.201405082137</version.org.jacoco>
+        <version.org.jacoco>0.7.9</version.org.jacoco>
         <jacoco.agent.argLine></jacoco.agent.argLine>
 
         <!-- Surefire args -->
