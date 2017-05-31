@@ -12,7 +12,7 @@
 
     <build>
         <plugins>
-            <!-- 
+             
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -27,7 +27,7 @@
                         <configuration>
                             <fileSets>
                                 <fileSet>
-                                    <directory>${basedir}/../</directory>
+                                    <directory>${project.basedir}/../</directory>
                                     <includes>
                                         <include>**/target/jacoco.exec</include>
                                     </includes>
@@ -44,7 +44,7 @@
                     </execution>
                 </executions>
             </plugin>
-             -->
+            
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
