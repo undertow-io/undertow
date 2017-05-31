@@ -32,26 +32,48 @@ import java.util.List;
  */
 class SpdyFramePriority implements FramePriority<SpdyChannel, SpdyStreamSourceChannel,SpdyStreamSinkChannel>{
 
-    public static SpdyFramePriority INSTANCE = new SpdyFramePriority();
+    private int nextId;
+
+    SpdyFramePriority(int nextId) {
+        this.nextId = nextId;
+    }
 
     @Override
     public boolean insertFrame(SpdyStreamSinkChannel newFrame, List<SpdyStreamSinkChannel> pendingFrames) {
-        //first deal with flow control
-        if(newFrame instanceof SpdyStreamStreamSinkChannel) {
-            if(newFrame.isBroken() || !newFrame.isOpen()) {
-                //drop the frame
+        // we need to deal with out of order streams
+        // if multiple threads are creating streams they may not end up here in
+        // the correct order
+        boolean incrementIfAccepted = false;
+
+        if (newFrame.getChannel().isClient() && newFrame instanceof SpdyStreamStreamSinkChannel) {
+            int streamId = ((SpdyStreamStreamSinkChannel) newFrame).getStreamId();
+            if (streamId > nextId) {
+                return false;
+            } else if (streamId == nextId) {
+                incrementIfAccepted = true;
+            }
+        }
+        // first deal with flow control
+        if (newFrame instanceof SpdyStreamStreamSinkChannel) {
+            if (newFrame.isBroken() || !newFrame.isOpen()) {
+                // drop the frame
                 return true;
             }
             SendFrameHeader header = ((SpdyStreamStreamSinkChannel) newFrame).generateSendFrameHeader();
-            //if no header is generated then flow control means we can't send anything
-            if(header.getByteBuffer() == null) {
-                //we clear the header, as we want to generate a new real header when the flow control window is updated
+            // if no header is generated then flow control means we can't send
+            // anything
+            if (header.getByteBuffer() == null) {
+                // we clear the header, as we want to generate a new real header
+                // when the flow control window is updated
                 ((SpdyStreamStreamSinkChannel) newFrame).clearHeader();
                 return false;
             }
         }
 
         pendingFrames.add(newFrame);
+        if (incrementIfAccepted) {
+            nextId += 2;
+        }
         return true;
     }
 
@@ -60,13 +82,30 @@ class SpdyFramePriority implements FramePriority<SpdyChannel, SpdyStreamSourceCh
         Iterator<SpdyStreamSinkChannel> it = holdFrames.iterator();
         while (it.hasNext()){
             SpdyStreamSinkChannel pending = it.next();
-            if(pending instanceof SpdyStreamStreamSinkChannel) {
+
+            boolean incrementNextId = false;
+
+            if (pending.getChannel().isClient() && pending instanceof SpdyStreamStreamSinkChannel) {
+                int streamId = ((SpdyStreamStreamSinkChannel) pending).getStreamId();
+                if (streamId > nextId) {
+                    continue;
+                } else if (streamId == nextId) {
+                    incrementNextId = true;
+                }
+            }
+
+            if (pending instanceof SpdyStreamStreamSinkChannel) {
                 SendFrameHeader header = ((SpdyStreamStreamSinkChannel) pending).generateSendFrameHeader();
-                if(header.getByteBuffer() != null) {
+                if (header.getByteBuffer() != null) {
                     pendingFrames.add(pending);
                     it.remove();
+                    it = holdFrames.iterator();
+                    if (incrementNextId) {
+                        nextId += 2;
+                    }
                 } else {
-                    //we clear the header, as we want to generate a new real header when the flow control window is updated
+                    // we clear the header, as we want to generate a new real
+                    // header when the flow control window is updated
                     ((SpdyStreamStreamSinkChannel) pending).clearHeader();
                 }
             }
