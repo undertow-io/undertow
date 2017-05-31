@@ -119,7 +119,7 @@ public class SpdyChannel extends AbstractFramedChannel<SpdyChannel, SpdyStreamSo
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
     public SpdyChannel(StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, PooledByteBuffer data, ByteBufferPool heapBufferPool, boolean clientSide, OptionMap options) {
-        super(connectedStreamChannel, bufferPool, SpdyFramePriority.INSTANCE, data, options);
+        super(connectedStreamChannel, bufferPool, new SpdyFramePriority(clientSide ? 1 : 2), data, options);
         this.heapBufferPool = heapBufferPool;
         this.deflater.setDictionary(SpdyProtocolUtils.SPDY_DICT);
         streamIdCounter = clientSide ? 1 : 2;
