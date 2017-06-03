@@ -404,4 +404,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5087, value = "Failed to use the server order")
     void failedToUseServerOrder(@Cause ReflectiveOperationException e);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5088, value = "Failed to execute ServletOutputStream.closeAsync() on IO thread")
+    void closeAsyncFailed(@Cause IOException e);
 }
