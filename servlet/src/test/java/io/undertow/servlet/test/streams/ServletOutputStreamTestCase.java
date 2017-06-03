@@ -118,7 +118,7 @@ public class ServletOutputStreamTestCase {
     @Test
     public void testBlockingServletOutputStream() throws IOException {
         message = START +  HELLO_WORLD + END;
-        runTest(message, BLOCKING_SERVLET, false, true, 1, true, false);
+        runTest(message, BLOCKING_SERVLET, false, true, 1, true, false, false);
 
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
         builder.append(START);
@@ -128,10 +128,10 @@ public class ServletOutputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString() + END;
-                runTest(message, BLOCKING_SERVLET, false, false, 1, false, false);
-                runTest(message, BLOCKING_SERVLET, true, false, 10, false, false);
-                runTest(message, BLOCKING_SERVLET, false, true, 3, false, false);
-                runTest(message, BLOCKING_SERVLET, true, true, 7, false, false);
+                runTest(message, BLOCKING_SERVLET, false, false, 1, false, false, false);
+                runTest(message, BLOCKING_SERVLET, true, false, 10, false, false, false);
+                runTest(message, BLOCKING_SERVLET, false, true, 3, false, false, false);
+                runTest(message, BLOCKING_SERVLET, true, true, 7, false, false, false);
             } catch (Throwable e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
@@ -142,7 +142,7 @@ public class ServletOutputStreamTestCase {
     @Test
     public void testChunkedResponseWithInitialFlush() throws IOException {
         message = START + HELLO_WORLD + END;
-        runTest(message, BLOCKING_SERVLET, false, true, 1, true, false);
+        runTest(message, BLOCKING_SERVLET, false, true, 1, true, false, false);
     }
 
     @Test
@@ -155,16 +155,55 @@ public class ServletOutputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString() + END;
-                runTest(message, ASYNC_SERVLET, false, false, 1, false, false);
-                runTest(message, ASYNC_SERVLET, true, false, 10, false, false);
-                runTest(message, ASYNC_SERVLET, false, true, 3, false, false);
-                runTest(message, ASYNC_SERVLET, true, true, 7, false, false);
+                runTest(message, ASYNC_SERVLET, false, false, 1, false, false, false);
+                runTest(message, ASYNC_SERVLET, true, false, 10, false, false, false);
+                runTest(message, ASYNC_SERVLET, false, true, 3, false, false, false);
+                runTest(message, ASYNC_SERVLET, true, true, 7, false, false, false);
             } catch (Exception e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
     }
 
+    @Test
+    public void testAsyncServletOutputStreamOffIOThread() {
+        StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
+        builder.append(START);
+        for (int i = 0; i < 10; ++i) {
+            try {
+                for (int j = 0; j < 10000; ++j) {
+                    builder.append(HELLO_WORLD);
+                }
+                String message = builder.toString() + END;
+                runTest(message, ASYNC_SERVLET, false, false, 1, false, false, true);
+                runTest(message, ASYNC_SERVLET, true, false, 10, false, false, true);
+                runTest(message, ASYNC_SERVLET, false, true, 3, false, false, true);
+                runTest(message, ASYNC_SERVLET, true, true, 7, false, false, true);
+            } catch (Exception e) {
+                throw new RuntimeException("test failed with i equal to " + i, e);
+            }
+        }
+    }
+
+    @Test
+    public void testAsyncServletOutputStreamWithPreableOffIOThread() {
+        StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
+        builder.append(START);
+        for (int i = 0; i < 10; ++i) {
+            try {
+                for (int j = 0; j < 10000; ++j) {
+                    builder.append(HELLO_WORLD);
+                }
+                String message = builder.toString() + END;
+                runTest(message, ASYNC_SERVLET, false, false, 1, false, true, true);
+                runTest(message, ASYNC_SERVLET, true, false, 10, false, true, true);
+                runTest(message, ASYNC_SERVLET, false, true, 3, false, true, true);
+                runTest(message, ASYNC_SERVLET, true, true, 7, false, true, true);
+            } catch (Exception e) {
+                throw new RuntimeException("test failed with i equal to " + i, e);
+            }
+        }
+    }
 
     @Test
     public void testAsyncServletOutputStreamWithPreable() {
@@ -176,18 +215,17 @@ public class ServletOutputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString() + END;
-                runTest(message, ASYNC_SERVLET, false, false, 1, false, true);
-                runTest(message, ASYNC_SERVLET, true, false, 10, false, true);
-                runTest(message, ASYNC_SERVLET, false, true, 3, false, true);
-                runTest(message, ASYNC_SERVLET, true, true, 7, false, true);
+                runTest(message, ASYNC_SERVLET, false, false, 1, false, true, false);
+                runTest(message, ASYNC_SERVLET, true, false, 10, false, true, false);
+                runTest(message, ASYNC_SERVLET, false, true, 3, false, true, false);
+                runTest(message, ASYNC_SERVLET, true, true, 7, false, true, false);
             } catch (Exception e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
     }
 
-
-    public void runTest(final String message, String url, final boolean flush, final boolean close, int reps, boolean initialFlush, boolean writePreable) throws IOException {
+    public void runTest(final String message, String url, final boolean flush, final boolean close, int reps, boolean initialFlush, boolean writePreable, boolean offIoThread) throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             ServletOutputStreamTestCase.message = message;
@@ -203,6 +241,9 @@ public class ServletOutputStreamTestCase {
             }
             if(writePreable) {
                 uri = uri + "preamble=true&";
+            }
+            if(offIoThread) {
+                uri += "offIoThread=true&";
             }
             HttpGet get = new HttpGet(uri);
             HttpResponse result = client.execute(get);
