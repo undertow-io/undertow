@@ -19,6 +19,7 @@
 package io.undertow.servlet.test.streams;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.AsyncContext;
@@ -54,11 +55,13 @@ public class AsyncOutputStreamServlet extends HttpServlet {
         WriteListener listener = new WriteListener() {
             @Override
             public synchronized void onWritePossible() throws IOException {
-                while (outputStream.isReady() && count.get() < reps) {
+                final AtomicBoolean writing = new AtomicBoolean();
+                while (outputStream.isReady() && count.get() < reps && writing.compareAndSet(false, true)) {
                     count.incrementAndGet();
                     outputStream.write(ServletOutputStreamTestCase.message.getBytes());
+                    writing.set(false);
                 }
-                if (count.get() == reps) {
+                if (count.get() == reps && writing.compareAndSet(false, true)) {
                     if (flush) {
                         outputStream.flush();
                     }
