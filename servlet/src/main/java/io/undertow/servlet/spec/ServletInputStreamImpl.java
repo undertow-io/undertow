@@ -59,6 +59,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private static final int FLAG_CLOSED = 1 << 1;
     private static final int FLAG_FINISHED = 1 << 2;
     private static final int FLAG_ON_DATA_READ_CALLED = 1 << 3;
+    private static final int FLAG_RECEIVED_NOT_READY = 1 << 4;
 
     private int state;
     private AsyncContextImpl asyncContext;
@@ -82,7 +83,11 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     @Override
     public boolean isReady() {
-        return anyAreSet(state, FLAG_READY) && !isFinished();
+        if (!(anyAreSet(state, FLAG_READY) && !isFinished())) {
+            state |= FLAG_RECEIVED_NOT_READY;
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -99,6 +104,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
         asyncContext = request.getAsyncContext();
         listener = readListener;
+        state |= FLAG_RECEIVED_NOT_READY;
         channel.getReadSetter().set(internalListener = new ServletInputStreamChannelListener());
 
         //we resume from an async task, after the request has been dispatched
@@ -276,7 +282,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 readIntoBufferNonBlocking();
                 if (pooled != null) {
                     state |= FLAG_READY;
-                    if (!anyAreSet(state, FLAG_FINISHED)) {
+                    // onDataAvailable should only be called once the listener has received false from isReady
+                    if (!anyAreSet(state, FLAG_FINISHED) && anyAreSet(state, FLAG_RECEIVED_NOT_READY)) {
+                        state &= ~FLAG_RECEIVED_NOT_READY;
                         request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
                         if (pooled != null) {
                             //they did not consume all the data
