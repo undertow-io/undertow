@@ -90,6 +90,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private static final int FLAG_READY = 1 << 2;
     private static final int FLAG_DELEGATE_SHUTDOWN = 1 << 3;
     private static final int FLAG_IN_CALLBACK = 1 << 4;
+    private static final int FLAG_RECEIVED_NOT_READY = 1 << 5;
 
     //TODO: should this be configurable?
     private static final int MAX_BUFFERS_TO_ALLOCATE = 6;
@@ -737,7 +738,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             //TODO: is this the correct behaviour?
             throw UndertowServletMessages.MESSAGES.streamNotInAsyncMode();
         }
-        return anyAreSet(state, FLAG_READY);
+        if (!anyAreSet(state, FLAG_READY)) {
+            state |= FLAG_RECEIVED_NOT_READY;
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -752,6 +757,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (!servletRequest.isAsyncStarted()) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
+        state |= FLAG_RECEIVED_NOT_READY;
         asyncContext = (AsyncContextImpl) servletRequest.getAsyncContext();
         listener = writeListener;
         //we register the write listener on the underlying connection
@@ -868,27 +874,30 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 }
 
                 state |= FLAG_READY;
-                try {
-                    state |= FLAG_IN_CALLBACK;
+                if (anyAreSet(state, FLAG_RECEIVED_NOT_READY)) {
+                    state &= ~FLAG_RECEIVED_NOT_READY;
+                    try {
+                        state |= FLAG_IN_CALLBACK;
 
-                    servletRequestContext.getCurrentServletContext().invokeOnWritePossible(servletRequestContext.getExchange(), listener);
+                        servletRequestContext.getCurrentServletContext().invokeOnWritePossible(servletRequestContext.getExchange(), listener);
 
-                    if (isReady()) {
-                        //if the stream is still ready then we do not resume writes
-                        //this is per spec, we only call the listener once for each time
-                        //isReady returns true
-                        if (channel != null) {
-                            channel.suspendWrites();
+                        if (anyAreSet(state, FLAG_READY)) {
+                            //if the stream is still ready then we do not resume writes
+                            //this is per spec, we only call the listener once for each time
+                            //isReady returns true
+                            if (channel != null) {
+                                channel.suspendWrites();
+                            }
+                        } else {
+                            if (channel != null) {
+                                channel.resumeWrites();
+                            }
                         }
-                    } else {
-                        if (channel != null) {
-                            channel.resumeWrites();
-                        }
+                    } catch (Throwable e) {
+                        IoUtils.safeClose(channel);
+                    } finally {
+                        state &= ~FLAG_IN_CALLBACK;
                     }
-                } catch (Throwable e) {
-                    IoUtils.safeClose(channel);
-                } finally {
-                    state &= ~FLAG_IN_CALLBACK;
                 }
             }
 
