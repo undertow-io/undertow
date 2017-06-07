@@ -20,8 +20,6 @@ package io.undertow.server;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 
@@ -44,7 +42,7 @@ public class XnioByteBufferPool implements ByteBufferPool {
         direct = !buf.getResource().hasArray();
         buf.free();
         if(direct) {
-            arrayBackedPool = new XnioByteBufferPool(new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, bufferSize, bufferSize, 0));
+            arrayBackedPool = new DefaultByteBufferPool(false, bufferSize);
         } else {
             arrayBackedPool = this;
         }
