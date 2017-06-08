@@ -457,4 +457,20 @@ public interface UndertowMessages {
 
     @Message(id = 165, value = "Invalid character %s in request-target")
     String invalidCharacterInRequestTarget(char next);
+
+    @Message(id = 168, value = "An invalid character [ASCII code: %s] was present in the cookie value")
+    IllegalArgumentException invalidCookieValue(String value);
+
+    @Message(id = 169, value = "An invalid domain [%s] was specified for this cookie")
+    IllegalArgumentException invalidCookieDomain(String value);
+
+    @Message(id = 170, value = "An invalid path [%s] was specified for this cookie")
+    IllegalArgumentException invalidCookiePath(String value);
+
+    @Message(id = 173, value = "An invalid control character [%s] was present in the cookie value or attribute")
+    IllegalArgumentException invalidControlCharacter(String value);
+
+    @Message(id = 174, value = "An invalid escape character in cookie value")
+    IllegalArgumentException invalidEscapeCharacter();
+
 }

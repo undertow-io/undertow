@@ -74,14 +74,21 @@ public class DateUtils {
 
     private static final String OLD_COOKIE_PATTERN = "EEE, dd-MMM-yyyy HH:mm:ss z";
 
-
     private static final String COMMON_LOG_PATTERN = "[dd/MMM/yyyy:HH:mm:ss Z]";
-
 
     private static final ThreadLocal<SimpleDateFormat> COMMON_LOG_PATTERN_FORMAT = new ThreadLocal<SimpleDateFormat>() {
         @Override
         protected SimpleDateFormat initialValue() {
             SimpleDateFormat df = new SimpleDateFormat(COMMON_LOG_PATTERN, LOCALE_US);
+            return df;
+        }
+    };
+
+    private static final ThreadLocal<SimpleDateFormat> OLD_COOKIE_FORMAT = new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+            SimpleDateFormat df = new SimpleDateFormat(OLD_COOKIE_PATTERN, LOCALE_US);
+            df.setTimeZone(GMT_ZONE);
             return df;
         }
     };
@@ -103,9 +110,7 @@ public class DateUtils {
 
 
     public static String toOldCookieDateString(final Date date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat(OLD_COOKIE_PATTERN, LOCALE_US);
-        dateFormat.setTimeZone(GMT_ZONE);
-        return dateFormat.format(date);
+        return OLD_COOKIE_FORMAT.get().format(date);
     }
 
     public static String toCommonLogFormat(final Date date) {

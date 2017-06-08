@@ -27,6 +27,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.LegacyCookieSupport;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
@@ -90,9 +91,10 @@ public class Connectors {
      */
     public static void flattenCookies(final HttpServerExchange exchange) {
         Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
+        boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION);
         if (cookies != null) {
             for (Map.Entry<String, Cookie> entry : cookies.entrySet()) {
-                exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(entry.getValue()));
+                exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(entry.getValue(), enableRfc6265Validation));
             }
         }
     }
@@ -143,13 +145,17 @@ public class Connectors {
         exchange.resetRequestChannel();
     }
 
-    private static String getCookieString(final Cookie cookie) {
-        switch (cookie.getVersion()) {
-            case 0:
-                return addVersion0ResponseCookieToExchange(cookie);
-            case 1:
-            default:
-                return addVersion1ResponseCookieToExchange(cookie);
+    private static String getCookieString(final Cookie cookie, boolean enableRfc6265Validation) {
+        if(enableRfc6265Validation) {
+            return addRfc6265ResponseCookieToExchange(cookie);
+        } else {
+            switch (LegacyCookieSupport.adjustedCookieVersion(cookie)) {
+                case 0:
+                    return addVersion0ResponseCookieToExchange(cookie);
+                case 1:
+                default:
+                    return addVersion1ResponseCookieToExchange(cookie);
+            }
         }
     }
 
@@ -157,18 +163,73 @@ public class Connectors {
         exchange.setRequestStartTime(System.nanoTime());
     }
 
-    private static String addVersion0ResponseCookieToExchange(final Cookie cookie) {
+    private static String addRfc6265ResponseCookieToExchange(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
         header.append(cookie.getValue());
-
         if (cookie.getPath() != null) {
-            header.append("; path=");
+            header.append("; Path=");
             header.append(cookie.getPath());
         }
         if (cookie.getDomain() != null) {
-            header.append("; domain=");
+            header.append("; Domain=");
             header.append(cookie.getDomain());
+        }
+        if (cookie.isDiscard()) {
+            header.append("; Discard");
+        }
+        if (cookie.isSecure()) {
+            header.append("; Secure");
+        }
+        if (cookie.isHttpOnly()) {
+            header.append("; HttpOnly");
+        }
+        if (cookie.getMaxAge() != null) {
+            if (cookie.getMaxAge() >= 0) {
+                header.append("; Max-Age=");
+                header.append(cookie.getMaxAge());
+            }
+            // Microsoft IE and Microsoft Edge don't understand Max-Age so send
+            // expires as well. Without this, persistent cookies fail with those
+            // browsers. They do understand Expires, even with V1 cookies.
+            // So, we add Expires header when Expires is not explicitly specified.
+            if (cookie.getExpires() == null) {
+                if (cookie.getMaxAge() == 0) {
+                    Date expires = new Date();
+                    expires.setTime(0);
+                    header.append("; Expires=");
+                    header.append(DateUtils.toOldCookieDateString(expires));
+                } else if (cookie.getMaxAge() > 0) {
+                    Date expires = new Date();
+                    expires.setTime(expires.getTime() + cookie.getMaxAge() * 1000L);
+                    header.append("; Expires=");
+                    header.append(DateUtils.toOldCookieDateString(expires));
+                }
+            }
+        }
+        if (cookie.getExpires() != null) {
+            header.append("; Expires=");
+            header.append(DateUtils.toDateString(cookie.getExpires()));
+        }
+        if (cookie.getComment() != null && !cookie.getComment().isEmpty()) {
+            header.append("; Comment=");
+            header.append(cookie.getComment());
+        }
+        return header.toString();
+    }
+
+    private static String addVersion0ResponseCookieToExchange(final Cookie cookie) {
+        final StringBuilder header = new StringBuilder(cookie.getName());
+        header.append("=");
+        LegacyCookieSupport.maybeQuote(header, cookie.getValue());
+
+        if (cookie.getPath() != null) {
+            header.append("; path=");
+            LegacyCookieSupport.maybeQuote(header, cookie.getPath());
+        }
+        if (cookie.getDomain() != null) {
+            header.append("; domain=");
+            LegacyCookieSupport.maybeQuote(header, cookie.getDomain());
         }
         if (cookie.isSecure()) {
             header.append("; secure");
@@ -204,15 +265,15 @@ public class Connectors {
 
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
-        header.append(cookie.getValue());
+        LegacyCookieSupport.maybeQuote(header, cookie.getValue());
         header.append("; Version=1");
         if (cookie.getPath() != null) {
             header.append("; Path=");
-            header.append(cookie.getPath());
+            LegacyCookieSupport.maybeQuote(header, cookie.getPath());
         }
         if (cookie.getDomain() != null) {
             header.append("; Domain=");
-            header.append(cookie.getDomain());
+            LegacyCookieSupport.maybeQuote(header, cookie.getDomain());
         }
         if (cookie.isDiscard()) {
             header.append("; Discard");
@@ -228,6 +289,23 @@ public class Connectors {
                 header.append("; Max-Age=");
                 header.append(cookie.getMaxAge());
             }
+            // Microsoft IE and Microsoft Edge don't understand Max-Age so send
+            // expires as well. Without this, persistent cookies fail with those
+            // browsers. They do understand Expires, even with V1 cookies.
+            // So, we add Expires header when Expires is not explicitly specified.
+            if (cookie.getExpires() == null) {
+                if (cookie.getMaxAge() == 0) {
+                    Date expires = new Date();
+                    expires.setTime(0);
+                    header.append("; Expires=");
+                    header.append(DateUtils.toOldCookieDateString(expires));
+                } else if (cookie.getMaxAge() > 0) {
+                    Date expires = new Date();
+                    expires.setTime(expires.getTime() + cookie.getMaxAge() * 1000L);
+                    header.append("; Expires=");
+                    header.append(DateUtils.toOldCookieDateString(expires));
+                }
+            }
         }
         if (cookie.getExpires() != null) {
             header.append("; Expires=");
@@ -235,7 +313,7 @@ public class Connectors {
         }
         if (cookie.getComment() != null && !cookie.getComment().isEmpty()) {
             header.append("; Comment=");
-            header.append(cookie.getComment());
+            LegacyCookieSupport.maybeQuote(header, cookie.getComment());
         }
         return header.toString();
     }
