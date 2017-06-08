@@ -19,6 +19,7 @@
 package io.undertow.servlet.test.streams;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.AsyncContext;
@@ -39,6 +40,7 @@ public class AsyncOutputStreamServlet extends HttpServlet {
         final boolean flush = req.getParameter("flush") != null;
         final boolean close = req.getParameter("close") != null;
         final boolean preable = req.getParameter("preamble") != null;
+        final boolean offIoThread = req.getParameter("offIoThread") != null;
         final int reps = Integer.parseInt(req.getParameter("reps"));
 
         final AtomicInteger count = new AtomicInteger();
@@ -50,14 +52,16 @@ public class AsyncOutputStreamServlet extends HttpServlet {
                 outputStream.write(ServletOutputStreamTestCase.message.getBytes());
             }
         }
-        outputStream.setWriteListener(new WriteListener() {
+        WriteListener listener = new WriteListener() {
             @Override
             public synchronized void onWritePossible() throws IOException {
-                while (outputStream.isReady() && count.get() < reps) {
+                final AtomicBoolean writing = new AtomicBoolean();
+                while (outputStream.isReady() && count.get() < reps && writing.compareAndSet(false, true)) {
                     count.incrementAndGet();
                     outputStream.write(ServletOutputStreamTestCase.message.getBytes());
+                    writing.set(false);
                 }
-                if (count.get() == reps) {
+                if (count.get() == reps && writing.compareAndSet(false, true)) {
                     if (flush) {
                         outputStream.flush();
                     }
@@ -72,6 +76,26 @@ public class AsyncOutputStreamServlet extends HttpServlet {
             public void onError(final Throwable t) {
 
             }
-        });
+        };
+        outputStream.setWriteListener(offIoThread ? new WriteListener() {
+            @Override
+            public void onWritePossible() throws IOException {
+                context.start(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            listener.onWritePossible();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+        } : listener);
     }
 }
