@@ -45,6 +45,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
+import io.undertow.util.Rfc6265CookieSupport;
 import io.undertow.util.StatusCodes;
 import org.jboss.logging.Logger;
 import org.xnio.Buffers;
@@ -1118,6 +1119,17 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param cookie The cookie
      */
     public HttpServerExchange setResponseCookie(final Cookie cookie) {
+
+        if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
+            Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+        }
+        if (cookie.getPath() != null && !cookie.getPath().isEmpty()) {
+            Rfc6265CookieSupport.validatePath(cookie.getPath());
+        }
+        if (cookie.getDomain() != null && !cookie.getDomain().isEmpty()) {
+            Rfc6265CookieSupport.validateDomain(cookie.getDomain());
+        }
+
         if (responseCookies == null) {
             responseCookies = new TreeMap<>(); //hashmap is slow to allocate in JDK7
         }

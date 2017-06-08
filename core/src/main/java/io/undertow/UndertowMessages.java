@@ -528,4 +528,14 @@ public interface UndertowMessages {
 
     @Message(id = 166, value = "Pooled object is closed")
     IllegalStateException objectIsClosed();
+
+    @Message(id = 170, value = "An invalid character [ASCII code: %s] was present in the cookie value")
+    IllegalArgumentException invalidCookieValue(String value);
+
+    @Message(id = 171, value = "An invalid domain [%s] was specified for this cookie")
+    IllegalArgumentException invalidCookieDomain(String value);
+
+    @Message(id = 172, value = "An invalid path [%s] was specified for this cookie")
+    IllegalArgumentException invalidCookiePath(String value);
+
 }
