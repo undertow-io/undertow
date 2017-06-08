@@ -36,6 +36,7 @@ import io.undertow.servlet.core.ServletUpgradeListener;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
@@ -328,6 +329,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         String newId = underlyingSession.changeSessionId(exchange, originalServletContext.getSessionConfig());
         servletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
+        //update jsessionid if in form redirect location url
+        String oldLocation = (String) underlyingSession.removeAttribute(ServletFormAuthenticationMechanism.SESSION_KEY);
+        if (oldLocation != null && oldLocation.contains(";jsessionid=" + oldId)){
+            underlyingSession.setAttribute(ServletFormAuthenticationMechanism.SESSION_KEY, oldLocation.replace(";jsessionid=" + oldId, ";jsessionid=" + newId));
+        }
         return newId;
     }
 
