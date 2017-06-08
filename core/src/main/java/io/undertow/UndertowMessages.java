@@ -538,4 +538,10 @@ public interface UndertowMessages {
     @Message(id = 172, value = "An invalid path [%s] was specified for this cookie")
     IllegalArgumentException invalidCookiePath(String value);
 
+    @Message(id = 173, value = "An invalid control character [%s] was present in the cookie value or attribute")
+    IllegalArgumentException invalidControlCharacter(String value);
+
+    @Message(id = 174, value = "An invalid escape character in cookie value")
+    IllegalArgumentException invalidEscapeCharacter();
+
 }
