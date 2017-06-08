@@ -278,4 +278,62 @@ public class CookiesTestCase {
     public void testInvalidSameSiteCookie() {
         Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=WILE_E_COYOTE; path=/; SameSite=test");
     }
+
+    // RFC6265 allows US-ASCII characters excluding CTLs, whitespace,
+    // double quote, comma, semicolon and backslash as cookie value.
+    // This does not change even if value is quoted.
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidRfc6265CookieInValue() {
+        // whitespace is not allowed
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=WILE_ E_COYOTE; path=/example; domain=example.com");
+        Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidRfc6265CookieInValue1() {
+        // whitespace is not allowed
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=\"WILE_ E_COYOTE\"; path=/example; domain=example.com");
+        Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidRfc6265CookieInValue2() {
+        // double quote si not allowed
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=\"WILE_\\\"E_COYOTE\"; path=/example; domain=example.com");
+        Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidRfc6265CookieInValue3() {
+        // comma is not allowed
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=\"WILE_,E_COYOTE\"; path=/example; domain=example.com");
+        Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidRfc6265CookieInValue4() {
+        // semicolon is not allowed
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=\"WILE_;E_COYOTE\"; path=/example; domain=example.com");
+        Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidRfc6265CookieInValue5() {
+        /// backslash is not allowed
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=\"WILE_\\E_COYOTE\"; path=/example; domain=example.com");
+        Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+    }
+
+    // RFC6265 allows any CHAR except CTLs or ";" as cookie path
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidRfc6265CookieInPath() {
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=WILE_E_COYOTE; path=\"/ex;ample\"; domain=example.com");
+        Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+        Rfc6265CookieSupport.validatePath(cookie.getPath());
+        Rfc6265CookieSupport.validateDomain(cookie.getDomain());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidRfc6265CookieInDomain() {
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=WILE_E_COYOTE; path=/example; domain=\"ex;ample.com\"");
+        Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+        Rfc6265CookieSupport.validatePath(cookie.getPath());
+        Rfc6265CookieSupport.validateDomain(cookie.getDomain());
+    }
+
 }
