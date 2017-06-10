@@ -167,6 +167,7 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
         if (uncompressed != null) {
             uncompressed.close();
         }
+        inflater.end();
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
