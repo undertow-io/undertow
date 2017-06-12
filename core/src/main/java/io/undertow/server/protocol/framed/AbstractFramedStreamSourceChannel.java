@@ -285,7 +285,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                                     //although we may be flushed as part of a batch
                                     moreData = (frameDataRemaining > 0 && data != null) || !pendingFrameData.isEmpty() || anyAreSet(state, STATE_WAITNG_MINUS_ONE);
                                 }
-                                while (allAreSet(state, STATE_READS_RESUMED) && allAreClear(state, STATE_CLOSED) && moreData);
+                                while (allAreSet(state, STATE_READS_RESUMED) && allAreClear(state, STATE_CLOSED | STATE_STREAM_BROKEN) && moreData);
                             } finally {
                                 state &= ~STATE_IN_LISTENER_LOOP;
                             }
