@@ -472,6 +472,9 @@ public class ServletPathMatches {
     }
 
     private static ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet, final String servletPath, final DeploymentInfo deploymentInfo, boolean defaultServlet, MappingMatch mappingMatch, String pattern) {
+        if (deploymentInfo.isSecurityDisabled()) {
+            return new ServletChain(next, managedServlet, servletPath, defaultServlet, mappingMatch, pattern);
+        }
         HttpHandler servletHandler = new ServletSecurityRoleHandler(next, deploymentInfo.getAuthorizationManager());
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
         return new ServletChain(servletHandler, managedServlet, servletPath, defaultServlet, mappingMatch, pattern);
