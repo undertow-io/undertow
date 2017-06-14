@@ -19,7 +19,9 @@
 package io.undertow.server.handlers.encoding;
 
 import io.undertow.UndertowLogger;
+import io.undertow.conduits.DeflaterPool;
 import io.undertow.conduits.DeflatingStreamSinkConduit;
+import io.undertow.conduits.NewInstanceDeflaterPool;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
@@ -34,14 +36,18 @@ import java.util.zip.Deflater;
  */
 public class DeflateEncodingProvider implements ContentEncodingProvider {
 
-    private final int deflateLevel;
+    private final DeflaterPool deflaterPool;
 
     public DeflateEncodingProvider() {
         this(Deflater.DEFLATED);
     }
 
     public DeflateEncodingProvider(int deflateLevel) {
-        this.deflateLevel = deflateLevel;
+        this(new NewInstanceDeflaterPool(deflateLevel, true));
+    }
+
+    public DeflateEncodingProvider(DeflaterPool deflaterPool) {
+        this.deflaterPool = deflaterPool;
     }
 
     @Override
@@ -50,7 +56,7 @@ public class DeflateEncodingProvider implements ContentEncodingProvider {
             @Override
             public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
                 UndertowLogger.REQUEST_LOGGER.tracef("Created DEFLATE response conduit for %s", exchange);
-                return new DeflatingStreamSinkConduit(factory, exchange, deflateLevel);
+                return new DeflatingStreamSinkConduit(factory, exchange, deflaterPool);
             }
         };
     }

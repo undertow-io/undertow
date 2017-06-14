@@ -19,7 +19,9 @@
 package io.undertow.server.handlers.encoding;
 
 import io.undertow.UndertowLogger;
+import io.undertow.conduits.DeflaterPool;
 import io.undertow.conduits.GzipStreamSinkConduit;
+import io.undertow.conduits.NewInstanceDeflaterPool;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
@@ -34,14 +36,18 @@ import java.util.zip.Deflater;
  */
 public class GzipEncodingProvider implements ContentEncodingProvider {
 
-    private final int deflateLevel;
+    private final DeflaterPool deflaterPool;
 
     public GzipEncodingProvider() {
         this(Deflater.DEFAULT_COMPRESSION);
     }
 
     public GzipEncodingProvider(int deflateLevel) {
-        this.deflateLevel = deflateLevel;
+        this(new NewInstanceDeflaterPool(deflateLevel, true));
+    }
+
+    public GzipEncodingProvider(DeflaterPool deflaterPool) {
+        this.deflaterPool = deflaterPool;
     }
 
     @Override
@@ -50,7 +56,7 @@ public class GzipEncodingProvider implements ContentEncodingProvider {
             @Override
             public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
                 UndertowLogger.REQUEST_LOGGER.tracef("Created GZIP response conduit for %s", exchange);
-                return new GzipStreamSinkConduit(factory, exchange, deflateLevel);
+                return new GzipStreamSinkConduit(factory, exchange, deflaterPool);
             }
         };
     }

@@ -52,7 +52,8 @@ import io.undertow.util.Headers;
  */
 public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
-    protected final Deflater deflater;
+    protected volatile Deflater deflater;
+    private final DeflaterPool deflaterPool;
     private final ConduitFactory<StreamSinkConduit> conduitFactory;
     private final HttpServerExchange exchange;
 
@@ -83,7 +84,12 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     }
 
     public DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange, int deflateLevel) {
-        deflater = new Deflater(deflateLevel, true);
+        this(conduitFactory, exchange, new NewInstanceDeflaterPool(deflateLevel, true));
+    }
+
+    public DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange, DeflaterPool deflaterPool) {
+        this.deflaterPool = deflaterPool;
+        deflater = deflaterPool.getDeflater();
         this.currentBuffer = exchange.getConnection().getByteBufferPool().allocate();
         this.exchange = exchange;
         this.conduitFactory = conduitFactory;
@@ -514,6 +520,10 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             currentBuffer.close();
             currentBuffer = null;
             state = state & ~FLUSHING_BUFFER;
+        }
+        if (deflater != null) {
+            deflaterPool.returnDeflater(deflater);
+            deflater = null;
         }
     }
 }
