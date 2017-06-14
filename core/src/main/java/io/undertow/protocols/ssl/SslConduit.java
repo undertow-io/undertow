@@ -612,7 +612,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             engine.closeInbound();
         } catch (SSLException e) {
             UndertowLogger.REQUEST_IO_LOGGER.trace("Exception closing read side of SSL channel", e);
-            IoUtils.safeClose(connection, delegate);
+            if(allAreClear(state, FLAG_WRITE_CLOSED) && isWriteResumed()) {
+                runWriteListener();
+            }
         }
 
         state |= FLAG_READ_CLOSED | FLAG_ENGINE_INBOUND_SHUTDOWN | FLAG_READ_SHUTDOWN;
