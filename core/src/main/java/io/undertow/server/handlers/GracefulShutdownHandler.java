@@ -71,7 +71,10 @@ public class GracefulShutdownHandler implements HttpHandler {
 
 
     public void shutdown() {
+        activeRequestsUpdater.incrementAndGet(this);
+        //the request count is never zero when shutdown is set to true
         shutdown = true;
+        decrementRequests();
     }
 
     public void start() {
@@ -152,14 +155,20 @@ public class GracefulShutdownHandler implements HttpHandler {
         }
     }
 
+
     private void decrementRequests() {
-        long active = activeRequestsUpdater.decrementAndGet(this);
         if (shutdown) {
+            //we don't read the request count until after checking the shutdown variable
+            //otherwise we could read the request count as zero, a new request could state, and then we shutdown
+            //see https://issues.jboss.org/browse/UNDERTOW-1099
+            long active = activeRequestsUpdater.decrementAndGet(this);
             synchronized (lock) {
                 if (active == 0) {
                     shutdownComplete();
                 }
             }
+        } else {
+            activeRequestsUpdater.decrementAndGet(this);
         }
     }
 
