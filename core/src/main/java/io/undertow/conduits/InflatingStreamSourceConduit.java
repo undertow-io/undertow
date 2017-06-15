@@ -36,6 +36,10 @@ import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
+import io.undertow.util.NewInstanceObjectPool;
+import io.undertow.util.ObjectPool;
+import io.undertow.util.PooledObject;
+import io.undertow.util.SimpleObjectPool;
 
 /**
  * @author Stuart Douglas
@@ -49,16 +53,35 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
         }
     };
 
+    private volatile Inflater inflater;
+
+    private final PooledObject<Inflater> pooledObject;
     private final HttpServerExchange exchange;
-    private final Inflater inflater = new Inflater(true);
     private PooledByteBuffer compressed;
     private PooledByteBuffer uncompressed;
     private boolean nextDone = false;
     private boolean headerDone = false;
 
     public InflatingStreamSourceConduit(HttpServerExchange exchange, StreamSourceConduit next) {
+        this(exchange, next, newInstanceInflaterPool());
+    }
+
+    public InflatingStreamSourceConduit(
+            HttpServerExchange exchange,
+            StreamSourceConduit next,
+            ObjectPool<Inflater> inflaterPool) {
         super(next);
         this.exchange = exchange;
+        this.pooledObject = inflaterPool.allocate();
+        this.inflater = pooledObject.getObject();
+    }
+
+    public static ObjectPool<Inflater> newInstanceInflaterPool() {
+        return new NewInstanceObjectPool<Inflater>(() -> new Inflater(true), Inflater::end);
+    }
+
+    public static ObjectPool<Inflater> simpleInflaterPool(int poolSize) {
+        return new SimpleObjectPool<Inflater>(poolSize, () -> new Inflater(true), Inflater::end);
     }
 
     @Override
@@ -167,7 +190,10 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
         if (uncompressed != null) {
             uncompressed.close();
         }
-        inflater.end();
+        if (inflater != null) {
+            pooledObject.close();
+            inflater = null;
+        }
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
