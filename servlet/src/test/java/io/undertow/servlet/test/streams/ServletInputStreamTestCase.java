@@ -71,7 +71,7 @@ public class ServletInputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString();
-                runTest(message, BLOCKING_SERVLET);
+                runTest(message, BLOCKING_SERVLET, false, false);
             } catch (Throwable e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
@@ -88,7 +88,7 @@ public class ServletInputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString();
-                runTest(message, ASYNC_SERVLET);
+                runTest(message, ASYNC_SERVLET, false, false);
             } catch (Throwable e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
@@ -97,10 +97,58 @@ public class ServletInputStreamTestCase {
     }
 
     @Test
+    public void testAsyncServletInputStreamWithPreamble() {
+        StringBuilder builder = new StringBuilder(2000 * HELLO_WORLD.length());
+        for (int i = 0; i < 10; ++i) {
+            try {
+                for (int j = 0; j < 10000; ++j) {
+                    builder.append(HELLO_WORLD);
+                }
+                String message = builder.toString();
+                runTest(message, ASYNC_SERVLET, true, false);
+            } catch (Throwable e) {
+                throw new RuntimeException("test failed with i equal to " + i, e);
+            }
+        }
+    }
+
+    @Test
+    public void testAsyncServletInputStreamOffIoThread() {
+        StringBuilder builder = new StringBuilder(2000 * HELLO_WORLD.length());
+        for (int i = 0; i < 10; ++i) {
+            try {
+                for (int j = 0; j < 10000; ++j) {
+                    builder.append(HELLO_WORLD);
+                }
+                String message = builder.toString();
+                runTest(message, ASYNC_SERVLET, false, true);
+            } catch (Throwable e) {
+                throw new RuntimeException("test failed with i equal to " + i, e);
+            }
+        }
+    }
+
+    @Test
+    public void testAsyncServletInputStreamOffIoThreadWithPreamble() {
+        StringBuilder builder = new StringBuilder(2000 * HELLO_WORLD.length());
+        for (int i = 0; i < 10; ++i) {
+            try {
+                for (int j = 0; j < 10000; ++j) {
+                    builder.append(HELLO_WORLD);
+                }
+                String message = builder.toString();
+                runTest(message, ASYNC_SERVLET, true, true);
+            } catch (Throwable e) {
+                throw new RuntimeException("test failed with i equal to " + i, e);
+            }
+        }
+    }
+
+    @Test
     public void testAsyncServletInputStreamWithEmptyRequestBody() {
         String message = "";
         try {
-            runTest(message, ASYNC_SERVLET);
+            runTest(message, ASYNC_SERVLET, false, false);
         } catch (Throwable e) {
             throw new RuntimeException("test failed", e);
         }
@@ -157,11 +205,17 @@ public class ServletInputStreamTestCase {
     }
 
 
-    public void runTest(final String message, String url) throws IOException {
+    public void runTest(final String message, String url, boolean preamble, boolean offIOThread) throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url;
             HttpPost post = new HttpPost(uri);
+            if (preamble && !message.isEmpty()) {
+                post.addHeader("preamble", Integer.toString(message.length() / 2));
+            }
+            if (offIOThread) {
+                post.addHeader("offIoThread", "true");
+            }
             post.setEntity(new StringEntity(message));
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
