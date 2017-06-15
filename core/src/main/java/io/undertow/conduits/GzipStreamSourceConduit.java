@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import org.xnio.conduits.StreamSourceConduit;
 import io.undertow.UndertowMessages;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
+import io.undertow.util.ObjectPool;
 
 /**
  * @author Stuart Douglas
@@ -58,6 +60,13 @@ public class GzipStreamSourceConduit extends InflatingStreamSourceConduit {
 
     public GzipStreamSourceConduit(HttpServerExchange exchange, StreamSourceConduit next) {
         super(exchange, next);
+    }
+
+    public GzipStreamSourceConduit(
+            HttpServerExchange exchange,
+            StreamSourceConduit next,
+            ObjectPool<Inflater> inflaterPool) {
+        super(exchange, next, inflaterPool);
     }
 
     private int totalOut;
