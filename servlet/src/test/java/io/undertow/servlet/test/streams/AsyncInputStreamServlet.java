@@ -39,12 +39,18 @@ public class AsyncInputStreamServlet extends HttpServlet {
 
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-
+        final int preamble = Math.max(0, req.getIntHeader("preamble"));
+        final boolean offIoThread = req.getHeader("offIoThread") != null;
         final AsyncContext context = req.startAsync();
 
         final ServletOutputStream outputStream = resp.getOutputStream();
         ServletInputStream inputStream = req.getInputStream();
-        final MyListener listener = new MyListener(outputStream, inputStream, context);
+        for (int i = 0; i < preamble; i++) {
+            int value = inputStream.read();
+            assert value >= 0 : "Stream is finished";
+            outputStream.write(value);
+        }
+        final MyListener listener = new MyListener(outputStream, inputStream, context, offIoThread);
         inputStream.setReadListener(listener);
         outputStream.setWriteListener(listener);
 
@@ -55,22 +61,28 @@ public class AsyncInputStreamServlet extends HttpServlet {
         private final ServletInputStream inputStream;
         private final ByteArrayOutputStream dataToWrite = new ByteArrayOutputStream();
         private final AsyncContext context;
+        private final boolean offIoThread;
 
         boolean done = false;
 
         int written = 0;
 
-        MyListener(final ServletOutputStream outputStream, final ServletInputStream inputStream, final AsyncContext context) {
+        MyListener(
+                final ServletOutputStream outputStream,
+                final ServletInputStream inputStream,
+                final AsyncContext context,
+                final boolean offIoThread) {
             this.outputStream = outputStream;
             this.inputStream = inputStream;
             this.context = context;
+            this.offIoThread = offIoThread;
         }
 
         @Override
         public void onWritePossible() throws IOException {
             if (outputStream.isReady()) {
-                outputStream.write(dataToWrite.toByteArray());
-                written += dataToWrite.toByteArray().length;
+                dataToWrite.writeTo(outputStream);
+                written += dataToWrite.size();
                 dataToWrite.reset();
                 if (done) {
                     context.complete();
@@ -80,17 +92,35 @@ public class AsyncInputStreamServlet extends HttpServlet {
 
         @Override
         public void onDataAvailable() throws IOException {
+            if (offIoThread) {
+                context.start(new Runnable() {
+                    @Override
+                    public void run() {
+                        doOnDataAvailable();
+                    }
+                });
+            } else {
+                doOnDataAvailable();
+            }
+        }
+
+        private void doOnDataAvailable() {
             int read;
-            while (inputStream.isReady()) {
-                read = inputStream.read();
-                if (read == 0) {
-                    System.out.println("onDataAvailable> read 0x00");
+            try {
+                while (inputStream.isReady()) {
+                    read = inputStream.read();
+                    if (read == 0) {
+                        System.out.println("onDataAvailable> read 0x00");
+                    }
+                    if (read != -1) {
+                        dataToWrite.write(read);
+                    } else {
+                        onWritePossible();
+                    }
                 }
-                if (read != -1) {
-                    dataToWrite.write(read);
-                } else {
-                    onWritePossible();
-                }
+            } catch (IOException e) {
+                context.complete();
+                throw new RuntimeException(e);
             }
         }
 
