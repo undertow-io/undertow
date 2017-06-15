@@ -59,7 +59,6 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     protected volatile Deflater deflater;
 
     protected final PooledObject<Deflater> pooledObject;
-    private final ObjectPool<Deflater> deflaterPool;
     private final ConduitFactory<StreamSinkConduit> conduitFactory;
     private final HttpServerExchange exchange;
 
@@ -94,7 +93,6 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     }
 
     public DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange, ObjectPool<Deflater> deflaterPool) {
-        this.deflaterPool = deflaterPool;
         this.pooledObject = deflaterPool.allocate();
         this.deflater = pooledObject.getObject();
         this.currentBuffer = exchange.getConnection().getByteBufferPool().allocate();
@@ -267,7 +265,9 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public void terminateWrites() throws IOException {
-        deflater.finish();
+        if (deflater != null) {
+            deflater.finish();
+        }
         state |= SHUTDOWN;
     }
 
@@ -539,6 +539,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         }
         if (deflater != null) {
             pooledObject.close();
+            deflater = null;
         }
     }
 }
