@@ -778,10 +778,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException If this exchange has already been dispatched
      */
     public HttpServerExchange dispatch(final Executor executor, final Runnable runnable) {
-        if (executor != null) {
-            this.dispatchExecutor = executor;
-        }
         if (isInCall()) {
+            if (executor != null) {
+                this.dispatchExecutor = executor;
+            }
             state |= FLAG_DISPATCHED;
             if(anyAreSet(state, FLAG_SHOULD_RESUME_READS | FLAG_SHOULD_RESUME_WRITES)) {
                 throw UndertowMessages.MESSAGES.resumedAndDispatched();
