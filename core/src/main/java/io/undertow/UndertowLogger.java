@@ -405,4 +405,7 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5087, value = "Failed to use the server order")
     void failedToUseServerOrder(@Cause ReflectiveOperationException e);
+
+    @Message(id = 5088, value = "Method parameter '%s' cannot be null")
+    IllegalArgumentException nullParameter(String name);
 }
