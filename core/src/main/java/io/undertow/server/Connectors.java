@@ -93,7 +93,7 @@ public class Connectors {
      */
     public static void flattenCookies(final HttpServerExchange exchange) {
         Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
-        boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, false);
+        boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION);
         if (cookies != null) {
             for (Map.Entry<String, Cookie> entry : cookies.entrySet()) {
                 exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(entry.getValue(), enableRfc6265Validation));
