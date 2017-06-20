@@ -213,7 +213,7 @@ public class PathResourceManager implements ResourceManager  {
             }
             return null;
         } catch (Exception e) {
-            UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s");
+            UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s", p);
             return null;
         }
     }
