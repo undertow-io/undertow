@@ -523,6 +523,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         public String getTransportProtocol() {
             return "mock";
         }
+
+        @Override
+        public boolean isRequestTrailerFieldsSupported() {
+            return false;
+        }
     }
 
 }

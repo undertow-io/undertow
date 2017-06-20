@@ -281,6 +281,8 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
         return false;
     }
 
+    public abstract boolean isRequestTrailerFieldsSupported();
+
     public interface CloseListener {
 
         void closed(final ServerConnection connection);

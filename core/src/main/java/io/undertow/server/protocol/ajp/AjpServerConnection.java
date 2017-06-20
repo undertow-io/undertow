@@ -140,4 +140,9 @@ public final class AjpServerConnection extends AbstractServerConnection {
     public String getTransportProtocol() {
         return "ajp";
     }
+
+    @Override
+    public boolean isRequestTrailerFieldsSupported() {
+        return false;
+    }
 }

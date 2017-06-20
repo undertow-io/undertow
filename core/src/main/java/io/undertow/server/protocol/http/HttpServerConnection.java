@@ -285,6 +285,19 @@ public final class HttpServerConnection extends AbstractServerConnection {
         return "http/1.1";
     }
 
+    @Override
+    public boolean isRequestTrailerFieldsSupported() {
+        if(current == null) {
+            return false;
+        }
+
+        String te = current.getRequestHeaders().getFirst(Headers.TRANSFER_ENCODING);
+        if(te == null) {
+            return false;
+        }
+        return te.equalsIgnoreCase(Headers.CHUNKED.toString());
+    }
+
     boolean isConnectHandled() {
         return connectHandled;
     }

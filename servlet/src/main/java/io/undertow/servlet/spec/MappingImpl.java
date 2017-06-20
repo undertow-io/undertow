@@ -18,13 +18,13 @@
 
 package io.undertow.servlet.spec;
 
+import javax.servlet.http.HttpServletMapping;
 import javax.servlet.http.MappingMatch;
-import javax.servlet.http.ServletMapping;
 
 /**
  * @author Stuart Douglas
  */
-public class MappingImpl implements ServletMapping {
+public class MappingImpl implements HttpServletMapping {
 
     private final String matchValue;
     private final String pattern;

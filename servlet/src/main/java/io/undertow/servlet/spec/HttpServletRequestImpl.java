@@ -84,13 +84,13 @@ import javax.servlet.ServletRequestWrapper;
 import javax.servlet.ServletResponse;
 import javax.servlet.ServletResponseWrapper;
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletMapping;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 import javax.servlet.http.PushBuilder;
-import javax.servlet.http.ServletMapping;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -224,7 +224,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public ServletMapping getServletMapping() {
+    public HttpServletMapping getHttpServletMapping() {
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         ServletPathMatch match = src.getOriginalServletPathMatch();
         String matchValue;
@@ -1162,7 +1162,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public Map<String, String> getTrailers() {
+    public Map<String, String> getTrailerFields() {
         HeaderMap trailers = exchange.getAttachment(HttpAttachments.REQUEST_TRAILERS);
         if(trailers == null) {
             return null;
@@ -1172,5 +1172,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             ret.put(entry.getHeaderName().toString(), entry.getFirst());
         }
         return ret;
+    }
+
+    @Override
+    public boolean isTrailerFieldsReady() {
+        if(exchange.isRequestComplete()) {
+            return true;
+        }
+        return !exchange.getConnection().isRequestTrailerFieldsSupported();
     }
 }

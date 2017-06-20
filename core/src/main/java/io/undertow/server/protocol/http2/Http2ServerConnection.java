@@ -391,6 +391,11 @@ public class Http2ServerConnection extends ServerConnection {
     }
 
     @Override
+    public boolean isRequestTrailerFieldsSupported() {
+        return true;
+    }
+
+    @Override
     public boolean pushResource(String path, HttpString method, HeaderMap requestHeaders) {
         return pushResource(path, method, requestHeaders, rootHandler);
     }
