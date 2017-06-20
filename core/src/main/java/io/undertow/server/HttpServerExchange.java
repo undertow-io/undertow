@@ -655,14 +655,16 @@ public final class HttpServerExchange extends AbstractAttachable {
                 colonIndex = host.indexOf(':');
             }
             if (colonIndex != -1) {
-                return Integer.parseInt(host.substring(colonIndex + 1));
-            } else {
-                if (getRequestScheme().equals("https")) {
-                    return 443;
-                } else if (getRequestScheme().equals("http")) {
-                    return 80;
-                }
+                try {
+                    return Integer.parseInt(host.substring(colonIndex + 1));
+                } catch (NumberFormatException ignore) {}
             }
+            if (getRequestScheme().equals("https")) {
+                return 443;
+            } else if (getRequestScheme().equals("http")) {
+                return 80;
+            }
+
         }
         return getDestinationAddress().getPort();
     }
