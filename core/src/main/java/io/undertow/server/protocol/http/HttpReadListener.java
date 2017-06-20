@@ -31,6 +31,7 @@ import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.server.protocol.http2.Http2ReceiveListener;
 import io.undertow.util.ClosingChannelExceptionHandler;
 import io.undertow.util.ConnectionUtils;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
@@ -235,8 +236,13 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 channel.suspendReads();
             }
 
-            if(requireHostHeader && !httpServerExchange.getRequestHeaders().contains(Headers.HOST)) {
-                if(httpServerExchange.getProtocol().equals(Protocols.HTTP_1_1)) {
+            HeaderValues host = httpServerExchange.getRequestHeaders().get(Headers.HOST);
+            if(host != null && host.size() > 1) {
+                sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.moreThanOneHostHeader());
+                return;
+            }
+            if(requireHostHeader && httpServerExchange.getProtocol().equals(Protocols.HTTP_1_1)) {
+                if(host == null || host.size() ==0 || host.getFirst().isEmpty()) {
                     sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.noHostInHttp11Request());
                     return;
                 }

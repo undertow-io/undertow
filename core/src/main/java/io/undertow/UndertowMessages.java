@@ -528,4 +528,7 @@ public interface UndertowMessages {
 
     @Message(id = 166, value = "Pooled object is closed")
     IllegalStateException objectIsClosed();
+
+    @Message(id = 167, value = "More than one host header in request")
+    IOException moreThanOneHostHeader();
 }
