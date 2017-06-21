@@ -76,7 +76,14 @@ public class CachingResourceManager implements ResourceManager {
     }
 
     @Override
-    public CachedResource getResource(final String path) throws IOException {
+    public CachedResource getResource(final String p) throws IOException {
+        final String path;
+        //base always ends with a /
+        if (p.startsWith("/")) {
+            path = p.substring(1);
+        } else {
+            path = p;
+        }
         Object res = cache.get(path);
         if (res instanceof NoResourceMarker) {
             NoResourceMarker marker = (NoResourceMarker) res;
@@ -129,7 +136,10 @@ public class CachingResourceManager implements ResourceManager {
         underlyingResourceManager.removeResourceChangeListener(listener);
     }
 
-    public void invalidate(final String path) {
+    public void invalidate(String path) {
+        if(path.startsWith("/")) {
+            path = path.substring(1);
+        }
         Object entry = cache.remove(path);
         if (entry instanceof CachedResource) {
             ((CachedResource) entry).invalidate();
