@@ -514,5 +514,6 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             currentBuffer = null;
             state = state & ~FLUSHING_BUFFER;
         }
+        deflater.end();
     }
 }
