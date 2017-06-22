@@ -41,7 +41,7 @@ public class SessionCookieConfig implements SessionConfig {
     private boolean discard;
     private boolean secure;
     private boolean httpOnly;
-    private int maxAge;
+    private int maxAge = -1;
     private String comment;
 
 
