@@ -193,6 +193,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 if(currentRequest != null) {
                     currentRequest.setFailed(new ClosedChannelException());
                     currentRequest = null;
+                    pendingResponse = null;
                 }
             }
         });
@@ -479,14 +480,17 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
         if (anyAreSet(state, CLOSE_REQ)) {
             currentRequest = null;
+            pendingResponse = null;
             this.state |= CLOSED;
             safeClose(connection);
         } else if (anyAreSet(state, UPGRADE_REQUESTED)) {
             connection.getSourceChannel().suspendReads();
             currentRequest = null;
+            pendingResponse = null;
             return;
         }
         currentRequest = null;
+        pendingResponse = null;
 
         HttpClientExchange next = pendingQueue.poll();
         if (next == null) {
@@ -549,6 +553,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                         try {
                             currentRequest.setFailed(e);
                             currentRequest = null;
+                            pendingResponse = null;
                         } finally {
                             safeClose(channel, HttpClientConnection.this);
                         }
@@ -567,6 +572,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                             // Cancel the current active request
                             currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
                             currentRequest = null;
+                            pendingResponse = null;
                         } finally {
                             safeClose(HttpClientConnection.this);
                         }
@@ -680,6 +686,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             http2Delegate = http2ClientConnection;
             connectedStreamChannel.getSourceChannel().wakeupReads(); //make sure the read listener is immediately invoked, as it may not happen if data is pushed back
             currentRequest = null;
+            pendingResponse = null;
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             safeClose(this);
