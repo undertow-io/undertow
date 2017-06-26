@@ -52,7 +52,9 @@ public class AsyncInputStreamServlet extends HttpServlet {
         }
         final MyListener listener = new MyListener(outputStream, inputStream, context, offIoThread);
         inputStream.setReadListener(listener);
-        outputStream.setWriteListener(listener);
+        if(!offIoThread) {
+            outputStream.setWriteListener(listener);
+        }
 
     }
 
@@ -80,7 +82,9 @@ public class AsyncInputStreamServlet extends HttpServlet {
 
         @Override
         public void onWritePossible() throws IOException {
-            if (outputStream.isReady()) {
+            //we don't use async writes for the off IO thread case
+            //as we can't make it thread safe
+            if (offIoThread || outputStream.isReady()) {
                 dataToWrite.writeTo(outputStream);
                 written += dataToWrite.size();
                 dataToWrite.reset();
