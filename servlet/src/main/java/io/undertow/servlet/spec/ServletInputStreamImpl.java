@@ -59,10 +59,12 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private static final int FLAG_CLOSED = 1 << 1;
     private static final int FLAG_FINISHED = 1 << 2;
     private static final int FLAG_ON_DATA_READ_CALLED = 1 << 3;
+    private static final int FLAG_CALL_ON_ALL_DATA_READ = 1 << 4;
+    private static final int FLAG_BEING_INVOKED_IN_IO_THREAD = 1 << 5;
 
-    private int state;
-    private AsyncContextImpl asyncContext;
-    private PooledByteBuffer pooled;
+    private volatile int state;
+    private volatile AsyncContextImpl asyncContext;
+    private volatile PooledByteBuffer pooled;
 
     public ServletInputStreamImpl(final HttpServletRequestImpl request) {
         this.request = request;
@@ -82,7 +84,22 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     @Override
     public boolean isReady() {
-        return anyAreSet(state, FLAG_READY) && !isFinished();
+        boolean finished = anyAreSet(state, FLAG_FINISHED);
+        if(finished) {
+            if (anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
+                if(allAreClear(state, FLAG_BEING_INVOKED_IN_IO_THREAD)) {
+                    state |= FLAG_ON_DATA_READ_CALLED;
+                    request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
+                } else {
+                    state |= FLAG_CALL_ON_ALL_DATA_READ;
+                }
+            }
+        }
+        boolean ready = anyAreSet(state, FLAG_READY) && !finished;
+        if(!ready && listener != null && !finished) {
+            channel.resumeReads();
+        }
+        return ready;
     }
 
     @Override
@@ -108,7 +125,6 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 channel.getIoThread().execute(new Runnable() {
                     @Override
                     public void run() {
-                        channel.resumeReads();
                         internalListener.handleEvent(channel);
                     }
                 });
@@ -192,9 +208,6 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     pooled = null;
                 }
             } else {
-                if (anyAreClear(state, FLAG_READY)) {
-                    throw UndertowServletMessages.MESSAGES.streamNotReady();
-                }
                 int res = channel.read(pooled.getBuffer());
                 pooled.getBuffer().flip();
                 if (res == -1) {
@@ -205,14 +218,6 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     state &= ~FLAG_READY;
                     pooled.close();
                     pooled = null;
-                    channel.getIoThread().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (!channel.isReadResumed()) {
-                                channel.resumeReads();
-                            }
-                        }
-                    });
                 }
             }
         }
@@ -271,18 +276,30 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 channel.suspendReads();
                 return;
             }
-            state |= FLAG_READY;
             try {
                 readIntoBufferNonBlocking();
                 if (pooled != null) {
+                    channel.suspendReads();
                     state |= FLAG_READY;
                     if (!anyAreSet(state, FLAG_FINISHED)) {
-                        request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
-                        if (pooled != null) {
-                            //they did not consume all the data
-                            channel.suspendReads();
+                        state |= FLAG_BEING_INVOKED_IN_IO_THREAD;
+                        try {
+                            request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
+                        } finally {
+                            state &= ~FLAG_BEING_INVOKED_IN_IO_THREAD;
+                        }
+                        if(anyAreSet(state, FLAG_CALL_ON_ALL_DATA_READ) && allAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
+                            state |= FLAG_ON_DATA_READ_CALLED;
+                            request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
                         }
                     }
+                } else if(anyAreSet(state, FLAG_FINISHED)) {
+                    if (allAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
+                        state |= FLAG_ON_DATA_READ_CALLED;
+                        request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
+                    }
+                } else {
+                    channel.resumeReads();
                 }
             } catch (final Exception e) {
                 request.getServletContext().invokeRunnable(request.getExchange(), new Runnable() {
@@ -293,19 +310,6 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 });
                 IoUtils.safeClose(channel);
             }
-            if (anyAreSet(state, FLAG_FINISHED)) {
-                if (anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
-                    try {
-                        state |= FLAG_ON_DATA_READ_CALLED;
-                        channel.shutdownReads();
-                        request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
-                    } catch (IOException e) {
-                        listener.onError(e);
-                        IoUtils.safeClose(channel);
-                    }
-                }
-            }
-
         }
     }
 }
