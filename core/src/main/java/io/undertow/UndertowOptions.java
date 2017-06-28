@@ -186,7 +186,7 @@ public class UndertowOptions {
      */
     public static final Option<Boolean> ENABLE_RFC6265_COOKIE_VALIDATION = Option.simple(UndertowOptions.class, "ENABLE_RFC6265_COOKIE_VALIDATION", Boolean.class);
 
-    public static final boolean DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION = false;
+    public static final boolean DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION = Boolean.getBoolean("io.undertow.cookie.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION");
 
     /**
      * If we should attempt to use SPDY for HTTPS connections.
