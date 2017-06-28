@@ -22,8 +22,6 @@
         <bundle dependency="true">mvn:org.jboss.spec.javax.servlet/jboss-servlet-api_4.0_spec/${version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec}</bundle>
         <bundle dependency="true">mvn:org.jboss.spec.javax.websocket/jboss-websocket-api_1.1_spec/${version.org.jboss.spec.javax.websockets}</bundle>
         <bundle dependency="true">mvn:org.jboss.logging/jboss-logging/${version.org.jboss.logging}</bundle>
-        <bundle dependency="true">mvn:org.wildfly.common/wildfly-common/${org.wildfly.common:wildfly-common:jar.version}</bundle>
-        <bundle dependency="true">mvn:org.wildfly.client/wildfly-client-config/${org.wildfly.client:wildfly-client-config:jar.version}</bundle>
         <bundle>mvn:org.jboss.xnio/xnio-api/${version.xnio}</bundle>
         <bundle>mvn:org.jboss.xnio/xnio-nio/${version.xnio}</bundle>
         <bundle>mvn:io.undertow/undertow-core/${project.version}</bundle>

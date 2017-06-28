@@ -77,8 +77,8 @@
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.0.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.1.0.Final</version.org.jboss.spec.javax.websockets>
-        <version.xnio>3.5.0.Beta7</version.xnio>
-        <version.org.wildfly.client.config>1.0.0.Beta5</version.org.wildfly.client.config> <!-- TODO: remove this once XNIO has been updated to include this version -->
+        <version.xnio>3.3.8.Final</version.xnio>
+
         <version.org.osgi.core>6.0.0</version.org.osgi.core>
 
         <!-- jacoco -->
@@ -419,12 +419,6 @@
                 <groupId>org.jboss.xnio</groupId>
                 <artifactId>xnio-nio</artifactId>
                 <version>${version.xnio}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.wildfly.client</groupId>
-                <artifactId>wildfly-client-config</artifactId>
-                <version>${version.org.wildfly.client.config}</version>
             </dependency>
 
             <dependency>
