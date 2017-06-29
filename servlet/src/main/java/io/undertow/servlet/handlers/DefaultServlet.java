@@ -23,6 +23,7 @@ import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.DefaultResourceSupplier;
 import io.undertow.server.handlers.resource.DirectoryUtils;
+import io.undertow.server.handlers.resource.PreCompressedResourceSupplier;
 import io.undertow.server.handlers.resource.RangeAwareResource;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.handlers.resource.ResourceSupplier;
@@ -52,6 +53,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -127,7 +129,15 @@ public class DefaultServlet extends HttpServlet {
         if (config.getInitParameter(ALLOW_POST) != null) {
             allowPost = Boolean.parseBoolean(config.getInitParameter(ALLOW_POST));
         }
-        this.resourceSupplier = new DefaultResourceSupplier(deployment.getDeploymentInfo().getResourceManager());
+        if(deployment.getDeploymentInfo().getPreCompressedResources().isEmpty()) {
+            this.resourceSupplier = new DefaultResourceSupplier(deployment.getDeploymentInfo().getResourceManager());
+        } else {
+            PreCompressedResourceSupplier preCompressedResourceSupplier = new PreCompressedResourceSupplier(deployment.getDeploymentInfo().getResourceManager());
+            for(Map.Entry<String, String> entry : deployment.getDeploymentInfo().getPreCompressedResources().entrySet()) {
+                preCompressedResourceSupplier.addEncoding(entry.getKey(), entry.getValue());
+            }
+            this.resourceSupplier = preCompressedResourceSupplier;
+        }
         String listings = config.getInitParameter(DIRECTORY_LISTING);
         if (Boolean.valueOf(listings)) {
             this.directoryListingEnabled = true;
