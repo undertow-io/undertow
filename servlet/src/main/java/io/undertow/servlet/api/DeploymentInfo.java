@@ -189,6 +189,11 @@ public class DeploymentInfo implements Cloneable {
 
     private boolean checkOtherSessionManagers = true;
 
+    /**
+     * A map of content encoding to file extension for pre compressed resource (e.g. gzip -> .gz)
+     */
+    private final Map<String, String> preCompressedResources = new HashMap<>();
+
     public void validate() {
         if (deploymentName == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("deploymentName");
@@ -1286,6 +1291,23 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    /**
+     * Adds a pre compressed resource encoding and maps it to a file extension
+     *
+     *
+     * @param encoding The content encoding
+     * @param extension The file extension
+     * @return this builder
+     */
+    public DeploymentInfo addPreCompressedResourceEncoding(String encoding, String extension) {
+       preCompressedResources.put(encoding, extension);
+       return this;
+    }
+
+    public Map<String, String> getPreCompressedResources() {
+        return Collections.unmodifiableMap(preCompressedResources);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1373,6 +1395,7 @@ public class DeploymentInfo implements Cloneable {
         info.securityDisabled = securityDisabled;
         info.useCachedAuthenticationMechanism = useCachedAuthenticationMechanism;
         info.checkOtherSessionManagers = checkOtherSessionManagers;
+        info.preCompressedResources.putAll(preCompressedResources);
         return info;
     }
 
