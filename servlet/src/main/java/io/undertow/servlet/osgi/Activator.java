@@ -35,12 +35,10 @@ import org.osgi.util.tracker.ServiceTrackerCustomizer;
  */
 public class Activator implements BundleActivator, ServiceTrackerCustomizer<ServletExtension, ServletExtension> {
 
-    BundleContext bundleContext;
     ServiceTracker<ServletExtension, ServletExtension> tracker;
 
     @Override
     public void start(BundleContext context) throws Exception {
-        bundleContext = context;
         tracker = new ServiceTracker<>(context, ServletExtension.class, this);
         tracker.open();
     }
