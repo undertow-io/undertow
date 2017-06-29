@@ -538,17 +538,4 @@ public class ResourceHandler implements HttpHandler {
             return resourceHandler;
         }
     }
-
-    private static class DefaultResourceSupplier implements ResourceSupplier {
-        private final ResourceManager resourceManager;
-
-        DefaultResourceSupplier(ResourceManager resourceManager) {
-            this.resourceManager = resourceManager;
-        }
-
-        @Override
-        public Resource getResource(HttpServerExchange exchange, String path) throws IOException {
-            return resourceManager.getResource(path);
-        }
-    }
 }
