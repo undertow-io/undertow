@@ -660,15 +660,17 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
 
                 if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
-                    if (buffer == null) {
+                    if (buffer == null && buffersToWrite == null) {
                         servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
+                    } else if (buffersToWrite != null) {
+                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Long.toString(Buffers.remaining(buffersToWrite)));
                     } else {
                         servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
                     }
                 }
             }
             createChannel();
-            if (buffer != null) {
+            if (buffer != null || buffersToWrite != null) {
                 if (!flushBufferAsync(true)) {
                     return;
                 }
