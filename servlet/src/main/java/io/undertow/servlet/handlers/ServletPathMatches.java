@@ -340,7 +340,7 @@ public class ServletPathMatches {
                     if (!entry.getValue().isEmpty()) {
                         handler = new FilterHandler(entry.getValue(), deploymentInfo.isAllowNonStandardWrappers(), handler);
                     }
-                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet(), pathMatch, deploymentInfo, defaultServletMatch, defaultServletMatch ? MappingMatch.DEFAULT : MappingMatch.EXTENSION, defaultServletMatch ? "/" : "*." + entry.getKey()));
+                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet(), entry.getValue(), pathMatch, deploymentInfo, defaultServletMatch, defaultServletMatch ? MappingMatch.DEFAULT : MappingMatch.EXTENSION, defaultServletMatch ? "/" : "*." + entry.getKey()));
                 }
             } else if (path.isEmpty()) {
                 //the context root match
@@ -382,9 +382,9 @@ public class ServletPathMatches {
                 }
             }
             if (filtersByDispatcher.isEmpty()) {
-                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet(), null, deploymentInfo, false, MappingMatch.EXACT, ""));
+                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet(), filtersByDispatcher, null, deploymentInfo, false, MappingMatch.EXACT, ""));
             } else {
-                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filtersByDispatcher, deploymentInfo.isAllowNonStandardWrappers(), entry.getValue()), entry.getValue().getManagedServlet(), null, deploymentInfo, false, MappingMatch.EXACT, ""));
+                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filtersByDispatcher, deploymentInfo.isAllowNonStandardWrappers(), entry.getValue()), entry.getValue().getManagedServlet(), filtersByDispatcher, null, deploymentInfo, false, MappingMatch.EXACT, ""));
             }
         }
 
@@ -394,10 +394,10 @@ public class ServletPathMatches {
     private ServletChain createHandler(final DeploymentInfo deploymentInfo, final ServletHandler targetServlet, final Map<DispatcherType, List<ManagedFilter>> noExtension, final String servletPath, final boolean defaultServlet, MappingMatch mappingMatch, String pattern) {
         final ServletChain initialHandler;
         if (noExtension.isEmpty()) {
-            initialHandler = servletChain(targetServlet, targetServlet.getManagedServlet(), servletPath, deploymentInfo, defaultServlet, mappingMatch, pattern);
+            initialHandler = servletChain(targetServlet, targetServlet.getManagedServlet(), noExtension, servletPath, deploymentInfo, defaultServlet, mappingMatch, pattern);
         } else {
             FilterHandler handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), targetServlet);
-            initialHandler = servletChain(handler, targetServlet.getManagedServlet(), servletPath, deploymentInfo, defaultServlet, mappingMatch, pattern);
+            initialHandler = servletChain(handler, targetServlet.getManagedServlet(), noExtension, servletPath, deploymentInfo, defaultServlet, mappingMatch, pattern);
         }
         return initialHandler;
     }
@@ -471,13 +471,13 @@ public class ServletPathMatches {
         list.add(value);
     }
 
-    private static ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet, final String servletPath, final DeploymentInfo deploymentInfo, boolean defaultServlet, MappingMatch mappingMatch, String pattern) {
+    private static ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet, Map<DispatcherType, List<ManagedFilter>> filters, final String servletPath, final DeploymentInfo deploymentInfo, boolean defaultServlet, MappingMatch mappingMatch, String pattern) {
         HttpHandler servletHandler = next;
         if(!deploymentInfo.isSecurityDisabled()) {
             servletHandler = new ServletSecurityRoleHandler(servletHandler, deploymentInfo.getAuthorizationManager());
         }
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
-        return new ServletChain(servletHandler, managedServlet, servletPath, defaultServlet, mappingMatch, pattern);
+        return new ServletChain(servletHandler, managedServlet, servletPath, defaultServlet, mappingMatch, pattern, filters);
     }
 
     private static HttpHandler wrapHandlers(final HttpHandler wrapee, final List<HandlerWrapper> wrappers) {
