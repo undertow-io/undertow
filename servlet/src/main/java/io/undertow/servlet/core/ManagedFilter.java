@@ -119,4 +119,10 @@ public class ManagedFilter implements Lifecycle {
                 "filterInfo=" + filterInfo +
                 '}';
     }
+
+    public void forceInit() throws ServletException {
+        if (filter == null) {
+            createFilter();
+        }
+    }
 }
