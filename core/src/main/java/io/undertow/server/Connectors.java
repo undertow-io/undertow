@@ -168,7 +168,9 @@ public class Connectors {
     private static String addRfc6265ResponseCookieToExchange(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
-        header.append(cookie.getValue());
+        if(cookie.getValue() != null) {
+            header.append(cookie.getValue());
+        }
         if (cookie.getPath() != null) {
             header.append("; Path=");
             header.append(cookie.getPath());
@@ -223,7 +225,9 @@ public class Connectors {
     private static String addVersion0ResponseCookieToExchange(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
-        LegacyCookieSupport.maybeQuote(header, cookie.getValue());
+        if(cookie.getValue() != null) {
+            LegacyCookieSupport.maybeQuote(header, cookie.getValue());
+        }
 
         if (cookie.getPath() != null) {
             header.append("; path=");
@@ -267,7 +271,9 @@ public class Connectors {
 
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
-        LegacyCookieSupport.maybeQuote(header, cookie.getValue());
+        if(cookie.getValue() != null) {
+            LegacyCookieSupport.maybeQuote(header, cookie.getValue());
+        }
         header.append("; Version=1");
         if (cookie.getPath() != null) {
             header.append("; Path=");
