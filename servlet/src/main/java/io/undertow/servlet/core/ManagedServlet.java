@@ -176,6 +176,21 @@ public class ManagedServlet implements Lifecycle {
         return instanceStrategy.getServlet();
     }
 
+
+    public void forceInit() throws ServletException {
+        if (!started) {
+            if(servletContext.getDeployment().getDeploymentState() != DeploymentManager.State.STARTED) {
+                throw UndertowServletMessages.MESSAGES.deploymentStopped(servletContext.getDeployment().getDeploymentInfo().getDeploymentName());
+            }
+            synchronized (this) {
+                if (!started) {
+                    instanceStrategy.start();
+                    started = true;
+                }
+            }
+        }
+    }
+
     public ServletInfo getServletInfo() {
         return servletInfo;
     }

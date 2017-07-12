@@ -18,10 +18,16 @@
 
 package io.undertow.servlet.handlers;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 import io.undertow.server.HttpHandler;
+import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.core.ManagedServlet;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
 
 /**
 * @author Stuart Douglas
@@ -32,17 +38,19 @@ public class ServletChain {
     private final String servletPath;
     private final Executor executor;
     private final boolean defaultServletMapping;
+    private final Map<DispatcherType, List<ManagedFilter>> filters;
 
-    public ServletChain(final HttpHandler handler, final ManagedServlet managedServlet, final String servletPath, boolean defaultServletMapping) {
+    public ServletChain(final HttpHandler handler, final ManagedServlet managedServlet, final String servletPath, boolean defaultServletMapping, Map<DispatcherType, List<ManagedFilter>> filters) {
         this.handler = handler;
         this.managedServlet = managedServlet;
         this.servletPath = servletPath;
         this.defaultServletMapping = defaultServletMapping;
         this.executor = managedServlet.getServletInfo().getExecutor();
+        this.filters = filters;
     }
 
     public ServletChain(final ServletChain other) {
-        this(other.getHandler(), other.getManagedServlet(), other.getServletPath(), other.isDefaultServletMapping());
+        this(other.getHandler(), other.getManagedServlet(), other.getServletPath(), other.isDefaultServletMapping(), other.filters);
     }
 
     public HttpHandler getHandler() {
@@ -67,5 +75,20 @@ public class ServletChain {
 
     public boolean isDefaultServletMapping() {
         return defaultServletMapping;
+    }
+
+    //see UNDERTOW-1132
+    public void forceInit(DispatcherType dispatcherType) throws ServletException {
+        managedServlet.forceInit();
+        if(filters != null) {
+            List<ManagedFilter> list = filters.get(dispatcherType);
+            if(list != null && !list.isEmpty()) {
+                for(int i = 0; i < list.size(); ++i) {
+                    ManagedFilter filter = list.get(i);
+                    filter.forceInit();
+                }
+            }
+        }
+
     }
 }
