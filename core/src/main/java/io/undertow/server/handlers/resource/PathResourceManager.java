@@ -4,6 +4,7 @@ package io.undertow.server.handlers.resource;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.util.ETag;
+import org.jboss.logging.Logger;
 import org.xnio.FileChangeCallback;
 import org.xnio.FileChangeEvent;
 import org.xnio.FileSystemWatcher;
@@ -25,6 +26,8 @@ import java.util.TreeSet;
  * Serves files from the file system.
  */
 public class PathResourceManager implements ResourceManager  {
+
+    private static final Logger log = Logger.getLogger(PathResourceManager.class.getName());
 
     private static final boolean DEFAULT_CHANGE_LISTENERS_ALLOWED = !Boolean.getBoolean("io.undertow.disable-file-system-watcher");
     private static final long DEFAULT_TRANSFER_MIN_SIZE = 1024;
@@ -190,15 +193,18 @@ public class PathResourceManager implements ResourceManager  {
                 if(normalizedFile.length() == base.length() - 1) {
                     //special case for the root path, which may not have a trailing slash
                     if(!base.startsWith(normalizedFile)) {
+                        log.tracef("Failed to get path resource %s from path resource manager with base %s, as file was outside the base directory", p, base);
                         return null;
                     }
                 } else {
+                    log.tracef("Failed to get path resource %s from path resource manager with base %s, as file was outside the base directory", p, base);
                     return null;
                 }
             }
             if (Files.exists(file)) {
                 if(path.endsWith(File.separator) && ! Files.isDirectory(file)) {
                     //UNDERTOW-432 don't return non directories if the path ends with a /
+                    log.tracef("Failed to get path resource %s from path resource manager with base %s, as path ended with a / but was not a directory", p, base);
                     return null;
                 }
                 boolean followAll = this.followLinks && safePaths.isEmpty();
@@ -206,12 +212,17 @@ public class PathResourceManager implements ResourceManager  {
                 if (!followAll && symlinkBase != null && symlinkBase.requiresCheck) {
                     if (this.followLinks && isSymlinkSafe(file)) {
                         return getFileResource(file, path, symlinkBase.path, normalizedFile);
+                    } else {
+                        log.tracef("Failed to get path resource %s from path resource manager with base %s, as it was not a safe symlink path", p, base);
+                        return null;
                     }
                 } else {
                     return getFileResource(file, path, symlinkBase == null ? null : symlinkBase.path, normalizedFile);
                 }
+            } else {
+                log.tracef("Failed to get path resource %s from path resource manager with base %s, as the path did not exist", p, base);
+                return null;
             }
-            return null;
         } catch (Exception e) {
             UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s", p);
             return null;
@@ -352,6 +363,7 @@ public class PathResourceManager implements ResourceManager  {
                 String fileResolved = file.toRealPath().toString();
                 String symlinkBaseResolved = symlinkBase.toRealPath().toString();
                 if (!fileResolved.startsWith(symlinkBaseResolved)) {
+                    log.tracef("Rejected path resource %s from path resource manager with base %s, as the case did not match actual case of %s", path, base, normalizedFile);
                     return null;
                 }
                 String compare = fileResolved.substring(symlinkBaseResolved.length());
@@ -362,15 +374,20 @@ public class PathResourceManager implements ResourceManager  {
                     relative = relative.substring(1);
                 }
                 if (relative.equals(compare)) {
+                    log.tracef("Found path resource %s from path resource manager with base %s", path, base);
                     return new PathResource(file, this, path, eTagFunction.generate(file));
                 }
+                log.tracef("Rejected path resource %s from path resource manager with base %s, as the case did not match actual case of %s", path, base, normalizedFile);
                 return null;
             } else if (isFileSameCase(file, normalizedFile)) {
+                log.tracef("Found path resource %s from path resource manager with base %s", path, base);
                 return new PathResource(file, this, path, eTagFunction.generate(file));
             } else {
+                log.tracef("Rejected path resource %s from path resource manager with base %s, as the case did not match actual case of %s", path, base, normalizedFile);
                 return null;
             }
         } else {
+            log.tracef("Found path resource %s from path resource manager with base %s", path, base);
             return new PathResource(file, this, path, eTagFunction.generate(file));
         }
     }
