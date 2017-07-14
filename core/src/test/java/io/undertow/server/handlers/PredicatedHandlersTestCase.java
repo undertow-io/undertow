@@ -54,7 +54,8 @@ public class PredicatedHandlersTestCase {
                                         "path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']\r\n" +
                                         "path-template('/bar->foo') -> redirect(/);" +
                                         "regex('(.*).css') -> set[attribute='%{o,css}', value='true'] else set[attribute='%{o,css}', value='false']; " +
-                                        "path(/restart) -> {rewrite(/foo/a/b); restart; }\r\n", getClass().getClassLoader()), new HttpHandler() {
+                                        "path(/restart) -> {rewrite(/foo/a/b); restart; }\r\n" +
+                                        "regex('^/path/([^/]+)/(.*)/?$') -> rewrite('/newpath'); set(attribute='%{o,result}', value='param1=$1&param2=$2'); done()", getClass().getClassLoader()), new HttpHandler() {
                             @Override
                             public void handleRequest(HttpServerExchange exchange) throws Exception {
                                 exchange.getResponseSender().send(exchange.getRelativePath());
@@ -72,6 +73,13 @@ public class PredicatedHandlersTestCase {
             Assert.assertEquals("a", result.getHeaders("template")[0].getValue());
             Assert.assertEquals("false", result.getHeaders("css")[0].getValue());
             Assert.assertEquals("/foo/a/b", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/a/b");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("param1=a&param2=b", result.getHeaders("result")[0].getValue());
+            Assert.assertEquals("/newpath", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b.css");
             result = client.execute(get);
