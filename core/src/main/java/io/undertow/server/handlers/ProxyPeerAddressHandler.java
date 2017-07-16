@@ -51,42 +51,29 @@ public class ProxyPeerAddressHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String forwardedFor = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_FOR);
         if (forwardedFor != null) {
-            int index = forwardedFor.indexOf(',');
-            final String value;
-            if (index == -1) {
-                value = forwardedFor;
-            } else {
-                value = forwardedFor.substring(0, index);
-            }
             //we have no way of knowing the port
-            exchange.setSourceAddress(InetSocketAddress.createUnresolved(value, 0));
+            exchange.setSourceAddress(InetSocketAddress.createUnresolved(mostRecent(forwardedFor), 0));
         }
         String forwardedProto = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PROTO);
         if (forwardedProto != null) {
-            exchange.setRequestScheme(forwardedProto);
+            exchange.setRequestScheme(mostRecent(forwardedProto));
         }
         String forwardedHost = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_HOST);
         String forwardedPort = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PORT);
         if (forwardedHost != null) {
-            int index = forwardedHost.indexOf(',');
-            String value;
-            if (index == -1) {
-                value = forwardedHost;
-            } else {
-                value = forwardedHost.substring(0, index);
-            }
+            String value = mostRecent(forwardedHost);
             if(value.startsWith("[")) {
                 int end = value.lastIndexOf("]");
                 if(end == -1 ) {
                     end = 0;
                 }
-                index = value.indexOf(":", end);
+                int index = value.indexOf(":", end);
                 if(index != -1) {
                     forwardedPort = value.substring(index + 1);
                     value = value.substring(0, index);
                 }
             } else {
-                index = value.lastIndexOf(":");
+                int index = value.lastIndexOf(":");
                 if(index != -1) {
                     forwardedPort = value.substring(index + 1);
                     value = value.substring(0, index);
@@ -96,7 +83,7 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             String hostHeader = NetworkUtils.formatPossibleIpv6Address(value);
             if(forwardedPort != null) {
                 try {
-                    port = Integer.parseInt(forwardedPort);
+                    port = Integer.parseInt(mostRecent(forwardedPort));
                     String scheme = exchange.getRequestScheme();
 
                     if (! standardPort(port, scheme)) {
@@ -110,6 +97,15 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
         }
         next.handleRequest(exchange);
+    }
+
+    private String mostRecent(String header) {
+        int index = header.indexOf(',');
+        if (index == -1) {
+            return header;
+        } else {
+            return header.substring(0, index);
+        }
     }
 
     private static boolean standardPort(int port, String scheme) {
