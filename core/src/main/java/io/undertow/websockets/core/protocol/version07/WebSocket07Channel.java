@@ -387,7 +387,7 @@ public class WebSocket07Channel extends WebSocketChannel {
             }
             if (frameFinalFlag) {
                 // check if the frame is a ping frame as these are allowed in the middle
-                if (frameOpcode != OPCODE_PING) {
+                if (frameOpcode != OPCODE_PING && frameOpcode != OPCODE_PONG) {
                     fragmentedFramesCount = 0;
                 }
             } else {
