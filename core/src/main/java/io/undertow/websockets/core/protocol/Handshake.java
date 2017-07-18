@@ -199,7 +199,7 @@ public abstract class Handshake {
         for (WebSocketExtension ext : extensionList) {
             for (ExtensionHandshake extHandshake : availableExtensions) {
                 WebSocketExtension negotiated = extHandshake.accept(ext);
-                if (ext != null && !extHandshake.isIncompatible(configured)) {
+                if (negotiated != null && !extHandshake.isIncompatible(configured)) {
                     selected.add(negotiated);
                     configured.add(extHandshake);
                 }
