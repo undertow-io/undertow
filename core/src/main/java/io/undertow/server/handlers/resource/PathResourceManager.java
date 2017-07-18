@@ -202,7 +202,7 @@ public class PathResourceManager implements ResourceManager  {
                 }
             }
             if (Files.exists(file)) {
-                if(path.endsWith(File.separator) && ! Files.isDirectory(file)) {
+                if(path.endsWith("/") && ! Files.isDirectory(file)) {
                     //UNDERTOW-432 don't return non directories if the path ends with a /
                     log.tracef("Failed to get path resource %s from path resource manager with base %s, as path ended with a / but was not a directory", p, base);
                     return null;
