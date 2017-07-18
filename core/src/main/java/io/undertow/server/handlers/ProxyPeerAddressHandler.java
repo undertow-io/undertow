@@ -84,10 +84,14 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             if(forwardedPort != null) {
                 try {
                     port = Integer.parseInt(mostRecent(forwardedPort));
-                    String scheme = exchange.getRequestScheme();
+                    if(port > 0) {
+                        String scheme = exchange.getRequestScheme();
 
-                    if (! standardPort(port, scheme)) {
-                        hostHeader += ":" + port;
+                        if (!standardPort(port, scheme)) {
+                            hostHeader += ":" + port;
+                        }
+                    } else {
+                        UndertowLogger.REQUEST_LOGGER.debugf("Ignoring negative port: %s", forwardedPort);
                     }
                 } catch (NumberFormatException ignore) {
                     UndertowLogger.REQUEST_LOGGER.debugf("Cannot parse port: %s", forwardedPort);
