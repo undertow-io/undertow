@@ -61,6 +61,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private static final int FLAG_ON_DATA_READ_CALLED = 1 << 3;
     private static final int FLAG_CALL_ON_ALL_DATA_READ = 1 << 4;
     private static final int FLAG_BEING_INVOKED_IN_IO_THREAD = 1 << 5;
+    private static final int FLAG_IS_READY_CALLED = 1 << 6;
 
     private volatile int state;
     private volatile AsyncContextImpl asyncContext;
@@ -98,6 +99,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
         boolean ready = anyAreSet(state, FLAG_READY) && !finished;
         if(!ready && listener != null && !finished) {
             channel.resumeReads();
+        }
+        if(ready) {
+            state |= FLAG_IS_READY_CALLED;
         }
         return ready;
     }
@@ -153,9 +157,10 @@ public class ServletInputStreamImpl extends ServletInputStream {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
         if (listener != null) {
-            if (anyAreClear(state, FLAG_READY)) {
+            if (anyAreClear(state, FLAG_READY | FLAG_IS_READY_CALLED) ) {
                 throw UndertowServletMessages.MESSAGES.streamNotReady();
             }
+            state &= ~FLAG_IS_READY_CALLED;
         } else {
             readIntoBuffer();
         }
