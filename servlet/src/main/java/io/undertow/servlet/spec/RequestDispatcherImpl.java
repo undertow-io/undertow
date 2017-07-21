@@ -150,9 +150,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     }
 
     private void forwardImpl(ServletRequest request, ServletResponse response, ServletRequestContext servletRequestContext) throws ServletException, IOException {
-        if(this.pathMatch != null) {
-            this.pathMatch.getServletChain().forceInit(DispatcherType.FORWARD);
-        }
         final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
         if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
@@ -327,9 +324,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
                 }
             }
-        }
-        if(this.pathMatch != null) {
-            this.pathMatch.getServletChain().forceInit(DispatcherType.INCLUDE);
         }
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
