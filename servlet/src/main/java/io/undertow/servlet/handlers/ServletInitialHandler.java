@@ -149,7 +149,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             return;
         }
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
-        info.getServletChain().forceInit(DispatcherType.REQUEST);
         //https://issues.jboss.org/browse/WFLY-3439
         //if the request is an upgrade request then we don't want to redirect
         //as there is a good chance the web socket client won't understand the redirect
@@ -242,7 +241,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
         exchange.setRelativePath(relative);
         final ServletPathMatch info = paths.getServletHandlerByPath(request.getServletPath());
-        info.getServletChain().forceInit(DispatcherType.REQUEST);
         final HttpServletResponseImpl oResponse = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl oRequest = new HttpServletRequestImpl(exchange, servletContext);
         final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), oRequest, oResponse, info);

@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.core.ManagedServlet;
 
@@ -44,7 +45,31 @@ public class ServletChain {
     private final Map<DispatcherType, List<ManagedFilter>> filters;
 
     public ServletChain(final HttpHandler handler, final ManagedServlet managedServlet, final String servletPath, boolean defaultServletMapping, MappingMatch mappingMatch, String pattern, Map<DispatcherType, List<ManagedFilter>> filters) {
-        this.handler = handler;
+        this(handler, managedServlet, servletPath, defaultServletMapping, mappingMatch, pattern, filters, true);
+    }
+
+    private ServletChain(final HttpHandler originalHandler, final ManagedServlet managedServlet, final String servletPath, boolean defaultServletMapping, MappingMatch mappingMatch, String pattern, Map<DispatcherType, List<ManagedFilter>> filters, boolean wrapHandler) {
+        if (wrapHandler) {
+            this.handler = new HttpHandler() {
+
+                private volatile boolean initDone = false;
+
+                @Override
+                public void handleRequest(HttpServerExchange exchange) throws Exception {
+                    if(!initDone) {
+                        synchronized (this) {
+                            if(!initDone) {
+                                ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                                forceInit(src.getDispatcherType());
+                            }
+                        }
+                    }
+                    originalHandler.handleRequest(exchange);
+                }
+            };
+        } else {
+            this.handler = originalHandler;
+        }
         this.managedServlet = managedServlet;
         this.servletPath = servletPath;
         this.defaultServletMapping = defaultServletMapping;
@@ -55,7 +80,7 @@ public class ServletChain {
     }
 
     public ServletChain(final ServletChain other, String pattern, MappingMatch mappingMatch) {
-        this(other.getHandler(), other.getManagedServlet(), other.getServletPath(), other.isDefaultServletMapping(), mappingMatch, pattern, other.filters);
+        this(other.getHandler(), other.getManagedServlet(), other.getServletPath(), other.isDefaultServletMapping(), mappingMatch, pattern, other.filters, false);
     }
 
     public HttpHandler getHandler() {
@@ -91,7 +116,7 @@ public class ServletChain {
     }
 
     //see UNDERTOW-1132
-    public void forceInit(DispatcherType dispatcherType) throws ServletException {
+    void forceInit(DispatcherType dispatcherType) throws ServletException {
         managedServlet.forceInit();
         if(filters != null) {
             List<ManagedFilter> list = filters.get(dispatcherType);
