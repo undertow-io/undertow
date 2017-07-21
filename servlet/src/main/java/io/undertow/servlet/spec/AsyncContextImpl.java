@@ -188,7 +188,6 @@ public class AsyncContextImpl implements AsyncContext {
                 Connectors.executeRootHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                        pathInfo.getServletChain().forceInit(DispatcherType.ASYNC);
                         servletDispatcher.dispatchToPath(exchange, pathInfo, DispatcherType.ASYNC);
                     }
                 }, exchange);
