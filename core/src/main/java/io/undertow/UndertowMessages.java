@@ -149,10 +149,10 @@ public interface UndertowMessages {
     @Message(id = 38, value = "Authentication failed, requested user name '%s'")
     String authenticationFailed(final String userName);
 
-    @Message(id = 39, value = "To many query parameters, cannot have more than %s query parameters")
+    @Message(id = 39, value = "Too many query parameters, cannot have more than %s query parameters")
     BadRequestException tooManyQueryParameters(int noParams);
 
-    @Message(id = 40, value = "To many headers, cannot have more than %s header")
+    @Message(id = 40, value = "Too many headers, cannot have more than %s header")
     String tooManyHeaders(int noParams);
 
     @Message(id = 41, value = "Channel is closed")
