@@ -77,6 +77,7 @@ public class DefaultServlet extends HttpServlet {
     public static final String ALLOWED_EXTENSIONS = "allowed-extensions";
     public static final String DISALLOWED_EXTENSIONS = "disallowed-extensions";
     public static final String RESOLVE_AGAINST_CONTEXT_ROOT = "resolve-against-context-root";
+    public static final String ALLOW_POST = "allow-post";
 
     private static final Set<String> DEFAULT_ALLOWED_EXTENSIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList("js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf", "jpeg", "xml")));
 
@@ -89,6 +90,7 @@ public class DefaultServlet extends HttpServlet {
     private Set<String> allowed = DEFAULT_ALLOWED_EXTENSIONS;
     private Set<String> disallowed = Collections.emptySet();
     private boolean resolveAgainstContextRoot;
+    private boolean allowPost = false;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -120,6 +122,9 @@ public class DefaultServlet extends HttpServlet {
         }
         if (config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT) != null) {
             resolveAgainstContextRoot = Boolean.parseBoolean(config.getInitParameter(RESOLVE_AGAINST_CONTEXT_ROOT));
+        }
+        if (config.getInitParameter(ALLOW_POST) != null) {
+            allowPost = Boolean.parseBoolean(config.getInitParameter(ALLOW_POST));
         }
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
         String listings = config.getInitParameter(DIRECTORY_LISTING);
@@ -183,17 +188,21 @@ public class DefaultServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        /*
-         * Where a servlet has received a POST request we still require the capability to include static content.
-         */
-        switch (req.getDispatcherType()) {
-            case INCLUDE:
-            case FORWARD:
-            case ERROR:
-                doGet(req, resp);
-                break;
-            default:
-                super.doPost(req, resp);
+        if(allowPost) {
+            doGet(req, resp);
+        } else {
+            /*
+             * Where a servlet has received a POST request we still require the capability to include static content.
+             */
+            switch (req.getDispatcherType()) {
+                case INCLUDE:
+                case FORWARD:
+                case ERROR:
+                    doGet(req, resp);
+                    break;
+                default:
+                    super.doPost(req, resp);
+            }
         }
     }
 
@@ -260,7 +269,11 @@ public class DefaultServlet extends HttpServlet {
             }
             if (!ETagUtils.handleIfNoneMatch(req.getHeader(Headers.IF_NONE_MATCH_STRING), etag, true) ||
                     !DateUtils.handleIfModifiedSince(req.getHeader(Headers.IF_MODIFIED_SINCE_STRING), lastModified)) {
-                resp.setStatus(StatusCodes.NOT_MODIFIED);
+                if(req.getMethod().equals(Methods.GET_STRING) || req.getMethod().equals(Methods.HEAD_STRING)) {
+                    resp.setStatus(StatusCodes.NOT_MODIFIED);
+                } else {
+                    resp.setStatus(StatusCodes.PRECONDITION_FAILED);
+                }
                 return;
             }
         }
