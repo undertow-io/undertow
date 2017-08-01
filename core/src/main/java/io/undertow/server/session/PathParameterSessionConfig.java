@@ -103,7 +103,7 @@ public class PathParameterSessionConfig implements SessionConfig {
 
         StringBuilder sb = new StringBuilder(path);
         if (sb.length() > 0) { // jsessionid can't be first.
-            if(fragmentIndex > 0) {
+            if(fragmentIndex > 0 && !fragment.toLowerCase(Locale.ENGLISH).contains(name)) {
                 sb.append(fragment);
                 sb.append("&");
             } else {
