@@ -53,7 +53,12 @@ public class URLUtils {
         QUERY_STRING_PARSER.parse(string, exchange, charset, doDecode, maxParameters);
     }
 
+    @Deprecated
     public static void parsePathParms(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode, int maxParameters) throws ParameterLimitException {
+        parsePathParams(string, exchange, charset, doDecode, maxParameters);
+    }
+
+    public static void parsePathParams(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode, int maxParameters) throws ParameterLimitException {
         PATH_PARAM_PARSER.parse(string, exchange, charset, doDecode, maxParameters);
     }
 

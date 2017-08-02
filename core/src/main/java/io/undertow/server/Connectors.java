@@ -450,7 +450,7 @@ public class Connectors {
                     if (encodedPath.charAt(j) == '?') {
                         exchange.setRequestURI(encodedPath.substring(0, j));
                         String pathParams = encodedPath.substring(i + 1, j);
-                        URLUtils.parsePathParms(pathParams, exchange, charset, decode, maxParameters);
+                        URLUtils.parsePathParams(pathParams, exchange, charset, decode, maxParameters);
                         String qs = encodedPath.substring(j + 1);
                         exchange.setQueryString(qs);
                         URLUtils.parseQueryString(qs, exchange, charset, decode, maxParameters);
@@ -458,7 +458,7 @@ public class Connectors {
                     }
                 }
                 exchange.setRequestURI(encodedPath);
-                URLUtils.parsePathParms(encodedPath.substring(i + 1), exchange, charset, decode, maxParameters);
+                URLUtils.parsePathParams(encodedPath.substring(i + 1), exchange, charset, decode, maxParameters);
                 return;
             } else if(c == '%' || c == '+') {
                 requiresDecode = true;

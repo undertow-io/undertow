@@ -104,12 +104,69 @@ public class PathParameterSessionConfig implements SessionConfig {
         StringBuilder sb = new StringBuilder(path);
         if (sb.length() > 0) { // jsessionid can't be first.
             if(fragmentIndex > 0) {
-                sb.append(fragment);
-                sb.append("&");
+                if(fragment.contains(name)) {
+                    //this does not necessarily mean that this parameter is present. It could be part of the value, or the
+                    //name could be a substring of a larger key name
+                    sb.append(';'); //we make sure we append the fragment portion
+                    String key = null;
+                    StringBuilder paramBuilder = new StringBuilder();
+                    for (int i = 1; i < fragment.length(); ++i) {
+                        char c = fragment.charAt(i);
+                        if (key == null) {
+                            if (c == '&' || c == '=') {
+                                key = paramBuilder.toString();
+                                paramBuilder.setLength(0);
+                                if (c == '&') {
+                                    if (!key.equals(name)) { //we don't append if it matches the name
+                                        sb.append(key);
+                                        sb.append('&');
+                                    }
+                                    key = null;
+                                }
+                            } else {
+                                paramBuilder.append(c);
+                            }
+                        } else {
+                            if (c == '&') {
+                                String value = paramBuilder.toString();
+                                paramBuilder.setLength(0);
+                                if (!key.equals(name)) { //we don't append if it matches the name
+                                    sb.append(key);
+                                    sb.append('=');
+                                    sb.append(value);
+                                    sb.append('&');
+                                }
+                                key = null;
+                            } else {
+                                paramBuilder.append(c);
+                            }
+                        }
+                    }
+                    if(paramBuilder.length() > 0) {
+                        if(key == null) {
+                            key = paramBuilder.toString();
+                            if (!key.equals(name)) { //we don't append if it matches the name
+                                sb.append(key);
+                                sb.append('&');
+                            }
+                        } else {
+                            String value = paramBuilder.toString();
+                            if (!key.equals(name)) { //we don't append if it matches the name
+                                sb.append(key);
+                                sb.append('=');
+                                sb.append(value);
+                                sb.append('&');
+                            }
+                        }
+                    }
+                } else {
+                    sb.append(fragment);
+                    sb.append("&");
+                }
             } else {
                 sb.append(';');
             }
-            sb.append(name.toLowerCase(Locale.ENGLISH));
+            sb.append(name);
             sb.append('=');
             sb.append(sessionId);
         }
