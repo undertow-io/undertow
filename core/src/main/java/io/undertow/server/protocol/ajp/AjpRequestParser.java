@@ -259,7 +259,7 @@ public class AjpRequestParser {
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
                         try {
-                            URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
+                            URLUtils.parsePathParams(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
                         } catch (ParameterLimitException e) {
                             UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                             state.badRequest = true;
