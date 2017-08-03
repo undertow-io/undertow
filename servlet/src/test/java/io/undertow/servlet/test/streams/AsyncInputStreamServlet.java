@@ -45,12 +45,13 @@ public class AsyncInputStreamServlet extends HttpServlet {
 
         final ServletOutputStream outputStream = resp.getOutputStream();
         ServletInputStream inputStream = req.getInputStream();
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
         for (int i = 0; i < preamble; i++) {
             int value = inputStream.read();
             assert value >= 0 : "Stream is finished";
-            outputStream.write(value);
+            data.write(value);
         }
-        final MyListener listener = new MyListener(outputStream, inputStream, context, offIoThread);
+        final MyListener listener = new MyListener(outputStream, inputStream, data, context, offIoThread);
         inputStream.setReadListener(listener);
         if(!offIoThread) {
             outputStream.setWriteListener(listener);
@@ -61,7 +62,7 @@ public class AsyncInputStreamServlet extends HttpServlet {
     private class MyListener implements WriteListener, ReadListener {
         private final ServletOutputStream outputStream;
         private final ServletInputStream inputStream;
-        private final ByteArrayOutputStream dataToWrite = new ByteArrayOutputStream();
+        private final ByteArrayOutputStream dataToWrite;
         private final AsyncContext context;
         private final boolean offIoThread;
 
@@ -72,10 +73,11 @@ public class AsyncInputStreamServlet extends HttpServlet {
         MyListener(
                 final ServletOutputStream outputStream,
                 final ServletInputStream inputStream,
-                final AsyncContext context,
+                ByteArrayOutputStream dataToWrite, final AsyncContext context,
                 final boolean offIoThread) {
             this.outputStream = outputStream;
             this.inputStream = inputStream;
+            this.dataToWrite = dataToWrite;
             this.context = context;
             this.offIoThread = offIoThread;
         }
