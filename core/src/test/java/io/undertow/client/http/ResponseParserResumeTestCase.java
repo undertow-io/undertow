@@ -19,6 +19,7 @@
 package io.undertow.client.http;
 
 import io.undertow.testutils.category.UnitTest;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
@@ -51,7 +52,7 @@ public class ResponseParserResumeTestCase {
     }
 
     @Test
-    public void testOneCharacterAtATime() {
+    public void testOneCharacterAtATime() throws BadRequestException {
         byte[] in = DATA.getBytes();
         final ResponseParseState context = new ResponseParseState();
         HttpResponseBuilder result = new HttpResponseBuilder();
@@ -64,7 +65,7 @@ public class ResponseParserResumeTestCase {
         runAssertions(result, context);
     }
 
-    private void testResume(final int split, byte[] in) {
+    private void testResume(final int split, byte[] in) throws BadRequestException {
         final ResponseParseState context = new ResponseParseState();
         HttpResponseBuilder result = new HttpResponseBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
