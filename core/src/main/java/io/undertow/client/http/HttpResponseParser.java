@@ -19,6 +19,7 @@
 package io.undertow.client.http;
 
 import io.undertow.annotationprocessor.HttpResponseParserConfig;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
@@ -117,11 +118,11 @@ abstract class HttpResponseParser {
         }
     }
 
-    abstract void handleHttpVersion(ByteBuffer buffer, ResponseParseState currentState, HttpResponseBuilder builder);
+    abstract void handleHttpVersion(ByteBuffer buffer, ResponseParseState currentState, HttpResponseBuilder builder) throws BadRequestException;
 
-    abstract void handleHeader(ByteBuffer buffer, ResponseParseState currentState, HttpResponseBuilder builder);
+    abstract void handleHeader(ByteBuffer buffer, ResponseParseState currentState, HttpResponseBuilder builder) throws BadRequestException;
 
-    public void handle(final ByteBuffer buffer, final ResponseParseState currentState, final HttpResponseBuilder builder) {
+    public void handle(final ByteBuffer buffer, final ResponseParseState currentState, final HttpResponseBuilder builder) throws BadRequestException {
 
         if (currentState.state == ResponseParseState.VERSION) {
             handleHttpVersion(buffer, currentState, builder);
