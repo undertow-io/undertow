@@ -45,6 +45,7 @@ import org.jboss.classfilewriter.util.DescriptorUtils;
  */
 public abstract class AbstractParserGenerator {
 
+    public static final String BAD_REQUEST_EXCEPTION = "io.undertow.util.BadRequestException";
     //class names
     protected final String parseStateClass;
     protected String resultClass;
@@ -92,7 +93,6 @@ public abstract class AbstractParserGenerator {
         final String className = existingClassName + CLASS_NAME_SUFFIX;
         final ClassFile file = new ClassFile(className, existingClassName);
 
-
         final ClassMethod ctor = file.addMethod(AccessFlag.PUBLIC, "<init>", "V", DescriptorUtils.parameterDescriptors(constructorDescriptor));
         ctor.getCodeAttribute().aload(0);
         ctor.getCodeAttribute().loadMethodParameters();
@@ -113,7 +113,7 @@ public abstract class AbstractParserGenerator {
 
     protected abstract void createStateMachines(final String[] httpVerbs, final String[] httpVersions, final String[] standardHeaders, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter);
 
-    protected void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine) {
+    protected void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine, boolean expectNewline) {
 
         //list of all states except the initial
         final List<State> allStates = new ArrayList<State>();
@@ -132,7 +132,8 @@ public abstract class AbstractParserGenerator {
         final int noStates = stateCounter.get();
 
         final ClassMethod handle = file.addMethod(Modifier.PROTECTED | Modifier.FINAL, methodName, "V", DescriptorUtils.makeDescriptor(ByteBuffer.class), parseStateDescriptor, httpExchangeDescriptor);
-        writeStateMachine(className, file, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, sctor);
+        handle.addCheckedExceptions(BAD_REQUEST_EXCEPTION);
+        writeStateMachine(className, file, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, expectNewline);
     }
 
     private void createStateField(final State state, final ClassFile file, final CodeAttribute sc) {
@@ -208,7 +209,7 @@ public abstract class AbstractParserGenerator {
         state.httpStringFieldName = "HTTP_STRING_" + fieldCounter.incrementAndGet();
     }
 
-    private void writeStateMachine(final String className, final ClassFile file, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine, final ClassMethod sctor) {
+    private void writeStateMachine(final String className, final ClassFile file, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine, boolean expectNewline) {
 
         //initial hasRemaining check
         c.aload(BYTE_BUFFER_VAR);
@@ -315,22 +316,35 @@ public abstract class AbstractParserGenerator {
         c.dup();
         c.dup();
         final Set<BranchEnd> prefixHandleSpace = new HashSet<BranchEnd>();
+        final Set<BranchEnd> badPrefixHandleSpace = new HashSet<BranchEnd>();
         if (stateMachine.isHeader()) {
             c.iconst(':');
             prefixHandleSpace.add(c.ifIcmpeq());
             c.dup();
+            c.iconst(' ');
+            prefixHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\r');
+            prefixHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            prefixHandleSpace.add(c.ifIcmpeq());
+        }else if(!expectNewline) {
+            c.iconst(' ');
+            prefixHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\r');
+            badPrefixHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            badPrefixHandleSpace.add(c.ifIcmpeq());
+        } else {
+            c.iconst('\r');
+            prefixHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            prefixHandleSpace.add(c.ifIcmpeq());
         }
-        c.iconst(' ');
-        prefixHandleSpace.add(c.ifIcmpeq());
-        c.dup();
-        c.iconst('\t');
-        prefixHandleSpace.add(c.ifIcmpeq());
-        c.dup();
-        c.iconst('\r');
-        prefixHandleSpace.add(c.ifIcmpeq());
-        c.dup();
-        c.iconst('\n');
-        prefixHandleSpace.add(c.ifIcmpeq());
         //check if we have overrun
         c.aload(STATE_CURRENT_BYTES_VAR);
         c.arraylength();
@@ -370,6 +384,16 @@ public abstract class AbstractParserGenerator {
         c.pop2();
         BranchEnd prefixToNoState = c.gotoInstruction();
 
+        if(!badPrefixHandleSpace.isEmpty()) {
+            //handle the space case
+            for (BranchEnd b : badPrefixHandleSpace) {
+                c.branchEnd(b);
+            }
+            c.newInstruction(BAD_REQUEST_EXCEPTION);
+            c.dup();
+            c.invokespecial(BAD_REQUEST_EXCEPTION, "<init>", "()V");
+            c.athrow();
+        }
         //handle the space case
         for (BranchEnd b : prefixHandleSpace) {
             c.branchEnd(b);
@@ -417,22 +441,35 @@ public abstract class AbstractParserGenerator {
         c.dup();
 
         final Set<BranchEnd> nostateHandleSpace = new HashSet<BranchEnd>();
+        final Set<BranchEnd> badNostateHandleSpace = new HashSet<BranchEnd>();
         if (stateMachine.isHeader()) {
             c.iconst(':');
             nostateHandleSpace.add(c.ifIcmpeq());
             c.dup();
+            c.iconst(' ');
+            nostateHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\r');
+            nostateHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            nostateHandleSpace.add(c.ifIcmpeq());
+        } else if(!expectNewline) {
+            c.iconst(' ');
+            nostateHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\r');
+            badNostateHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            badNostateHandleSpace.add(c.ifIcmpeq());
+        } else {
+            c.iconst('\r');
+            nostateHandleSpace.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            nostateHandleSpace.add(c.ifIcmpeq());
         }
-        c.iconst(' ');
-        nostateHandleSpace.add(c.ifIcmpeq());
-        c.dup();
-        c.iconst('\t');
-        nostateHandleSpace.add(c.ifIcmpeq());
-        c.dup();
-        c.iconst('\r');
-        nostateHandleSpace.add(c.ifIcmpeq());
-        c.dup();
-        c.iconst('\n');
-        nostateHandleSpace.add(c.ifIcmpeq());
         c.aload(STATE_STRING_BUILDER_VAR);
         c.swap();
         c.invokevirtual(StringBuilder.class.getName(), "append", "(C)Ljava/lang/StringBuilder;");
@@ -447,6 +484,17 @@ public abstract class AbstractParserGenerator {
         c.putfield(parseStateClass, "parseState", "I");
         c.iconst(0);
         c.returnInstruction();
+
+        if(!badNostateHandleSpace.isEmpty()) {
+            //handle the space case
+            for (BranchEnd b : badNostateHandleSpace) {
+                c.branchEnd(b);
+            }
+            c.newInstruction(BAD_REQUEST_EXCEPTION);
+            c.dup();
+            c.invokespecial(BAD_REQUEST_EXCEPTION, "<init>", "()V");
+            c.athrow();
+        }
         for (BranchEnd b : nostateHandleSpace) {
             c.branchEnd(b);
         }
@@ -471,11 +519,11 @@ public abstract class AbstractParserGenerator {
         c.astore(STATE_CURRENT_BYTES_VAR);
 
         c.branchEnd(ends.get(initial).get());
-        invokeState(className, file, c, initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
+        invokeState(className, file, c, initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine, expectNewline);
         for (final State s : allStates) {
             if (s.stateno >= 0) {
                 c.branchEnd(ends.get(s).get());
-                invokeState(className, file, c, s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
+                invokeState(className, file, c, s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine, expectNewline);
             }
         }
 
@@ -504,7 +552,7 @@ public abstract class AbstractParserGenerator {
         c.gotoInstruction(returnCode);
     }
 
-    private void invokeState(final String className, final ClassFile file, final CodeAttribute c, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
+    private void invokeState(final String className, final ClassFile file, final CodeAttribute c, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine, boolean expectNewline) {
         currentState.mark(c);
 
         BranchEnd parseDone = null;
@@ -537,29 +585,42 @@ public abstract class AbstractParserGenerator {
         }
 
         c.dup();
-        final Set<AtomicReference<BranchEnd>> tokenEnds = new HashSet<AtomicReference<BranchEnd>>();
-        final Map<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<State, AtomicReference<BranchEnd>>();
+        final Set<BranchEnd> tokenEnds = new HashSet<>();
+        final Set<BranchEnd> badTokenEnds = new HashSet<>();
+        final Map<State, BranchEnd> ends = new IdentityHashMap<State, BranchEnd>();
         for (State state : currentState.next.values()) {
             c.iconst(state.value);
-            ends.put(state, new AtomicReference<BranchEnd>(c.ifIcmpeq()));
+            ends.put(state, c.ifIcmpeq());
             c.dup();
         }
         if (stateMachine.isHeader()) {
             c.iconst(':');
-            tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
+            tokenEnds.add(c.ifIcmpeq());
             c.dup();
+            c.iconst('\r');
+            tokenEnds.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            tokenEnds.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst(' ');
+            tokenEnds.add(c.ifIcmpeq());
+        }else if (expectNewline) {
+            c.iconst('\r');
+            tokenEnds.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            tokenEnds.add(c.ifIcmpeq());
+        } else {
+            c.iconst(' ');
+            tokenEnds.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\r');
+            badTokenEnds.add(c.ifIcmpeq());
+            c.dup();
+            c.iconst('\n');
+            badTokenEnds.add(c.ifIcmpeq());
         }
-        c.iconst(' ');
-        tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
-        c.dup();
-        c.iconst('\t');
-        tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
-        c.dup();
-        c.iconst('\r');
-        tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
-        c.dup();
-        c.iconst('\n');
-        tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
 
 
         c.iconst(NO_STATE);
@@ -575,9 +636,19 @@ public abstract class AbstractParserGenerator {
 
         c.gotoInstruction(noStateStart);
 
+        if(!badTokenEnds.isEmpty()) {
+            //handle the space case
+            for (BranchEnd b : badTokenEnds) {
+                c.branchEnd(b);
+            }
+            c.newInstruction(BAD_REQUEST_EXCEPTION);
+            c.dup();
+            c.invokespecial(BAD_REQUEST_EXCEPTION, "<init>", "()V");
+            c.athrow();
+        }
         //now we write out tokenEnd
-        for (AtomicReference<BranchEnd> tokenEnd : tokenEnds) {
-            c.branchEnd(tokenEnd.get());
+        for (BranchEnd tokenEnd : tokenEnds) {
+            c.branchEnd(tokenEnd);
         }
 
         if (!currentState.soFar.equals("")) {
@@ -597,8 +668,8 @@ public abstract class AbstractParserGenerator {
             initialState.jumpTo(c);
         }
 
-        for (Map.Entry<State, AtomicReference<BranchEnd>> e : ends.entrySet()) {
-            c.branchEnd(e.getValue().get());
+        for (Map.Entry<State, BranchEnd> e : ends.entrySet()) {
+            c.branchEnd(e.getValue());
             c.pop();
             final State state = e.getKey();
             if (state.stateno < 0) {
