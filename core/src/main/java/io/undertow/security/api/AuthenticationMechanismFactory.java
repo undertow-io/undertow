@@ -18,6 +18,7 @@
 
 package io.undertow.security.api;
 
+import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.handlers.form.FormParserFactory;
 
 import java.util.Map;
@@ -37,14 +38,29 @@ public interface AuthenticationMechanismFactory {
     String ERROR_PAGE = "error_page";
     String CONTEXT_PATH = "context_path";
 
-
     /**
      * Creates an authentication mechanism using the specified properties
      *
      * @param mechanismName The name under which this factory was registered
      * @param properties The properties
+     * @param formParserFactory Parser to create a form data parser for a given request.
      * @return The mechanism
      */
-    AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, final Map<String, String> properties);
+    default AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, final Map<String, String> properties) {
+        return null;
+    }
+
+    /**
+     * Creates an authentication mechanism that needs access to the deployment IdentityManager and specified properties
+     *
+     * @param mechanismName The name under which this factory was registered
+     * @param identityManager the IdentityManager instance asscociated with the deployment
+     * @param formParserFactory Parser to create a form data parser for a given request.
+     * @param properties The properties
+     * @return The mechanism
+     */
+    default AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, final Map<String, String> properties) {
+        return create(mechanismName, formParserFactory, properties);
+    }
 
 }

@@ -402,7 +402,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     name = name.equals(DIGEST_AUTH) ? DIGEST_AUTH : name;
                     name = name.equals(CLIENT_CERT_AUTH) ? CLIENT_CERT_AUTH : name;
 
-                    authenticationMechanisms.add(factory.create(name, parser, properties));
+                    authenticationMechanisms.add(factory.create(name, identityManager, parser, properties));
                 }
             }
 
