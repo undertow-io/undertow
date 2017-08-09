@@ -321,6 +321,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
         List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<>();
 
+        if(deploymentInfo.isUseCachedAuthenticationMechanism()) {
+            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager));
+        }
         String mechName = null;
         if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
 
@@ -360,9 +363,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
                 authenticationMechanisms.add(factory.create(name, parser, properties));
             }
-        }
-        if(deploymentInfo.isUseCachedAuthenticationMechanism()) {
-            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism(identityManager));
         }
         deployment.setAuthenticationMechanisms(authenticationMechanisms);
         //if the JASPI auth mechanism is set then it takes over
