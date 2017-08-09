@@ -389,7 +389,7 @@ public class HpackSpecExamplesUnitTestCase {
     }
 
 
-    private static void assertTableState(HpackDecoder decoder, int index, String name, String value) {
+    private static void assertTableState(HpackDecoder decoder, int index, String name, String value) throws HpackException {
         int idx = decoder.getRealIndex(index);
         Hpack.HeaderField val = decoder.getHeaderTable()[idx];
         Assert.assertEquals(name, val.name.toString());
