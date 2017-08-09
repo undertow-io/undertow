@@ -304,11 +304,15 @@ public class HpackDecoder {
      * @param index The index from the hpack
      * @return the real index into the array
      */
-    int getRealIndex(int index) {
+    int getRealIndex(int index) throws HpackException {
         //the index is one based, but our table is zero based, hence -1
         //also because of our ring buffer setup the indexes are reversed
         //index = 1 is at position firstSlotPosition + filledSlots
-        return (firstSlotPosition + (filledTableSlots - index)) % headerTable.length;
+        int newIndex = (firstSlotPosition + (filledTableSlots - index)) % headerTable.length;
+        if(newIndex < 0) {
+            throw UndertowMessages.MESSAGES.invalidHpackIndex(index);
+        }
+        return newIndex;
     }
 
     private void addStaticTableEntry(int index) throws HpackException {

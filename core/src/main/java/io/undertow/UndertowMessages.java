@@ -547,4 +547,6 @@ public interface UndertowMessages {
     @Message(id = 174, value = "An invalid escape character in cookie value")
     IllegalArgumentException invalidEscapeCharacter();
 
+    @Message(id = 175, value = "Invalid Hpack index %s")
+    HpackException invalidHpackIndex(int index);
 }
