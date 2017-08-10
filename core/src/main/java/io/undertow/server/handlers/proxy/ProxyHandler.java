@@ -380,8 +380,10 @@ public final class ProxyHandler implements HttpHandler {
             if(exchange.isHostIncludedInRequestURI()) {
                 int uriPart = targetURI.indexOf("//");
                 if(uriPart != -1) {
-                    uriPart = targetURI.indexOf("/", uriPart);
-                    targetURI = targetURI.substring(uriPart);
+                    uriPart = targetURI.indexOf("/", uriPart + 2);
+                    if(uriPart != -1) {
+                        targetURI = targetURI.substring(uriPart);
+                    }
                 }
             }
 
