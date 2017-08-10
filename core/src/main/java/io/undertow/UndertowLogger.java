@@ -161,10 +161,10 @@ public interface UndertowLogger extends BasicLogger {
 //    @LogMessage(level = Logger.Level.ERROR)
 //    @Message(id = 5025, value = "Could not initiate SPDY connection and no HTTP fallback defined")
 //    void couldNotInitiateSpdyConnection();
-
-    @LogMessage(level = INFO)
-    @Message(id = 5026, value = "Jetty ALPN support not found on boot class path, %s client will not be available.")
-    void jettyALPNNotFound(String protocol);
+//
+//    @LogMessage(level = INFO)
+//    @Message(id = 5026, value = "Jetty ALPN support not found on boot class path, %s client will not be available.")
+//    void jettyALPNNotFound(String protocol);
 
     @LogMessage(level = ERROR)
     @Message(id = 5027, value = "Timing out request to %s")
@@ -368,9 +368,9 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5077, value = "SSL unwrap buffer overflow detected. This should not happen, please report this to the Undertow developers. Current state %s")
     void sslBufferOverflow(SslConduit sslConduit);
 
-    @LogMessage(level = ERROR)
-    @Message(id = 5078, value = "ALPN connection failed")
-    void alpnConnectionFailed(@Cause Exception e);
+//    @LogMessage(level = ERROR)
+//    @Message(id = 5078, value = "ALPN connection failed")
+//    void alpnConnectionFailed(@Cause Exception e);
 
     @LogMessage(level = ERROR)
     @Message(id = 5079, value = "ALPN negotiation on %s failed")
