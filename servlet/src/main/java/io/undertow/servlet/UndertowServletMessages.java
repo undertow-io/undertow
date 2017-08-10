@@ -94,9 +94,9 @@ public interface UndertowServletMessages {
 
     @Message(id = 10016, value = "Not a multi part request")
     ServletException notAMultiPartRequest();
-
-    @Message(id = 10017, value = "Request was neither the original request object or a ServletRequestWrapper")
-    IllegalArgumentException requestNoOfCorrectType();
+//
+//    @Message(id = 10017, value = "Request was neither the original request object or a ServletRequestWrapper")
+//    IllegalArgumentException requestNoOfCorrectType();
 
     @Message(id = 10018, value = "Async not started")
     IllegalStateException asyncNotStarted();
@@ -154,9 +154,9 @@ public interface UndertowServletMessages {
 
     @Message(id = 10036, value = "Listener has already been set")
     IllegalStateException listenerAlreadySet();
-
-    @Message(id = 10037, value = "When stream is in async mode a write can only be made from the listener callback")
-    IllegalStateException writeCanOnlyBeMadeFromListenerCallback();
+//
+//    @Message(id = 10037, value = "When stream is in async mode a write can only be made from the listener callback")
+//    IllegalStateException writeCanOnlyBeMadeFromListenerCallback();
 
     @Message(id = 10038, value = "No web socket handler was provided to the web socket servlet")
     ServletException noWebSocketHandler();
