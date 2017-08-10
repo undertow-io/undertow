@@ -39,31 +39,31 @@ public interface WebSocketLogger extends BasicLogger {
     WebSocketLogger REQUEST_LOGGER = Logger.getMessageLogger(WebSocketLogger.class, WebSocketLogger.class.getPackage().getName() + ".request");
 
     WebSocketLogger EXTENSION_LOGGER = Logger.getMessageLogger(WebSocketLogger.class, WebSocketLogger.class.getPackage().getName() + ".extension");
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 25001, value = "WebSocket handshake failed")
-    void webSocketHandshakeFailed(@Cause Throwable cause);
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 25002, value = "StreamSinkFrameChannel %s was closed before writing was finished, web socket connection is now unusable")
-    void closedBeforeFinishedWriting(StreamSinkFrameChannel streamSinkFrameChannel);
+//
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 25001, value = "WebSocket handshake failed")
+//    void webSocketHandshakeFailed(@Cause Throwable cause);
+//
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 25002, value = "StreamSinkFrameChannel %s was closed before writing was finished, web socket connection is now unusable")
+//    void closedBeforeFinishedWriting(StreamSinkFrameChannel streamSinkFrameChannel);
 
     @LogMessage(level = Logger.Level.DEBUG)
     @Message(id = 25003, value = "Decoding WebSocket Frame with opCode %s")
     void decodingFrameWithOpCode(int opCode);
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 25004, value = "Failure during execution of SendCallback")
-    void sendCallbackExecutionError(@Cause Throwable cause);
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 25005, value = "Failed to set idle timeout")
-    void setIdleTimeFailed(@Cause Throwable cause);
-
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 25006, value = "Failed to get idle timeout")
-    void getIdleTimeFailed(@Cause Throwable cause);
+//
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 25004, value = "Failure during execution of SendCallback")
+//    void sendCallbackExecutionError(@Cause Throwable cause);
+//
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 25005, value = "Failed to set idle timeout")
+//    void setIdleTimeFailed(@Cause Throwable cause);
+//
+//
+//    @LogMessage(level = Logger.Level.ERROR)
+//    @Message(id = 25006, value = "Failed to get idle timeout")
+//    void getIdleTimeFailed(@Cause Throwable cause);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 25007, value = "Unhandled exception for annotated endpoint %s")
