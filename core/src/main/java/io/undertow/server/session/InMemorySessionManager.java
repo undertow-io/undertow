@@ -214,7 +214,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
         }
         String sessionId = config.findSessionId(serverExchange);
-        return getSession(sessionId);
+        InMemorySessionManager.SessionImpl session = (SessionImpl) getSession(sessionId);
+        if(session != null) {
+            session.requestStarted(serverExchange);
+        }
+        return session;
     }
 
     @Override
@@ -342,6 +346,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     private static class SessionImpl implements Session {
 
 
+        final AttachmentKey<Boolean> FIRST_REQUEST_ACCESS = AttachmentKey.create(Boolean.class);
         final InMemorySessionManager sessionManager;
         final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<>();
         volatile long lastAccessed;
@@ -451,11 +456,18 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             return sessionId;
         }
 
+        void requestStarted(HttpServerExchange serverExchange) {
+            Boolean existing = serverExchange.getAttachment(FIRST_REQUEST_ACCESS);
+            if(existing == null) {
+                if (!invalid) {
+                    lastAccessed = System.currentTimeMillis();
+                }
+                serverExchange.putAttachment(FIRST_REQUEST_ACCESS, Boolean.TRUE);
+            }
+        }
+
         @Override
         public void requestDone(final HttpServerExchange serverExchange) {
-            if (!invalid) {
-                lastAccessed = System.currentTimeMillis();
-            }
         }
 
         @Override
