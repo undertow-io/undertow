@@ -56,6 +56,8 @@ import static io.undertow.util.StatusCodes.UNAUTHORIZED;
  */
 public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
+    public static final AuthenticationMechanismFactory FACTORY = new Factory();
+
     public static final String SILENT = "silent";
     public static final String CHARSET = "charset";
     /**
@@ -210,14 +212,13 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
     public static class Factory implements AuthenticationMechanismFactory {
 
-        private final IdentityManager identityManager;
+        @Deprecated
+        public Factory(IdentityManager identityManager) {}
 
-        public Factory(IdentityManager identityManager) {
-            this.identityManager = identityManager;
-        }
+        public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             String realm = properties.get(REALM);
             String silent = properties.get(SILENT);
             String charsetString = properties.get(CHARSET);

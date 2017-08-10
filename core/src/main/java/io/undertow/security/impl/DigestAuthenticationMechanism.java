@@ -61,6 +61,8 @@ import java.util.Set;
  */
 public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
+    public static final AuthenticationMechanismFactory FACTORY = new Factory();
+
     private static final String DEFAULT_NAME = "DIGEST";
     private static final String DIGEST_PREFIX = DIGEST + " ";
     private static final int PREFIX_LENGTH = DIGEST_PREFIX.length();
@@ -621,14 +623,13 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
     public static final class Factory implements AuthenticationMechanismFactory {
 
-        private final IdentityManager identityManager;
+        @Deprecated
+        public Factory(IdentityManager identityManager) {}
 
-        public Factory(IdentityManager identityManager) {
-            this.identityManager = identityManager;
-        }
+        public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             return new DigestAuthenticationMechanism(properties.get(REALM), properties.get(CONTEXT_PATH), mechanismName, identityManager);
         }
     }

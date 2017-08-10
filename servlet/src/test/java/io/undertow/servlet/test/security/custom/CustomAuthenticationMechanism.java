@@ -20,6 +20,7 @@ package io.undertow.servlet.test.security.custom;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
@@ -29,12 +30,12 @@ import java.util.Map;
 
 /**
  * <p>
- * Custom Authentication Mechanism has a slight change from the {@link FormAuthenticationMechanism} that the posting of
+ * Custom Authentication Mechanism has a slight change from the {@link io.undertow.security.impl.FormAuthenticationMechanism} that the posting of
  * username/password happens to a resource ending with custom_security_check rather than j_security_check in the form
  * authentication.
  * </p>
  * <p>
- * This allows to test the injection of an {@link AuthenticationMechanism} to the {@link DeploymentManagerImpl} API
+ * This allows to test the injection of an {@link AuthenticationMechanism} to the {@link io.undertow.servlet.core.DeploymentManagerImpl} API
  * </p>
  *
  * @author anil saldhana
@@ -61,7 +62,7 @@ public class CustomAuthenticationMechanism extends ServletFormAuthenticationMech
     public static final class Factory implements AuthenticationMechanismFactory {
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             return new CustomAuthenticationMechanism(mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE));
         }
     }

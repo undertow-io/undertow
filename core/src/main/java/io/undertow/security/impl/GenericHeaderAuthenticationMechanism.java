@@ -46,6 +46,8 @@ import static io.undertow.security.api.AuthenticationMechanism.AuthenticationMec
  */
 public class GenericHeaderAuthenticationMechanism implements AuthenticationMechanism {
 
+    public static final AuthenticationMechanismFactory FACTORY = new Factory();
+
     public static final String NAME = "GENERIC_HEADER";
     public static final String IDENTITY_HEADER = "identity-header";
     public static final String SESSION_HEADER = "session-header";
@@ -109,14 +111,16 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
 
     public static class Factory implements AuthenticationMechanismFactory {
 
-        private final IdentityManager identityManager;
-
+        @Deprecated
         public Factory(IdentityManager identityManager) {
-            this.identityManager = identityManager;
+        }
+
+        public Factory() {
+
         }
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             String identity = properties.get(IDENTITY_HEADER);
             if(identity == null) {
                 throw UndertowMessages.MESSAGES.authenticationPropertyNotSet(mechanismName, IDENTITY_HEADER);

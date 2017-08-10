@@ -48,6 +48,8 @@ import java.util.Map;
  */
 public class ClientCertAuthenticationMechanism implements AuthenticationMechanism {
 
+    public static final AuthenticationMechanismFactory FACTORY = new Factory();
+
     public static final String FORCE_RENEGOTIATION = "force_renegotiation";
 
     private final String name;
@@ -142,14 +144,13 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
 
     public static final class Factory implements AuthenticationMechanismFactory {
 
-        private final IdentityManager identityManager;
+        @Deprecated
+        public Factory(IdentityManager identityManager) {}
 
-        public Factory(IdentityManager identityManager) {
-            this.identityManager = identityManager;
-        }
+        public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             String forceRenegotiation = properties.get(FORCE_RENEGOTIATION);
             return new ClientCertAuthenticationMechanism(mechanismName, forceRenegotiation == null ? true : "true".equals(forceRenegotiation), identityManager);
         }

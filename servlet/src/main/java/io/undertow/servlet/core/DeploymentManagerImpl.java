@@ -336,22 +336,22 @@ public class DeploymentManagerImpl implements DeploymentManager {
             final Map<String, AuthenticationMechanismFactory> factoryMap = new HashMap<>(deploymentInfo.getAuthenticationMechanisms());
             final IdentityManager identityManager = deploymentInfo.getIdentityManager();
             if(!factoryMap.containsKey(BASIC_AUTH)) {
-                factoryMap.put(BASIC_AUTH, new BasicAuthenticationMechanism.Factory(identityManager));
+                factoryMap.put(BASIC_AUTH, BasicAuthenticationMechanism.FACTORY);
             }
             if(!factoryMap.containsKey(FORM_AUTH)) {
-                factoryMap.put(FORM_AUTH, new ServletFormAuthenticationMechanism.Factory(identityManager));
+                factoryMap.put(FORM_AUTH, ServletFormAuthenticationMechanism.FACTORY);
             }
             if(!factoryMap.containsKey(DIGEST_AUTH)) {
-                factoryMap.put(DIGEST_AUTH, new DigestAuthenticationMechanism.Factory(identityManager));
+                factoryMap.put(DIGEST_AUTH, DigestAuthenticationMechanism.FACTORY);
             }
             if(!factoryMap.containsKey(CLIENT_CERT_AUTH)) {
-                factoryMap.put(CLIENT_CERT_AUTH, new ClientCertAuthenticationMechanism.Factory(identityManager));
+                factoryMap.put(CLIENT_CERT_AUTH, ClientCertAuthenticationMechanism.FACTORY);
             }
             if(!factoryMap.containsKey(ExternalAuthenticationMechanism.NAME)) {
-                factoryMap.put(ExternalAuthenticationMechanism.NAME, new ExternalAuthenticationMechanism.Factory(identityManager));
+                factoryMap.put(ExternalAuthenticationMechanism.NAME, ExternalAuthenticationMechanism.FACTORY);
             }
             if(!factoryMap.containsKey(GenericHeaderAuthenticationMechanism.NAME)) {
-                factoryMap.put(GenericHeaderAuthenticationMechanism.NAME, new GenericHeaderAuthenticationMechanism.Factory(identityManager));
+                factoryMap.put(GenericHeaderAuthenticationMechanism.NAME, GenericHeaderAuthenticationMechanism.FACTORY);
             }
             List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<>();
 

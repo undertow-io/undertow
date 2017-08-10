@@ -20,6 +20,7 @@ package io.undertow.util;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
+import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.handlers.form.FormParserFactory;
 
 import java.util.Map;
@@ -37,7 +38,7 @@ public class ImmediateAuthenticationMechanismFactory implements AuthenticationMe
     }
 
     @Override
-    public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+    public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
         return authenticationMechanism;
     }
 }

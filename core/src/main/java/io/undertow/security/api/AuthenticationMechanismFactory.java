@@ -46,6 +46,7 @@ public interface AuthenticationMechanismFactory {
      * @param formParserFactory Parser to create a form data parser for a given request.
      * @return The mechanism
      */
+    @Deprecated
     default AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, final Map<String, String> properties) {
         return null;
     }

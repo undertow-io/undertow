@@ -57,6 +57,8 @@ import java.util.WeakHashMap;
  */
 public class ServletFormAuthenticationMechanism extends FormAuthenticationMechanism {
 
+    public static final AuthenticationMechanismFactory FACTORY = new Factory();
+
     private static final String SESSION_KEY = "io.undertow.servlet.form.auth.redirect.location";
 
     public static final String SAVE_ORIGINAL_REQUEST = "save-original-request";
@@ -224,14 +226,13 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     public static class Factory implements AuthenticationMechanismFactory {
 
-        private final IdentityManager identityManager;
+        @Deprecated
+        public Factory(IdentityManager identityManager) {}
 
-        public Factory(IdentityManager identityManager) {
-            this.identityManager = identityManager;
-        }
+        public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             boolean saveOriginal = true;
             if(properties.containsKey(SAVE_ORIGINAL_REQUEST)) {
                 saveOriginal = Boolean.parseBoolean(properties.get(SAVE_ORIGINAL_REQUEST));
