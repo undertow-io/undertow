@@ -652,6 +652,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     }
 
     public boolean flush() throws IOException {
+
         log.trace("flush");
         int oldVal = state;
         int state = oldVal & MASK_STATE;
@@ -718,6 +719,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if(pooledBuffer != null) {
             pooledBuffer.close();
             pooledBuffer = null;
+            this.state = state & ~MASK_STATE | FLAG_SHUTDOWN;
         }
     }
 }

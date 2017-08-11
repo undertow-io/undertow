@@ -100,6 +100,17 @@ public abstract class AbstractLoadBalancingProxyTestCase {
     }
 
     @Test
+    public void testAbruptClosed() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/close");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getStatusLine().getStatusCode());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+    @Test
     public void testUrlEncoding() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -295,6 +306,11 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                         } else {
                             exchange.getResponseSender().send("true");
                         }
+                    }
+                }).addPrefixPath("/close", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        IoUtils.safeClose(exchange.getConnection());
                     }
                 }).addPrefixPath("/old", new HttpHandler() {
                     @Override
