@@ -799,7 +799,12 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return res;
             }
         } catch (RuntimeException|IOException e) {
-            close();
+            try {
+                close();
+            } catch (Exception ex) {
+                //we ignore this
+                UndertowLogger.REQUEST_LOGGER.debug("Exception closing SSLConduit after exception in doUnwrap", e);
+            }
             throw e;
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
@@ -901,7 +906,11 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
             return result.bytesConsumed();
         } catch (RuntimeException|IOException e) {
-            close();
+            try {
+                close();
+            } catch (Exception ex) {
+                UndertowLogger.REQUEST_LOGGER.debug("Exception closing SSLConduit after exception in doWrap()", ex);
+            }
             throw e;
         } finally {
             //this can be cleared if the channel is fully closed
