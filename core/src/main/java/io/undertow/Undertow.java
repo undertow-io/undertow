@@ -197,8 +197,12 @@ public final class Undertow {
                         if (listener.sslContext != null) {
                             xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), listener.sslContext);
                         } else {
-
-                            xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), JsseSslUtils.createSSLContext(listener.keyManagers, listener.trustManagers, new SecureRandom(), OptionMap.create(Options.USE_DIRECT_BUFFERS, true)));
+                            OptionMap.Builder builder = OptionMap.builder();
+                            builder.addAll(listener.overrideSocketOptions);
+                            if(!listener.overrideSocketOptions.contains(Options.SSL_PROTOCOL)) {
+                                builder.set(Options.SSL_PROTOCOL, "TLSv1.2");
+                            }
+                            xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), JsseSslUtils.createSSLContext(listener.keyManagers, listener.trustManagers, new SecureRandom(), builder.getMap()));
                         }
                         OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
                         AcceptingChannel<SslConnection> sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptionsWithOverrides);
