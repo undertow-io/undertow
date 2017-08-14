@@ -658,7 +658,9 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             } catch (Exception e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
                 safeClose(connection);
-                currentRequest.setFailed(new IOException(e));
+                if(currentRequest != null) {
+                    currentRequest.setFailed(new IOException(e));
+                }
             } finally {
                 if (free) {
                     pooled.close();
