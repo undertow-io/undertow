@@ -25,6 +25,7 @@ import static org.xnio.Bits.anyAreSet;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
@@ -70,7 +71,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private Integer bufferSize;
     private StreamSinkChannel channel;
     private long written;
-    private int state;
+    private volatile int state;
     private AsyncContextImpl asyncContext;
 
     private WriteListener listener;
@@ -94,6 +95,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     //TODO: should this be configurable?
     private static final int MAX_BUFFERS_TO_ALLOCATE = 6;
+
+    private static final AtomicIntegerFieldUpdater<ServletOutputStreamImpl> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(ServletOutputStreamImpl.class, "state");
 
 
     /**
@@ -243,7 +246,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 long res;
                 long written = 0;
                 createChannel();
-                state |= FLAG_WRITE_STARTED;
+                setFlags(FLAG_WRITE_STARTED);
                 do {
                     res = channel.write(bufs);
                     written += res;
@@ -255,7 +258,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                         copy.flip();
 
                         this.buffersToWrite = new ByteBuffer[]{buffer, copy};
-                        state &= ~FLAG_READY;
+                        clearFlags(FLAG_READY);
                         return;
                     }
                 } while (written < toWrite);
@@ -288,7 +291,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     channel = servletRequestContext.getExchange().getResponseChannel();
                 }
                 Channels.writeBlocking(channel, buffers, 0, buffers.length);
-                state |= FLAG_WRITE_STARTED;
+                setFlags(FLAG_WRITE_STARTED);
             } else {
                 ByteBuffer buffer = buffer();
                 if (len < buffer.remaining()) {
@@ -307,7 +310,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                         Channels.writeBlocking(channel, newBuffers, 0, newBuffers.length);
                         buffer.clear();
                     }
-                    state |= FLAG_WRITE_STARTED;
+                    setFlags(FLAG_WRITE_STARTED);
                 }
             }
 
@@ -330,7 +333,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     long res;
                     long written = 0;
                     createChannel();
-                    state |= FLAG_WRITE_STARTED;
+                    setFlags(FLAG_WRITE_STARTED);
                     do {
                         res = channel.write(bufs);
                         written += res;
@@ -342,7 +345,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                             Buffers.copy(copy, buffers, 0, buffers.length);
                             copy.flip();
                             this.buffersToWrite = new ByteBuffer[]{buffer, copy};
-                            state &= ~FLAG_READY;
+                            clearFlags(FLAG_READY);
                             channel.resumeWrites();
                             return;
                         }
@@ -372,13 +375,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         this.written += len;
         long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
         if (contentLength != -1 && this.written >= contentLength) {
-            state |= FLAG_CLOSED;
+            setFlags(FLAG_CLOSED);
             //if buffersToWrite is set we are already flushing
             //so we don't have to do anything
             if (buffersToWrite == null && pendingFile == null) {
                 if (flushBufferAsync(true)) {
                     channel.shutdownWrites();
-                    state |= FLAG_DELEGATE_SHUTDOWN;
+                    setFlags(FLAG_DELEGATE_SHUTDOWN);
                     channel.flush();
                     if (pooledBuffer != null) {
                         pooledBuffer.close();
@@ -407,7 +410,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             buffer.clear();
             return true;
         }
-        state |= FLAG_WRITE_STARTED;
+        setFlags(FLAG_WRITE_STARTED);
         createChannel();
         long res;
         long written = 0;
@@ -420,7 +423,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             written += res;
             if (res == 0) {
                 //write it out with a listener
-                state = state & ~FLAG_READY;
+                clearFlags(FLAG_READY);
                 buffersToWrite = bufs;
                 channel.resumeWrites();
                 return false;
@@ -501,7 +504,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
             //we have some data in the buffer, we can just write it out
             //if the write fails we just compact, rather than changing the ready state
-            state |= FLAG_WRITE_STARTED;
+            setFlags(FLAG_WRITE_STARTED);
             buffer.flip();
             long res;
             do {
@@ -531,7 +534,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             Channels.transferBlocking(channel, source, position, count);
             updateWritten(count);
         } else {
-            state |= FLAG_WRITE_STARTED;
+            setFlags(FLAG_WRITE_STARTED);
             createChannel();
 
             long pos = 0;
@@ -542,7 +545,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 while (size - pos > 0) {
                     long ret = channel.transferFrom(pendingFile, pos, size - pos);
                     if (ret <= 0) {
-                        state &= ~FLAG_READY;
+                        clearFlags(FLAG_READY);
                         pendingFile = source;
                         source.position(pos);
                         channel.resumeWrites();
@@ -574,7 +577,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
         }
         buffer.clear();
-        state |= FLAG_WRITE_STARTED;
+        setFlags(FLAG_WRITE_STARTED);
     }
 
     /**
@@ -587,8 +590,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
         if (listener == null) {
             if (anyAreSet(state, FLAG_CLOSED)) return;
-            state |= FLAG_CLOSED;
-            state &= ~FLAG_READY;
+            setFlags(FLAG_CLOSED);
+            clearFlags(FLAG_READY);
             if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null && servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
                 if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
                     if (buffer == null) {
@@ -605,7 +608,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 if (channel == null) {
                     channel = servletRequestContext.getExchange().getResponseChannel();
                 }
-                state |= FLAG_DELEGATE_SHUTDOWN;
+                setFlags(FLAG_DELEGATE_SHUTDOWN);
                 StreamSinkChannel channel = this.channel;
                 if (channel != null) { //mock requests
                     channel.shutdownWrites();
@@ -655,8 +658,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
         try {
 
-            state |= FLAG_CLOSED;
-            state &= ~FLAG_READY;
+            setFlags(FLAG_CLOSED);
+            clearFlags(FLAG_READY);
             if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
 
                 if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
@@ -681,7 +684,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 }
             }
             channel.shutdownWrites();
-            state |= FLAG_DELEGATE_SHUTDOWN;
+            setFlags(FLAG_DELEGATE_SHUTDOWN);
             if (!channel.flush()) {
                 channel.resumeWrites();
             }
@@ -870,7 +873,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                         buffer = null;
                     }
                     channel.shutdownWrites();
-                    state |= FLAG_DELEGATE_SHUTDOWN;
+                    setFlags(FLAG_DELEGATE_SHUTDOWN);
                     channel.flush();
                 } catch (IOException e) {
                     handleError(e);
@@ -886,9 +889,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     return;
                 }
 
-                state |= FLAG_READY;
+                setFlags(FLAG_READY);
                 try {
-                    state |= FLAG_IN_CALLBACK;
+                    setFlags(FLAG_IN_CALLBACK);
 
                     //if the stream is still ready then we do not resume writes
                     //this is per spec, we only call the listener once for each time
@@ -900,7 +903,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 } catch (Throwable e) {
                     IoUtils.safeClose(channel);
                 } finally {
-                    state &= ~FLAG_IN_CALLBACK;
+                    clearFlags(FLAG_IN_CALLBACK);
                 }
             }
 
@@ -919,6 +922,20 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 IoUtils.safeClose(channel, servletRequestContext.getExchange().getConnection());
             }
         }
+    }
+
+    private void setFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old | flags));
+    }
+
+    private void clearFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old & ~flags));
     }
 
 }
