@@ -332,6 +332,6 @@ public class ServletInputStreamImpl extends ServletInputStream {
         int old;
         do {
             old = state;
-        } while (!stateUpdater.compareAndSet(this, old, old &= ~flags));
+        } while (!stateUpdater.compareAndSet(this, old, old & ~flags));
     }
 }
