@@ -320,7 +320,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
             }
         }
     }
-    
+
     private void setFlags(int flags) {
         int old;
         do {
