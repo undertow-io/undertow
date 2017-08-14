@@ -24,6 +24,7 @@ import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 
@@ -67,6 +68,8 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private volatile AsyncContextImpl asyncContext;
     private volatile PooledByteBuffer pooled;
 
+    private static final AtomicIntegerFieldUpdater<ServletInputStreamImpl> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(ServletInputStreamImpl.class, "state");
+
     public ServletInputStreamImpl(final HttpServletRequestImpl request) {
         this.request = request;
         if (request.getExchange().isRequestChannelAvailable()) {
@@ -89,10 +92,10 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if(finished) {
             if (anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
                 if(allAreClear(state, FLAG_BEING_INVOKED_IN_IO_THREAD)) {
-                    state |= FLAG_ON_DATA_READ_CALLED;
+                    setFlags(FLAG_ON_DATA_READ_CALLED);
                     request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
                 } else {
-                    state |= FLAG_CALL_ON_ALL_DATA_READ;
+                    setFlags(FLAG_CALL_ON_ALL_DATA_READ);
                 }
             }
         }
@@ -101,7 +104,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
             channel.resumeReads();
         }
         if(ready) {
-            state |= FLAG_IS_READY_CALLED;
+            setFlags(FLAG_IS_READY_CALLED);
         }
         return ready;
     }
@@ -160,7 +163,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
             if (anyAreClear(state, FLAG_READY | FLAG_IS_READY_CALLED) ) {
                 throw UndertowServletMessages.MESSAGES.streamNotReady();
             }
-            state &= ~FLAG_IS_READY_CALLED;
+            clearFlags(FLAG_IS_READY_CALLED);
         } else {
             readIntoBuffer();
         }
@@ -189,7 +192,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
             int res = Channels.readBlocking(channel, pooled.getBuffer());
             pooled.getBuffer().flip();
             if (res == -1) {
-                state |= FLAG_FINISHED;
+                setFlags(FLAG_FINISHED);
                 pooled.close();
                 pooled = null;
             }
@@ -208,7 +211,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 }
                 pooled.getBuffer().flip();
                 if (res == -1) {
-                    state |= FLAG_FINISHED;
+                    setFlags(FLAG_FINISHED);
                     pooled.close();
                     pooled = null;
                 }
@@ -216,11 +219,11 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 int res = channel.read(pooled.getBuffer());
                 pooled.getBuffer().flip();
                 if (res == -1) {
-                    state |= FLAG_FINISHED;
+                    setFlags(FLAG_FINISHED);
                     pooled.close();
                     pooled = null;
                 } else if (res == 0) {
-                    state &= ~FLAG_READY;
+                    clearFlags(FLAG_READY);
                     pooled.close();
                     pooled = null;
                 }
@@ -248,7 +251,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (anyAreSet(state, FLAG_CLOSED)) {
             return;
         }
-        this.state = state | FLAG_CLOSED;
+        setFlags(FLAG_CLOSED);
         try {
             while (allAreClear(state, FLAG_FINISHED)) {
                 readIntoBuffer();
@@ -258,7 +261,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 }
             }
         } finally {
-            state |= FLAG_FINISHED;
+            setFlags(FLAG_FINISHED);
             if (pooled != null) {
                 pooled.close();
                 pooled = null;
@@ -285,22 +288,22 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 readIntoBufferNonBlocking();
                 if (pooled != null) {
                     channel.suspendReads();
-                    state |= FLAG_READY;
+                    setFlags(FLAG_READY);
                     if (!anyAreSet(state, FLAG_FINISHED)) {
-                        state |= FLAG_BEING_INVOKED_IN_IO_THREAD;
+                        setFlags(FLAG_BEING_INVOKED_IN_IO_THREAD);
                         try {
                             request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
                         } finally {
-                            state &= ~FLAG_BEING_INVOKED_IN_IO_THREAD;
+                            clearFlags(FLAG_BEING_INVOKED_IN_IO_THREAD);
                         }
                         if(anyAreSet(state, FLAG_CALL_ON_ALL_DATA_READ) && allAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
-                            state |= FLAG_ON_DATA_READ_CALLED;
+                            setFlags(FLAG_ON_DATA_READ_CALLED);
                             request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
                         }
                     }
                 } else if(anyAreSet(state, FLAG_FINISHED)) {
                     if (allAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
-                        state |= FLAG_ON_DATA_READ_CALLED;
+                        setFlags(FLAG_ON_DATA_READ_CALLED);
                         request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
                     }
                 } else {
@@ -316,5 +319,19 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 IoUtils.safeClose(channel);
             }
         }
+    }
+    
+    private void setFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old | flags));
+    }
+
+    private void clearFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old &= ~flags));
     }
 }
