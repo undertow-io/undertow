@@ -121,6 +121,7 @@ public class ServletPrintWriter {
     }
 
     public boolean checkError() {
+        flush();
         return error;
     }
 
