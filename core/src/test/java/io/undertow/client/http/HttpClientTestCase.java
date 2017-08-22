@@ -24,6 +24,7 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.UndertowClient;
+import io.undertow.conduits.InflatingStreamSourceConduit;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
@@ -33,6 +34,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.ByteBufferWriteChannelListener;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
@@ -44,6 +46,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ChannelListeners;
+import org.xnio.CompressionType;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
@@ -53,13 +56,17 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.XnioSsl;
 
 import javax.net.ssl.SSLContext;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 
 /**
  * @author Emanuel Muckenhuber
@@ -71,6 +78,7 @@ public class HttpClientTestCase {
     private static final String message = "Hello World!";
     public static final String MESSAGE = "/message";
     public static final String POST = "/post";
+    public static final String POST_COMPRESSED = "/post-compressed";
     private static XnioWorker worker;
 
     private static final OptionMap DEFAULT_OPTIONS;
@@ -116,6 +124,18 @@ public class HttpClientTestCase {
         .addExactPath(POST, new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
+                exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
+                    @Override
+                    public void handle(HttpServerExchange exchange, String message) {
+                        exchange.getResponseSender().send(message);
+                    }
+                });
+            }
+        })
+        .addExactPath(POST_COMPRESSED, new HttpHandler() {
+            @Override
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                exchange.addRequestWrapper(InflatingStreamSourceConduit.WRAPPER);
                 exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
                     @Override
                     public void handle(HttpServerExchange exchange, String message) {
@@ -241,6 +261,162 @@ public class HttpClientTestCase {
         }
     }
 
+    @Test
+    public void testCompressedPostRequest() throws Exception {
+        //
+        final UndertowClient client = createClient();
+        final String postMessage = "This is a post request";
+
+        final List<String> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(10);
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        try {
+            connection.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < 10; i++) {
+                        final ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(POST_COMPRESSED);
+                        request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                        request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+                        connection.sendRequest(request, new ClientCallback<ClientExchange>() {
+                            @Override
+                            public void completed(ClientExchange result) {
+                                StreamSinkChannel channel;
+                                try {
+                                    channel = worker.getDeflatingChannel(
+                                            result.getRequestChannel(),
+                                            OptionMap.create(Options.COMPRESSION_TYPE, CompressionType.GZIP));
+                                } catch (IOException e) {
+                                    IoUtils.safeClose(connection);
+                                    e.printStackTrace();
+                                    return;
+                                }
+                                new StringWriteChannelListener(postMessage).setup(channel);
+                                result.setResponseListener(new ClientCallback<ClientExchange>() {
+                                    @Override
+                                    public void completed(ClientExchange result) {
+                                        new StringReadChannelListener(DefaultServer.getBufferPool()) {
+
+                                            @Override
+                                            protected void stringDone(String string) {
+                                                responses.add(string);
+                                                latch.countDown();
+                                            }
+
+                                            @Override
+                                            protected void error(IOException e) {
+                                                e.printStackTrace();
+                                                latch.countDown();
+                                            }
+                                        }.setup(result.getResponseChannel());
+                                    }
+
+                                    @Override
+                                    public void failed(IOException e) {
+                                        e.printStackTrace();
+                                        latch.countDown();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void failed(IOException e) {
+                                e.printStackTrace();
+                                latch.countDown();
+                            }
+                        });
+                    }
+                }
+
+            });
+
+            latch.await(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(10, responses.size());
+            for (final String response : responses) {
+                Assert.assertEquals(postMessage, response);
+            }
+        } finally {
+            IoUtils.safeClose(connection);
+        }
+    }
+
+    // Sanity check that the server pieces are working properly
+    @Test
+    public void testPreCompressedPostRequest() throws Exception {
+        //
+        final UndertowClient client = createClient();
+        final String postMessage = "This is a post request";
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (DeflaterOutputStream deflateOut = new DeflaterOutputStream(baos, new Deflater(Deflater.BEST_SPEED, true))) {
+            deflateOut.write(postMessage.getBytes());
+        }
+        final byte[] compressedMessage = baos.toByteArray();
+
+        final List<String> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(10);
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        try {
+            connection.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < 10; i++) {
+                        final ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(POST_COMPRESSED);
+                        request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                        request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+                        connection.sendRequest(request, new ClientCallback<ClientExchange>() {
+                            @Override
+                            public void completed(ClientExchange result) {
+
+                                new ByteBufferWriteChannelListener(ByteBuffer.wrap(compressedMessage)).setup(result.getRequestChannel());
+                                result.setResponseListener(new ClientCallback<ClientExchange>() {
+                                    @Override
+                                    public void completed(ClientExchange result) {
+                                        new StringReadChannelListener(DefaultServer.getBufferPool()) {
+
+                                            @Override
+                                            protected void stringDone(String string) {
+                                                responses.add(string);
+                                                latch.countDown();
+                                            }
+
+                                            @Override
+                                            protected void error(IOException e) {
+                                                e.printStackTrace();
+                                                latch.countDown();
+                                            }
+                                        }.setup(result.getResponseChannel());
+                                    }
+
+                                    @Override
+                                    public void failed(IOException e) {
+                                        e.printStackTrace();
+                                        latch.countDown();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void failed(IOException e) {
+                                e.printStackTrace();
+                                latch.countDown();
+                            }
+                        });
+                    }
+                }
+
+            });
+
+            latch.await(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(10, responses.size());
+            for (final String response : responses) {
+                Assert.assertEquals(postMessage, response);
+            }
+        } finally {
+            IoUtils.safeClose(connection);
+        }
+    }
 
     @Test
     public void testSsl() throws Exception {
