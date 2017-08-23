@@ -74,7 +74,7 @@ public class ConnectionUtils {
                 doDrain(connection, additional);
             }
 
-        } catch (Exception e) {
+        } catch (Throwable e) {
             if (e instanceof IOException) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) e);
             } else {
@@ -130,7 +130,7 @@ public class ConnectionUtils {
                 IoUtils.safeClose(connection);
                 IoUtils.safeClose(additional);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             if (e instanceof IOException) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) e);
             } else {

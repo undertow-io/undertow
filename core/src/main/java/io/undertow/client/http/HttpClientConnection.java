@@ -126,7 +126,6 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private static final int UPGRADE_REQUESTED = 1 << 29;
     private static final int CLOSE_REQ = 1 << 30;
     private static final int CLOSED = 1 << 31;
-    private int count = 0;
 
     private int state;
     private final ChannelListener.SimpleSetter<HttpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
@@ -331,7 +330,6 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             http2Delegate.sendRequest(request, clientCallback);
             return;
         }
-        count++;
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
             clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());
             return;
@@ -400,7 +398,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 conduit = new ClientFixedLengthStreamSinkConduit(conduit, length, false, false, currentRequest);
                 hasContent = length != 0;
             } catch (NumberFormatException e) {
-                handleError(new IOException(e));
+                handleError(e);
                 return;
             }
         } else if (transferEncodingString != null) {
@@ -430,12 +428,19 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     }));
                     sinkChannel.resumeWrites();
                 }
-            } catch (IOException e) {
-                handleError(e);
+            } catch (Throwable t) {
+                handleError(t);
             }
         }
     }
 
+    private void handleError(Throwable exception) {
+        if (exception instanceof IOException) {
+            handleError((IOException) exception);
+        } else {
+            handleError(new IOException(exception));
+        }
+    }
     private void handleError(IOException exception) {
         UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
         safeClose(connection);
@@ -655,11 +660,11 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 }
 
 
-            } catch (Exception e) {
-                UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
+            } catch (Throwable t) {
+                UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(t);
                 safeClose(connection);
                 if(currentRequest != null) {
-                    currentRequest.setFailed(new IOException(e));
+                    currentRequest.setFailed(new IOException(t));
                 }
             } finally {
                 if (free) {
@@ -708,7 +713,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 long contentLength = Long.parseLong(length);
                 connection.getSourceChannel().setConduit(new FixedLengthStreamSourceConduit(connection.getSourceChannel().getConduit(), contentLength, responseFinishedListener));
             } catch (NumberFormatException e) {
-                handleError(new IOException(e));
+                handleError(e);
                 throw e;
             }
         } else if (response.getProtocol().equals(Protocols.HTTP_1_1) && !Connectors.isEntityBodyAllowed(response.getResponseCode())) {
