@@ -40,6 +40,8 @@ public class Cookies {
     public static final String VERSION = "$Version";
     public static final String PATH = "$Path";
 
+
+
     /**
      * Parses a "Set-Cookie:" response header value into its cookie representation. The header value is parsed according to the
      * syntax that's defined in RFC2109:
@@ -197,19 +199,22 @@ public class Cookies {
      * @see <a href="http://tools.ietf.org/search/rfc2109">rfc2109</a>
      */
     public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
+        return parseRequestCookies(maxCookies, allowEqualInValue, cookies, LegacyCookieSupport.COMMA_IS_SEPERATOR);
+    }
 
+    static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator) {
         if (cookies == null) {
             return new TreeMap<>();
         }
         final Map<String, Cookie> parsedCookies = new TreeMap<>();
 
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue);
+            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator);
         }
         return parsedCookies;
     }
 
-    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue) {
+    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator) {
         int state = 0;
         String name = null;
         int start = 0;
@@ -234,7 +239,7 @@ public class Cookies {
                         name = cookie.substring(start, i);
                         start = i + 1;
                         state = 2;
-                    } else if (c == ';') {
+                    } else if (c == ';' || (commaIsSeperator && c == ',')) {
                         if(name != null) {
                             cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         } else if(UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
@@ -247,7 +252,7 @@ public class Cookies {
                 }
                 case 2: {
                     //extract value
-                    if (c == ';') {
+                    if (c == ';' || (commaIsSeperator && c == ',')) {
                         cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
@@ -272,7 +277,7 @@ public class Cookies {
                 }
                 case 4: {
                     //skip value portion behind '='
-                    if (c == ';') {
+                    if (c == ';' || (commaIsSeperator && c == ',')) {
                         state = 0;
                     }
                     start = i + 1;

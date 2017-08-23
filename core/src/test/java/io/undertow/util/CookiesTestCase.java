@@ -199,6 +199,27 @@ public class CookiesTestCase {
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
     }
+    @Test
+    public void testCommaSeparatedCookies() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList("CUSTOMER=\"WILE_E_COYOTE\", SHIPPING=FEDEX" ), true);
+        Assert.assertEquals(2, cookies.size());
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+
+        //also make sure semi colon works as normal
+        cookies = Cookies.parseRequestCookies(2, false, Arrays.asList("CUSTOMER=\"WILE_E_COYOTE\"; SHIPPING=FEDEX" ), true);
+        Assert.assertEquals(2, cookies.size());
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+    }
 
     @Test
     public void testSimpleJSONObjectInRequestCookies() {
