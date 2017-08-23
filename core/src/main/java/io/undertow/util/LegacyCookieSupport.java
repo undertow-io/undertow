@@ -51,6 +51,13 @@ public final class LegacyCookieSupport {
      */
     private static final boolean FWD_SLASH_IS_SEPARATOR = Boolean.getBoolean("io.undertow.legacy.cookie.FWD_SLASH_IS_SEPARATOR");
 
+
+    /**
+     * If set to true, the <code,</code> character will be treated as a
+     * separator in Cookie: headers.
+     */
+    static final boolean COMMA_IS_SEPERATOR = Boolean.getBoolean("io.undertow.legacy.cookie.COMMA_IS_SEPARATOR");
+
     /**
      * The list of separators that apply to version 0 cookies. To quote the
      * spec, these are comma, semi-colon and white-space. The HTTP spec
