@@ -35,7 +35,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private static final int MAX_HEADER_LENGTH = 107;
 
     private static final byte[] NAME = "PROXY ".getBytes(StandardCharsets.US_ASCII);
-    private static final String UNKOWN = "UNKOWN";
+    private static final String UNKNOWN = "UNKNOWN";
     private static final String TCP = "TCP";
     private static final String TCP_6 = "TCP6";
 
@@ -53,7 +53,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private int destPort = -1;
     private StringBuilder stringBuilder = new StringBuilder();
     private boolean carriageReturnSeen = false;
-    private boolean parsingUnkown = false;
+    private boolean parsingUnknown = false;
 
 
     ProxyProtocolReadListener(StreamConnection streamConnection, OpenListener openListener, UndertowXnioSsl ssl, ByteBufferPool bufferPool, OptionMap sslOptionMap) {
@@ -89,8 +89,8 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                                 throw UndertowMessages.MESSAGES.invalidProxyHeader();
                             }
                         } else {
-                            if (parsingUnkown) {
-                                //we are parsing the UNKOWN protocol
+                            if (parsingUnknown) {
+                                //we are parsing the UNKNOWN protocol
                                 //we just ignore everything till \r\n
                                 if (c == '\r') {
                                     carriageReturnSeen = true;
@@ -124,41 +124,49 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                                 } else {
                                     throw UndertowMessages.MESSAGES.invalidProxyHeader();
                                 }
-                            } else if (c == ' ') {
-                                //we have a space
-                                if (sourcePort != -1 || stringBuilder.length() == 0) {
-                                    //header was invalid, either we are expecting a \r or a \n, or the previous character was a space
-                                    throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                } else if (protocol == null) {
-                                    protocol = stringBuilder.toString();
-                                    stringBuilder.setLength(0);
-                                    if (protocol.equals(UNKOWN)) {
-                                        parsingUnkown = true;
-                                    } else if (!protocol.equals(TCP) && !protocol.equals(TCP_6)) {
+                            } else switch (c) {
+                                case ' ':
+                                    //we have a space
+                                    if (sourcePort != -1 || stringBuilder.length() == 0) {
+                                        //header was invalid, either we are expecting a \r or a \n, or the previous character was a space
+                                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                                    } else if (protocol == null) {
+                                        protocol = stringBuilder.toString();
+                                        stringBuilder.setLength(0);
+                                        if (protocol.equals(UNKNOWN)) {
+                                            parsingUnknown = true;
+                                        } else if (!protocol.equals(TCP) && !protocol.equals(TCP_6)) {
+                                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                                        }
+                                    } else if (sourceAddress == null) {
+                                        sourceAddress = parseAddress(stringBuilder.toString(), protocol);
+                                        stringBuilder.setLength(0);
+                                    } else if (destAddress == null) {
+                                        destAddress = parseAddress(stringBuilder.toString(), protocol);
+                                        stringBuilder.setLength(0);
+                                    } else {
+                                        sourcePort = Integer.parseInt(stringBuilder.toString());
+                                        stringBuilder.setLength(0);
+                                    }
+                                    break;
+                                case '\r':
+                                    if (destPort == -1 && sourcePort != -1 && !carriageReturnSeen && stringBuilder.length() > 0) {
+                                        destPort = Integer.parseInt(stringBuilder.toString());
+                                        stringBuilder.setLength(0);
+                                        carriageReturnSeen = true;
+                                    } else if (protocol == null) {
+                                        if (UNKNOWN.equals(stringBuilder.toString())) {
+                                            parsingUnknown = true;
+                                            carriageReturnSeen = true;
+                                        }
+                                    } else {
                                         throw UndertowMessages.MESSAGES.invalidProxyHeader();
                                     }
-                                } else if (sourceAddress == null) {
-                                    sourceAddress = parseAddress(stringBuilder.toString(), protocol);
-                                    stringBuilder.setLength(0);
-                                } else if (destAddress == null) {
-                                    destAddress = parseAddress(stringBuilder.toString(), protocol);
-                                    stringBuilder.setLength(0);
-                                } else {
-                                    sourcePort = Integer.parseInt(stringBuilder.toString());
-                                    stringBuilder.setLength(0);
-                                }
-                            } else if (c == '\r') {
-                                if (destPort == -1 && sourcePort != -1 && !carriageReturnSeen && stringBuilder.length() > 0) {
-                                    destPort = Integer.parseInt(stringBuilder.toString());
-                                    stringBuilder.setLength(0);
-                                    carriageReturnSeen = true;
-                                } else {
+                                    break;
+                                case '\n':
                                     throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                }
-                            } else if (c == '\n') {
-                                throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                            } else {
-                                stringBuilder.append(c);
+                                default:
+                                    stringBuilder.append(c);
                             }
 
                         }
