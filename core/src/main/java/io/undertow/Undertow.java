@@ -76,7 +76,7 @@ public final class Undertow {
      * Will be true when a {@link XnioWorker} instance was NOT provided to the {@link Builder}.
      * When true, a new worker will be created during {@link Undertow#start()},
      * and shutdown when {@link Undertow#stop()} is called.
-     *
+     * <p>
      * Will be false when a {@link XnioWorker} instance was provided to the {@link Builder}.
      * When false, the provided {@link #worker} will be used instead of creating a new one in {@link Undertow#start()}.
      * Also, when false, the {@link #worker} will NOT be shutdown when {@link Undertow#stop()} is called.
@@ -153,7 +153,7 @@ public final class Undertow {
                     openListener.setRootHandler(rootHandler);
 
                     final ChannelListener<StreamConnection> finalListener;
-                    if(listener.useProxyProtocol) {
+                    if (listener.useProxyProtocol) {
                         finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, OptionMap.EMPTY);
                     } else {
                         finalListener = openListener;
@@ -170,12 +170,12 @@ public final class Undertow {
                     if (listener.type == ListenerType.HTTP) {
                         HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
                         HttpHandler handler = rootHandler;
-                        if(http2) {
+                        if (http2) {
                             handler = new Http2UpgradeHandler(handler);
                         }
                         openListener.setRootHandler(handler);
                         final ChannelListener<StreamConnection> finalListener;
-                        if(listener.useProxyProtocol) {
+                        if (listener.useProxyProtocol) {
                             finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, OptionMap.EMPTY);
                         } else {
                             finalListener = openListener;
@@ -193,9 +193,9 @@ public final class Undertow {
                         HttpOpenListener httpOpenListener = new HttpOpenListener(buffers, undertowOptions);
                         httpOpenListener.setRootHandler(rootHandler);
 
-                        if(http2) {
+                        if (http2) {
                             AlpnOpenListener alpn = new AlpnOpenListener(buffers, undertowOptions, httpOpenListener);
-                            if(http2) {
+                            if (http2) {
                                 Http2OpenListener http2Listener = new Http2OpenListener(buffers, undertowOptions);
                                 http2Listener.setRootHandler(rootHandler);
                                 alpn.addProtocol(Http2OpenListener.HTTP2, http2Listener, 10);
@@ -212,7 +212,7 @@ public final class Undertow {
                         } else {
                             OptionMap.Builder builder = OptionMap.builder();
                             builder.addAll(listener.overrideSocketOptions);
-                            if(!listener.overrideSocketOptions.contains(Options.SSL_PROTOCOL)) {
+                            if (!listener.overrideSocketOptions.contains(Options.SSL_PROTOCOL)) {
                                 builder.set(Options.SSL_PROTOCOL, "TLSv1.2");
                             }
                             xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), JsseSslUtils.createSSLContext(listener.keyManagers, listener.trustManagers, new SecureRandom(), builder.getMap()));
@@ -220,7 +220,7 @@ public final class Undertow {
 
                         OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
                         AcceptingChannel<? extends StreamConnection> sslServer;
-                        if(listener.useProxyProtocol) {
+                        if (listener.useProxyProtocol) {
                             ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(new ProxyProtocolOpenListener(openListener, xnioSsl, buffers, socketOptionsWithOverrides));
                             sslServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptionsWithOverrides);
                         } else {
@@ -270,12 +270,11 @@ public final class Undertow {
     }
 
     public List<ListenerInfo> getListenerInfo() {
-        if(listenerInfo == null) {
+        if (listenerInfo == null) {
             throw UndertowMessages.MESSAGES.serverNotStarted();
         }
         return Collections.unmodifiableList(listenerInfo);
     }
-
 
 
     public enum ListenerType {
@@ -285,6 +284,7 @@ public final class Undertow {
     }
 
     private static class ListenerConfig {
+
         final ListenerType type;
         final int port;
         final String host;
@@ -333,6 +333,7 @@ public final class Undertow {
     }
 
     public static final class ListenerBuilder {
+
         ListenerType type;
         int port;
         String host;
@@ -485,6 +486,7 @@ public final class Undertow {
             listeners.add(new ListenerConfig(ListenerType.AJP, port, host, null, null, rootHandler));
             return this;
         }
+
         public Builder setBufferSize(final int bufferSize) {
             this.bufferSize = bufferSize;
             return this;
@@ -536,7 +538,7 @@ public final class Undertow {
          * when {@link Undertow#start()} is called.
          * Additionally, this newly created worker will be shutdown when {@link Undertow#stop()} is called.
          * <br/>
-         *
+         * <p>
          * When non-null, the provided {@link XnioWorker} will be reused instead of creating a new {@link XnioWorker}
          * when {@link Undertow#start()} is called.
          * Additionally, the provided {@link XnioWorker} will NOT be shutdown when {@link Undertow#stop()} is called.
