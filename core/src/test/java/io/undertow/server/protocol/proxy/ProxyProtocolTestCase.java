@@ -81,4 +81,48 @@ public class ProxyProtocolTestCase {
             undertow.stop();
         }
     }
+
+    @Test
+    public void testProxyProtocolUnknownEmpty() throws Exception {
+        doTestProxyProtocolUnknown("");
+    }
+
+    @Test
+    public void testProxyProtocolUnknownSpace() throws Exception {
+        doTestProxyProtocolUnknown(" ");
+    }
+
+    @Test
+    public void testProxyProtocolUnknownJunk() throws Exception {
+        doTestProxyProtocolUnknown(" mekmitasdigoat");
+    }
+
+    public void doTestProxyProtocolUnknown(String extra) throws Exception {
+        Undertow undertow = Undertow.builder().addListener(
+                new Undertow.ListenerBuilder()
+                        .setType(Undertow.ListenerType.HTTP)
+                        .setHost(DefaultServer.getHostAddress())
+                        .setUseProxyProtocol(true)
+                        .setPort(0)
+        )
+                .setHandler(new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.setPersistent(false);
+                        exchange.getResponseHeaders().put(new HttpString("result"), exchange.getSourceAddress().toString() + " " + exchange.getDestinationAddress().toString());
+                    }
+                })
+                .build();
+        try {
+            undertow.start();
+            InetSocketAddress serverAddress = (InetSocketAddress) undertow.getListenerInfo().get(0).getAddress();
+            Socket s = new Socket(serverAddress.getAddress(), serverAddress.getPort());
+            String expected = String.format("result: /%s:%d /%s:%d", s.getLocalAddress().getHostAddress(), s.getLocalPort(), serverAddress.getAddress().getHostAddress(), serverAddress.getPort());
+            s.getOutputStream().write(("PROXY UNKNOWN" + extra + "\r\nGET / HTTP/1.0\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+            String result = FileUtils.readFile(s.getInputStream());
+            Assert.assertTrue(result, result.contains(expected));
+        } finally {
+            undertow.stop();
+        }
+    }
 }
