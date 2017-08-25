@@ -366,6 +366,9 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 IoUtils.safeClose(channel);
+            } catch (Throwable t) {
+                UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
+                IoUtils.safeClose(channel);
             } finally {
                 if (free) {
                     buffer.close();

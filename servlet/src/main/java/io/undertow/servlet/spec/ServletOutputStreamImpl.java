@@ -614,7 +614,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     channel.shutdownWrites();
                     Channels.flushBlocking(channel);
                 }
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException | Error e) {
                 IoUtils.safeClose(this.channel);
                 throw e;
             } finally {
@@ -688,7 +688,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (!channel.flush()) {
                 channel.resumeWrites();
             }
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException | Error e) {
             if (pooledBuffer != null) {
                 pooledBuffer.close();
                 pooledBuffer = null;
@@ -817,8 +817,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     //or it won't, and we continue with writes resumed
                     channel.flush();
                     return;
-                } catch (IOException e) {
-                    handleError(e);
+                } catch (Throwable t) {
+                    handleError(t);
                     return;
                 }
             }
@@ -835,8 +835,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                             if (res == 0) {
                                 return;
                             }
-                        } catch (IOException e) {
-                            handleError(e);
+                        } catch (Throwable t) {
+                            handleError(t);
                             return;
                         }
                     } while (written < toWrite);
@@ -858,8 +858,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                         pos += ret;
                     }
                     pendingFile = null;
-                } catch (IOException e) {
-                    handleError(e);
+                } catch (Throwable t) {
+                    handleError(t);
                     return;
                 }
             }
@@ -875,8 +875,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     channel.shutdownWrites();
                     setFlags(FLAG_DELEGATE_SHUTDOWN);
                     channel.flush();
-                } catch (IOException e) {
-                    handleError(e);
+                } catch (Throwable t) {
+                    handleError(t);
                     return;
                 }
             } else {
@@ -909,13 +909,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
         }
 
-        private void handleError(final IOException e) {
+        private void handleError(final Throwable t) {
 
             try {
                 servletRequestContext.getCurrentServletContext().invokeRunnable(servletRequestContext.getExchange(), new Runnable() {
                     @Override
                     public void run() {
-                        listener.onError(e);
+                        listener.onError(t);
                     }
                 });
             } finally {

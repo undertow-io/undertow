@@ -529,7 +529,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         } finally {
             try {
                 exitRead();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 markStreamBroken();
             }
         }
@@ -558,7 +558,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                         this.currentDataOriginalSize = frameData.getBuffer().remaining();
                         try {
                             this.data = processFrameData(frameData, frameDataRemaining - currentDataOriginalSize == 0);
-                        } catch (Exception e) {
+                        } catch (Throwable e) {
                             frameData.close();
                             UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
                             markStreamBroken();
@@ -660,7 +660,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             if(data != null) {
                 try {
                     data.close(); //may have been closed by the read thread
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     //ignore
                 }
                 this.data = null;
