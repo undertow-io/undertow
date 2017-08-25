@@ -117,7 +117,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = DEBUG)
     @Message(id = 5014, value = "Failed to parse request")
-    void failedToParseRequest(@Cause Exception e);
+    void failedToParseRequest(@Cause Throwable e);
 
     @LogMessage(level = ERROR)
     @Message(id = 5015, value = "Error rotating access log")
@@ -412,4 +412,8 @@ public interface UndertowLogger extends BasicLogger {
 
     @Message(id = 5089, value = "Method parameter '%s' cannot be null")
     IllegalArgumentException nullParameter(String name);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5090, value = "Unexpected failure")
+    void handleUnexpectedFailure(@Cause Throwable t);
 }

@@ -112,8 +112,12 @@ public class RequestBufferingHandler implements HttpHandler {
                                         buffer = exchange.getConnection().getByteBufferPool().allocate();
                                     }
                                 } while (true);
-                            } catch (IOException e) {
-                                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                            } catch (Throwable t) {
+                                if (t instanceof IOException) {
+                                    UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) t);
+                                } else {
+                                    UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
+                                }
                                 for(int i = 0; i < bufferedData.length; ++i) {
                                     IoUtils.safeClose(bufferedData[i]);
                                 }

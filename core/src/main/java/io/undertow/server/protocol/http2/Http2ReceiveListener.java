@@ -119,6 +119,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(channel);
+        } catch (Throwable t) {
+            UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
+            IoUtils.safeClose(channel);
         }
     }
 

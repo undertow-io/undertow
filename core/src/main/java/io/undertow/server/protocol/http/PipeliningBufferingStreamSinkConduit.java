@@ -323,6 +323,9 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
                         } catch (IOException e) {
                             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                             IoUtils.safeClose(channel);
+                        } catch (Throwable t) {
+                            UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
+                            IoUtils.safeClose(channel);
                         }
                     }
                 });
@@ -334,6 +337,9 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
             }
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            IoUtils.safeClose(connection.getChannel());
+        } catch (Throwable t) {
+            UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
             IoUtils.safeClose(connection.getChannel());
         }
     }

@@ -121,6 +121,9 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         } catch (IOException e) {
             IoUtils.safeClose(channel);
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+        } catch (Throwable t) {
+            IoUtils.safeClose(channel);
+            UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
         }
         if(statisticsEnabled) {
             channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
