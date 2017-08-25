@@ -166,7 +166,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     stream.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, null, null));
                     stream.wakeupReads();
                 }
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException | Error e) {
                 IoUtils.safeClose(channel);
             }
         }
@@ -468,7 +468,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
             }
             return null;
-        } catch (IOException|RuntimeException e) {
+        } catch (IOException|RuntimeException|Error e) {
             //something has code wrong with parsing, close the read side
             //we don't close the write side, as the underlying implementation will most likely want to send an error
             markReadsBroken(e);
@@ -607,7 +607,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     if(channel.getSinkChannel().flush()) {
                         channel.getSinkChannel().suspendWrites();
                     }
-                } catch (IOException e) {
+                } catch (Throwable e) {
                     safeClose(channel);
                     markWritesBroken(e);
                 }
@@ -665,7 +665,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                 }
 
-            } catch (IOException|RuntimeException e) {
+            } catch (IOException|RuntimeException|Error e) {
                 safeClose(channel);
                 markWritesBroken(e);
             }

@@ -309,7 +309,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 } else {
                     channel.resumeReads();
                 }
-            } catch (final RuntimeException|IOException e) {
+            } catch (final Throwable e) {
                 request.getServletContext().invokeRunnable(request.getExchange(), new Runnable() {
                     @Override
                     public void run() {
