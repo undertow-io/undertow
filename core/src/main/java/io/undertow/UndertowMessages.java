@@ -554,4 +554,7 @@ public interface UndertowMessages {
 
     @Message(id = 180, value = "PROXY protocol header exceeded max size of 107 bytes")
     IOException headerSizeToLarge();
+
+    @Message(id = 181, value = "HTTP/2 trailers too large for single buffer")
+    RuntimeException http2TrailerToLargeForSingleBuffer();
 }

@@ -35,8 +35,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.client.ClientStatistics;
+import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
 import io.undertow.protocols.http2.Http2GoAwayStreamSourceChannel;
 import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
+import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Methods;
 import io.undertow.util.NetworkUtils;
@@ -197,9 +200,15 @@ public class Http2ClientConnection implements ClientConnection {
             clientCallback.failed(e);
             return;
         }
-        Http2ClientExchange exchange = new Http2ClientExchange(this, sinkChannel, request);
+        final Http2ClientExchange exchange = new Http2ClientExchange(this, sinkChannel, request);
         currentExchanges.put(sinkChannel.getStreamId(), exchange);
 
+        sinkChannel.setTrailersProducer(new Http2DataStreamSinkChannel.TrailersProducer() {
+            @Override
+            public HeaderMap getTrailers() {
+                return exchange.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
+            }
+        });
 
         if(clientCallback != null) {
             clientCallback.completed(exchange);
@@ -354,7 +363,7 @@ public class Http2ClientConnection implements ClientConnection {
                     final Http2StreamSourceChannel streamSourceChannel = (Http2StreamSourceChannel) result;
 
                     int statusCode = Integer.parseInt(streamSourceChannel.getHeaders().getFirst(STATUS));
-                    Http2ClientExchange request = currentExchanges.get(streamSourceChannel.getStreamId());
+                    final Http2ClientExchange request = currentExchanges.get(streamSourceChannel.getStreamId());
                     if(statusCode < 200) {
                         //this is an informational response 1xx response
                         if(statusCode == 100) {
@@ -364,6 +373,12 @@ public class Http2ClientConnection implements ClientConnection {
                         Channels.drain(result, Long.MAX_VALUE);
                         return;
                     }
+                    ((Http2StreamSourceChannel) result).setTrailersHandler(new Http2StreamSourceChannel.TrailersHandler() {
+                        @Override
+                        public void handleTrailers(HeaderMap headerMap) {
+                            request.putAttachment(HttpAttachments.REQUEST_TRAILERS, headerMap);
+                        }
+                    });
 
                     result.addCloseTask(new ChannelListener<AbstractHttp2StreamSourceChannel>() {
                         @Override

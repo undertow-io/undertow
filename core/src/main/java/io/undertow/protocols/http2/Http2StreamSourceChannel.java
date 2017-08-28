@@ -62,6 +62,8 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
 
     private long contentLengthRemaining;
 
+    private TrailersHandler trailersHandler;
+
     Http2StreamSourceChannel(Http2Channel framedChannel, PooledByteBuffer data, long frameDataRemaining, HeaderMap headers, int streamId) {
         super(framedChannel, data, frameDataRemaining);
         this.headers = headers;
@@ -88,6 +90,10 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
                     IoUtils.safeClose(getFramedChannel());
                     throw new RuntimeException(e);
                 }
+            }
+        } else if(parser instanceof Http2HeadersParser) {
+            if(trailersHandler != null) {
+                trailersHandler.handleTrailers(((Http2HeadersParser) parser).getHeaderMap());
             }
         }
         handleFinalFrame(data);
@@ -248,6 +254,14 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
         return headersEndStream;
     }
 
+    public TrailersHandler getTrailersHandler() {
+        return trailersHandler;
+    }
+
+    public void setTrailersHandler(TrailersHandler trailersHandler) {
+        this.trailersHandler = trailersHandler;
+    }
+
     @Override
     public String toString() {
         return "Http2StreamSourceChannel{" +
@@ -271,6 +285,10 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
                 getFramedChannel().sendRstStream(streamId, Http2Channel.ERROR_PROTOCOL_ERROR);
             }
         }
+    }
+
+    public interface TrailersHandler {
+        void handleTrailers(HeaderMap headerMap);
     }
 
 }
