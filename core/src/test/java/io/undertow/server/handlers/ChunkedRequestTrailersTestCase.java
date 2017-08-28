@@ -20,13 +20,12 @@ package io.undertow.server.handlers;
 
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.ServerConnection;
 import io.undertow.server.protocol.http.HttpAttachments;
-import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.StatusCodes;
@@ -46,11 +45,10 @@ import java.net.Socket;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@ProxyIgnore
-@HttpOneOnly
+@AjpIgnore
 public class ChunkedRequestTrailersTestCase {
 
-    private static volatile HttpServerConnection connection;
+    private static volatile ServerConnection connection;
 
     private static OptionMap existing;
 
@@ -65,7 +63,7 @@ public class ChunkedRequestTrailersTestCase {
             public void handleRequest(final HttpServerExchange exchange) {
                 try {
                     if (connection == null) {
-                        connection = (HttpServerConnection) exchange.getConnection();
+                        connection = exchange.getConnection();
                     } else if (!DefaultServer.isProxy() && connection != exchange.getConnection()) {
                         exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                         final OutputStream outputStream = exchange.getOutputStream();
@@ -120,7 +118,7 @@ public class ChunkedRequestTrailersTestCase {
 
             StringBuilder sb = new StringBuilder();
             int read = 0;
-            byte[] buf = new byte[100];
+            byte[] buf = new byte[300];
             while (read < response1.length()) {
                 int r = s.getInputStream().read(buf);
                 if (r <= 0) break;
@@ -129,18 +127,20 @@ public class ChunkedRequestTrailersTestCase {
                     sb.append(new String(buf, 0, r));
                 }
             }
+            String actual = sb.toString();
+            actual = actual.replaceAll("\r\nDate:.*","");
+            actual = actual.replaceAll("content-length","Content-Length");
             try {
                 //this is pretty yuck
-                Assert.assertEquals(response1, sb.toString());
+                Assert.assertEquals(response1, actual);
             } catch (AssertionError e) {
-                Assert.assertEquals(response2, sb.toString());
+                Assert.assertEquals(response2, actual);
             }
 
             s.getOutputStream().write(request.getBytes());
 
             sb = new StringBuilder();
             read = 0;
-            buf = new byte[100];
             while (read < response1.length()) {
                 int r = s.getInputStream().read(buf);
                 if (r <= 0) break;
@@ -149,10 +149,13 @@ public class ChunkedRequestTrailersTestCase {
                     sb.append(new String(buf, 0, r));
                 }
             }
+            actual = sb.toString();
+            actual = actual.replaceAll("\r\nDate:.*","");
+            actual = actual.replaceAll("content-length","Content-Length");
             try {
-                Assert.assertEquals(response1, sb.toString());
+                Assert.assertEquals(response1, actual);
             } catch (AssertionError e) {
-                Assert.assertEquals(response2, sb.toString());
+                Assert.assertEquals(response2, actual);
             }
 
         } finally {

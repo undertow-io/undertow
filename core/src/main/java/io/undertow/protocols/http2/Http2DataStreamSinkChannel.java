@@ -18,16 +18,16 @@
 
 package io.undertow.protocols.http2;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
+import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.protocol.framed.SendFrameHeader;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import io.undertow.connector.PooledByteBuffer;
 
-import io.undertow.server.protocol.framed.SendFrameHeader;
-import io.undertow.util.HeaderMap;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Headers channel
@@ -44,6 +44,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
 
     private final int frameType;
     private boolean completionListenerReady;
+    private TrailersProducer trailersProducer;
 
     Http2DataStreamSinkChannel(Http2Channel channel, int streamId, int frameType) {
         this(channel, streamId, new HeaderMap(), frameType);
@@ -54,6 +55,14 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
         this.encoder = channel.getEncoder();
         this.headers = headers;
         this.frameType = frameType;
+    }
+
+    public TrailersProducer getTrailersProducer() {
+        return trailersProducer;
+    }
+
+    public void setTrailersProducer(TrailersProducer trailersProducer) {
+        this.trailersProducer = trailersProducer;
     }
 
     @Override
@@ -85,6 +94,14 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
         ByteBuffer firstBuffer = firstHeaderBuffer.getBuffer();
         boolean firstFrame = false;
 
+        HeaderMap trailers = null;
+        if(finalFrame && this.trailersProducer != null) {
+            trailers = this.trailersProducer.getTrailers();
+            if(trailers != null && trailers.size() == 0) {
+                trailers = null;
+            }
+        }
+
         if (first) {
             firstFrame = true;
             first = false;
@@ -102,14 +119,14 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
                 firstBuffer.put((byte) (paddingBytes & 0xFF));
             }
             writeBeforeHeaderBlock(firstBuffer);
-
+            HeaderMap headers = this.headers;
             HpackEncoder.State result = encoder.encode(headers, firstBuffer);
             PooledByteBuffer current = firstHeaderBuffer;
             int headerFrameLength = firstBuffer.position() - 9 + paddingBytes;
             firstBuffer.put(0, (byte) ((headerFrameLength >> 16) & 0xFF));
             firstBuffer.put(1, (byte) ((headerFrameLength >> 8) & 0xFF));
             firstBuffer.put(2, (byte) (headerFrameLength & 0xFF));
-            firstBuffer.put(4, (byte) ((isFinalFrameQueued() && !getBuffer().hasRemaining() && frameType == Http2Channel.FRAME_TYPE_HEADERS ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ) | (paddingBytes > 0 ? Http2Channel.HEADERS_FLAG_PADDED : 0))); //flags
+            firstBuffer.put(4, (byte) ((isFinalFrameQueued() && !getBuffer().hasRemaining() && frameType == Http2Channel.FRAME_TYPE_HEADERS && trailers == null ? Http2Channel.HEADERS_FLAG_END_STREAM : 0) | (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 ) | (paddingBytes > 0 ? Http2Channel.HEADERS_FLAG_PADDED : 0))); //flags
             ByteBuffer currentBuffer = firstBuffer;
 
             if(currentBuffer.remaining() < paddingBytes) {
@@ -126,23 +143,8 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
 
                 allHeaderBuffers = allocateAll(allHeaderBuffers, current);
                 current = allHeaderBuffers[allHeaderBuffers.length - 1];
-                //continuation frame
-                //note that if the buffers are small we may not actually need a continuation here
-                //but it greatly reduces the code complexity
-                //back fill the length
-                currentBuffer = current.getBuffer();
-                currentBuffer.put((byte) 0);
-                currentBuffer.put((byte) 0);
-                currentBuffer.put((byte) 0);
-                currentBuffer.put((byte) Http2Channel.FRAME_TYPE_CONTINUATION); //type
-                currentBuffer.put((byte) 0); //back fill the flags
-                Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
-                result = encoder.encode(headers, currentBuffer);
-                int contFrameLength = currentBuffer.position() - 9;
-                currentBuffer.put(0, (byte) ((contFrameLength >> 16) & 0xFF));
-                currentBuffer.put(1, (byte) ((contFrameLength >> 8) & 0xFF));
-                currentBuffer.put(2, (byte) (contFrameLength & 0xFF));
-                currentBuffer.put(4, (byte) (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 )); //flags
+                result = encodeContinuationFrame(headers, current);
+
             }
         }
 
@@ -150,6 +152,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
         ByteBuffer currentBuffer = currentPooled.getBuffer();
         ByteBuffer trailer = null;
         int remainingInBuffer = 0;
+        boolean requiresTrailers = false;
 
         if (getBuffer().remaining() > 0) {
             if (fcWindow > 0) {
@@ -168,7 +171,14 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
                 currentBuffer.put((byte) ((fcWindow >> 8) & 0xFF));
                 currentBuffer.put((byte) (fcWindow & 0xFF));
                 currentBuffer.put((byte) Http2Channel.FRAME_TYPE_DATA); //type
-                currentBuffer.put((byte) ((finalFrame ? Http2Channel.DATA_FLAG_END_STREAM : 0) | (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
+                if(trailers == null) {
+                    currentBuffer.put((byte) ((finalFrame ? Http2Channel.DATA_FLAG_END_STREAM : 0) | (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
+                } else {
+                    if(finalFrame) {
+                        requiresTrailers = true;
+                    }
+                    currentBuffer.put((byte) (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0)); //flags
+                }
                 Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
                 if(dataPaddingBytes > 0) {
                     currentBuffer.put((byte) (dataPaddingBytes & 0xFF));
@@ -182,12 +192,45 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             currentBuffer.put((byte) ((fcWindow >> 8) & 0xFF));
             currentBuffer.put((byte) (fcWindow & 0xFF));
             currentBuffer.put((byte) Http2Channel.FRAME_TYPE_DATA); //type
-            currentBuffer.put((byte) ((Http2Channel.HEADERS_FLAG_END_STREAM & 0xFF)| (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
+            if (trailers == null) {
+                currentBuffer.put((byte) ((Http2Channel.HEADERS_FLAG_END_STREAM & 0xFF) | (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
+            } else {
+                requiresTrailers = true;
+                currentBuffer.put((byte) ((dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
+            }
             Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
-            if(dataPaddingBytes > 0) {
+            if (dataPaddingBytes > 0) {
                 currentBuffer.put((byte) (dataPaddingBytes & 0xFF));
                 trailer = ByteBuffer.allocate(dataPaddingBytes);
             }
+        }
+
+        if (requiresTrailers) {
+            PooledByteBuffer firstTrailerBuffer = getChannel().getBufferPool().allocate();
+            if (trailer != null) {
+                firstTrailerBuffer.getBuffer().put(trailer);
+            }
+            firstTrailerBuffer.getBuffer().put((byte) 0);
+            firstTrailerBuffer.getBuffer().put((byte) 0);
+            firstTrailerBuffer.getBuffer().put((byte) 0);
+            firstTrailerBuffer.getBuffer().put((byte) Http2Channel.FRAME_TYPE_HEADERS); //type
+            firstTrailerBuffer.getBuffer().put((byte) (Http2Channel.HEADERS_FLAG_END_STREAM | Http2Channel.HEADERS_FLAG_END_HEADERS)); //back fill the flags
+
+            Http2ProtocolUtils.putInt(firstTrailerBuffer.getBuffer(), getStreamId());
+            HpackEncoder.State result = encoder.encode(trailers, firstTrailerBuffer.getBuffer());
+            if (result != HpackEncoder.State.COMPLETE) {
+                throw UndertowMessages.MESSAGES.http2TrailerToLargeForSingleBuffer();
+            }
+            int headerFrameLength = firstTrailerBuffer.getBuffer().position() - 9;
+            firstTrailerBuffer.getBuffer().put(0, (byte) ((headerFrameLength >> 16) & 0xFF));
+            firstTrailerBuffer.getBuffer().put(1, (byte) ((headerFrameLength >> 8) & 0xFF));
+            firstTrailerBuffer.getBuffer().put(2, (byte) (headerFrameLength & 0xFF));
+            firstTrailerBuffer.getBuffer().flip();
+            int size = firstTrailerBuffer.getBuffer().remaining();
+            trailer = ByteBuffer.allocate(size);
+            trailer.put(firstTrailerBuffer.getBuffer());
+            trailer.flip();
+            firstTrailerBuffer.close();
         }
         if (allHeaderBuffers == null) {
             //only one buffer required
@@ -217,6 +260,28 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
             }
         }
 
+    }
+
+    private HpackEncoder.State encodeContinuationFrame(HeaderMap headers, PooledByteBuffer current) {
+        ByteBuffer currentBuffer;
+        HpackEncoder.State result;//continuation frame
+        //note that if the buffers are small we may not actually need a continuation here
+        //but it greatly reduces the code complexity
+        //back fill the length
+        currentBuffer = current.getBuffer();
+        currentBuffer.put((byte) 0);
+        currentBuffer.put((byte) 0);
+        currentBuffer.put((byte) 0);
+        currentBuffer.put((byte) Http2Channel.FRAME_TYPE_CONTINUATION); //type
+        currentBuffer.put((byte) 0); //back fill the flags
+        Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
+        result = encoder.encode(headers, currentBuffer);
+        int contFrameLength = currentBuffer.position() - 9;
+        currentBuffer.put(0, (byte) ((contFrameLength >> 16) & 0xFF));
+        currentBuffer.put(1, (byte) ((contFrameLength >> 8) & 0xFF));
+        currentBuffer.put(2, (byte) (contFrameLength & 0xFF));
+        currentBuffer.put(4, (byte) (result == HpackEncoder.State.COMPLETE ? Http2Channel.HEADERS_FLAG_END_HEADERS : 0 )); //flags
+        return result;
     }
 
     @Override
@@ -265,5 +330,9 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
 
     public void setCompletionListener(ChannelListener<Http2DataStreamSinkChannel> completionListener) {
         this.completionListener = completionListener;
+    }
+
+    public interface TrailersProducer {
+        HeaderMap getTrailers();
     }
 }
