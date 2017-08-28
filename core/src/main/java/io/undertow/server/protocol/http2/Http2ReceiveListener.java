@@ -230,6 +230,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             requestHeaders.putAll(hv.getHeaderName(), hv);
         }
         final HttpServerExchange exchange = new HttpServerExchange(connection, requestHeaders, sink.getHeaders(), maxEntitySize);
+        if(initial.getAttachment(HttpAttachments.REQUEST_TRAILERS) != null) {
+            exchange.putAttachment(HttpAttachments.REQUEST_TRAILERS, initial.getAttachment(HttpAttachments.REQUEST_TRAILERS));
+        }
         connection.setExchange(exchange);
         exchange.setRequestScheme(initial.getRequestScheme());
         exchange.setProtocol(initial.getProtocol());
