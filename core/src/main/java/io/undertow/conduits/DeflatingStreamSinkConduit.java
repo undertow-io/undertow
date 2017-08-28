@@ -136,7 +136,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             Connectors.updateResponseBytesSent(exchange, 0 - data.length);
             deflateData(false);
             return data.length;
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException | Error e) {
             freeBuffer();
             throw e;
         }
@@ -163,7 +163,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                 }
             }
             return total;
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException | Error e) {
             freeBuffer();
             throw e;
         }
@@ -400,13 +400,13 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                     if (anyAreSet(state, WRITES_RESUMED) && !anyAreSet(state ,NEXT_SHUTDOWN)) {
                         try {
                             next.resumeWrites();
-                        } catch (Exception e) {
+                        } catch (Throwable e) {
                             UndertowLogger.REQUEST_LOGGER.debug("Failed to resume", e);
                         }
                     }
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException | Error e) {
             freeBuffer();
             throw e;
         }

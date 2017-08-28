@@ -263,7 +263,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             } while (buffer.hasRemaining());
             bufferDone();
             return STATE_BODY;
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             //WFLY-4696, just to be safe
             if (pooledBuffer != null) {
                 pooledBuffer.close();
@@ -610,7 +610,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             } finally {
                 this.state = oldState & ~MASK_STATE | state;
             }
-        } catch(IOException|RuntimeException e) {
+        } catch(IOException|RuntimeException|Error e) {
             IoUtils.safeClose(connection);
             throw e;
         }
@@ -643,7 +643,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 return ret;
             }
             return length == 1 ? next.write(srcs[offset]) : next.write(srcs, offset, length);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(connection);
             throw e;
         } finally {
@@ -656,7 +656,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             if (pooledFileTransferBuffer != null) {
                 try {
                     return write(pooledFileTransferBuffer.getBuffer());
-                } catch (IOException | RuntimeException e) {
+                } catch (IOException | RuntimeException | Error e) {
                     if (pooledFileTransferBuffer != null) {
                         pooledFileTransferBuffer.close();
                         pooledFileTransferBuffer = null;
@@ -692,7 +692,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             } else {
                 return next.transferFrom(src, position, count);
             }
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(connection);
             throw e;
         }
@@ -705,7 +705,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             } else {
                 return next.transferFrom(source, count, throughBuffer);
             }
-        } catch (IOException| RuntimeException e) {
+        } catch (IOException| RuntimeException | Error e) {
             IoUtils.safeClose(connection);
             throw e;
         }
@@ -715,7 +715,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     public int writeFinal(ByteBuffer src) throws IOException {
         try {
             return Conduits.writeFinalBasic(this, src);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(connection);
             throw e;
         }
@@ -725,7 +725,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
         try {
             return Conduits.writeFinalBasic(this, srcs, offset, length);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(connection);
             throw e;
         }
@@ -746,7 +746,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
             }
             return next.flush();
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(connection);
             throw e;
         } finally {
@@ -763,7 +763,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 return;
             }
             this.state = oldVal | FLAG_SHUTDOWN;
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(connection);
             throw e;
         }
@@ -772,7 +772,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     public void truncateWrites() throws IOException {
         try {
             next.truncateWrites();
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(connection);
             throw e;
         } finally {

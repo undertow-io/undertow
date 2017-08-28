@@ -1586,7 +1586,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                         if (listener.handleDefaultResponse(this)) {
                             return this;
                         }
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         UndertowLogger.REQUEST_LOGGER.debug("Exception running default response listener", e);
                     }
                 }
@@ -1604,6 +1604,9 @@ public final class HttpServerExchange extends AbstractAttachable {
                 blockingHttpExchange.close();
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                IoUtils.safeClose(connection);
+            } catch (Throwable t) {
+                UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
                 IoUtils.safeClose(connection);
             }
         }
@@ -1657,8 +1660,12 @@ public final class HttpServerExchange extends AbstractAttachable {
                     } else if (read == -1) {
                         break;
                     }
-                } catch (IOException e) {
-                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                } catch (Throwable t) {
+                    if (t instanceof IOException) {
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) t);
+                    } else {
+                        UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
+                    }
                     invokeExchangeCompleteListeners();
                     IoUtils.safeClose(connection);
                     return this;
@@ -1720,8 +1727,12 @@ public final class HttpServerExchange extends AbstractAttachable {
                     IoUtils.safeClose(connection);
                 }
             }
-        } catch (IOException e) {
-            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+        } catch (Throwable t) {
+            if (t instanceof IOException) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) t);
+            } else {
+                UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
+            }
             invokeExchangeCompleteListeners();
 
             IoUtils.safeClose(connection);

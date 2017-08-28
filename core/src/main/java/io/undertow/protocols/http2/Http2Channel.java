@@ -240,7 +240,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 headerParser.length = initialOtherSideSettings.remaining();
                 parser.parse(initialOtherSideSettings, headerParser);
                 updateSettings(parser.getSettings());
-            } catch (IOException e) {
+            } catch (Throwable e) {
                 IoUtils.safeClose(connectedStreamChannel);
                 //should never happen
                 throw new RuntimeException(e);
@@ -303,6 +303,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             flushChannel(stream);
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+        } catch (Throwable t) {
+            UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
         }
     }
 
@@ -745,6 +747,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             }
         } catch (IOException e) {
             exceptionHandler.handleException(ping, e);
+        } catch (Throwable t) {
+            exceptionHandler.handleException(ping, new IOException(t));
         }
     }
 
@@ -776,6 +780,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             }
         } catch (IOException e) {
             exceptionHandler.handleException(goAway, e);
+        } catch (Throwable t) {
+            exceptionHandler.handleException(goAway, new IOException(t));
         }
     }
 

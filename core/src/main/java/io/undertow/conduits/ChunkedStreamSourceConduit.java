@@ -19,6 +19,8 @@
 package io.undertow.conduits;
 
 import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
@@ -28,8 +30,6 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.PooledAdaptor;
 import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
@@ -107,7 +107,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
         try {
             return target.transferFrom(new ConduitReadableByteChannel(this), position, count);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(closeable);
             throw e;
         }
@@ -140,7 +140,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
         try {
             return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(closeable);
             throw e;
         }
@@ -281,7 +281,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                     pooled.close();
                 }
             }
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(closeable);
             throw e;
         } finally {
