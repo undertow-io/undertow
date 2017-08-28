@@ -161,13 +161,14 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
             }
             return toAllocate;
 
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException | Error e) {
+            IOException ioe = e instanceof IOException ? (IOException) e : new IOException(e);
             //on exception we fail every item in the frame queue
             try {
                 for (Frame frame : frameQueue) {
                     FrameCallBack cb = frame.callback;
                     if (cb != null) {
-                        cb.failed(e);
+                        cb.failed(ioe);
                     }
                 }
                 frameQueue.clear();

@@ -196,7 +196,8 @@ public class Http2ClientConnection implements ClientConnection {
         Http2HeadersStreamSinkChannel sinkChannel;
         try {
             sinkChannel = http2Channel.createStream(request.getRequestHeaders());
-        } catch (IOException e) {
+        } catch (Throwable t) {
+            IOException e = t instanceof IOException ? (IOException) t : new IOException(t);
             clientCallback.failed(e);
             return;
         }
@@ -227,14 +228,14 @@ public class Http2ClientConnection implements ClientConnection {
                     }));
                     sinkChannel.resumeWrites();
                 }
-            } catch (IOException e) {
+            } catch (Throwable e) {
                 handleError(e);
             }
         }
     }
 
-    private void handleError(IOException e) {
-
+    private void handleError(Throwable t) {
+        IOException e = t instanceof IOException ? (IOException) t : new IOException(t);
         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         IoUtils.safeClose(Http2ClientConnection.this);
         for (Map.Entry<Integer, Http2ClientExchange> entry : currentExchanges.entrySet()) {
@@ -448,13 +449,14 @@ public class Http2ClientConnection implements ClientConnection {
                     Channels.drain(result, Long.MAX_VALUE);
                 }
 
-            } catch (IOException e) {
+            } catch (Throwable t) {
+                IOException e = t instanceof IOException ? (IOException) t : new IOException(t);
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 IoUtils.safeClose(Http2ClientConnection.this);
                 for (Map.Entry<Integer, Http2ClientExchange> entry : currentExchanges.entrySet()) {
                     try {
                         entry.getValue().failed(e);
-                    } catch (Exception ex) {
+                    } catch (Throwable ex) {
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(ex));
                     }
                 }

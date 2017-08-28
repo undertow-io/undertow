@@ -145,7 +145,8 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
                                 return;
                             }
                             listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics, false));
-                        } catch (IOException e) {
+                        } catch (Throwable t) {
+                            IOException e = t instanceof IOException ? (IOException) t : new IOException(t);
                             listener.failed(e);
                         }
                     }
@@ -153,7 +154,8 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
                 return;
             }
             listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics, false));
-        } catch (IOException e) {
+        } catch (Throwable t) {
+            IOException e = t instanceof IOException ? (IOException) t : new IOException(t);
             listener.failed(e);
         }
     }

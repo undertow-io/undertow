@@ -271,8 +271,8 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 if (!sinkChannel.flush()) {
                     handleFailedFlush(sinkChannel);
                 }
-            } catch (IOException e) {
-                handleError(e);
+            } catch (Throwable t) {
+                handleError((t instanceof IOException) ? (IOException) t : new IOException(t));
             }
         }
     }
@@ -358,7 +358,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                     Channels.drain(result, Long.MAX_VALUE);
                 }
 
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
                 safeClose(connection);
                 if(currentRequest != null) {
