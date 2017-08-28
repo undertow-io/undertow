@@ -172,7 +172,7 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
         try {
             return target.transferFrom(new ConduitReadableByteChannel(this), position, count);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(exchange.getConnection());
             throw e;
         }
@@ -182,7 +182,7 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
     public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
         try {
             return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(exchange.getConnection());
             throw e;
         }
