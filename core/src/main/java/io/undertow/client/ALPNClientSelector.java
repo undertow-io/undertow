@@ -101,7 +101,8 @@ public class ALPNClientSelector {
                                 fallback.handleEvent(sslConnection);
                                 return;
                             }
-                        } catch (IOException e) {
+                        } catch (Throwable t) {
+                            IOException e = t instanceof IOException ? (IOException) t : new IOException(t);
                             failedListener.failed(e);
                         }
                     }

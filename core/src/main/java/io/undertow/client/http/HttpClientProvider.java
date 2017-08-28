@@ -149,8 +149,8 @@ public class HttpClientProvider implements ClientProvider {
             if(connection instanceof SslConnection) {
                 try {
                     ((SslConnection) connection).startHandshake();
-                } catch (IOException e) {
-                    listener.failed(e);
+                } catch (Throwable t) {
+                    listener.failed((t instanceof IOException) ? (IOException) t : new IOException(t));
                 }
             }
             listener.completed(new HttpClientConnection(connection, options, bufferPool));
