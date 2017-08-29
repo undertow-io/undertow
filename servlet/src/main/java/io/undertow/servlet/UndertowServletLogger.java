@@ -124,4 +124,8 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 15020, value = "Path %s is secured for some HTTP methods, however it is not secured for %s")
     void unsecuredMethodsOnPath(String path, Set<String> missing);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 15021, value = "Failure dispatching async event")
+    void failureDispatchingAsyncEvent(@Cause Throwable t);
 }
