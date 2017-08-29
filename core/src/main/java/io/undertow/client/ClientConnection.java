@@ -18,6 +18,7 @@
 
 package io.undertow.client;
 
+import io.undertow.UndertowMessages;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import io.undertow.connector.ByteBufferPool;
@@ -28,6 +29,7 @@ import org.xnio.XnioWorker;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.Channel;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A client connection. This can be used to send requests, or to upgrade the connection.
@@ -120,4 +122,24 @@ public interface ClientConnection extends Channel {
      * @param listener The close listener
      */
     void addCloseListener(ChannelListener<ClientConnection> listener);
+
+    /**
+     *
+     * @return <code>true</code> if the underlying protocol supports sending a ping
+     */
+    default boolean isPingSupported() {
+        return false;
+    }
+
+    default void sendPing(PingListener listener, long timeout, TimeUnit timeUnit) {
+        listener.failed(UndertowMessages.MESSAGES.pingNotSupported());
+    }
+
+    interface PingListener {
+
+        void acknowledged();
+
+        void failed(IOException e);
+
+    }
 }

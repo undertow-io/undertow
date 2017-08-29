@@ -29,10 +29,14 @@ import static io.undertow.util.Headers.TRANSFER_ENCODING;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import io.undertow.client.ClientStatistics;
 import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
@@ -82,11 +86,17 @@ public class Http2ClientConnection implements ClientConnection {
 
     private final Map<Integer, Http2ClientExchange> currentExchanges = new ConcurrentHashMap<>();
 
+    private static final AtomicLong PING_COUNTER = new AtomicLong();
+
+
     private boolean initialUpgradeRequest;
     private final String defaultHost;
     private final ClientStatistics clientStatistics;
     private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
     private final boolean secure;
+
+    private final Map<PingKey, PingListener> outstandingPings = new HashMap<>();
+
     private final ChannelListener<Http2Channel> closeTask = new ChannelListener<Http2Channel>() {
         @Override
         public void handleEvent(Http2Channel channel) {
@@ -354,6 +364,36 @@ public class Http2ClientConnection implements ClientConnection {
         closeListeners.add(listener);
     }
 
+    @Override
+    public boolean isPingSupported() {
+        return true;
+    }
+
+    @Override
+    public void sendPing(PingListener listener, long timeout, TimeUnit timeUnit) {
+        long count = PING_COUNTER.incrementAndGet();
+        byte[] data = new byte[8];
+        data[0] = (byte) count;
+        data[1] = (byte)(count << 8);
+        data[2] = (byte)(count << 16);
+        data[3] = (byte)(count << 24);
+        data[4] = (byte)(count << 32);
+        data[5] = (byte)(count << 40);
+        data[6] = (byte)(count << 48);
+        data[7] = (byte)(count << 54);
+        final PingKey key = new PingKey(data);
+        outstandingPings.put(key, listener);
+        if(timeout > 0) {
+            http2Channel.getIoThread().executeAfter(() -> {
+                PingListener listener1 = outstandingPings.remove(key);
+                if(listener1 != null) {
+                    listener1.failed(UndertowMessages.MESSAGES.pingTimeout());
+                }
+            }, timeout, timeUnit);
+        }
+        http2Channel.sendPing(data, (channel, exception) -> listener.failed(exception));
+    }
+
     private class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         @Override
@@ -469,8 +509,36 @@ public class Http2ClientConnection implements ClientConnection {
             if (!frame.isAck()) {
                 //server side ping, return it
                 frame.getHttp2Channel().sendPing(id);
+            } else {
+                PingListener listener = outstandingPings.remove(new PingKey(id));
+                if(listener != null) {
+                    listener.acknowledged();
+                }
             }
         }
 
+    }
+
+    private static final class PingKey{
+        private final byte[] data;
+
+        private PingKey(byte[] data) {
+            this.data = data;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            PingKey pingKey = (PingKey) o;
+
+            return Arrays.equals(data, pingKey.data);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(data);
+        }
     }
 }

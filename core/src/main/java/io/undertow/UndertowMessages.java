@@ -560,4 +560,10 @@ public interface UndertowMessages {
 
     @Message(id = 181, value = "HTTP/2 trailers too large for single buffer")
     RuntimeException http2TrailerToLargeForSingleBuffer();
+
+    @Message(id = 182, value = "Ping not supported")
+    IOException pingNotSupported();
+
+    @Message(id = 183, value = "Ping timed out")
+    IOException pingTimeout();
 }
