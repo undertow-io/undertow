@@ -273,18 +273,18 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private class ServletInputStreamChannelListener implements ChannelListener<StreamSourceChannel> {
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
-            if (asyncContext.isDispatched()) {
-                //this is no longer an async request
-                //we just return
-                //TODO: what do we do here? Revert back to blocking mode?
-                channel.suspendReads();
-                return;
-            }
-            if (anyAreSet(state, FLAG_FINISHED)) {
-                channel.suspendReads();
-                return;
-            }
             try {
+                if (asyncContext.isDispatched()) {
+                    //this is no longer an async request
+                    //we just return
+                    //TODO: what do we do here? Revert back to blocking mode?
+                    channel.suspendReads();
+                    return;
+                }
+                if (anyAreSet(state, FLAG_FINISHED)) {
+                    channel.suspendReads();
+                    return;
+                }
                 readIntoBufferNonBlocking();
                 if (pooled != null) {
                     channel.suspendReads();
@@ -310,13 +310,20 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     channel.resumeReads();
                 }
             } catch (final Throwable e) {
-                request.getServletContext().invokeRunnable(request.getExchange(), new Runnable() {
-                    @Override
-                    public void run() {
-                        listener.onError(e);
+                try {
+                    request.getServletContext().invokeRunnable(request.getExchange(), new Runnable() {
+                        @Override
+                        public void run() {
+                            listener.onError(e);
+                        }
+                    });
+                } finally {
+                    if (pooled != null) {
+                        pooled.close();
+                        pooled = null;
                     }
-                });
-                IoUtils.safeClose(channel);
+                    IoUtils.safeClose(channel);
+                }
             }
         }
     }

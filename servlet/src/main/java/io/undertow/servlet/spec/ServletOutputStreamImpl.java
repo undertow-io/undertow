@@ -920,6 +920,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 });
             } finally {
                 IoUtils.safeClose(channel, servletRequestContext.getExchange().getConnection());
+                if (pooledBuffer != null) {
+                    pooledBuffer.close();
+                    pooledBuffer = null;
+                    buffer = null;
+                }
             }
         }
     }
