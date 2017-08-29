@@ -152,7 +152,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             local.allocationDepth++;
         }
         buffer.clear();
-        return new DefaultPooledBuffer(this, buffer, leakDectionPercent == 0 ? false : (++count % 100 > leakDectionPercent));
+        return new DefaultPooledBuffer(this, buffer, leakDectionPercent == 0 ? false : (++count % 100 < leakDectionPercent));
     }
 
     @Override
