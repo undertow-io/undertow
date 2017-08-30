@@ -203,6 +203,8 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
                 currentBuffer.put((byte) (dataPaddingBytes & 0xFF));
                 trailer = ByteBuffer.allocate(dataPaddingBytes);
             }
+        } else if(finalFrame && trailers != null) {
+            requiresTrailers = true;
         }
 
         if (requiresTrailers) {
