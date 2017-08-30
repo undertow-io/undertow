@@ -18,6 +18,7 @@
 
 package io.undertow;
 
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.DefaultByteBufferPool;
@@ -27,6 +28,7 @@ import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
+import io.undertow.server.protocol.http2.Http2UpgradeHandler;
 import io.undertow.server.protocol.proxy.ProxyProtocolOpenListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -34,8 +36,6 @@ import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.server.protocol.http2.Http2UpgradeHandler;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
@@ -83,15 +83,17 @@ public final class Undertow {
      */
     private final boolean internalWorker;
 
+    private ByteBufferPool byteBufferPool;
     private XnioWorker worker;
     private List<AcceptingChannel<? extends StreamConnection>> channels;
     private Xnio xnio;
 
     private Undertow(Builder builder) {
-        this.bufferSize = builder.bufferSize;
+        this.byteBufferPool = builder.byteBufferPool;
+        this.bufferSize = byteBufferPool != null ? byteBufferPool.getBufferSize() : builder.bufferSize;
+        this.directBuffers = byteBufferPool != null ? byteBufferPool.isDirect() : builder.directBuffers;
         this.ioThreads = builder.ioThreads;
         this.workerThreads = builder.workerThreads;
-        this.directBuffers = builder.directBuffers;
         this.listeners.addAll(builder.listeners);
         this.rootHandler = builder.handler;
         this.worker = builder.worker;
@@ -142,7 +144,10 @@ public final class Undertow {
                     .getMap();
 
 
-            ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, bufferSize, -1, 4);
+            ByteBufferPool buffers = this.byteBufferPool;
+            if (buffers == null) {
+                buffers = new DefaultByteBufferPool(directBuffers, bufferSize, -1, 4);
+            }
 
             listenerInfo = new ArrayList<>();
             for (ListenerConfig listener : listeners) {
@@ -399,6 +404,7 @@ public final class Undertow {
         private final List<ListenerConfig> listeners = new ArrayList<>();
         private HttpHandler handler;
         private XnioWorker worker;
+        private ByteBufferPool byteBufferPool;
 
         private final OptionMap.Builder workerOptions = OptionMap.builder();
         private final OptionMap.Builder socketOptions = OptionMap.builder();
@@ -546,6 +552,11 @@ public final class Undertow {
          */
         public <T> Builder setWorker(XnioWorker worker) {
             this.worker = worker;
+            return this;
+        }
+
+        public <T> Builder setByteBufferPool(ByteBufferPool byteBufferPool) {
+            this.byteBufferPool = byteBufferPool;
             return this;
         }
     }
