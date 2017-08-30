@@ -183,6 +183,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
     private void freeInternal(ByteBuffer buffer) {
         if (closed) {
+            DirectByteBufferDeallocator.free(buffer);
             return; //GC will take care of it
         }
         ThreadLocalData local = threadLocalCache.get();
@@ -203,6 +204,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         do {
             size = currentQueueLength;
             if(size > maximumPoolSize) {
+                DirectByteBufferDeallocator.free(buffer);
                 return;
             }
         } while (!currentQueueLengthUpdater.compareAndSet(this, size, currentQueueLength + 1));
