@@ -415,4 +415,12 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 5090, value = "Unexpected failure")
     void handleUnexpectedFailure(@Cause Throwable t);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5091, value = "Failed to initialize DirectByteBufferDeallocator")
+    void directBufferDeallocatorInitializationFailed(@Cause Throwable t);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5092, value = "Failed to free direct buffer")
+    void directBufferDeallocationFailed(@Cause Throwable t);
 }
