@@ -228,6 +228,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         Http2HeadersStreamSinkChannel sink = channel.createInitialUpgradeResponseStream();
         final Http2ServerConnection connection = new Http2ServerConnection(channel, sink, undertowOptions, bufferSize, rootHandler);
 
+
         HeaderMap requestHeaders = new HeaderMap();
         for(HeaderValues hv : initial.getRequestHeaders()) {
             requestHeaders.putAll(hv.getHeaderName(), hv);
@@ -254,6 +255,13 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             exchange.endExchange();
             return;
         }
+        sink.setTrailersProducer(new Http2DataStreamSinkChannel.TrailersProducer() {
+            @Override
+            public HeaderMap getTrailers() {
+                return exchange.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
+            }
+        });
+
 
         SSLSession session = channel.getSslSession();
         if(session != null) {
