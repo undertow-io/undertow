@@ -43,7 +43,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -144,7 +144,7 @@ public class AsyncListenerExceptionTest {
             for (int i = 0; i < expected.size(); i++) {
                 actual.add(AbstractAsyncServlet.QUEUE.poll(10, TimeUnit.SECONDS));
             }
-            actual.sort(Comparator.naturalOrder());
+            Collections.sort(actual);
             Assert.assertEquals(expected, actual);
         } finally {
             client.getConnectionManager().shutdown();
