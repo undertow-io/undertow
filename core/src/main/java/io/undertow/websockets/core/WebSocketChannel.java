@@ -19,6 +19,7 @@ package io.undertow.websockets.core;
 
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
+import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import org.xnio.ChannelExceptionHandler;
@@ -35,6 +36,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -109,6 +111,11 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
                 WebSocketChannel.this.peerConnections.remove(WebSocketChannel.this);
             }
         });
+    }
+
+    @Override
+    protected Collection<AbstractFramedStreamSourceChannel<WebSocketChannel, StreamSourceFrameChannel, StreamSinkFrameChannel>> getReceivers() {
+        return Collections.<AbstractFramedStreamSourceChannel<WebSocketChannel, StreamSourceFrameChannel, StreamSinkFrameChannel>>singleton(fragmentedChannel);
     }
 
     @Override
