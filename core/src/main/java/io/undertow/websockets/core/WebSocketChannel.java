@@ -115,6 +115,9 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
 
     @Override
     protected Collection<AbstractFramedStreamSourceChannel<WebSocketChannel, StreamSourceFrameChannel, StreamSinkFrameChannel>> getReceivers() {
+        if(fragmentedChannel == null) {
+            return Collections.emptyList();
+        }
         return Collections.<AbstractFramedStreamSourceChannel<WebSocketChannel, StreamSourceFrameChannel, StreamSinkFrameChannel>>singleton(fragmentedChannel);
     }
 

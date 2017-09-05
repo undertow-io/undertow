@@ -177,6 +177,9 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
 
     @Override
     protected Collection<AbstractFramedStreamSourceChannel<AjpClientChannel, AbstractAjpClientStreamSourceChannel, AbstractAjpClientStreamSinkChannel>> getReceivers() {
+        if(source == null) {
+            return Collections.emptyList();
+        }
         return Collections.<AbstractFramedStreamSourceChannel<AjpClientChannel, AbstractAjpClientStreamSourceChannel, AbstractAjpClientStreamSinkChannel>>singleton(source);
     }
 
