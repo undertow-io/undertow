@@ -146,7 +146,7 @@ public final class Undertow {
 
             ByteBufferPool buffers = this.byteBufferPool;
             if (buffers == null) {
-                buffers = new DefaultByteBufferPool(directBuffers, bufferSize, -1, 4);
+                buffers = new DefaultByteBufferPool(directBuffers, bufferSize, workerThreads, 12);
             }
 
             listenerInfo = new ArrayList<>();

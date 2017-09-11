@@ -21,6 +21,7 @@ package io.undertow.server;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.XnioIoThread;
 
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -125,7 +126,8 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                 if (buffer != null) {
                     currentQueueLengthUpdater.decrementAndGet(this);
                 }
-            } else {
+            } else if (Thread.currentThread() instanceof XnioIoThread) {
+                // Only use a ThreadLocal cache on IO threads
                 local = new ThreadLocalData();
                 synchronized (threadLocalDataList) {
                     if (closed) {
