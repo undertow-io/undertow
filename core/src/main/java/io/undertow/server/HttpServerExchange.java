@@ -97,6 +97,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private static final RuntimePermission SET_SECURITY_CONTEXT = new RuntimePermission("io.undertow.SET_SECURITY_CONTEXT");
     private static final String ISO_8859_1 = "ISO-8859-1";
+    private static final String HTTPS = "https";
 
     /**
      * The HTTP reason phrase to send. This is an attachment rather than a field as it is rarely used. If this is not set
@@ -113,6 +114,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Attachment key that can be used to hold additional request attributes
      */
     public static final AttachmentKey<Map<String, String>> REQUEST_ATTRIBUTES = AttachmentKey.create(Map.class);
+
+    /**
+     * Attachment key that can be used as a flag of secure attribute
+     */
+    public static final AttachmentKey<Boolean> SECURE_REQUEST = AttachmentKey.create(Boolean.class);
 
     private final ServerConnection connection;
     private final HeaderMap requestHeaders;
@@ -375,6 +381,18 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public boolean isHttp11() {
         return protocol.equals(Protocols.HTTP_1_1);
+    }
+
+    public boolean isSecure() {
+        Boolean secure = getAttachment(SECURE_REQUEST);
+        if(secure != null && secure) {
+            return true;
+        }
+        String scheme = getRequestScheme();
+        if (scheme != null && scheme.equalsIgnoreCase(HTTPS)) {
+            return true;
+        }
+        return false;
     }
 
     /**
