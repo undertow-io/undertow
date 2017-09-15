@@ -22,7 +22,6 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
 
 import java.util.Collections;
 import java.util.Map;
@@ -45,7 +44,7 @@ public class MarkSecureHandler implements HttpHandler  {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        exchange.putAttachment(HttpServletRequestImpl.SECURE_REQUEST, Boolean.TRUE);
+        exchange.putAttachment(HttpServerExchange.SECURE_REQUEST, Boolean.TRUE);
         next.handleRequest(exchange);
     }
 

@@ -99,7 +99,8 @@ import javax.servlet.http.PushBuilder;
  */
 public final class HttpServletRequestImpl implements HttpServletRequest {
 
-    private static final String HTTPS = "https";
+    @Deprecated
+    public static final AttachmentKey<Boolean> SECURE_REQUEST = HttpServerExchange.SECURE_REQUEST;
 
     private final HttpServerExchange exchange;
     private final ServletContextImpl originalServletContext;
@@ -119,8 +120,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private Charset characterEncoding;
     private boolean readStarted;
     private SessionConfig.SessionCookieSource sessionCookieSource;
-
-    public static final AttachmentKey<Boolean> SECURE_REQUEST = AttachmentKey.create(Boolean.class);
 
     public HttpServletRequestImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -924,11 +923,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isSecure() {
-        Boolean secure = exchange.getAttachment(SECURE_REQUEST);
-        if(secure != null && secure) {
-            return true;
-        }
-        return getScheme().equalsIgnoreCase(HTTPS);
+        return exchange.isSecure();
     }
 
     @Override
