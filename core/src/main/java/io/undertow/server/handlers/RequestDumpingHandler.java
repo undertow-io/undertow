@@ -32,6 +32,8 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.LocaleUtils;
@@ -114,6 +116,9 @@ public class RequestDumpingHandler implements HttpHandler {
         exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+
+				sb.append(dumpRequestBody(exchange));
+
                 // Log post-service information
                 sb.append("--------------------------RESPONSE--------------------------\n");
                 if (sc != null) {
@@ -144,7 +149,7 @@ public class RequestDumpingHandler implements HttpHandler {
                     sb.append(storedResponse);
                 }
 
-                sb.append("==============================================================");
+                sb.append("\n==============================================================");
 
 
                 nextListener.proceed();
@@ -157,6 +162,39 @@ public class RequestDumpingHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
+	private StringBuilder dumpRequestBody(HttpServerExchange exchange) {
+    	final StringBuilder sb = new StringBuilder();
+		try {
+			FormData formData = exchange.getAttachment(FormDataParser.FORM_DATA);
+			if(formData != null) {
+				sb.append("body=\n");
+
+				for (Iterator<String> formDataIt = formData.iterator(); formDataIt.hasNext(); ) {
+					String formField = formDataIt.next();
+					Deque<FormData.FormValue> formValues = formData.get(formField);
+
+					sb.append(formField + "=");
+					for (Iterator<FormData.FormValue> formValuesIt = formValues.iterator(); formValuesIt.hasNext(); ) {
+						FormData.FormValue formValue = formValuesIt.next();
+						sb.append(formValue.isFile() ? "[file-content]" : formValue.getValue());
+						sb.append("\n");
+
+						if(formValue.getHeaders() != null) {
+							sb.append("headers=\n");
+							for (Iterator<HeaderValues> iterator = formValue.getHeaders().iterator(); iterator.hasNext(); ) {
+								HeaderValues header =  iterator.next();
+								sb.append("\t"+header.getHeaderName()+"="+header.getFirst()+"\n");
+
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		return sb;
+	}
 
 
     public static class Builder implements HandlerBuilder {
