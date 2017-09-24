@@ -18,8 +18,10 @@
 
 package io.undertow.util;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.URLDecoder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collections;
@@ -378,5 +380,36 @@ public final class Headers {
             }
             return header.substring(start, end);
         }
+    }
+
+    /**
+     * Extracts a quoted value from a header that has a given key. For instance if the header is
+     * <p>
+     * content-disposition=form-data; filename*="utf-8''test.txt"
+     * and the key is filename* then "test.txt" will be returned after extracting character set and language
+     * (following RFC 2231) and performing URL decoding to the value using the specified encoding
+     *
+     * @param header The header
+     * @param key    The key that identifies the token to extract
+     * @return The token, or null if it was not found
+     */
+    public static String extractQuotedValueFromHeaderWithEncoding(final String header, final String key) {
+        String value = extractQuotedValueFromHeader(header, key);
+        if (value != null) {
+            return value;
+        }
+        value = extractQuotedValueFromHeader(header , key + "*");
+        if(value != null) {
+            int characterSetDelimiter = value.indexOf('\'');
+            int languageDelimiter = value.lastIndexOf('\'', characterSetDelimiter + 1);
+            String characterSet = value.substring(0, characterSetDelimiter);
+            try {
+                String fileNameURLEncoded = value.substring(languageDelimiter + 1);
+                return URLDecoder.decode(fileNameURLEncoded, characterSet);
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
     }
 }
