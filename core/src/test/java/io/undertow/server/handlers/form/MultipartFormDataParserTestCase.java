@@ -26,9 +26,11 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import org.apache.commons.io.Charsets;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.mime.FormBodyPart;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
@@ -106,7 +108,6 @@ public class MultipartFormDataParserTestCase {
     }
 
 
-
     @Test
     public void testQuotedBoundary() throws Exception {
         DefaultServer.setRootHandler(new BlockingHandler(createHandler()));
@@ -114,7 +115,7 @@ public class MultipartFormDataParserTestCase {
         try {
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
-            post.setHeader(Headers.CONTENT_TYPE_STRING,"multipart/form-data; boundary=\"s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\"");
+            post.setHeader(Headers.CONTENT_TYPE_STRING, "multipart/form-data; boundary=\"s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\"");
             StringEntity entity = new StringEntity("--s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
                     "\r\n" +
@@ -150,6 +151,33 @@ public class MultipartFormDataParserTestCase {
 
             entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
             entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testFileUploadWithEagerParsingAndNonASCIIFilename() throws Exception {
+        DefaultServer.setRootHandler(new EagerFormParsingHandler().setNext(createHandler()));
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            MultipartEntity entity = new MultipartEntity();
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+
+            File uploadfile = new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile());
+            FormBodyPart filePart = new FormBodyPart("file", new FileBody(uploadfile, "τεστ", "application/octet-stream", Charsets.UTF_8.toString()));
+            filePart.addField("Content-Disposition", "form-data; name=\"file\"; filename*=\"utf-8''%CF%84%CE%B5%CF%83%CF%84.txt\"");
+            entity.addPart(filePart);
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
