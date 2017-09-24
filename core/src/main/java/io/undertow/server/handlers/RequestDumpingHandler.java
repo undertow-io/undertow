@@ -20,9 +20,12 @@ package io.undertow.server.handlers;
 
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import io.undertow.UndertowLogger;
 import io.undertow.attribute.StoredResponse;
@@ -32,6 +35,8 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.LocaleUtils;
@@ -114,6 +119,9 @@ public class RequestDumpingHandler implements HttpHandler {
         exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+
+				sb.append(dumpRequestBody(exchange));
+
                 // Log post-service information
                 sb.append("--------------------------RESPONSE--------------------------\n");
                 if (sc != null) {
@@ -144,7 +152,7 @@ public class RequestDumpingHandler implements HttpHandler {
                     sb.append(storedResponse);
                 }
 
-                sb.append("==============================================================");
+                sb.append("\n==============================================================");
 
 
                 nextListener.proceed();
@@ -157,6 +165,32 @@ public class RequestDumpingHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
+	private StringBuilder dumpRequestBody(HttpServerExchange exchange) {
+    	final StringBuilder sb = new StringBuilder();
+		try {
+			FormData formData = exchange.getAttachment(FormDataParser.FORM_DATA);
+			if(formData != null) {
+				sb.append("body=\n");
+				StreamSupport.stream(formData.spliterator(), false)
+					.map(field -> new HashMap.SimpleEntry<>(field, formData.get(field)))
+					.forEach(entry -> {
+						String value = entry.getValue().stream()
+							.map(formValue -> formValue.isFile() ? "[file-content]" : formValue.getValue())
+							.collect(Collectors.joining(","));
+						String headers = entry.getValue().stream()
+							.map(formValue -> formValue.getHeaders().toString())
+							.collect(Collectors.joining(","));
+						sb.append(entry.getKey()+"="+value+"\n");
+						if(headers != null) {
+							sb.append("\theaders=[" + headers + "]" + "\n");
+						}
+					});
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		return sb;
+	}
 
 
     public static class Builder implements HandlerBuilder {
