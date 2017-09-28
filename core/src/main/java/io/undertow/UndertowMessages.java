@@ -566,4 +566,8 @@ public interface UndertowMessages {
 
     @Message(id = 183, value = "Ping timed out")
     IOException pingTimeout();
+
+    @Message(id = 184, value = "Stream limit exceeded")
+    IOException streamLimitExceeded();
+
 }
