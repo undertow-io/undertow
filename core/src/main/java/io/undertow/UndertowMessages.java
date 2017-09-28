@@ -557,4 +557,8 @@ public interface UndertowMessages {
 
     @Message(id = 181, value = "HTTP/2 trailers too large for single buffer")
     RuntimeException http2TrailerToLargeForSingleBuffer();
+
+    @Message(id = 184, value = "Stream limit exceeded")
+    IOException streamLimitExceeded();
+
 }
