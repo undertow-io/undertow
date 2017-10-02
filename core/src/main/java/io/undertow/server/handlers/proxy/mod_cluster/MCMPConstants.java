@@ -29,7 +29,7 @@ interface MCMPConstants {
     String BALANCER_STRING = "Balancer";
     String CONTEXT_STRING = "Context";
     String DOMAIN_STRING = "Domain";
-    String FLUSH_PACKET_STRING = "flushpacket";
+    String FLUSH_PACKET_STRING = "flushpackets";
     String FLUSH_WAIT_STRING = "flushwait";
     String HOST_STRING = "Host";
     String JVMROUTE_STRING = "JVMRoute";
