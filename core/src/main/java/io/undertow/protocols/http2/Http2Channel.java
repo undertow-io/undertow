@@ -32,13 +32,13 @@ import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 import org.xnio.Bits;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import io.undertow.util.HttpString;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.SslConnection;
@@ -57,6 +57,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.net.ssl.SSLSession;
 
 /**
@@ -147,6 +148,11 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private final int maxHeaders;
     private final int maxHeaderListSize;
 
+    private final AtomicIntegerFieldUpdater<Http2Channel> sendConcurrentStreamsAtomicUpdater = AtomicIntegerFieldUpdater.newUpdater(
+            Http2Channel.class, "sendConcurrentStreams");
+
+    private final AtomicIntegerFieldUpdater<Http2Channel> receiveConcurrentStreamsAtomicUpdater = AtomicIntegerFieldUpdater.newUpdater(
+            Http2Channel.class, "receiveConcurrentStreams");
 
     private boolean thisGoneAway = false;
     private boolean peerGoneAway = false;
@@ -234,7 +240,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             if(fromUpgrade) {
                 StreamHolder streamHolder = new StreamHolder((Http2StreamSinkChannel) null);
                 streamHolder.sinkClosed = true;
-                sendConcurrentStreams++;
+                sendConcurrentStreamsAtomicUpdater.getAndIncrement(this);
                 currentStreams.put(1, streamHolder);
             }
         } else if(fromUpgrade) {
@@ -413,7 +419,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
                 StreamHolder holder = currentStreams.get(frameParser.streamId);
                 if(holder == null) {
-                    receiveConcurrentStreams++;
+                    receiveConcurrentStreamsAtomicUpdater.getAndIncrement(this);
                     currentStreams.put(frameParser.streamId, holder = new StreamHolder((Http2StreamSourceChannel) channel));
                 } else {
                     holder.sourceChannel = (Http2StreamSourceChannel) channel;
@@ -425,7 +431,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     if(!isClient() || !"100".equals(parser.getHeaderMap().getFirst(STATUS))) {
                         holder.sourceClosed = true;
                         if(holder.sinkClosed) {
-                            receiveConcurrentStreams--;
+                            receiveConcurrentStreamsAtomicUpdater.getAndDecrement(this);
                             currentStreams.remove(frameParser.streamId);
                         }
                     }
@@ -871,7 +877,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if (!isOpen()) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
-        ++sendConcurrentStreams;
+        sendConcurrentStreamsAtomicUpdater.incrementAndGet(this);
         if(sendMaxConcurrentStreams > 0 && sendConcurrentStreams > sendMaxConcurrentStreams) {
             throw UndertowMessages.MESSAGES.streamLimitExceeded();
         }
@@ -890,7 +896,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if (isClient()) {
             throw UndertowMessages.MESSAGES.pushPromiseCanOnlyBeCreatedByServer();
         }
-        ++sendConcurrentStreams;
+        sendConcurrentStreamsAtomicUpdater.incrementAndGet(this);
         if(sendMaxConcurrentStreams > 0 && sendConcurrentStreams > sendMaxConcurrentStreams) {
             throw UndertowMessages.MESSAGES.streamLimitExceeded();
         }
@@ -944,9 +950,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         existing.sinkChannel = null;
         if(existing.sourceClosed) {
             if(streamId % 2 == (isClient() ? 1 : 0)) {
-                sendConcurrentStreams--;
+                sendConcurrentStreamsAtomicUpdater.getAndDecrement(this);
             } else {
-                receiveConcurrentStreams--;
+                receiveConcurrentStreamsAtomicUpdater.getAndDecrement(this);
             }
             currentStreams.remove(streamId);
         }
@@ -1050,9 +1056,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         StreamHolder holder = currentStreams.remove(streamId);
         if(holder != null) {
             if(streamId % 2 == (isClient() ? 1 : 0)) {
-                sendConcurrentStreams--;
+                sendConcurrentStreamsAtomicUpdater.getAndDecrement(this);
             } else {
-                receiveConcurrentStreams--;
+                receiveConcurrentStreamsAtomicUpdater.getAndDecrement(this);
             }
             if (holder.sinkChannel != null) {
                 holder.sinkChannel.rstStream();
@@ -1077,7 +1083,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         StreamHolder streamHolder = new StreamHolder(stream);
         streamHolder.sourceClosed = true;
         currentStreams.put(1, streamHolder);
-        receiveConcurrentStreams++;
+        receiveConcurrentStreamsAtomicUpdater.getAndIncrement(this);
         return stream;
 
     }
@@ -1104,9 +1110,9 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         existing.sourceChannel = null;
         if(existing.sinkClosed) {
             if(streamId % 2 == (isClient() ? 1 : 0)) {
-                sendConcurrentStreams--;
+                sendConcurrentStreamsAtomicUpdater.getAndDecrement(this);
             } else {
-                receiveConcurrentStreams--;
+                receiveConcurrentStreamsAtomicUpdater.getAndDecrement(this);
             }
             currentStreams.remove(streamId);
         }
