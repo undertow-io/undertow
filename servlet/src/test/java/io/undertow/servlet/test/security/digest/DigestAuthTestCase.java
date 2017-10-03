@@ -119,7 +119,8 @@ public class DigestAuthTestCase {
 
     public void testCall(final String path, final String expectedResponse) throws Exception {
         TestHttpClient client = new TestHttpClient();
-        String url = DefaultServer.getDefaultServerURL() + "/servletContext/secured/" + path;
+        String servletPath = "/servletContext/secured/" + path;
+        String url = DefaultServer.getDefaultServerURL() + servletPath;
         HttpGet get = new HttpGet(url);
         HttpResponse result = client.execute(get);
         assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
@@ -134,7 +135,7 @@ public class DigestAuthTestCase {
 
         String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
 
-        String clientResponse = createResponse("user1", REALM_NAME, "password1", "GET", "/", nonce);
+        String clientResponse = createResponse("user1", REALM_NAME, "password1", "GET", servletPath, nonce);
 
         client = new TestHttpClient();
         get = new HttpGet(url);
@@ -143,7 +144,7 @@ public class DigestAuthTestCase {
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"user1\"").append(",");
         sb.append(DigestAuthorizationToken.REALM.getName()).append("=\"").append(REALM_NAME).append("\",");
         sb.append(DigestAuthorizationToken.NONCE.getName()).append("=\"").append(nonce).append("\",");
-        sb.append(DigestAuthorizationToken.DIGEST_URI.getName()).append("=\"/\",");
+        sb.append(DigestAuthorizationToken.DIGEST_URI.getName()).append("=\"" + servletPath + "\",");
         sb.append(DigestAuthorizationToken.RESPONSE.getName()).append("=\"").append(clientResponse).append("\"");
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
