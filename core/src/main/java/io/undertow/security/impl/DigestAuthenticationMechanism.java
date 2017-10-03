@@ -42,6 +42,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HexConverter;
+import io.undertow.util.StatusCodes;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -179,7 +180,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
     }
 
-    public AuthenticationMechanismOutcome handleDigestHeader(HttpServerExchange exchange, final SecurityContext securityContext) {
+    private AuthenticationMechanismOutcome handleDigestHeader(HttpServerExchange exchange, final SecurityContext securityContext) {
         DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
         Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
         // Step 1 - Verify the set of tokens received to ensure valid values.
@@ -229,7 +230,21 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
-        // TODO - Validate the URI
+        if(parsedHeader.containsKey(DigestAuthorizationToken.DIGEST_URI)) {
+            String uri = parsedHeader.get(DigestAuthorizationToken.DIGEST_URI);
+            String requestURI = exchange.getRequestURI();
+            if(!exchange.getQueryString().isEmpty()) {
+                requestURI = requestURI + "?" + exchange.getQueryString();
+            }
+            if(!uri.equals(requestURI)) {
+                //just end the auth process
+                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                exchange.endExchange();
+                return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+            }
+        } else {
+            return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+        }
 
         if (parsedHeader.containsKey(DigestAuthorizationToken.OPAQUE)) {
             if (!OPAQUE_VALUE.equals(parsedHeader.get(DigestAuthorizationToken.OPAQUE))) {
