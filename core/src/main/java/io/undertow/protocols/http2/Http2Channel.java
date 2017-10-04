@@ -148,10 +148,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private final int maxHeaders;
     private final int maxHeaderListSize;
 
-    private final AtomicIntegerFieldUpdater<Http2Channel> sendConcurrentStreamsAtomicUpdater = AtomicIntegerFieldUpdater.newUpdater(
+    private static final AtomicIntegerFieldUpdater<Http2Channel> sendConcurrentStreamsAtomicUpdater = AtomicIntegerFieldUpdater.newUpdater(
             Http2Channel.class, "sendConcurrentStreams");
 
-    private final AtomicIntegerFieldUpdater<Http2Channel> receiveConcurrentStreamsAtomicUpdater = AtomicIntegerFieldUpdater.newUpdater(
+    private static final AtomicIntegerFieldUpdater<Http2Channel> receiveConcurrentStreamsAtomicUpdater = AtomicIntegerFieldUpdater.newUpdater(
             Http2Channel.class, "receiveConcurrentStreams");
 
     private boolean thisGoneAway = false;
