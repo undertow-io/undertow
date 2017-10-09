@@ -238,7 +238,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_READ_REQUIRES_WRITE)) {
             delegate.getSinkChannel().resumeWrites();
         } else {
-            if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) || wakeup) {
+            if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) || wakeup || unwrappedData != null) {
                 runReadListener(true);
             } else {
                 delegate.getSourceChannel().resumeReads();
