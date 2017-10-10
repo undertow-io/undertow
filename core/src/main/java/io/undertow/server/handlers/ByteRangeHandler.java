@@ -99,7 +99,8 @@ public class ByteRangeHandler implements HttpHandler {
                         return factory.create();
                     }
                     long responseLength = Long.parseLong(length);
-                    ByteRange.RangeResponseResult rangeResponse = range.getResponseResult(responseLength, exchange.getRequestHeaders().getFirst(Headers.IF_RANGE), DateUtils.parseDate(exchange.getResponseHeaders().getFirst(Headers.LAST_MODIFIED)), exchange.getResponseHeaders().getFirst(Headers.ETAG));
+                    String lastModified = exchange.getResponseHeaders().getFirst(Headers.LAST_MODIFIED);
+                    ByteRange.RangeResponseResult rangeResponse = range.getResponseResult(responseLength, exchange.getRequestHeaders().getFirst(Headers.IF_RANGE), lastModified == null ? null : DateUtils.parseDate(lastModified), exchange.getResponseHeaders().getFirst(Headers.ETAG));
                     if(rangeResponse != null){
                         long start = rangeResponse.getStart();
                         long end = rangeResponse.getEnd();
