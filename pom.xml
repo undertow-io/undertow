@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>23</version>
+        <version>25</version>
     </parent>
 
     <groupId>io.undertow</groupId>
@@ -71,7 +71,7 @@
         <version.org.glassfish.el>3.0.1-b08</version.org.glassfish.el>
         <version.org.jboss.classfilewriter>1.0.5.Final</version.org.jboss.classfilewriter>
         <version.org.jboss.logging>3.2.1.Final</version.org.jboss.logging>
-        <version.org.jboss.logging.processor>2.0.0.Final</version.org.jboss.logging.processor>
+        <version.org.jboss.logging.processor>2.1.0.Final</version.org.jboss.logging.processor>
         <version.org.jboss.logmanager>2.0.0.Final</version.org.jboss.logmanager>
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.0.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
