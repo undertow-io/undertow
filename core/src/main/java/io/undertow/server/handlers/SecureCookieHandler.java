@@ -45,7 +45,7 @@ public class SecureCookieHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        if(exchange.getRequestScheme().equals("https")) {
+        if(exchange.isSecure()) {
             exchange.addResponseCommitListener(new ResponseCommitListener() {
                 @Override
                 public void beforeCommit(HttpServerExchange exchange) {
