@@ -35,3 +35,4 @@ io.undertow.server.handlers.AccessControlListHandler$Builder
 io.undertow.server.handlers.JDBCLogHandler$Builder
 io.undertow.server.handlers.LocalNameResolvingHandler$Builder
 io.undertow.server.handlers.StoredResponseHandler$Builder
+io.undertow.server.handlers.SecureCookieHandler$Builder
