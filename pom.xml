@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>23</version>
+        <version>25</version>
     </parent>
 
     <groupId>io.undertow</groupId>
@@ -71,7 +71,7 @@
         <version.org.glassfish.el>3.0.1-b08</version.org.glassfish.el>
         <version.org.jboss.classfilewriter>1.0.5.Final</version.org.jboss.classfilewriter>
         <version.org.jboss.logging>3.3.0.Final</version.org.jboss.logging>
-        <version.org.jboss.logging.processor>2.0.0.Final</version.org.jboss.logging.processor>
+        <version.org.jboss.logging.processor>2.1.0.Final</version.org.jboss.logging.processor>
         <version.org.jboss.logmanager>2.0.0.Final</version.org.jboss.logmanager>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>1.0.0.Alpha3</version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.0.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
@@ -111,6 +111,8 @@
         <!-- Non-default maven plugin versions and configuration -->
         <version.org.wildfly.openssl>1.0.0.CR4</version.org.wildfly.openssl>
         <version.checkstyle>7.1</version.checkstyle>
+        <version.compiler.plugin>3.7.0</version.compiler.plugin>
+
     </properties>
 
     <modules>
@@ -508,6 +510,7 @@
                             <configuration>
                                 <!-- fork is needed so compiler args can be used -->
                                 <fork>true</fork>
+                                <failOnError>false</failOnError>
                                 <compilerArgs>
                                     <arg>-J--add-modules=java.annotations.common</arg>
                                     <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
