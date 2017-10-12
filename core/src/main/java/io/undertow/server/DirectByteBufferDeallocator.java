@@ -20,7 +20,11 @@ public final class DirectByteBufferDeallocator {
 
 
     static {
-        int version = Integer.getInteger("java.specification.version");
+        String versionString = System.getProperty("java.specification.version");
+        if(versionString.startsWith("1.")) {
+            versionString = versionString.substring(2);
+        }
+        int version = Integer.parseInt(versionString);
 
         Method tmpCleaner = null;
         Method tmpCleanerClean = null;
