@@ -516,7 +516,6 @@
                                 <!-- fork is needed so compiler args can be used -->
                                 <fork>true</fork>
                                 <compilerArgs>
-                                    <arg>-J--add-modules=java.annotations.common</arg>
                                     <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
                                 </compilerArgs>
                             </configuration>
