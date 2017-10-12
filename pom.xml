@@ -111,7 +111,6 @@
         <!-- Non-default maven plugin versions and configuration -->
         <version.org.wildfly.openssl>1.0.0.CR4</version.org.wildfly.openssl>
         <version.checkstyle>7.1</version.checkstyle>
-        <version.compiler.plugin>3.7.0</version.compiler.plugin>
 
     </properties>
 
@@ -512,7 +511,6 @@
                                 <fork>true</fork>
                                 <failOnError>false</failOnError>
                                 <compilerArgs>
-                                    <arg>-J--add-modules=java.annotations.common</arg>
                                     <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
                                 </compilerArgs>
                             </configuration>
