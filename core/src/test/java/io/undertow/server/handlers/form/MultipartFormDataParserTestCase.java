@@ -26,9 +26,11 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import org.apache.commons.io.Charsets;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.mime.FormBodyPart;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
@@ -161,4 +163,31 @@ public class MultipartFormDataParserTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+	@Test
+	public void testFileUploadWithEagerParsingAndNonASCIIFilename() throws Exception {
+		DefaultServer.setRootHandler(new EagerFormParsingHandler().setNext(createHandler()));
+		TestHttpClient client = new TestHttpClient();
+		try {
+
+			HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+			MultipartEntity entity = new MultipartEntity();
+
+			entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+
+			File uploadfile = new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile());
+			FormBodyPart filePart = new FormBodyPart("file", new FileBody(uploadfile, "τεστ", "application/octet-stream", Charsets.UTF_8.toString()));
+			filePart.addField("Content-Disposition", "form-data; name=\"file\"; filename*=\"utf-8''%CF%84%CE%B5%CF%83%CF%84.txt\"");
+			entity.addPart(filePart);
+
+			post.setEntity(entity);
+			HttpResponse result = client.execute(post);
+			Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+			HttpClientUtils.readResponse(result);
+
+
+		} finally {
+			client.getConnectionManager().shutdown();
+		}
+	}
 }
