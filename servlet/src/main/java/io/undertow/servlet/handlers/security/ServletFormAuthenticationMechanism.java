@@ -156,6 +156,18 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     @Override
     protected void storeInitialLocation(final HttpServerExchange exchange) {
+        storeInitialLocation(exchange, null, 0);
+    }
+
+    /**
+     * This method doesn't save content of request but instead uses data from parameter.
+     * This should be used in case that data from request was already read and therefore it is not possible to save them.
+     *
+     * @param exchange
+     * @param bytes
+     * @param contentLength
+     */
+    protected void storeInitialLocation(final HttpServerExchange exchange, byte[] bytes, int contentLength) {
         if(!saveOriginalRequest) {
             return;
         }
@@ -172,7 +184,11 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
             manager.registerSessionListener(LISTENER);
         }
         session.setAttribute(SESSION_KEY, RedirectBuilder.redirect(exchange, exchange.getRelativePath()));
-        SavedRequest.trySaveRequest(exchange);
+        if(bytes == null) {
+            SavedRequest.trySaveRequest(exchange);
+        } else {
+            SavedRequest.trySaveRequest(exchange, bytes, contentLength);
+        }
     }
 
     @Override
