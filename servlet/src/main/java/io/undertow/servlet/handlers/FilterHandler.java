@@ -106,8 +106,8 @@ public class FilterHandler implements HttpHandler {
 
 
             final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-            final ServletRequest oldReq = servletRequestContext.getServletRequest();
-            final ServletResponse oldResp = servletRequestContext.getServletResponse();
+            final ServletRequest oldReq = servletRequestContext.getOriginalRequest();
+            final ServletResponse oldResp = servletRequestContext.getOriginalResponse();
             try {
 
                 if(!allowNonStandardWrappers) {
@@ -140,8 +140,10 @@ public class FilterHandler implements HttpHandler {
                 throw new RuntimeException(e);
             } finally {
                 location--;
-                servletRequestContext.setServletRequest(oldReq);
-                servletRequestContext.setServletResponse(oldResp);
+                if(!request.isAsyncStarted()) {
+                    servletRequestContext.setServletRequest(oldReq);
+                    servletRequestContext.setServletResponse(oldResp);
+                }
             }
         }
     }
