@@ -254,7 +254,7 @@ public class NodeConfig {
             this.cacheConnections = modCluster.getCacheConnections();
             this.requestQueueSize = modCluster.getRequestQueueSize();
             this.queueNewRequests = modCluster.isQueueNewRequests();
-            this.ttl = modCluster.getTtl();
+            if (modCluster.getTtl() > 0) { this.ttl = modCluster.getTtl(); }
         }
 
         public NodeBuilder setHostname(String hostname) {
