@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The mod cluster manager web frontend.
@@ -217,7 +218,7 @@ class MCMPWebManager extends MCMPHandler {
                     if (nodeConfig.isFlushPackets()) {
                         flushpackets = "Auto";
                     }
-                    buf.append(",Flushpackets: " + flushpackets + ",Flushwait: " + nodeConfig.getFlushwait() + ",Ping: " + nodeConfig.getPing() + " ,Smax: " + nodeConfig.getPing() + ",Ttl: " + nodeConfig.getTtl());
+                    buf.append(",Flushpackets: " + flushpackets + ",Flushwait: " + nodeConfig.getFlushwait() + ",Ping: " + nodeConfig.getPing() + " ,Smax: " + nodeConfig.getPing() + ",Ttl: " + TimeUnit.MILLISECONDS.toSeconds(nodeConfig.getTtl()));
                     printProxyStat(buf, node, reduceDisplay);
                 } else {
                     buf.append("<br/>\n");

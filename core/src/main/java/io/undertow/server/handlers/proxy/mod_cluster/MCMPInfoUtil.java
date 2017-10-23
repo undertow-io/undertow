@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author Emanuel Muckenhuber
  */
@@ -93,7 +95,7 @@ class MCMPInfoUtil {
                 .append(",Flushwait: ").append(node.getNodeConfig().getFlushwait())
                 .append(",Ping: ").append(node.getNodeConfig().getPing())
                 .append(",Smax: ").append(node.getNodeConfig().getSmax())
-                .append(",Ttl: ").append(node.getNodeConfig().getTtl())
+                .append(",Ttl: ").append(TimeUnit.MILLISECONDS.toSeconds(node.getNodeConfig().getTtl()))
                 .append(",Elected: ").append(node.getElected())
                 .append(",Read: ").append(node.getConnectionPool().getClientStatistics().getRead())
                 .append(",Transfered: ").append(node.getConnectionPool().getClientStatistics().getWritten())
@@ -116,7 +118,7 @@ class MCMPInfoUtil {
                 .append(",flushwait: ").append(node.getNodeConfig().getFlushwait())
                 .append(",ping: ").append(node.getNodeConfig().getPing())
                 .append(",smax: ").append(node.getNodeConfig().getSmax())
-                .append(",ttl: ").append(node.getNodeConfig().getTtl())
+                .append(",ttl: ").append(TimeUnit.MILLISECONDS.toSeconds(node.getNodeConfig().getTtl()))
                 .append(",timeout: ").append(node.getNodeConfig().getTimeout())
                 .append(NEWLINE);
     }
