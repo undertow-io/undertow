@@ -201,7 +201,7 @@ public class ModCluster {
 
         // Fairly restrictive connection pool defaults
         private int maxConnections = 16;
-        private int cacheConnections = 8;
+        private int cacheConnections = 1;
         private int requestQueueSize = 0;
         private boolean queueNewRequests = false;
 
