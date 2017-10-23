@@ -51,6 +51,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.ALIAS;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.BALANCER;
@@ -277,7 +278,7 @@ class MCMPHandler implements HttpHandler {
             } else if (SMAX.equals(name)) {
                 node.setSmax(Integer.parseInt(value));
             } else if (TTL.equals(name)) {
-                node.setTtl(Integer.parseInt(value));
+                node.setTtl(TimeUnit.SECONDS.toMillis(Long.parseLong(value)));
             } else if (TIMEOUT.equals(name)) {
                 node.setTimeout(Integer.parseInt(value));
             } else if (CONTEXT.equals(name)) {
