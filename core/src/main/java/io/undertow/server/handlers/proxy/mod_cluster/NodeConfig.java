@@ -243,9 +243,9 @@ public class NodeConfig {
         private int maxConnections;
         private int cacheConnections;
         private int requestQueueSize;
-        private boolean queueNewRequests = false;
+        private boolean queueNewRequests;
 
-        private long ttl = 60000;
+        private long ttl;
         private int timeout = 0;
         private int waitWorker = -1;
 

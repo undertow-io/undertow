@@ -206,7 +206,7 @@ public class ModCluster {
         private boolean queueNewRequests = false;
 
         private int maxRequestTime = -1;
-        private long ttl;
+        private long ttl = TimeUnit.SECONDS.toMillis(60);
         private boolean useAlias = false;
 
         private NodeHealthChecker healthChecker = NodeHealthChecker.NO_CHECK;
