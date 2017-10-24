@@ -126,6 +126,7 @@ public class DeploymentInfo implements Cloneable {
     private final Map<String, AuthenticationMechanismFactory> authenticationMechanisms = new HashMap<>();
     private final List<LifecycleInterceptor> lifecycleInterceptors = new ArrayList<>();
     private final List<SessionListener> sessionListeners = new ArrayList<>();
+    private final boolean defaultWebSocketEnabled = false;
 
     /**
      * additional servlet extensions
@@ -1327,6 +1328,14 @@ public class DeploymentInfo implements Cloneable {
     public Map<String, String> getPreCompressedResources() {
         return Collections.unmodifiableMap(preCompressedResources);
     }
+    
+    public DeploymentInfo enableDefaultWebsocket(boolean defaultWebSocketEnabled) {
+        WebSocketDeploymentInfo webSocketDeploymentInfo = new WebSocketDeploymentInfo();
+        addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME, webSocketDeploymentInfo);
+        this.defaultWebSocketEnabled = defaultWebSocketEnabled;
+        return this;
+        
+    }
 
     @Override
     public DeploymentInfo clone() {
@@ -1418,6 +1427,7 @@ public class DeploymentInfo implements Cloneable {
         info.defaultRequestEncoding = defaultRequestEncoding;
         info.defaultResponseEncoding = defaultResponseEncoding;
         info.preCompressedResources.putAll(preCompressedResources);
+        info.enableDefaultWebsocket(defaultWebSocketEnabled);
         return info;
     }
 
