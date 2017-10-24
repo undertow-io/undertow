@@ -430,7 +430,7 @@ public final class Undertow {
                 //use 16k buffers for best performance
                 //as 16k is generally the max amount of data that can be sent in a single write() call
                 directBuffers = true;
-                bufferSize = 1024 * 16;
+                bufferSize = 1024 * 16 - 20; //the 20 is to allow some space for protocol headers, see UNDERTOW-1209
             }
 
         }
