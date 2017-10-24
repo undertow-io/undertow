@@ -113,7 +113,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final int PROXY_OFFSET = 1111;
     public static final int APACHE_PORT = 9080;
     public static final int APACHE_SSL_PORT = 9443;
-    public static final int BUFFER_SIZE = Integer.getInteger("test.bufferSize", 8192 * 3);
+    public static final int BUFFER_SIZE = Integer.getInteger("test.bufferSize", 1024 * 16 - 20);
     public static final DebuggingSlicePool SSL_BUFFER_POOL = new DebuggingSlicePool(new DefaultByteBufferPool(true, 17 * 1024));
 
     private static boolean first = true;
