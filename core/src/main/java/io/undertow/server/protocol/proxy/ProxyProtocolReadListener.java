@@ -7,6 +7,7 @@ import io.undertow.connector.PooledByteBuffer;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.OpenListener;
+import io.undertow.util.NetworkUtils;
 import io.undertow.util.PooledAdaptor;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -233,64 +234,11 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     }
 
     static InetAddress parseAddress(String addressString, String protocol) throws IOException {
-        InetAddress address;
         if (protocol.equals(TCP)) {
-            String[] parts = addressString.split("\\.");
-            if (parts.length != 4) {
-                throw UndertowMessages.MESSAGES.invalidProxyHeader();
-            }
-            byte[] data = new byte[4];
-            for (int i = 0; i < 4; ++i) {
-                String part = parts[i];
-                if (part.length() == 0 || (part.charAt(0) == '0' && part.length() > 1)) {
-                    //leading zeros are not allowed
-                    throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                }
-                data[i] = (byte) Integer.parseInt(part);
-            }
-            address = InetAddress.getByAddress(data);
+            return NetworkUtils.parseIpv4Address(addressString);
         } else {
-            boolean startsWithColon = addressString.startsWith(":");
-            if (startsWithColon && !addressString.startsWith("::")) {
-                throw UndertowMessages.MESSAGES.invalidProxyHeader();
-            }
-            String[] parts = (startsWithColon ? addressString.substring(1) : addressString).split(":"); //because of the way split works we want to change a leading double colon to a single one. We have already verified that the address does not actually start with a single colon
-            byte[] data = new byte[16];
-            int partOffset = 0;
-            boolean seenEmpty = false;
-            if (parts.length > 8) {
-                throw UndertowMessages.MESSAGES.invalidProxyHeader();
-            }
-            for (int i = 0; i < parts.length; ++i) {
-                String part = parts[i];
-                if (part.length() > 4) {
-                    throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                } else if (part.isEmpty()) {
-                    if (seenEmpty) {
-                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                    }
-                    seenEmpty = true;
-                    int off = 8 - parts.length;//this works because of the empty part that represents the double colon, so the parts list is one larger than the number of digits
-                    if (off < 0) {
-                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                    }
-                    partOffset = off * 2;
-                } else if (part.length() > 1 && part.charAt(0) == '0') {
-                    //leading zeros are not allowed
-                    throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                } else {
-                    int num = Integer.parseInt(part, 16);
-                    data[i * 2 + partOffset] = (byte) (num >> 8);
-                    data[i * 2 + partOffset + 1] = (byte) (num);
-                }
-            }
-            if (parts.length < 8 && !seenEmpty) {
-                //address was too small
-                throw UndertowMessages.MESSAGES.invalidProxyHeader();
-            }
-            address = InetAddress.getByAddress(data);
+            return NetworkUtils.parseIpv6Address(addressString);
         }
-        return address;
     }
 
     private static final class AddressWrappedConnection extends StreamConnection {
