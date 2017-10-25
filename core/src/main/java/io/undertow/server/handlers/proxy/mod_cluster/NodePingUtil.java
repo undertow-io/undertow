@@ -72,16 +72,6 @@ class NodePingUtil {
 
     }
 
-    private static final ClientRequest PING_REQUEST;
-
-    static {
-        final ClientRequest request = new ClientRequest();
-        request.setMethod(Methods.OPTIONS);
-        request.setPath("*");
-        request.getRequestHeaders().add(Headers.USER_AGENT, "mod_cluster ping");
-        PING_REQUEST = request;
-    }
-
     /**
      * Try to open a socket connection to given address.
      *
@@ -141,7 +131,7 @@ class NodePingUtil {
                     @Override
                     public void completed(final HttpServerExchange exchange, ProxyConnection result) {
                         final RequestExchangeListener exchangeListener = new RequestExchangeListener(callback, NodeHealthChecker.NO_CHECK, false);
-                        exchange.dispatch(SameThreadExecutor.INSTANCE, new ConnectionPoolPingTask(result, exchangeListener));
+                        exchange.dispatch(SameThreadExecutor.INSTANCE, new ConnectionPoolPingTask(result, exchangeListener, node.getNodeConfig().getConnectionURI()));
                         // Schedule timeout task
                         scheduleCancelTask(exchange.getIoThread(), exchangeListener, timeout, TimeUnit.SECONDS);
                     }
@@ -192,17 +182,26 @@ class NodePingUtil {
 
         private final RequestExchangeListener exchangeListener;
         private final ProxyConnection proxyConnection;
+        private final URI uri;
 
-        ConnectionPoolPingTask(ProxyConnection proxyConnection, RequestExchangeListener exchangeListener) {
+        ConnectionPoolPingTask(ProxyConnection proxyConnection, RequestExchangeListener exchangeListener, URI uri) {
             this.proxyConnection = proxyConnection;
             this.exchangeListener = exchangeListener;
+            this.uri = uri;
         }
 
         @Override
         public void run() {
 
             // TODO AJP has a special ping thing
-            proxyConnection.getConnection().sendRequest(PING_REQUEST, new ClientCallback<ClientExchange>() {
+
+            final ClientRequest request = new ClientRequest();
+            request.setMethod(Methods.OPTIONS);
+            request.setPath("*");
+            request.getRequestHeaders()
+                    .add(Headers.USER_AGENT, "mod_cluster ping")
+                    .add(Headers.HOST, uri.getHost());
+            proxyConnection.getConnection().sendRequest(request, new ClientCallback<ClientExchange>() {
                 @Override
                 public void completed(final ClientExchange result) {
                     if (exchangeListener.isDone()) {
@@ -318,7 +317,14 @@ class NodePingUtil {
                         IoUtils.safeClose(clientConnection);
                         return;
                     }
-                    clientConnection.sendRequest(PING_REQUEST, new ClientCallback<ClientExchange>() {
+
+                    final ClientRequest request = new ClientRequest();
+                    request.setMethod(Methods.OPTIONS);
+                    request.setPath("*");
+                    request.getRequestHeaders()
+                            .add(Headers.USER_AGENT, "mod_cluster ping")
+                            .add(Headers.HOST, connection.getHost());
+                    clientConnection.sendRequest(request, new ClientCallback<ClientExchange>() {
 
                         @Override
                         public void completed(ClientExchange result) {
