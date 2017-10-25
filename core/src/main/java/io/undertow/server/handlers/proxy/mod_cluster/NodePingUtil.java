@@ -34,6 +34,7 @@ import io.undertow.server.handlers.proxy.ProxyCallback;
 import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -78,7 +79,12 @@ class NodePingUtil {
         final ClientRequest request = new ClientRequest();
         request.setMethod(Methods.OPTIONS);
         request.setPath("*");
-        request.getRequestHeaders().add(Headers.USER_AGENT, "mod_cluster ping");
+        request.setProtocol(Protocols.HTTP_1_1);
+        request.getRequestHeaders()
+                .add(Headers.USER_AGENT, "mod_cluster ping")
+                // RFC 2616 (Hypertext Transfer Protocol – HTTP/1.1) dictates that
+                // a client that sends an HTTP/1.1 request MUST send a Host header.
+                .add(Headers.HOST, "localhost");
         PING_REQUEST = request;
     }
 
