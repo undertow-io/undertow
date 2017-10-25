@@ -4,6 +4,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
@@ -28,6 +29,7 @@ import static io.undertow.server.handlers.ForwardedHandler.parseHeader;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@ProxyIgnore
 public class ForwardedHandlerTestCase {
 
     @BeforeClass
