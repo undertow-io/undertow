@@ -570,4 +570,6 @@ public interface UndertowMessages {
     @Message(id = 184, value = "Stream limit exceeded")
     IOException streamLimitExceeded();
 
+    @Message(id = 185, value = "Invalid IP address %s")
+    IOException invalidIpAddress(String addressString);
 }
