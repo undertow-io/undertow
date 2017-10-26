@@ -2,7 +2,6 @@ package io.undertow.server.handlers.proxy;
 
 import io.undertow.Undertow;
 import io.undertow.client.UndertowClient;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
@@ -60,11 +59,12 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
             }
         };
 
-        DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient(UndertowClient.getInstance(), null, hostSelector)
+        DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient(UndertowClient.getInstance(), null, hostSelector)
                 .setConnectionsPerThread(4)
                 .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
-                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
-                , 10000, ResponseCodeHandler.HANDLE_404));
+                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2"))
+                .setMaxRequestTime(10000)
+                .setMaxConnectionRetries(2).build());
     }
 
     @AfterClass

@@ -22,7 +22,6 @@ import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.protocol.http2.Http2ServerConnection;
 import io.undertow.server.protocol.http2.Http2UpgradeHandler;
 import io.undertow.testutils.DefaultServer;
@@ -94,11 +93,12 @@ public class LoadBalancingProxyHTTP2ViaUpgradeTestCase extends AbstractLoadBalan
         server1.start();
         server2.start();
 
-        DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
+        DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(4)
                 .addHost(new URI("h2c", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
-                .addHost(new URI("h2c", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2")
-                , 10000, ResponseCodeHandler.HANDLE_404, false, false , 2));
+                .addHost(new URI("h2c", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2"))
+                .setMaxRequestTime(10000)
+                .setMaxConnectionRetries(2).build());
     }
 
     @Test

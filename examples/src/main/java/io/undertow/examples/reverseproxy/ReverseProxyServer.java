@@ -22,7 +22,6 @@ import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.util.Headers;
@@ -85,7 +84,7 @@ public class ReverseProxyServer {
             Undertow reverseProxy = Undertow.builder()
                     .addHttpListener(8080, "localhost")
                     .setIoThreads(4)
-                    .setHandler(new ProxyHandler(loadBalancer, 30000, ResponseCodeHandler.HANDLE_404))
+                    .setHandler(ProxyHandler.builder().setProxyClient(loadBalancer).setMaxRequestTime( 30000).build())
                     .build();
             reverseProxy.start();
 
