@@ -4,7 +4,6 @@ import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
@@ -44,13 +43,13 @@ public class LoadBalancerConnectionPoolingTestCase {
     @BeforeClass
     public static void before() throws Exception {
 
-        ProxyHandler proxyHandler = new ProxyHandler(new LoadBalancingProxyClient()
+        ProxyHandler proxyHandler = ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(1)
                 .setSoftMaxConnectionsPerThread(0)
                 .setTtl(TTL)
                 .setMaxQueueSize(1000)
-                .addHost(new URI("http", null, host, port, null, null, null), "s1")
-                , 10000, ResponseCodeHandler.HANDLE_404);
+                .addHost(new URI("http", null, host, port, null, null, null), "s1"))
+                .setMaxRequestTime(10000).build();
 
         // Default server uses 8 io threads which is hard to test against
         undertow = Undertow.builder()

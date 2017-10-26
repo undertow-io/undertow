@@ -142,7 +142,7 @@ public class ModCluster {
      * @return the proxy handler
      */
     public HttpHandler createProxyHandler() {
-        return new ProxyHandler(container.getProxyClient(), maxRequestTime, NEXT_HANDLER, false, false, maxRetries);
+        return ProxyHandler.builder().setProxyClient(container.getProxyClient()).setMaxRequestTime(maxRequestTime).setMaxConnectionRetries(maxRetries).build();
     }
 
     /**
@@ -151,7 +151,7 @@ public class ModCluster {
      * @return the proxy handler
      */
     public HttpHandler createProxyHandler(HttpHandler next) {
-        return new ProxyHandler(container.getProxyClient(), maxRequestTime, next, false, false, maxRetries);
+        return ProxyHandler.builder().setProxyClient(container.getProxyClient()).setNext(next).setMaxRequestTime(maxRequestTime).setMaxConnectionRetries(maxRetries).build();
     }
     /**
      * Start

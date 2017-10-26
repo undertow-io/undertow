@@ -45,7 +45,6 @@ import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.RequestDumpingHandler;
 import io.undertow.server.handlers.RequestLimit;
 import io.undertow.server.handlers.RequestLimitingHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.ResponseRateLimitingHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
@@ -487,7 +486,7 @@ public class Handlers {
      * @return The proxy handler
      */
     public static ProxyHandler proxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next) {
-        return new ProxyHandler(proxyClient, maxRequestTime, next);
+        return ProxyHandler.builder().setProxyClient(proxyClient).setNext(next).setMaxRequestTime(maxRequestTime).build();
     }
     /**
      * Returns a handler that can act as a load balancing reverse proxy.
@@ -497,7 +496,7 @@ public class Handlers {
      * @return The proxy handler
      */
     public static ProxyHandler proxyHandler(ProxyClient proxyClient, HttpHandler next) {
-        return new ProxyHandler(proxyClient, next);
+        return ProxyHandler.builder().setProxyClient(proxyClient).setNext(next).build();
     }
 
     /**
@@ -507,7 +506,7 @@ public class Handlers {
      * @return The proxy handler
      */
     public static ProxyHandler proxyHandler(ProxyClient proxyClient) {
-        return new ProxyHandler(proxyClient, ResponseCodeHandler.HANDLE_404);
+        return ProxyHandler.builder().setProxyClient(proxyClient).build();
     }
 
     /**

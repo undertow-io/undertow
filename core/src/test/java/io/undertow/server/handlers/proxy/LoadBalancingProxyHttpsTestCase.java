@@ -21,7 +21,6 @@ package io.undertow.server.handlers.proxy;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
@@ -64,11 +63,12 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
         server2.start();
 
         UndertowXnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, DefaultServer.createClientSslContext());
-        DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
+        DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(4)
                 .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl)
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl)
-                , 10000, ResponseCodeHandler.HANDLE_404, false, false , 2));
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl))
+                .setMaxRequestTime(10000)
+                .setMaxConnectionRetries(2).build());
     }
 
 }

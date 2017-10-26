@@ -4,7 +4,7 @@ io.undertow.server.handlers.SetAttributeHandler$ClearBuilder
 io.undertow.server.handlers.builder.ResponseCodeHandlerBuilder
 io.undertow.server.handlers.DisableCacheHandler$Builder
 io.undertow.server.handlers.ProxyPeerAddressHandler$Builder
-io.undertow.server.handlers.proxy.ProxyHandler$Builder
+io.undertow.server.handlers.proxy.ProxyHandlerBuilder
 io.undertow.server.handlers.RedirectHandler$Builder
 io.undertow.server.handlers.accesslog.AccessLogHandler$Builder
 io.undertow.server.handlers.AllowedMethodsHandler$Builder

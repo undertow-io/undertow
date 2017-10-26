@@ -5,7 +5,6 @@ import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -192,9 +191,8 @@ public class ProxyPathHandlingTest {
         }
 
         private HttpHandler proxyHandler(String targetPath) {
-            return new ProxyHandler(
-                    new SimpleProxyClientProvider(URI.create(targetUri + targetPath)),
-                    ResponseCodeHandler.HANDLE_404);
+            return ProxyHandler.builder().setProxyClient((
+                    new SimpleProxyClientProvider(URI.create(targetUri + targetPath)))).build();
         }
     }
 

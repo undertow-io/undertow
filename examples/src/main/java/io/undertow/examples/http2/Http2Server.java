@@ -43,7 +43,6 @@ import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.LearningPushHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.resource.PathResourceManager;
@@ -98,7 +97,7 @@ public class Http2Server {
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .addHttpListener(8081, bindAddress)
                 .addHttpsListener(8444, bindAddress, sslContext)
-                .setHandler(new ProxyHandler(proxy, 30000, ResponseCodeHandler.HANDLE_404))
+                .setHandler(ProxyHandler.builder().setProxyClient(proxy).setMaxRequestTime( 30000).build())
                 .build();
         reverseProxy.start();
 

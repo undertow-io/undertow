@@ -18,7 +18,6 @@ import io.undertow.Undertow;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
@@ -68,10 +67,12 @@ public class ProxyHandlerXForwardedForTestCase {
 
     private static void setProxyHandler(boolean rewriteHostHeader, boolean reuseXForwarded) throws Exception {
 
-        DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient()
+        DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient((new LoadBalancingProxyClient()
                 .setConnectionsPerThread(4)
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), handlerPort, null, null, null), "s1", ssl)
-                , 10000, ResponseCodeHandler.HANDLE_404, rewriteHostHeader, reuseXForwarded));
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), handlerPort, null, null, null), "s1", ssl)))
+                .setMaxRequestTime(10000)
+                .setRewriteHostHeader(rewriteHostHeader)
+                .setReuseXForwarded(reuseXForwarded).build());
 
     }
 
