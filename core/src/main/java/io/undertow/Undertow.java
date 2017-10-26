@@ -242,7 +242,7 @@ public final class Undertow {
             }
 
         } catch (Exception e) {
-            if(internalWorker) {
+            if(internalWorker && worker != null) {
                 worker.shutdownNow();
             }
             throw new RuntimeException(e);
