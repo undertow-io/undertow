@@ -1550,7 +1550,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             // idempotent
             return this;
         }
-        responseChannel.responseDone();
+        if(responseChannel != null) {
+            responseChannel.responseDone();
+        }
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
         if (anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
             invokeExchangeCompleteListeners();

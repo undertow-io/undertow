@@ -294,6 +294,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                         if (firstFail) {
                             firstFail = false;
                             IoUtils.safeClose(exchange.getConnection());
+                            return;
                         }
                         exchange.getResponseSender().send(exchange.getRequestURI() + ":" + firstFail);
                     }

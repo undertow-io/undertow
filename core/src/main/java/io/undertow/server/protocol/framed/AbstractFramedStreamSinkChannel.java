@@ -532,9 +532,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 header.getByteBuffer().close();
                 header = null;
             }
-            if (anyAreSet(state, STATE_FIRST_DATA_WRITTEN)) {
-                channelForciblyClosed();
-            }
+            channelForciblyClosed();
             //we need to wake up/invoke the write listener
             if (isWriteResumed()) {
                 ChannelListeners.invokeChannelListener(getIoThread(), this, (ChannelListener) getWriteListener());
