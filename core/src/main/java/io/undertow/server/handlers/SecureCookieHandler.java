@@ -28,6 +28,9 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ResponseCommitListener;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 
+/**
+ * Handler that will set the secure flag on all cookies that are received over a secure connection
+ */
 public class SecureCookieHandler implements HttpHandler {
 
     public static final HandlerWrapper WRAPPER = new HandlerWrapper() {
