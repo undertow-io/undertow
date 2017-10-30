@@ -886,6 +886,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void setAttribute(final String name, final Object object) {
+        if(object == null) {
+            removeAttribute(name);
+            return;
+        }
         if (attributes == null) {
             attributes = new HashMap<>();
         }
