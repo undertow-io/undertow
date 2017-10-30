@@ -419,7 +419,7 @@ public class ProxyConnectionPool implements Closeable {
         int idleConnections = data.availableConnections.size();
         for (;;) {
             ConnectionHolder holder;
-            if (idleConnections > 0 && idleConnections >= coreCachedConnections && (holder = data.availableConnections.peek()) != null) {
+            if (idleConnections > 0 && idleConnections > coreCachedConnections && (holder = data.availableConnections.peek()) != null) {
                 if (!holder.clientConnection.isOpen()) {
                     // Already closed connections decrease the available connections
                     idleConnections--;
