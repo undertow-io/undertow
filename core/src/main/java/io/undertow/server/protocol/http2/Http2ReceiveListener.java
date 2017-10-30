@@ -292,7 +292,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         // if CONNECT type is used, then we expect :method and :authority to be present only;
         // :scheme and :path must not be present
-        if (headers.get(METHOD).contains(Methods.CONNECT_STRING)) {
+        if (headers.get(METHOD).contains(Methods.CONNECT)) {
             if (headers.contains(SCHEME) || headers.contains(PATH) || headers.count(AUTHORITY) != 1) {
                 return false;
             }
