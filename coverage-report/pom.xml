@@ -3,7 +3,7 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>1.4.21.Final</version>
+        <version>1.4.22.Final-SNAPSHOT</version>
     </parent>
     <artifactId>undertow-coverage-report</artifactId>
     <name>Undertow Test Coverage Report</name>
