@@ -25,7 +25,6 @@ import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.util.Attachable;
@@ -49,7 +48,6 @@ import java.nio.channels.Channel;
 import java.nio.channels.ClosedChannelException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -646,17 +644,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             }
 
         }
-    }
-
-    @Override
-    protected Collection<AbstractFramedStreamSourceChannel<Http2Channel, AbstractHttp2StreamSourceChannel, AbstractHttp2StreamSinkChannel>> getReceivers() {
-        List<AbstractFramedStreamSourceChannel<Http2Channel, AbstractHttp2StreamSourceChannel, AbstractHttp2StreamSinkChannel>> channels = new ArrayList<>(currentStreams.size());
-        for(Map.Entry<Integer, StreamHolder> entry : currentStreams.entrySet()) {
-            if(!entry.getValue().sourceClosed) {
-                channels.add(entry.getValue().sourceChannel);
-            }
-        }
-        return channels;
     }
 
     /**

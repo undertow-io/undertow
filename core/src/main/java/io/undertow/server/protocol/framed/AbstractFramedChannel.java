@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -124,6 +123,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private volatile ReferenceCountedPooled readData = null;
     private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<>();
     private volatile boolean flushingSenders = false;
+
+    private final Set<AbstractFramedStreamSourceChannel<C, R, S>> receivers = new HashSet<>();
 
     @SuppressWarnings("unused")
     private volatile int outstandingBuffers;
@@ -450,6 +451,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     boolean moreData = data.getFrameLength() > frameData.getBuffer().remaining();
                     R newChannel = createChannel(data, frameData);
                     if (newChannel != null) {
+                        if(!newChannel.isComplete()) {
+                            receivers.add(newChannel);
+                        }
                         if (moreData) {
                             receiver = newChannel;
                         }
@@ -494,7 +498,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     private void handleLastFrame(AbstractFramedStreamSourceChannel newChannel) {
         //make a defensive copy
-        Set<AbstractFramedStreamSourceChannel<C, R, S>> receivers = new HashSet<>(getReceivers());
+        Set<AbstractFramedStreamSourceChannel<C, R, S>> receivers = new HashSet<>(this.receivers);
         for(AbstractFramedStreamSourceChannel<C, R, S> r : receivers) {
             if(r != newChannel) {
                 r.markStreamBroken();
@@ -815,7 +819,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if(receiver != null) {
                 receiver.markStreamBroken();
             }
-            for(AbstractFramedStreamSourceChannel<C, R, S> r : new ArrayList<>(getReceivers())) {
+            for(AbstractFramedStreamSourceChannel<C, R, S> r : new ArrayList<>(receivers)) {
                 r.markStreamBroken();
             }
 
@@ -895,6 +899,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     void notifyFrameReadComplete(AbstractFramedStreamSourceChannel<C, R, S> channel) {
 
     }
+
+    void notifyClosed(AbstractFramedStreamSourceChannel<C, R, S> channel) {
+        synchronized (AbstractFramedChannel.this) {
+            receivers.remove(channel);
+        }
+    }
+
 
     /**
      * {@link org.xnio.ChannelListener} which delegates the read notification to the appropriate listener
@@ -1009,7 +1020,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     pendingFrames = new ArrayList<>(AbstractFramedChannel.this.pendingFrames);
                     newFrames = new ArrayList<>(AbstractFramedChannel.this.newFrames);
                     heldFrames = new ArrayList<>(AbstractFramedChannel.this.heldFrames);
-                    receivers = new ArrayList<>(getReceivers());
+                    receivers = new ArrayList<>(AbstractFramedChannel.this.receivers);
                 }
                 for (final S channel : pendingFrames) {
                     //if this was a clean shutdown there should not be any senders
@@ -1047,8 +1058,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         }
     }
 
-    protected abstract Collection<AbstractFramedStreamSourceChannel<C, R, S>> getReceivers();
-
     public void setIdleTimeout(long timeout) {
         idleTimeoutConduit.setIdleTimeout(timeout);
     }
@@ -1073,8 +1082,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     protected StreamConnection getUnderlyingConnection() {
         return channel;
     }
-
-
 
 
 
