@@ -24,6 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
+import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
@@ -167,7 +168,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
 
             assert buffer.remaining() >= 50;
-            exchange.getProtocol().appendTo(buffer);
+            Protocols.HTTP_1_1.appendTo(buffer);
             buffer.put((byte) ' ');
             int code = exchange.getStatusCode();
             assert 999 >= code && code >= 100;
