@@ -39,7 +39,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
-import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
 
@@ -140,7 +139,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 5020, value = "Error writing JDBC log")
-    void errorWritingJDBCLog(@Cause SQLException e);
+    void errorWritingJDBCLog(@Cause Exception e);
 
 //    @LogMessage(level = Logger.Level.ERROR)
 //    @Message(id = 5021, value = "Proxy request to %s timed out")
@@ -335,7 +334,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 5069, value = "Failed to write JDBC access log")
-    void failedToWriteJdbcAccessLog(@Cause SQLException e);
+    void failedToWriteJdbcAccessLog(@Cause Exception e);
 
     @LogMessage(level = ERROR)
     @Message(id = 5070, value = "Failed to write pre-cached file")
