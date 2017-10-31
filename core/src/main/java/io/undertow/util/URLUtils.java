@@ -72,6 +72,19 @@ public class URLUtils {
      * @return The decoded URL
      */
     public static String decode(String s, String enc, boolean decodeSlash, StringBuilder buffer) {
+        return decode(s, enc, decodeSlash, true, buffer);
+    }
+
+    /**
+     * Decodes a URL. If the decoding fails for any reason then an IllegalArgumentException will be thrown.
+     *
+     * @param s           The string to decode
+     * @param enc         The encoding
+     * @param decodeSlash If slash characters should be decoded
+     * @param buffer      The string builder to use as a buffer.
+     * @return The decoded URL
+     */
+    public static String decode(String s, String enc, boolean decodeSlash, boolean formEncoding, StringBuilder buffer) {
         buffer.setLength(0);
         boolean needToChange = false;
         int numChars = s.length();
@@ -83,9 +96,14 @@ public class URLUtils {
             c = s.charAt(i);
             switch (c) {
                 case '+':
-                    buffer.append(' ');
-                    i++;
-                    needToChange = true;
+                    if(formEncoding) {
+                        buffer.append(' ');
+                        i++;
+                        needToChange = true;
+                    } else {
+                        i++;
+                        buffer.append(c);
+                    }
                     break;
                 case '%':
                 /*
@@ -243,7 +261,7 @@ public class URLUtils {
 
         private String decode(String charset, String attrName, final boolean doDecode) throws UnsupportedEncodingException {
             if (doDecode) {
-                return URLUtils.decode(attrName, charset, true, new StringBuilder());
+                return URLUtils.decode(attrName, charset, true, true, new StringBuilder());
             }
             return attrName;
         }
