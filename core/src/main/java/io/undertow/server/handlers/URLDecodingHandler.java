@@ -58,17 +58,17 @@ public class URLDecodingHandler implements HttpHandler {
         if (!decodeDone) {
             final StringBuilder sb = new StringBuilder();
             final boolean decodeSlash = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
-            exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, decodeSlash, sb));
-            exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, decodeSlash, sb));
-            exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, decodeSlash, sb));
+            exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, decodeSlash, false, sb));
+            exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, decodeSlash, false, sb));
+            exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, decodeSlash, false, sb));
             if (!exchange.getQueryString().isEmpty()) {
                 final TreeMap<String, Deque<String>> newParams = new TreeMap<>();
                 for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
                     final Deque<String> newVales = new ArrayDeque<>(param.getValue().size());
                     for (String val : param.getValue()) {
-                        newVales.add(URLUtils.decode(val, charset, true, sb));
+                        newVales.add(URLUtils.decode(val, charset, true, true, sb));
                     }
-                    newParams.put(URLUtils.decode(param.getKey(), charset, true, sb), newVales);
+                    newParams.put(URLUtils.decode(param.getKey(), charset, true, true, sb), newVales);
                 }
                 exchange.getQueryParameters().clear();
                 exchange.getQueryParameters().putAll(newParams);
