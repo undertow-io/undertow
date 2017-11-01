@@ -42,7 +42,7 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
     private final long requestIdleTimeout;
     private volatile XnioExecutor.Key handle;
     private volatile long expireTime = -1;
-    private boolean parsing = false;
+    private volatile boolean parsing = false;
 
     //we add 50ms to the timeout to make sure the underlying channel has actually timed out
     private static final int FUZZ_FACTOR = 50;
