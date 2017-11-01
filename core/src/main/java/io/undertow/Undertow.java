@@ -45,6 +45,7 @@ import org.xnio.ssl.JsseSslUtils;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -168,7 +169,7 @@ public final class Undertow {
                     AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptionsWithOverrides);
                     server.resumeAccepts();
                     channels.add(server);
-                    listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), openListener, null));
+                    listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), openListener, null, channel));
                 } else {
                     OptionMap undertowOptions = OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap();
                     boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, false);
@@ -191,7 +192,7 @@ public final class Undertow {
                         AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptionsWithOverrides);
                         server.resumeAccepts();
                         channels.add(server);
-                        listenerInfo.add(new ListenerInfo("http", server.getLocalAddress(), openListener, null));
+                        listenerInfo.add(new ListenerInfo("http", server.getLocalAddress(), openListener, null, channel));
                     } else if (listener.type == ListenerType.HTTPS) {
                         OpenListener openListener;
 
@@ -235,7 +236,7 @@ public final class Undertow {
 
                         sslServer.resumeAccepts();
                         channels.add(sslServer);
-                        listenerInfo.add(new ListenerInfo("https", sslServer.getLocalAddress(), openListener, xnioSsl));
+                        listenerInfo.add(new ListenerInfo("https", sslServer.getLocalAddress(), openListener, xnioSsl, channel));
                     }
                 }
 
@@ -570,12 +571,14 @@ public final class Undertow {
         private final SocketAddress address;
         private final OpenListener openListener;
         private final UndertowXnioSsl ssl;
+        private final AcceptingChannel<? extends StreamConnection> channel;
 
-        public ListenerInfo(String protcol, SocketAddress address, OpenListener openListener, UndertowXnioSsl ssl) {
+        public ListenerInfo(String protcol, SocketAddress address, OpenListener openListener, UndertowXnioSsl ssl, AcceptingChannel<? extends StreamConnection> channel) {
             this.protcol = protcol;
             this.address = address;
             this.openListener = openListener;
             this.ssl = ssl;
+            this.channel = channel;
         }
 
         public String getProtcol() {
@@ -596,6 +599,14 @@ public final class Undertow {
 
         public ConnectorStatistics getConnectorStatistics() {
             return openListener.getConnectorStatistics();
+        }
+
+        public <T> void setSocketOption(Option<T>option, T value) throws IOException {
+            channel.setOption(option, value);
+        }
+
+        public void setServerOptions(OptionMap options) {
+            openListener.setUndertowOptions(options);
         }
 
         @Override
