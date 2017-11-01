@@ -173,10 +173,22 @@ public class URLUtils {
                                     c = s.charAt(i);
                                 }
                             } else {
-                                bytes[pos++] = (byte) c;
-                                ++i;
-                                if (i < numChars) {
-                                    c = s.charAt(i);
+                                if(c > 127) {
+                                    //we assume this is data that is already encoded in the correct charset
+                                    byte[] data = String.valueOf(c).getBytes(enc);
+                                    for(int j = 0; j < data.length; ++j) {
+                                        bytes[pos++] = data[j];
+                                    }
+                                    ++i;
+                                    if (i < numChars) {
+                                        c = s.charAt(i);
+                                    }
+                                } else {
+                                    bytes[pos++] = (byte) c;
+                                    ++i;
+                                    if (i < numChars) {
+                                        c = s.charAt(i);
+                                    }
                                 }
                             }
                         }
@@ -194,19 +206,7 @@ public class URLUtils {
                     buffer.append(c);
                     i++;
                     if(c > 127 && !needToChange) {
-                        //we have non-ascii data in our URL, which sucks
-                        //its hard to know exactly what to do with this, but we assume that because this data
-                        //has not been properly encoded none of the other data is either
-                        try {
-                            char[] carray = s.toCharArray();
-                            byte[] buf = new byte[carray.length];
-                            for(int l = 0;l < buf.length; ++l) {
-                                buf[l] = (byte) carray[l];
-                            }
-                            return new String(buf, enc);
-                        } catch (UnsupportedEncodingException e) {
-                            throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, e);
-                        }
+                        needToChange = true;
                     }
                     break;
             }
