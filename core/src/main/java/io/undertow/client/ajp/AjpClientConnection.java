@@ -37,6 +37,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.client.ClientStatistics;
+import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -82,6 +83,8 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         }
     };
 
+    private static final Logger log = Logger.getLogger(AjpClientConnection.class);
+
     private final Deque<AjpClientExchange> pendingQueue = new ArrayDeque<>();
     private AjpClientExchange currentRequest;
 
@@ -110,6 +113,8 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         connection.addCloseTask(new ChannelListener<AjpClientChannel>() {
             @Override
             public void handleEvent(AjpClientChannel channel) {
+                log.debugf("connection to %s closed", getPeerAddress());
+                AjpClientConnection.this.state |= CLOSED;
                 ChannelListeners.invokeChannelListener(AjpClientConnection.this, closeSetter.get());
                 for(ChannelListener<ClientConnection> listener : closeListeners) {
                     listener.handleEvent(AjpClientConnection.this);
@@ -121,6 +126,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 }
                 if(currentRequest != null) {
                     currentRequest.setFailed(new ClosedChannelException());
+                    currentRequest = null;
                 }
             }
         });
@@ -309,6 +315,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     }
 
     public void close() throws IOException {
+        log.debugf("close called on connection to %s", getPeerAddress());
         if (anyAreSet(state, CLOSED)) {
             return;
         }

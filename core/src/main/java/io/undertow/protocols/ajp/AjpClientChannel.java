@@ -181,16 +181,10 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
 
     @Override
     protected void handleBrokenSourceChannel(Throwable e) {
-        IoUtils.safeClose(source, sink);
-        UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
-        IoUtils.safeClose(this);
     }
 
     @Override
     protected void handleBrokenSinkChannel(Throwable e) {
-        IoUtils.safeClose(source, sink);
-        UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
-        IoUtils.safeClose(this);
     }
 
     @Override
