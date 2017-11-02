@@ -34,6 +34,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.client.ClientStatistics;
 import org.xnio.ChannelExceptionHandler;
@@ -231,6 +232,17 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         } else {
             pendingQueue.add(AjpClientExchange);
         }
+    }
+
+    @Override
+    public boolean isPingSupported() {
+        return true;
+    }
+
+    @Override
+    public void sendPing(PingListener listener, long timeout, TimeUnit timeUnit) {
+        connection.sendPing(listener, timeout, timeUnit);
+
     }
 
     private void initiateRequest(AjpClientExchange AjpClientExchange) {
