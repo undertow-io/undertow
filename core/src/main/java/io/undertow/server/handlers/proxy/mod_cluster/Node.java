@@ -457,7 +457,7 @@ class Node {
 
         @Override
         public int getMaxCachedConnections() {
-            return nodeConfig.getCacheConnections();
+            return nodeConfig.getMaxConnections();
         }
 
         @Override
