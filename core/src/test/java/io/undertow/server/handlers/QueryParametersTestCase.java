@@ -18,7 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Deque;
 import java.util.Iterator;
@@ -125,17 +124,15 @@ public class QueryParametersTestCase {
     @Test
     @ProxyIgnore
     public void testQueryParameterParsingIncorrectlyEncodedURI() throws IOException, ParameterLimitException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        out.write(0xc7);
-        out.write(0xd1);
-        out.write(0x25);
-        out.write(0x32);
-        out.write(0x30);
-        out.write(0xb1);
-        out.write(0xdb);
-        byte[] currentString = out.toByteArray();
-        String ret = new String(currentString, 0, currentString.length, "MS949");
-        String s = "p=" + ret;
+        StringBuilder out = new StringBuilder();
+        out.append((char)0xc7);
+        out.append((char)0xd1);
+        out.append((char)0x25);
+        out.append((char)0x32);
+        out.append((char)0x30);
+        out.append((char)0xb1);
+        out.append((char)0xdb);
+        String s = "p=" + out.toString();
         HttpServerExchange exchange = new HttpServerExchange(null);
         URLUtils.parseQueryString(s, exchange, "MS949", true, 1000);
         Assert.assertEquals("한 글", exchange.getQueryParameters().get("p").getFirst());
