@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>1.3.32.Final</version>
+        <version>1.3.33.Final-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-websockets-jsr</artifactId>
-    <version>1.3.32.Final</version>
+    <version>1.3.33.Final-SNAPSHOT</version>
 
     <name>Undertow WebSockets JSR356 implementations</name>
 
