@@ -535,7 +535,7 @@ public class AjpRequestParser {
 
         if (buf.hasRemaining()) {
             buf.get(); //null terminator
-            String value = state.getStringAndClear(encoding);
+            String value = state.getStringAndClear();
             state.stringLength = -1;
             state.containsUrlCharacters = false;
             return new StringHolder(value, true, containsUrlCharacters);

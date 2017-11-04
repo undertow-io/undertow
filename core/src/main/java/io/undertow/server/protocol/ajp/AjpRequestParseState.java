@@ -79,8 +79,7 @@ class AjpRequestParseState {
     /**
      * The current string being read
      */
-    private byte[] currentString = new byte[16];
-    private int currentStringLength = 0;
+    private StringBuilder currentString = new StringBuilder();
 
     /**
      * when reading the first byte of an integer this stores the first value. It is set to -1 to signify that
@@ -98,10 +97,10 @@ class AjpRequestParseState {
 
     public void reset() {
         stringLength = -1;
-        currentStringLength = 0;
         currentIntegerPart = -1;
         readHeaders = 0;
         badRequest = false;
+        currentString.setLength(0);
     }
     public boolean isComplete() {
         return state == 15;
@@ -144,21 +143,16 @@ class AjpRequestParseState {
     }
 
     public void addStringByte(byte b) {
-        if(currentString.length == currentStringLength) {
-            byte[] old = currentString;
-            currentString = new byte[currentStringLength + 16];
-            System.arraycopy(old, 0, currentString, 0, currentStringLength);
-        }
-        currentString[currentStringLength++] = b;
+        currentString.append((char)b);
     }
 
-    public String getStringAndClear(String charset) throws UnsupportedEncodingException {
-        String ret = new String(currentString, 0, currentStringLength, charset);
-        currentStringLength = 0;
+    public String getStringAndClear() throws UnsupportedEncodingException {
+        String ret = currentString.toString();
+        currentString.setLength(0);
         return ret;
     }
 
     public int getCurrentStringLength() {
-        return currentStringLength;
+        return currentString.length();
     }
 }
