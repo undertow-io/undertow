@@ -46,6 +46,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
 import io.undertow.util.Methods;
+import io.undertow.util.Result;
 import org.xnio.LocalSocketAddress;
 
 import javax.servlet.AsyncContext;
@@ -108,11 +109,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private BufferedReader reader;
 
     private Cookie[] cookies;
-    private List<Part> parts = null;
+    private Result<List<Part>, ? extends RuntimeException> parts = null;
     private volatile boolean asyncStarted = false;
     private volatile AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
-    private FormData parsedFormData;
+    private Result<FormData, ? extends RuntimeException> parsedFormData;
     private Charset characterEncoding;
     private boolean readStarted;
     private SessionConfig.SessionCookieSource sessionCookieSource;
@@ -467,7 +468,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (parts == null) {
             loadParts();
         }
-        return parts;
+        return parts.getOrThrow();
     }
 
     @Override
@@ -475,7 +476,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (parts == null) {
             loadParts();
         }
-        for (Part part : parts) {
+        for (Part part : parts.getOrThrow()) {
             if (part.getName().equals(name)) {
                 return part;
             }
@@ -505,10 +506,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
 
-                FormData formData = parseFormData();
+                Result<FormData, ? extends RuntimeException> formData = parseFormData();
                 if(formData != null) {
-                    for (final String namedPart : formData) {
-                        for (FormData.FormValue part : formData.get(namedPart)) {
+                    for (final String namedPart : formData.getOrThrow()) {
+                        for (FormData.FormValue part : formData.getOrThrow().get(namedPart)) {
                             parts.add(new PartImpl(namedPart,
                                     part,
                                     requestContext.getOriginalServletPathMatch().getServletChain().getManagedServlet().getMultipartConfig(),
@@ -519,7 +520,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             } else {
                 throw UndertowServletMessages.MESSAGES.notAMultiPartRequest();
             }
-            this.parts = parts;
+            this.parts = new Result<>(parts, parsedFormData != null ? parsedFormData.getException(): null);
         }
     }
 
@@ -649,9 +650,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
-            final FormData parsedFormData = parseFormData();
-            if (parsedFormData != null) {
-                FormData.FormValue res = parsedFormData.getFirst(name);
+            final Result<FormData, ?> parsedFormData = parseFormData();
+            if (parsedFormData != null && parsedFormData.hasResult()) {
+                FormData.FormValue res = parsedFormData.getOrThrow().getFirst(name);
                 if (res == null || res.isFile()) {
                     return null;
                 } else {
@@ -670,12 +671,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         final Set<String> parameterNames = new HashSet<>(queryParameters.keySet());
         if (exchange.getRequestMethod().equals(Methods.POST)) {
-            final FormData parsedFormData = parseFormData();
-            if (parsedFormData != null) {
-                Iterator<String> it = parsedFormData.iterator();
+            final Result<FormData, ?> parsedFormData = parseFormData();
+            if (parsedFormData != null && parsedFormData.hasResult()) {
+                Iterator<String> it = parsedFormData.getOrThrow().iterator();
                 while (it.hasNext()) {
                     String name = it.next();
-                    for(FormData.FormValue param : parsedFormData.get(name)) {
+                    for(FormData.FormValue param : parsedFormData.getOrThrow().get(name)) {
                         if(!param.isFile()) {
                             parameterNames.add(name);
                             break;
@@ -700,9 +701,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
         }
         if (exchange.getRequestMethod().equals(Methods.POST)) {
-            final FormData parsedFormData = parseFormData();
-            if (parsedFormData != null) {
-                Deque<FormData.FormValue> res = parsedFormData.get(name);
+            final Result<FormData, ?> parsedFormData = parseFormData();
+            if (parsedFormData != null && parsedFormData.hasResult()) {
+                Deque<FormData.FormValue> res = parsedFormData.getOrThrow().get(name);
                 if (res != null) {
                     for (FormData.FormValue value : res) {
                         if(!value.isFile()) {
@@ -729,12 +730,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         if (exchange.getRequestMethod().equals(Methods.POST)) {
 
-            final FormData parsedFormData = parseFormData();
-            if (parsedFormData != null) {
-                Iterator<String> it = parsedFormData.iterator();
+            final Result<FormData, ?> parsedFormData = parseFormData();
+            if (parsedFormData != null && parsedFormData.hasResult()) {
+                Iterator<String> it = parsedFormData.getOrThrow().iterator();
                 while (it.hasNext()) {
                     final String name = it.next();
-                    Deque<FormData.FormValue> val = parsedFormData.get(name);
+                    Deque<FormData.FormValue> val = parsedFormData.getOrThrow().get(name);
                     if (arrayMap.containsKey(name)) {
                         ArrayList<String> existing = arrayMap.get(name);
                         for (final FormData.FormValue v : val) {
@@ -761,7 +762,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         return ret;
     }
 
-    private FormData parseFormData() {
+    private Result<FormData, ? extends RuntimeException> parseFormData() {
         if (parsedFormData == null) {
             if (readStarted) {
                 return null;
@@ -773,7 +774,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
             readStarted = true;
             try {
-                return parsedFormData = parser.parseBlocking();
+                parsedFormData = Result.from(parser.parseBlocking());
+            } catch (IllegalStateException e) {
+                parsedFormData = Result.from(e);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
