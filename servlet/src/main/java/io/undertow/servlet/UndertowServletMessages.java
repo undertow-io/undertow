@@ -214,4 +214,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10056, value = "path was not set")
     IllegalStateException pathWasNotSet();
+
+    @Message(id = 10057, value = "multipart config was not present on Servlet")
+    IllegalStateException multipartConfigNotPresent();
 }

@@ -38,19 +38,23 @@ public class MultiPartServlet extends HttpServlet {
 
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        Collection<Part> parts = req.getParts();
-        PrintWriter writer = resp.getWriter();
-        writer.println("PARAMS:");
-        for(Part part : parts) {
-            writer.println("name: " + part.getName());
-            writer.println("filename: " + part.getSubmittedFileName());
-            writer.println("content-type: " + part.getContentType());
-            Collection<String> headerNames = new TreeSet<>(part.getHeaderNames());
-            for(String header: headerNames) {
-                writer.println(header + ": " + part.getHeader(header));
+        try {
+            Collection<Part> parts = req.getParts();
+            PrintWriter writer = resp.getWriter();
+            writer.println("PARAMS:");
+            for (Part part : parts) {
+                writer.println("name: " + part.getName());
+                writer.println("filename: " + part.getSubmittedFileName());
+                writer.println("content-type: " + part.getContentType());
+                Collection<String> headerNames = new TreeSet<>(part.getHeaderNames());
+                for (String header : headerNames) {
+                    writer.println(header + ": " + part.getHeader(header));
+                }
+                writer.println("size: " + part.getSize());
+                writer.println("content: " + FileUtils.readFile(part.getInputStream()));
             }
-            writer.println("size: " + part.getSize());
-            writer.println("content: " + FileUtils.readFile(part.getInputStream()));
+        } catch (Exception e) {
+            resp.getWriter().write("EXCEPTION: " + e.getClass());
         }
     }
 }
