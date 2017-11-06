@@ -172,7 +172,7 @@ public class Http2ClientConnection implements ClientConnection {
 
         //setup the X-Forwarded-* headers
         String peer = request.getAttachment(ProxiedRequestAttachments.REMOTE_HOST);
-        if(peer != null) {
+        if(peer != null && !request.getRequestHeaders().contains(Headers.X_FORWARDED_FOR)) {
             request.getRequestHeaders().put(Headers.X_FORWARDED_FOR, peer);
         }
         Boolean proto = request.getAttachment(ProxiedRequestAttachments.IS_SSL);
