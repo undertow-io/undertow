@@ -19,6 +19,7 @@
 package io.undertow.io;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RequestTooBigException;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -33,7 +34,7 @@ public interface Receiver {
     /**
      * Sets the maximum amount of data that will be buffered in memory. If you call a receiveFull* method
      * and the request size is larger than this amount then the error callback with be invoked with a
-     * {@link io.undertow.io.Receiver.RequestToLargeException}.
+     * {@link RequestTooBigException}.
      *
      * @param maxBufferSize The maximum amount of data to be buffered
      */

@@ -23,6 +23,8 @@ import java.nio.channels.ClosedChannelException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 
+import io.undertow.server.RequestTooBigException;
+import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
@@ -95,7 +97,7 @@ public interface UndertowMessages {
 //    IOException requestEntityWasTooLarge(SocketAddress address, long size);
 
     @Message(id = 20, value = "Connection terminated as request was larger than %s")
-    IOException requestEntityWasTooLarge(long size);
+    RequestTooBigException requestEntityWasTooLarge(long size);
 
     @Message(id = 21, value = "Session already invalidated")
     IllegalStateException sessionAlreadyInvalidated();
@@ -191,7 +193,7 @@ public interface UndertowMessages {
     IllegalArgumentException listenerAlreadyRegistered(String name);
 
     @Message(id = 54, value = "The maximum size %s for an individual file in a multipart request was exceeded")
-    IOException maxFileSizeExceeded(long maxIndividualFileSize);
+    MultiPartParserDefinition.FileTooLargeException maxFileSizeExceeded(long maxIndividualFileSize);
 
     @Message(id = 55, value = "Could not set attribute %s to %s as it is read only")
     String couldNotSetAttribute(String attributeName, String newValue);
