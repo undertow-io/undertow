@@ -22,6 +22,7 @@ import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.testutils.DefaultServer;
@@ -54,12 +55,8 @@ public class AjpCharacterEncodingTestCase {
     public static void setup() throws Exception {
         undertow = Undertow.builder()
                 .setServerOption(UndertowOptions.URL_CHARSET, "MS949")
-                .addListener(
-                        new Undertow.ListenerBuilder()
-                                .setType(Undertow.ListenerType.AJP)
-                                .setHost(DefaultServer.getHostAddress())
-                                .setPort(PORT)
-                ).setHandler(new HttpHandler() {
+                .addListener(PORT, DefaultServer.getHostAddress(), Undertow.ListenerType.AJP)
+                .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("RESULT:" + exchange.getQueryParameters().get("p").getFirst());
@@ -68,7 +65,7 @@ public class AjpCharacterEncodingTestCase {
                 .build();
         undertow.start();
 
-        DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient().addHost(new URI("ajp://" + DefaultServer.getHostAddress() + ":" + PORT))).build());
+        DefaultServer.setRootHandler(new ProxyHandler(new LoadBalancingProxyClient().addHost(new URI("ajp://" + DefaultServer.getHostAddress() + ":" + PORT)), ResponseCodeHandler.HANDLE_404));
         old = DefaultServer.getUndertowOptions();
         DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true, UndertowOptions.URL_CHARSET, "MS949"));
     }
