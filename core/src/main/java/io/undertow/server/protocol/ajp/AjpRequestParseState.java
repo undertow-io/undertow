@@ -143,7 +143,7 @@ class AjpRequestParseState {
     }
 
     public void addStringByte(byte b) {
-        currentString.append((char)b);
+        currentString.append((char)(b & 0xFF));
     }
 
     public String getStringAndClear() throws UnsupportedEncodingException {
