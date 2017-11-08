@@ -32,6 +32,7 @@ import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
@@ -53,6 +54,7 @@ import static io.undertow.servlet.Servlets.servlet;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@ProxyIgnore
 public class MultiPartTestCase {
 
 
