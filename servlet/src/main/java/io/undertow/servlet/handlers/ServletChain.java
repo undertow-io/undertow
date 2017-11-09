@@ -117,7 +117,6 @@ public class ServletChain {
 
     //see UNDERTOW-1132
     void forceInit(DispatcherType dispatcherType) throws ServletException {
-        managedServlet.forceInit();
         if(filters != null) {
             List<ManagedFilter> list = filters.get(dispatcherType);
             if(list != null && !list.isEmpty()) {
@@ -127,6 +126,6 @@ public class ServletChain {
                 }
             }
         }
-
+        managedServlet.forceInit();
     }
 }
