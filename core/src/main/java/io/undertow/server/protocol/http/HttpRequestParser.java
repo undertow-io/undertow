@@ -519,7 +519,7 @@ public abstract class HttpRequestParser {
 
         while (buffer.hasRemaining()) {
             char next = (char) (buffer.get() & 0xFF);
-            if(!ALLOWED_TARGET_CHARACTER[next]) {
+            if(!allowUnescapedCharactersInUrl && !ALLOWED_TARGET_CHARACTER[next]) {
                 throw new BadRequestException(UndertowMessages.MESSAGES.invalidCharacterInRequestTarget(next));
             }
             if (next == ' ' || next == '\t') {
@@ -602,7 +602,7 @@ public abstract class HttpRequestParser {
 
         while (buffer.hasRemaining()) {
             char next = (char) (buffer.get() & 0xFF);
-            if(!ALLOWED_TARGET_CHARACTER[next]) {
+            if(!allowUnescapedCharactersInUrl && !ALLOWED_TARGET_CHARACTER[next]) {
                 throw new BadRequestException(UndertowMessages.MESSAGES.invalidCharacterInRequestTarget(next));
             }
             if (next == ' ' || next == '\t' || next == '?') {
