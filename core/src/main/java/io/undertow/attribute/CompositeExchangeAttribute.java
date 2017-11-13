@@ -38,13 +38,15 @@ public class CompositeExchangeAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(HttpServerExchange exchange) {
         final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < attributes.length; ++i) {
-            final String val = attributes[i].readAttribute(exchange);
-            if(val != null) {
-                sb.append(val);
-            }
-        }
+        readAttribute(exchange, sb);
         return sb.toString();
+    }
+
+    @Override
+    public void readAttribute(HttpServerExchange exchange, StringBuilder destination) {
+        for (int i = 0; i < attributes.length; ++i) {
+            attributes[i].readAttribute(exchange, destination);
+        }
     }
 
     @Override

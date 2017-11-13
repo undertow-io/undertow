@@ -61,6 +61,26 @@ public class PathParameterAttribute implements ExchangeAttribute {
     }
 
     @Override
+    public void readAttribute(HttpServerExchange exchange, StringBuilder destination) {
+        Deque<String> res = exchange.getPathParameters().get(parameter);
+        if(res != null && !res.isEmpty()) {
+            if (res.size() == 1) {
+                destination.append(res.getFirst());
+            } else {
+                destination.append('[');
+                int i = 0;
+                for (String s : res) {
+                    destination.append(s);
+                    if (++i != res.size()) {
+                        destination.append(", ");
+                    }
+                }
+                destination.append(']');
+            }
+        }
+    }
+
+    @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
         final ArrayDeque<String> value = new ArrayDeque<>();
         value.add(newValue);

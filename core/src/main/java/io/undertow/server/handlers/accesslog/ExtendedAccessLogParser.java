@@ -270,6 +270,17 @@ public class ExtendedAccessLogParser {
                     }
 
                     @Override
+                    public void readAttribute(HttpServerExchange exchange, StringBuilder destination) {
+                        final InetSocketAddress peerAddress = exchange.getConnection().getPeerAddress(InetSocketAddress.class);
+
+                        try {
+                            destination.append(peerAddress.getHostName());
+                        } catch (Throwable e) {
+                            destination.append(peerAddress.getHostString());
+                        }
+                    }
+
+                    @Override
                     public void writeAttribute(HttpServerExchange exchange, String newValue) throws ReadOnlyAttributeException {
                         throw new ReadOnlyAttributeException();
                     }
@@ -338,6 +349,19 @@ public class ExtendedAccessLogParser {
                                 buf.append('?');
                                 buf.append(exchange.getQueryString());
                                 return buf.toString();
+                            }
+                        }
+
+                        @Override
+                        public void readAttribute(HttpServerExchange exchange, StringBuilder destination) {
+                            String query = exchange.getQueryString();
+
+                            if (query.isEmpty()) {
+                                destination.append(exchange.getRequestURI());
+                            } else {
+                                destination.append(exchange.getRequestURI());
+                                destination.append('?');
+                                destination.append(exchange.getQueryString());
                             }
                         }
 
@@ -440,6 +464,20 @@ public class ExtendedAccessLogParser {
                         return buffer.toString();
                     }
                     return null;
+                }
+
+                @Override
+                public void readAttribute(HttpServerExchange exchange, StringBuilder destination) {
+                    HeaderValues values = exchange.getResponseHeaders().get(parameter);
+                    if (values != null && values.size() > 0) {
+                        for (int i = 0; i < values.size(); i++) {
+                            String string = values.get(i);
+                            destination.append(string);
+                            if (i + 1 < values.size()) {
+                                destination.append(",");
+                            }
+                        }
+                    }
                 }
 
                 @Override

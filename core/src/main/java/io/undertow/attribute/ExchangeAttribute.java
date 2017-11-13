@@ -35,6 +35,13 @@ public interface ExchangeAttribute {
      */
     String readAttribute(final HttpServerExchange exchange);
 
+    default void readAttribute(final HttpServerExchange exchange, final StringBuilder destination) {
+        final String value = readAttribute(exchange);
+        if (value != null) {
+            destination.append(value);
+        }
+    }
+
     /**
      * Sets a new value for the attribute. Not all attributes are writable.
      * @param exchange The exchange
