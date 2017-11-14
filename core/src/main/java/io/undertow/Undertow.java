@@ -590,11 +590,17 @@ public final class Undertow {
         }
 
         public SSLContext getSslContext() {
+            if(ssl == null) {
+                return null;
+            }
             return ssl.getSslContext();
         }
 
         public void setSslContext(SSLContext sslContext) {
-            ssl.updateSSLContext(sslContext);
+            if(ssl != null) {
+                //just ignore it if this is not a SSL listener
+                ssl.updateSSLContext(sslContext);
+            }
         }
 
         public ConnectorStatistics getConnectorStatistics() {
