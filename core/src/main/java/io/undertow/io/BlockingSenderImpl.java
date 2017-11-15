@@ -26,9 +26,12 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import org.xnio.Buffers;
 import org.xnio.IoUtils;
 
 /**
@@ -55,6 +58,17 @@ public class BlockingSenderImpl implements Sender {
         if (inCall) {
             queue(new ByteBuffer[]{buffer}, callback);
             return;
+        } else {
+            long responseContentLength = exchange.getResponseContentLength();
+            if(responseContentLength > 0 && buffer.remaining() > responseContentLength) {
+                callback.onException(exchange, this, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(buffer.remaining(), responseContentLength));
+                return;
+            }
+            if (!exchange.isResponseStarted() && callback == IoCallback.END_EXCHANGE) {
+                if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                    exchange.setResponseContentLength(buffer.remaining());
+                }
+            }
         }
         if (writeBuffer(buffer, callback)) {
             invokeOnComplete(callback);
@@ -67,6 +81,17 @@ public class BlockingSenderImpl implements Sender {
         if (inCall) {
             queue(buffer, callback);
             return;
+        } else {
+            long responseContentLength = exchange.getResponseContentLength();
+            if(responseContentLength > 0 && Buffers.remaining(buffer) > responseContentLength) {
+                callback.onException(exchange, this, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(Buffers.remaining(buffer), responseContentLength));
+                return;
+            }
+            if (!exchange.isResponseStarted() && callback == IoCallback.END_EXCHANGE) {
+                if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                    exchange.setResponseContentLength(Buffers.remaining(buffer));
+                }
+            }
         }
         if (!writeBuffer(buffer, callback)) {
             return;
@@ -86,12 +111,24 @@ public class BlockingSenderImpl implements Sender {
 
     @Override
     public void send(final String data, final IoCallback callback) {
+        byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
         if (inCall) {
-            queue(new ByteBuffer[]{ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8))}, callback);
+            queue(new ByteBuffer[]{ByteBuffer.wrap(bytes)}, callback);
             return;
+        } else {
+            long responseContentLength = exchange.getResponseContentLength();
+            if(responseContentLength > 0 && bytes.length > responseContentLength) {
+                callback.onException(exchange, this, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(bytes.length, responseContentLength));
+                return;
+            }
+            if (!exchange.isResponseStarted() && callback == IoCallback.END_EXCHANGE) {
+                if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                    exchange.setResponseContentLength(bytes.length);
+                }
+            }
         }
         try {
-            outputStream.write(data.getBytes(StandardCharsets.UTF_8));
+            outputStream.write(bytes);
             invokeOnComplete(callback);
         } catch (IOException e) {
             callback.onException(exchange, this, e);
@@ -100,12 +137,24 @@ public class BlockingSenderImpl implements Sender {
 
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
+        byte[] bytes = data.getBytes(charset);
         if (inCall) {
-            queue(new ByteBuffer[]{ByteBuffer.wrap(data.getBytes(charset))}, callback);
+            queue(new ByteBuffer[]{ByteBuffer.wrap(bytes)}, callback);
             return;
+        }else {
+            long responseContentLength = exchange.getResponseContentLength();
+            if(responseContentLength > 0 && bytes.length > responseContentLength) {
+                callback.onException(exchange, this, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(bytes.length, responseContentLength));
+                return;
+            }
+            if (!exchange.isResponseStarted() && callback == IoCallback.END_EXCHANGE) {
+                if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                    exchange.setResponseContentLength(bytes.length);
+                }
+            }
         }
         try {
-            outputStream.write(data.getBytes(charset));
+            outputStream.write(bytes);
             invokeOnComplete(callback);
         } catch (IOException e) {
             callback.onException(exchange, this, e);
