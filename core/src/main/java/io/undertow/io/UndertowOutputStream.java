@@ -50,7 +50,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     private PooledByteBuffer pooledBuffer;
     private StreamSinkChannel channel;
     private int state;
-    private int written;
+    private long written;
     private final long contentLength;
 
     private static final int FLAG_CLOSED = 1;
@@ -87,6 +87,9 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
 
     }
 
+    public long getBytesWritten() {
+        return written;
+    }
 
     /**
      * {@inheritDoc}
