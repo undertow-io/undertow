@@ -217,4 +217,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10057, value = "multipart config was not present on Servlet")
     IllegalStateException multipartConfigNotPresent();
+
+    @Message(id = 10058, value = "Servlet name cannot be null")
+    IllegalArgumentException servletNameNull();
 }

@@ -127,6 +127,7 @@ public class ServletContextImpl implements ServletContext {
     private volatile ThreadSetupHandler.Action<Void, ReadListener> onDataAvailableTask;
     private volatile ThreadSetupHandler.Action<Void, ReadListener> onAllDataReadTask;
     private volatile ThreadSetupHandler.Action<Void, ThreadSetupHandler.Action<Void, Object>> invokeActionTask;
+    private volatile int defaultSessionTimeout;
 
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
@@ -141,7 +142,7 @@ public class ServletContextImpl implements ServletContext {
         }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
         this.contentTypeCache = new LRUCache<>(deployment.getDeploymentInfo().getContentTypeCacheSize(), -1, true);
-
+        this.defaultSessionTimeout = deploymentInfo.getDefaultSessionTimeout() / 60;
     }
 
     public void initDone() {
@@ -487,6 +488,7 @@ public class ServletContextImpl implements ServletContext {
     public ServletRegistration.Dynamic addServlet(final String servletName, final String className) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
+        ensureServletNameNotNull(servletName);
         try {
             if (deploymentInfo.getServlets().containsKey(servletName)) {
                 return null;
@@ -508,6 +510,7 @@ public class ServletContextImpl implements ServletContext {
     public ServletRegistration.Dynamic addServlet(final String servletName, final Servlet servlet) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
+        ensureServletNameNotNull(servletName);
         if (deploymentInfo.getServlets().containsKey(servletName)) {
             return null;
         }
@@ -522,6 +525,7 @@ public class ServletContextImpl implements ServletContext {
     public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass){
         ensureNotProgramaticListener();
         ensureNotInitialized();
+        ensureServletNameNotNull(servletName);
         if (deploymentInfo.getServlets().containsKey(servletName)) {
             return null;
         }
@@ -533,6 +537,12 @@ public class ServletContextImpl implements ServletContext {
             return new ServletRegistrationImpl(servlet, handler.getManagedServlet(), deployment);
         } catch (NoSuchMethodException e) {
             throw UndertowServletMessages.MESSAGES.couldNotCreateFactory(servletClass.getName(),e);
+        }
+    }
+
+    private void ensureServletNameNotNull(String servletName) {
+        if(servletName == null) {
+            throw UndertowServletMessages.MESSAGES.servletNameNull();
         }
     }
 
@@ -748,17 +758,25 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
-        return null;
+        if(servletName == null || servletName.isEmpty()) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("servletName");
+        }
+        ServletRegistration.Dynamic dynamic = addServlet(servletName, "org.apache.jasper.servlet.JspServlet");
+        dynamic.setInitParameter("jspFile", jspFile);
+        return dynamic;
     }
 
     @Override
     public int getSessionTimeout() {
-        return 0;
+        return defaultSessionTimeout;
     }
 
     @Override
     public void setSessionTimeout(int sessionTimeout) {
-
+        ensureNotInitialized();
+        ensureNotProgramaticListener();
+        this.defaultSessionTimeout = sessionTimeout;
+        deployment.getSessionManager().setDefaultSessionTimeout(sessionTimeout * 60);
     }
 
     @Override
