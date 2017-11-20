@@ -429,6 +429,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public boolean setInitParameter(final String name, final String value) {
+        if(name == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNullNPE("name");
+        }
         if (deploymentInfo.getInitParameters().containsKey(name)) {
             return false;
         }

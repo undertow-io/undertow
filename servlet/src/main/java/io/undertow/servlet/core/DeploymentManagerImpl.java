@@ -530,7 +530,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private ApplicationListeners createListeners() {
         final List<ManagedListener> managedListeners = new ArrayList<>();
         for (final ListenerInfo listener : deployment.getDeploymentInfo().getListeners()) {
-            managedListeners.add(new ManagedListener(listener, false));
+            managedListeners.add(new ManagedListener(listener, listener.isProgramatic()));
         }
         return new ApplicationListeners(managedListeners, deployment.getServletContext());
     }

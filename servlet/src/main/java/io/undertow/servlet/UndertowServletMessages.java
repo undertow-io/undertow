@@ -220,4 +220,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10058, value = "Servlet name cannot be null")
     IllegalArgumentException servletNameNull();
+
+    @Message(id = 10059, value = "Param %s cannot be null")
+    NullPointerException paramCannotBeNullNPE(String name);
 }
