@@ -229,22 +229,32 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public HttpServletMapping getHttpServletMapping() {
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         ServletPathMatch match = src.getOriginalServletPathMatch();
+        if(getDispatcherType() == DispatcherType.FORWARD) {
+            match = src.getServletPathMatch();
+        }
         String matchValue;
         switch (match.getMappingMatch()) {
             case EXACT:
-                matchValue = getServletPath();
-                break;
-            case DEFAULT:
-                matchValue = "/";
+            case DEFAULT: //TODO: TCK expects different behaviour to the spec, but I think the TCK makes more sense
+                matchValue = match.getMatched();
+                if(matchValue.startsWith("/")) {
+                    matchValue = matchValue.substring(1);
+                }
                 break;
             case CONTEXT_ROOT:
                 matchValue = "";
                 break;
             case PATH:
                 matchValue = match.getRemaining();
+                if(matchValue.startsWith("/")) {
+                    matchValue = matchValue.substring(1);
+                }
                 break;
             case EXTENSION:
                 matchValue = match.getMatched().substring(0, match.getMatched().length() - match.getMatchString().length() + 1);
+                if(matchValue.startsWith("/")) {
+                    matchValue = matchValue.substring(1);
+                }
                 break;
             default:
                 matchValue = match.getRemaining();
@@ -1184,11 +1194,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public Map<String, String> getTrailerFields() {
         HeaderMap trailers = exchange.getAttachment(HttpAttachments.REQUEST_TRAILERS);
         if(trailers == null) {
-            return null;
+            return Collections.emptyMap();
         }
         Map<String, String> ret = new HashMap<>();
         for(HeaderValues entry : trailers) {
-            ret.put(entry.getHeaderName().toString(), entry.getFirst());
+            ret.put(entry.getHeaderName().toString().toLowerCase(Locale.ENGLISH), entry.getFirst());
         }
         return ret;
     }

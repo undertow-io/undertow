@@ -18,6 +18,7 @@
 package io.undertow.servlet.spec;
 
 import io.undertow.Version;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.LRUCache;
 import io.undertow.server.handlers.resource.Resource;
@@ -67,6 +68,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
+import javax.servlet.ServletRequest;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.WriteListener;
 import javax.servlet.annotation.HttpMethodConstraint;
@@ -92,6 +94,7 @@ import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -489,6 +492,10 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final String className) {
+        return addServlet(servletName, className, Collections.emptyList());
+    }
+
+    public ServletRegistration.Dynamic addServlet(final String servletName, final String className, List<HandlerWrapper> wrappers) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
         ensureServletNameNotNull(servletName);
@@ -498,6 +505,9 @@ public class ServletContextImpl implements ServletContext {
             }
             Class<? extends Servlet> servletClass=(Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className);
             ServletInfo servlet = new ServletInfo(servletName, servletClass, deploymentInfo.getClassIntrospecter().createInstanceFactory(servletClass));
+            for(HandlerWrapper i : wrappers) {
+                servlet.addHandlerChainWrapper(i);
+            }
             readServletAnnotations(servlet);
             deploymentInfo.addServlet(servlet);
             ServletHandler handler = deployment.getServlets().addServlet(servlet);
@@ -764,9 +774,11 @@ public class ServletContextImpl implements ServletContext {
         if(servletName == null || servletName.isEmpty()) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("servletName");
         }
-        ServletRegistration.Dynamic dynamic = addServlet(servletName, "org.apache.jasper.servlet.JspServlet");
-        dynamic.setInitParameter("jspFile", jspFile);
-        return dynamic;
+        return addServlet(servletName, "org.apache.jasper.servlet.JspServlet", Collections.singletonList(handler -> exchange -> {
+            ServletRequest request = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletRequest();
+            request.setAttribute(System.getProperty("org.apache.jasper.Constants.JSP_FILE", "org.apache.catalina.jsp_file"), jspFile);
+            handler.handleRequest(exchange);
+        }));
     }
 
     @Override
