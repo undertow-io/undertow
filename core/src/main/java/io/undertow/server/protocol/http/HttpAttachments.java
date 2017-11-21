@@ -21,6 +21,8 @@ package io.undertow.server.protocol.http;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 
+import java.util.function.Supplier;
+
 /**
  * Exchange attachments that have specific meaning when using the HTTP protocol
  *
@@ -36,12 +38,28 @@ public class HttpAttachments {
 
     /**
      * Attachment key for response trailers. If a header map is attached under this key then the contents will be written
-     * out at the end of the chunked request.
+     * out at the end of the chunked request or HTTP/2 response.
+     *
+     * Note that the results of {@link #RESPONSE_TRAILERS} and {@link #RESPONSE_TRAILER_SUPPLIER} will be merged if both exit
+     * with the value supplied by the supplier taking precedence.
      *
      * Note that if pre chunked streams are being used then the trailers will not be appended to the response, however any
      * trailers parsed out of the chunked stream will be attached here instead.
      */
     public static final AttachmentKey<HeaderMap> RESPONSE_TRAILERS = AttachmentKey.create(HeaderMap.class);
+
+
+    /**
+     * Attachment key for a supplier response trailers. If a header map is attached under this key then the contents will be written
+     * out at the end of the chunked request or HTTP/2 response.
+     *
+     * Note that the results of {@link #RESPONSE_TRAILERS} and {@link #RESPONSE_TRAILER_SUPPLIER} will be merged if both exit
+     * with the value supplied by the supplier taking precedence.
+     *
+     * Note that if pre chunked streams are being used then the trailers will not be appended to the response, however any
+     * trailers parsed out of the chunked stream will be attached here instead.
+     */
+    public static final AttachmentKey<Supplier<HeaderMap>> RESPONSE_TRAILER_SUPPLIER = AttachmentKey.create(Supplier.class);
 
     /**
      * If the value {@code true} is attached to the exchange under this key then Undertow will assume that the underlying application

@@ -223,4 +223,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10059, value = "Param %s cannot be null")
     NullPointerException paramCannotBeNullNPE(String name);
+
+    @Message(id = 10060, value = "Trailers not supported for this request due to %s")
+    IllegalStateException trailersNotSupported(String reason);
 }

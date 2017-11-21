@@ -37,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import io.undertow.client.ClientStatistics;
 import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
@@ -192,7 +193,21 @@ public class Http2ClientConnection implements ClientConnection {
         sinkChannel.setTrailersProducer(new Http2DataStreamSinkChannel.TrailersProducer() {
             @Override
             public HeaderMap getTrailers() {
-                return exchange.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
+                HeaderMap attachment = exchange.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
+                Supplier<HeaderMap> supplier = exchange.getAttachment(HttpAttachments.RESPONSE_TRAILER_SUPPLIER);
+                if(attachment != null && supplier == null) {
+                    return attachment;
+                } else if(attachment == null && supplier != null) {
+                    return supplier.get();
+                } else if(attachment != null) {
+                    HeaderMap supplied = supplier.get();
+                    for(HeaderValues k : supplied) {
+                        attachment.putAll(k.getHeaderName(), k);
+                    }
+                    return attachment;
+                } else {
+                    return null;
+                }
             }
         });
 
