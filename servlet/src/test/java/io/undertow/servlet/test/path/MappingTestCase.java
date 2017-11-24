@@ -60,7 +60,7 @@ public class MappingTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Mapping match:PATH\n" +
-                    "Match value:/foo\n" +
+                    "Match value:foo\n" +
                     "Pattern:/path/*", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo.ext");
@@ -68,7 +68,7 @@ public class MappingTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Mapping match:EXTENSION\n" +
-                    "Match value:/foo\n" +
+                    "Match value:foo\n" +
                     "Pattern:*.ext", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
@@ -84,7 +84,7 @@ public class MappingTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Mapping match:DEFAULT\n" +
-                    "Match value:/\n" +
+                    "Match value:doesnotexist\n" +
                     "Pattern:/", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/exact");
@@ -92,7 +92,7 @@ public class MappingTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Mapping match:EXACT\n" +
-                    "Match value:/exact\n" +
+                    "Match value:exact\n" +
                     "Pattern:/exact", response);
 
         } finally {
