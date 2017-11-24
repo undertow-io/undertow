@@ -25,6 +25,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.PushBuilder;
@@ -32,7 +33,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -41,6 +41,8 @@ import java.util.Set;
 public class PushBuilderImpl implements PushBuilder {
 
     private static final Set<HttpString> IGNORE;
+    private static final Set<HttpString> CONDITIONAL;
+    private static final Set<String> INVALID_METHOD;
     static {
         final Set<HttpString> ignore = new HashSet<>();
         ignore.add(Headers.IF_MATCH);
@@ -54,6 +56,23 @@ public class PushBuilderImpl implements PushBuilder {
         ignore.add(Headers.AUTHORIZATION);
         ignore.add(Headers.REFERER);
         IGNORE = Collections.unmodifiableSet(ignore);
+
+        final Set<HttpString> conditional = new HashSet<>();
+        conditional.add(Headers.IF_MATCH);
+        conditional.add(Headers.IF_NONE_MATCH);
+        conditional.add(Headers.IF_MODIFIED_SINCE);
+        conditional.add(Headers.IF_UNMODIFIED_SINCE);
+        conditional.add(Headers.IF_RANGE);
+        CONDITIONAL = Collections.unmodifiableSet(conditional);
+        final Set<String> invalid = new HashSet<>();
+        invalid.add(Methods.OPTIONS_STRING);
+        invalid.add(Methods.PUT_STRING);
+        invalid.add(Methods.POST_STRING);
+        invalid.add(Methods.DELETE_STRING);
+        invalid.add(Methods.CONNECT_STRING);
+        invalid.add(Methods.TRACE_STRING);
+        invalid.add("");
+        INVALID_METHOD = Collections.unmodifiableSet(invalid);
     }
 
     private final HttpServletRequestImpl servletRequest;
@@ -87,7 +106,7 @@ public class PushBuilderImpl implements PushBuilder {
         }
         this.path = null;
         for(Map.Entry<String, Cookie> cookie : servletRequest.getExchange().getResponseCookies().entrySet()) {
-            if(Objects.equals(0, cookie.getValue().getMaxAge())) {
+            if(cookie.getValue().getMaxAge() != null && cookie.getValue().getMaxAge() <= 0) {
                 //remove cookie
                 HeaderValues existing = headers.get(Headers.COOKIE);
                 if(existing != null) {
@@ -99,8 +118,8 @@ public class PushBuilderImpl implements PushBuilder {
                         }
                     }
                 }
-            } else {
-                headers.add(Headers.COOKIE, cookie.getKey() + "=" + cookie.getValue());
+            } else if(!cookie.getKey().equals(servletRequest.getServletContext().getSessionCookieConfig().getName())){
+                headers.add(Headers.COOKIE, cookie.getKey() + "=" + cookie.getValue().getValue());
             }
         }
 
@@ -109,6 +128,12 @@ public class PushBuilderImpl implements PushBuilder {
 
     @Override
     public PushBuilder method(String method) {
+        if(method == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNullNPE("method");
+        }
+        if(INVALID_METHOD.contains(method)) {
+            throw UndertowServletMessages.MESSAGES.invalidMethodForPushRequest(method);
+        }
         this.method = method;
         return this;
     }
@@ -164,12 +189,22 @@ public class PushBuilderImpl implements PushBuilder {
                 newHeaders.put(Headers.COOKIE, "JSESSIONID=" + sessionId); //TODO: do this properly, may be a different tracking method or a different cookie name
             }
             String path = this.path;
+            if(!path.startsWith("/")) {
+                path = servletRequest.getContextPath() + "/" + path;
+            }
             if (queryString != null && !queryString.isEmpty()) {
-                path += "?" + queryString;
+                if(path.contains("?")) {
+                    path += "&" + queryString;
+                } else {
+                    path += "?" + queryString;
+                }
             }
             con.pushResource(path, new HttpString(method), newHeaders);
         }
         path = null;
+        for(HttpString h : CONDITIONAL) {
+            headers.remove(h);
+        }
     }
 
     @Override

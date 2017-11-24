@@ -226,4 +226,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10060, value = "Trailers not supported for this request due to %s")
     IllegalStateException trailersNotSupported(String reason);
+
+    @Message(id = 10061, value = "Invalid method for push request %s")
+    IllegalArgumentException invalidMethodForPushRequest(String method);
 }
