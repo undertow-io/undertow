@@ -78,11 +78,11 @@ public class ETagUtils {
         if (ifMatch == null) {
             return true;
         }
+        if (ifMatch.equals("*")) {
+            return true; //todo: how to tell if there is a current entity for the request
+        }
         List<ETag> parts = parseETagList(ifMatch);
         for (ETag part : parts) {
-            if (part.getTag().equals("*")) {
-                return true; //todo: how to tell if there is a current entity for the request
-            }
             if (part.isWeak() && !allowWeak) {
                 continue;
             }
