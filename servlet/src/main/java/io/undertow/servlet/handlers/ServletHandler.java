@@ -19,8 +19,6 @@
 package io.undertow.servlet.handlers;
 
 import java.io.IOException;
-import java.util.Date;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
@@ -46,10 +44,6 @@ public class ServletHandler implements HttpHandler {
 
     private final ManagedServlet managedServlet;
 
-    private static final AtomicLongFieldUpdater<ServletHandler> unavailableUntilUpdater = AtomicLongFieldUpdater.newUpdater(ServletHandler.class, "unavailableUntil");
-
-    @SuppressWarnings("unused")
-    private volatile long unavailableUntil = 0;
 
     public ServletHandler(final ManagedServlet managedServlet) {
         this.managedServlet = managedServlet;
@@ -63,15 +57,10 @@ public class ServletHandler implements HttpHandler {
             return;
         }
 
-        long until = unavailableUntil;
-        if (until != 0) {
+        if (managedServlet.isTemporarilyUnavailable()) {
             UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 503 for servlet %s due to temporary unavailability", managedServlet.getServletInfo().getName());
-            if (System.currentTimeMillis() < until) {
-                exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
-                return;
-            } else {
-                unavailableUntilUpdater.compareAndSet(this, until, 0);
-            }
+            exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
+            return;
         }
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         if(!managedServlet.getServletInfo().isAsyncSupported()) {
@@ -95,14 +84,10 @@ public class ServletHandler implements HttpHandler {
             //    }
             //}
         } catch (UnavailableException e) {
+            managedServlet.handleUnavailableException(e);
             if (e.isPermanent()) {
-                UndertowServletLogger.REQUEST_LOGGER.stoppingServletDueToPermanentUnavailability(managedServlet.getServletInfo().getName(), e);
-                managedServlet.stop();
-                managedServlet.setPermanentlyUnavailable(true);
                 exchange.setStatusCode(StatusCodes.NOT_FOUND);
             } else {
-                unavailableUntilUpdater.set(this, System.currentTimeMillis() + e.getUnavailableSeconds() * 1000);
-                UndertowServletLogger.REQUEST_LOGGER.stoppingServletUntilDueToTemporaryUnavailability(managedServlet.getServletInfo().getName(), new Date(until), e);
                 exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
             }
         } finally {
