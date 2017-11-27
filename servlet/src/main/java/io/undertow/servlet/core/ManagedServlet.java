@@ -20,7 +20,9 @@ package io.undertow.servlet.core;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
@@ -60,6 +62,11 @@ public class ManagedServlet implements Lifecycle {
     private long maxRequestSize;
     private FormParserFactory formParserFactory;
     private MultipartConfigElement multipartConfig;
+
+    private static final AtomicLongFieldUpdater<ManagedServlet> unavailableUntilUpdater = AtomicLongFieldUpdater.newUpdater(ManagedServlet.class, "unavailableUntil");
+
+    @SuppressWarnings("unused")
+    private volatile long unavailableUntil = 0;
 
     public ManagedServlet(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
@@ -157,6 +164,18 @@ public class ManagedServlet implements Lifecycle {
         return permanentlyUnavailable;
     }
 
+    public boolean isTemporarilyUnavailable() {
+        long until = unavailableUntil;
+        if (until != 0) {
+            if (System.currentTimeMillis() < until) {
+                return true;
+            } else {
+                unavailableUntilUpdater.compareAndSet(this, until, 0);
+            }
+        }
+        return false;
+    }
+
     public void setPermanentlyUnavailable(final boolean permanentlyUnavailable) {
         this.permanentlyUnavailable = permanentlyUnavailable;
     }
@@ -184,10 +203,26 @@ public class ManagedServlet implements Lifecycle {
             }
             synchronized (this) {
                 if (!started) {
-                    instanceStrategy.start();
+                    try {
+                        instanceStrategy.start();
+                    } catch (UnavailableException e) {
+                        handleUnavailableException(e);
+                    }
                     started = true;
                 }
             }
+        }
+    }
+
+    public void handleUnavailableException(UnavailableException e) {
+        if (e.isPermanent()) {
+            UndertowServletLogger.REQUEST_LOGGER.stoppingServletDueToPermanentUnavailability(getServletInfo().getName(), e);
+            stop();
+            setPermanentlyUnavailable(true);
+        } else {
+            long until = System.currentTimeMillis() + e.getUnavailableSeconds() * 1000;
+            unavailableUntilUpdater.set(this, until);
+            UndertowServletLogger.REQUEST_LOGGER.stoppingServletUntilDueToTemporaryUnavailability(getServletInfo().getName(), new Date(until), e);
         }
     }
 
