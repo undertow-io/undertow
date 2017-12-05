@@ -24,9 +24,9 @@
         <bundle dependency="true">mvn:org.jboss.logging/jboss-logging/${version.org.jboss.logging}</bundle>
         <bundle>mvn:org.jboss.xnio/xnio-api/${version.xnio}</bundle>
         <bundle>mvn:org.jboss.xnio/xnio-nio/${version.xnio}</bundle>
-        <bundle>file:///${project.basedir}/../core/target/undertow-core-${project.version}.jar</bundle>
-        <bundle>file:///${project.basedir}/../servlet/target/undertow-servlet-${project.version}.jar</bundle>
-        <bundle>file:///${project.basedir}/../websockets-jsr/target/undertow-websockets-jsr-${project.version}.jar</bundle>
+        <bundle>mvn:io.undertow/undertow-core/${project.version}</bundle>
+        <bundle>mvn:io.undertow/undertow-servlet/${project.version}</bundle>
+        <bundle>mvn:io.undertow/undertow-websockets-jsr/${project.version}</bundle>
     </feature>
 
 </features>
