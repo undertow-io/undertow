@@ -32,6 +32,12 @@ import io.undertow.connector.PooledByteBuffer;
 public class MultipartParser {
 
     /**
+     * The Horizontal Tab ASCII character value;
+     */
+    public static final byte HTAB = 0x09;
+
+
+    /**
      * The Carriage Return ASCII character value.
      */
     public static final byte CR = 0x0D;
@@ -41,6 +47,12 @@ public class MultipartParser {
      * The Line Feed ASCII character value.
      */
     public static final byte LF = 0x0A;
+
+
+    /**
+     * The Space ASCII character value;
+     */
+    public static final byte SP = 0x20;
 
 
     /**
@@ -222,17 +234,34 @@ public class MultipartParser {
         private void headerValue(final ByteBuffer buffer) throws MalformedMessageException, UnsupportedEncodingException {
             while (buffer.hasRemaining()) {
                 final byte b = buffer.get();
-                if (b == CR) {
+                if(subState == 2) {
+                    if (b == CR) { //end of headers section
+                        headers.put(new HttpString(currentHeaderName.trim()), new String(currentString.toByteArray(), requestCharset).trim());
+                        //set state for headerName to verify end of headers section
+                        state = 1;
+                        subState = 1; //CR already encountered
+                        currentString = null;
+                        return;
+                    } else if (b == SP || b == HTAB) { //multi-line header
+                        currentString.write(b);
+                        subState = 0;
+                    } else { //next header name
+                        headers.put(new HttpString(currentHeaderName.trim()), new String(currentString.toByteArray(), requestCharset).trim());
+                        //set state for headerName to collect next header's name
+                        state = 1;
+                        subState = 0;
+                        //start name collection for headerName to finish
+                        currentString = new ByteArrayOutputStream();
+                        currentString.write(b);
+                        return;
+                    }
+                } else if (b == CR) {
                     subState = 1;
                 } else if (b == LF) {
                     if (subState != 1) {
                         throw new MalformedMessageException();
                     }
-                    headers.put(new HttpString(currentHeaderName.trim()), new String(currentString.toByteArray(), requestCharset).trim());
-                    state = 1;
-                    subState = 0;
-                    currentString = null;
-                    return;
+                    subState = 2;
                 } else {
                     if (subState != 0) {
                         throw new MalformedMessageException();
