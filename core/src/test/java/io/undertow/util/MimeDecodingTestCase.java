@@ -133,6 +133,22 @@ public class MimeDecodingTestCase {
         Assert.assertEquals("text/plain", handler.parts.get(0).map.getFirst(Headers.CONTENT_TYPE));
     }
 
+    @Test
+    public void testMultilineHeader() throws IOException {
+        final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime-multiline.txt"));
+        TestPartHandler handler = new TestPartHandler();
+        MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
+
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
+        parser.parse(buf);
+        Assert.assertTrue(parser.isComplete());
+        Assert.assertEquals(2, handler.parts.size());
+        Assert.assertEquals("Here is some text.", handler.parts.get(0).data.toString());
+        Assert.assertEquals("Here is some more text.", handler.parts.get(1).data.toString());
+
+        Assert.assertEquals("text/plain; charset=\"ascii\"", handler.parts.get(0).map.getFirst(Headers.CONTENT_TYPE));
+    }
+
     private static class TestPartHandler implements MultipartParser.PartHandler {
 
         private final List<Part> parts = new ArrayList<>();
