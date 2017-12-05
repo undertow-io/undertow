@@ -135,7 +135,7 @@ public class MimeDecodingTestCase {
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
-        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
         Assert.assertTrue(parser.isComplete());
         Assert.assertEquals(2, handler.parts.size());
