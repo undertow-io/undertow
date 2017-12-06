@@ -19,6 +19,7 @@
 package io.undertow.attribute;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
 
 /**
@@ -37,7 +38,22 @@ public class ResponseHeaderAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        return exchange.getResponseHeaders().getFirst(responseHeader);
+        HeaderValues header = exchange.getResponseHeaders().get(responseHeader);
+        if (header == null) {
+            return null;
+        } else if(header.size() == 1) {
+            return header.getFirst();
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < header.size(); ++i) {
+            if (i != 0) {
+                sb.append(", ");
+            }
+            sb.append(header.get(i));
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     @Override
