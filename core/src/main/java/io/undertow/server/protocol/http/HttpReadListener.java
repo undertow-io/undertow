@@ -206,6 +206,10 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             this.httpServerExchange = null;
             requestStateUpdater.set(this, 1);
 
+            if (recordRequestStartTime) {
+                Connectors.setRequestStartTime(httpServerExchange);
+            }
+
             if(httpServerExchange.getProtocol() == Protocols.HTTP_2_0) {
                 free = handleHttp2PriorKnowledge(pooled, httpServerExchange);
                 return;
@@ -220,9 +224,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 }
             }
             HttpTransferEncoding.setupRequest(httpServerExchange);
-            if (recordRequestStartTime) {
-                Connectors.setRequestStartTime(httpServerExchange);
-            }
             connection.setCurrentExchange(httpServerExchange);
             if(connectorStatistics != null) {
                 connectorStatistics.setup(httpServerExchange);
