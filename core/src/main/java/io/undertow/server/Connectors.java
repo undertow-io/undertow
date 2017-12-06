@@ -165,6 +165,10 @@ public class Connectors {
         exchange.setRequestStartTime(System.nanoTime());
     }
 
+    public static void setRequestStartTime(HttpServerExchange existing, HttpServerExchange newExchange) {
+        newExchange.setRequestStartTime(existing.getRequestStartTime());
+    }
+
     private static String addRfc6265ResponseCookieToExchange(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
