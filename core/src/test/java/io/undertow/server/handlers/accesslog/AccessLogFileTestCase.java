@@ -213,4 +213,30 @@ public class AccessLogFileTestCase {
         }
     }
 
+    @Test
+    public void testLoggingDuplicateHeaders() throws IOException, InterruptedException {
+        Path logFileName = logDirectory.resolve("server1.log");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), logDirectory, "server1.");
+        CompletionLatchHandler latchHandler;
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver,
+                "Remote address %a Code %s test-header %{i,test-header} test-header-2 %{i,test-header-2} " +
+                   "%{i,non-existent}", AccessLogFileTestCase.class.getClassLoader())));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            get.addHeader("test-header", "single-val");
+            get.addHeader("test-header-2", "a-val");
+            get.addHeader("test-header-2", "some-val");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
+            latchHandler.await();
+            logReceiver.awaitWrittenForTest();
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress()
+                    + " Code 200 test-header single-val test-header-2 [a-val, some-val] -\n",
+                                new String(Files.readAllBytes(logFileName)));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }

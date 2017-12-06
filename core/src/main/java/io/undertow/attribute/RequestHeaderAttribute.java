@@ -37,6 +37,9 @@ public class RequestHeaderAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
+        if (exchange.getRequestHeaders().get(requestHeader) != null && exchange.getRequestHeaders().get(requestHeader).size() > 1) {
+            return exchange.getRequestHeaders().get(requestHeader).toString();
+        }
         return exchange.getRequestHeaders().getFirst(requestHeader);
     }
 
