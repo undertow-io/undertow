@@ -97,17 +97,19 @@ public class AccessLogFileTestCase {
     private void verifySingleLogMessageToFile(Path logFileName, DefaultAccessLogReceiver logReceiver) throws IOException, InterruptedException {
 
         CompletionLatchHandler latchHandler;
-        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header} %{i,non-existent}", AccessLogFileTestCase.class.getClassLoader())));
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header} %{i,non-existent} %{i,dup}", AccessLogFileTestCase.class.getClassLoader())));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.addHeader("test-header", "single-val");
+            get.addHeader("dup", "d"); //we can't rely on ordering, so we just send the same thing twice to make the comparison easy
+            get.addHeader("dup", "d");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latchHandler.await();
             logReceiver.awaitWrittenForTest();
-            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header single-val -\n", new String(Files.readAllBytes(logFileName)));
+            Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header single-val - [d, d]\n", new String(Files.readAllBytes(logFileName)));
         } finally {
             client.getConnectionManager().shutdown();
         }
