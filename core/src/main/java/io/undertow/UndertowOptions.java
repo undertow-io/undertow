@@ -98,6 +98,7 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_HEADERS = Option.simple(UndertowOptions.class, "MAX_HEADERS", Integer.class);
 
+    public static final int DEFAULT_MAX_COOKIES = 200;
 
     /**
      * The maximum number of cookies that will be parsed. This is used to protect against hash vulnerabilities.

@@ -32,6 +32,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
+import io.undertow.util.Cookies;
 import org.xnio.ChannelListener;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.util.StatusCodes;
@@ -215,6 +216,19 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             connection.getChannel().getSourceChannel().setConduit(createSourceConduit(connection.getChannel().getSourceChannel().getConduit(), responseConduit, httpServerExchange));
             //we need to set the write ready handler. This allows the response conduit to wrap it
             responseConduit.setWriteReadyHandler(writeReadyHandler);
+
+            // Check if the number of cookies sent exceeded the maximum
+            try {
+                Cookies.parseRequestCookies(connection.getUndertowOptions().get(UndertowOptions.MAX_COOKIES, UndertowOptions.DEFAULT_MAX_COOKIES),
+                                            connection.getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
+                                            httpServerExchange.getRequestHeaders().get(Headers.COOKIE));
+            } catch (IllegalStateException | IllegalArgumentException e) {
+                UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
+                httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                httpServerExchange.endExchange();
+                safeClose(connection);
+                return;
+            }
 
             try {
                 connection.setSSLSessionInfo(state.createSslSessionInfo());
