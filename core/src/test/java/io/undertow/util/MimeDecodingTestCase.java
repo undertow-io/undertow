@@ -135,9 +135,9 @@ public class MimeDecodingTestCase {
     public void testMultilineHeader() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime-multiline.txt"));
         TestPartHandler handler = new TestPartHandler();
-        MultipartParser.ParseState parser = MultipartParser.beginParse(DefaultServer.getBufferPool(), handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
+        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes(), "ISO-8859-1");
 
-        ByteBuffer buf = ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
         Assert.assertTrue(parser.isComplete());
         Assert.assertEquals(2, handler.parts.size());
