@@ -72,6 +72,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private final boolean allowEncodingSlash;
     private final int bufferSize;
     private final int maxParameters;
+    private final boolean recordRequestStartTime;
 
 
 
@@ -94,6 +95,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         this.allowEncodingSlash = undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
         this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
         this.maxParameters = undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
+        this.recordRequestStartTime = undertowOptions.get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
         if (undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
             this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         } else {
@@ -157,6 +159,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
             return;
         }
+
         try {
             Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
         } catch (ParameterLimitException e) {
@@ -165,6 +168,10 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             exchange.setStatusCode(StatusCodes.BAD_REQUEST);
             exchange.endExchange();
             return;
+        }
+
+        if (recordRequestStartTime) {
+            Connectors.setRequestStartTime(exchange);
         }
         SSLSession session = channel.getSslSession();
         if(session != null) {
@@ -217,6 +224,8 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             requestHeaders.putAll(hv.getHeaderName(), hv);
         }
         final HttpServerExchange exchange = new HttpServerExchange(connection, requestHeaders, sink.getHeaders(), maxEntitySize);
+
+        Connectors.setRequestStartTime(initial, exchange);
         connection.setExchange(exchange);
         exchange.setRequestScheme(initial.getRequestScheme());
         exchange.setProtocol(initial.getProtocol());
