@@ -68,8 +68,10 @@ public class DeploymentInfo implements Cloneable {
     private ClassLoader classLoader;
     private ResourceManager resourceManager = ResourceManager.EMPTY_RESOURCE_MANAGER;
     private ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
-    private int majorVersion = 3;
-    private int minorVersion;
+    private int majorVersion = 4;
+    private int minorVersion = 0;
+    private int containerMajorVersion = 4;
+    private int containerMinorVersion = 0;
     private Executor executor;
     private Executor asyncExecutor;
     private Path tempDir;
@@ -1328,6 +1330,24 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableMap(preCompressedResources);
     }
 
+    public int getContainerMajorVersion() {
+        return containerMajorVersion;
+    }
+
+    public DeploymentInfo setContainerMajorVersion(int containerMajorVersion) {
+        this.containerMajorVersion = containerMajorVersion;
+        return this;
+    }
+
+    public int getContainerMinorVersion() {
+        return containerMinorVersion;
+    }
+
+    public DeploymentInfo setContainerMinorVersion(int containerMinorVersion) {
+        this.containerMinorVersion = containerMinorVersion;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1418,6 +1438,8 @@ public class DeploymentInfo implements Cloneable {
         info.defaultRequestEncoding = defaultRequestEncoding;
         info.defaultResponseEncoding = defaultResponseEncoding;
         info.preCompressedResources.putAll(preCompressedResources);
+        info.containerMajorVersion = containerMajorVersion;
+        info.containerMinorVersion = containerMinorVersion;
         return info;
     }
 
