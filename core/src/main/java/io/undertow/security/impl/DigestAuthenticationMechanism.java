@@ -239,10 +239,20 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 requestURI = requestURI + "?" + exchange.getQueryString();
             }
             if(!uri.equals(requestURI)) {
-                //just end the auth process
-                exchange.setStatusCode(StatusCodes.BAD_REQUEST);
-                exchange.endExchange();
-                return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+                //it is possible we were given an absolute URI
+                //we reconstruct the URI from the host header to make sure they match up
+                //I am not sure if this is overly strict, however I think it is better
+                //to be safe than sorry
+                requestURI = exchange.getRequestURL();
+                if(!exchange.getQueryString().isEmpty()) {
+                    requestURI = requestURI + "?" + exchange.getQueryString();
+                }
+                if(!uri.equals(requestURI)) {
+                    //just end the auth process
+                    exchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                    exchange.endExchange();
+                    return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+                }
             }
         } else {
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
