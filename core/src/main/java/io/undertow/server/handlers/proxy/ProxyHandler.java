@@ -86,6 +86,8 @@ import io.undertow.util.WorkerUtils;
  * used to connect to the remote server, otherwise the next handler will be invoked and the
  * request will proceed as normal.
  *
+ * This handler uses non blocking IO
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ProxyHandler implements HttpHandler {
