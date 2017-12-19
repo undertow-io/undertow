@@ -758,7 +758,16 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     public synchronized void suspendReceives() {
         receivesSuspended = true;
         if (receiver == null) {
-            channel.getSourceChannel().suspendReads();
+            if(Thread.currentThread() == channel.getIoThread()) {
+                channel.getSourceChannel().suspendReads();
+            } else {
+                channel.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        channel.getSourceChannel().suspendReads();
+                    }
+                });
+            }
         }
     }
 
@@ -766,7 +775,19 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * Resume the receive of new frames via {@link #receive()}
      */
     public synchronized void resumeReceives() {
-        receivesSuspended = false;
+        receivesSuspended = false;if(Thread.currentThread() == channel.getIoThread()) {
+            doResume();
+        } else {
+            channel.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    doResume();
+                }
+            });
+        }
+    }
+
+    private void doResume() {
         if (readData != null && !readData.isFreed()) {
             channel.getSourceChannel().wakeupReads();
         } else {
