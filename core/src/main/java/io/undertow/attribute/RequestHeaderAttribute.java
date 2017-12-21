@@ -21,6 +21,7 @@ package io.undertow.attribute;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
+import io.undertow.util.HeaderValues;
 
 /**
  * A request header
