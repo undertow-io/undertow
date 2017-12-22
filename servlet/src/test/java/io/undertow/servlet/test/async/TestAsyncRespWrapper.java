@@ -25,7 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
 class TestAsyncRespWrapper extends HttpServletResponseWrapper {
-    public TestAsyncRespWrapper(HttpServletResponse resp) {
+    TestAsyncRespWrapper(HttpServletResponse resp) {
         super(resp);
     }
 
