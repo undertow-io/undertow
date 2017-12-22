@@ -75,7 +75,11 @@ public class SimpleAsyncTestCase {
                         .addMapping("/async2"),
                 servlet("error", AsyncErrorServlet.class)
                         .setAsyncSupported(true)
-                        .addMapping("/error"));
+                        .addMapping("/error"),
+                servlet("dispatch", AsyncDispatchServlet.class)
+                        .setAsyncSupported(true)
+                        .addMapping("/dispatch")
+                );
 
     }
 
@@ -121,6 +125,19 @@ public class SimpleAsyncTestCase {
         }
     }
 
+    @Test
+    public void testWrappedDispatch() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("wrapped: " + HELLO_WORLD, response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
     @Test
     public void testErrorServletWithPostData() throws IOException {
         TestHttpClient client = new TestHttpClient();

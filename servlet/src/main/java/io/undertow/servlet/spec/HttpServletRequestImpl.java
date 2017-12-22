@@ -1049,6 +1049,8 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
         asyncStarted = true;
+        servletRequestContext.setServletRequest(servletRequest);
+        servletRequestContext.setServletResponse(servletResponse);
         return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, true, asyncContext);
     }
 
