@@ -32,6 +32,7 @@ public class ResponseTimeAttribute implements ExchangeAttribute {
     public static final String RESPONSE_TIME_MILLIS_SHORT = "%D";
     public static final String RESPONSE_TIME_SECONDS_SHORT = "%T";
     public static final String RESPONSE_TIME_MILLIS = "%{RESPONSE_TIME}";
+    public static final String RESPONSE_TIME_MICROS = "%{RESPONSE_TIME_MICROS}";
     public static final String RESPONSE_TIME_NANOS = "%{RESPONSE_TIME_NANOS}";
 
     private final TimeUnit timeUnit;
@@ -82,6 +83,9 @@ public class ResponseTimeAttribute implements ExchangeAttribute {
             }
             if (token.equals(RESPONSE_TIME_SECONDS_SHORT)) {
                 return new ResponseTimeAttribute(TimeUnit.SECONDS);
+            }
+            if(token.equals(RESPONSE_TIME_MICROS)) {
+                return new ResponseTimeAttribute(TimeUnit.MICROSECONDS);
             }
             if(token.equals(RESPONSE_TIME_NANOS)) {
                 return new ResponseTimeAttribute(TimeUnit.NANOSECONDS);
