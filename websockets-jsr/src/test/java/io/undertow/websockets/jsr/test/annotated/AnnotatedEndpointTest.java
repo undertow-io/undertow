@@ -41,6 +41,7 @@ import org.xnio.FutureResult;
 
 
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.undertow.Handlers;
@@ -281,13 +282,24 @@ public class AnnotatedEndpointTest {
 
 
     @Test
-    public void testEncodingAndDecoding() throws Exception {
+    public void testEncodingAndDecodingText() throws Exception {
         final byte[] payload = "hello".getBytes();
         final FutureResult latch = new FutureResult();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encoding/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+    @Test
+    public void testEncodingAndDecodingBinary() throws Exception {
+        final byte[] payload = "hello".getBytes();
+        final FutureResult latch = new FutureResult();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encoding/Stuart"));
+        client.connect();
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }

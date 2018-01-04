@@ -25,7 +25,7 @@ import javax.websocket.server.ServerEndpoint;
 /**
  * @author Stuart Douglas
  */
-@ServerEndpoint(value = "/encoding/{user}", encoders = EncodableObject.Encoder.class, decoders = EncodableObject.Decoder.class)
+@ServerEndpoint(value = "/encoding/{user}", encoders = {EncodableObject.TextEncoder.class}, decoders = {EncodableObject.TextDecoder.class, EncodableObject.BinaryDecoder.class})
 public class EncodingEndpoint {
 
     @OnMessage
