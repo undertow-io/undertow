@@ -59,7 +59,7 @@ public class AjpParsingUnitTestCase {
         }
     }
 
-    public static final AjpRequestParser AJP_REQUEST_PARSER = new AjpRequestParser("UTF-8", true, 100, 100);
+    public static final AjpRequestParser AJP_REQUEST_PARSER = new AjpRequestParser("UTF-8", true, 100, 100, false);
 
 
     @Test
