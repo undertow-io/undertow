@@ -18,6 +18,9 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+
 import javax.websocket.DecodeException;
 import javax.websocket.EncodeException;
 import javax.websocket.EndpointConfig;
@@ -37,7 +40,7 @@ public class EncodableObject {
         return value;
     }
 
-    public static class Encoder implements javax.websocket.Encoder.Text<EncodableObject> {
+    public static class TextEncoder implements javax.websocket.Encoder.Text<EncodableObject> {
 
         boolean initalized = false;
         public static volatile boolean destroyed = false;
@@ -61,7 +64,7 @@ public class EncodableObject {
         }
     }
 
-    public static class Decoder implements javax.websocket.Decoder.Text<EncodableObject> {
+    public static class TextDecoder implements javax.websocket.Decoder.Text<EncodableObject> {
 
         boolean initalized = false;
         public static volatile boolean destroyed = false;
@@ -86,6 +89,37 @@ public class EncodableObject {
 
         @Override
         public boolean willDecode(final String s) {
+            return true;
+        }
+    }
+
+    public static class BinaryDecoder implements javax.websocket.Decoder.Binary<EncodableObject> {
+
+        boolean initalized = false;
+        public static volatile boolean destroyed = false;
+
+        @Override
+        public void init(final EndpointConfig config) {
+            initalized = true;
+        }
+
+        @Override
+        public void destroy() {
+            destroyed = true;
+        }
+
+        @Override
+        public EncodableObject decode(final ByteBuffer s) throws DecodeException {
+            if(!initalized) {
+                throw new DecodeException(s, "not initialized");
+            }
+            byte[] data = new byte[s.remaining()];
+            s.get(data);
+            return new EncodableObject(new String(data, StandardCharsets.US_ASCII));
+        }
+
+        @Override
+        public boolean willDecode(final ByteBuffer s) {
             return true;
         }
     }
