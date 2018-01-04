@@ -48,7 +48,6 @@ import static io.undertow.util.Methods.VERSION_CONTROL;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.util.TreeMap;
 
@@ -71,8 +70,10 @@ public class AjpRequestParser {
 
     private final String encoding;
     private final boolean doDecode;
+    private final boolean allowEncodedSlash;
     private final int maxParameters;
     private final int maxHeaders;
+    private StringBuilder decodeBuffer;
 
     private static final HttpString[] HTTP_HEADERS;
 
@@ -175,11 +176,12 @@ public class AjpRequestParser {
         ATTRIBUTES[13] = STORED_METHOD;
     }
 
-    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders) {
+    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash) {
         this.encoding = encoding;
         this.doDecode = doDecode;
         this.maxParameters = maxParameters;
         this.maxHeaders = maxHeaders;
+        this.allowEncodedSlash = allowEncodedSlash;
     }
 
 
@@ -455,7 +457,10 @@ public class AjpRequestParser {
     private String decode(String url, final boolean containsUrlCharacters) throws UnsupportedEncodingException {
         if (doDecode && containsUrlCharacters) {
             try {
-                return URLDecoder.decode(url, encoding);
+                if(decodeBuffer == null) {
+                    decodeBuffer = new StringBuilder();
+                }
+                return URLUtils.decode(url, this.encoding, allowEncodedSlash, false, decodeBuffer);
             } catch (Exception e) {
                 throw UndertowMessages.MESSAGES.failedToDecodeURL(url, encoding, e);
             }
