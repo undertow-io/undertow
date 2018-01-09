@@ -47,13 +47,27 @@ public class RelativePathAttribute implements ExchangeAttribute {
         int pos = newValue.indexOf('?');
         if (pos == -1) {
             exchange.setRelativePath(newValue);
-            exchange.setRequestURI(exchange.getResolvedPath() + newValue);
-            exchange.setRequestPath(exchange.getResolvedPath() + newValue);
+            String requestURI = exchange.getResolvedPath() + newValue;
+            if(requestURI.contains("%")) {
+                //as the request URI is supposed to be encoded we need to replace
+                //percent characters with their encoded form, otherwise we can run into issues
+                //where the percent will be taked to be a encoded character
+                //TODO: should we fully encode this? It seems like it also has the potential to cause issues, and encoding the percent character is probably enough
+                exchange.setRequestURI(requestURI.replaceAll("%", "%25"));
+            } else {
+                exchange.setRequestURI(requestURI);
+            }
+            exchange.setRequestPath(requestURI);
         } else {
             final String path = newValue.substring(0, pos);
             exchange.setRelativePath(path);
-            exchange.setRequestURI(exchange.getResolvedPath() + path);
-            exchange.setRequestPath(exchange.getResolvedPath() + path);
+            String requestURI = exchange.getResolvedPath() + path;
+            if(requestURI.contains("%")) {
+                exchange.setRequestURI(requestURI.replaceAll("%", "%25"));
+            } else {
+                exchange.setRequestURI(requestURI);
+            }
+            exchange.setRequestPath(requestURI);
 
             final String newQueryString = newValue.substring(pos);
             exchange.setQueryString(newQueryString);
