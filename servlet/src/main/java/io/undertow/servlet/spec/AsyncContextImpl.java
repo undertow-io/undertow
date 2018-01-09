@@ -106,6 +106,7 @@ public class AsyncContextImpl implements AsyncContext {
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
             public void run() {
+                servletRequestContext.getOriginalRequest().setAsyncCancelled(false);
                 exchange.setDispatchExecutor(null);
                 initialRequestDone();
             }
@@ -284,6 +285,7 @@ public class AsyncContextImpl implements AsyncContext {
         servletRequestContext.getOriginalRequest().asyncRequestDispatched();
         Thread currentThread = Thread.currentThread();
         if (!initialRequestDone && currentThread == initiatingThread) {
+            servletRequestContext.getOriginalRequest().setAsyncCancelled(true);
             //TODO: according to the spec we should delay this until the container initiated thread has returned?
 
             onAsyncComplete();
