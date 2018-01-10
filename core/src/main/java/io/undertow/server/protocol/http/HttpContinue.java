@@ -74,6 +74,9 @@ public class HttpContinue {
         if (!COMPATIBLE_PROTOCOLS.contains(exchange.getProtocol()) || exchange.isResponseStarted() || !exchange.getConnection().isContinueResponseSupported() || exchange.getAttachment(ALREADY_SENT) != null) {
             return false;
         }
+        if(exchange.getRequestContentLength() == 0) {
+            return false;
+        }
         if (exchange.getConnection() instanceof HttpServerConnection) {
             if (((HttpServerConnection) exchange.getConnection()).getExtraBytes() != null) {
                 //we have already received some of the request body
