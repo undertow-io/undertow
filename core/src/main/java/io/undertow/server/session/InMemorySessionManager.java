@@ -428,10 +428,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 expireTime = newExpireTime;
                 UndertowLogger.SESSION_LOGGER.tracef("Bumping timeout for session %s to %s", sessionId, expireTime);
                 if(timerCancelKey == null) {
-                    //+500ms, to make sure that the time has actually expired
+                    //+1, to make sure that the time has actually expired
                     //we don't re-schedule every time, as it is expensive
                     //instead when it expires we check if the timeout has been bumped, and if so we re-schedule
-                    timerCancelKey = executor.executeAfter(cancelTask, (maxInactiveInterval * 1000L) + 500L, TimeUnit.MILLISECONDS);
+                    timerCancelKey = executor.executeAfter(cancelTask, (maxInactiveInterval * 1000L) + 1L, TimeUnit.MILLISECONDS);
                 }
             } else {
                 expireTime = -1;
