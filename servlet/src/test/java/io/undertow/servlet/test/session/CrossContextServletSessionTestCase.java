@@ -24,6 +24,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -76,13 +77,17 @@ public class CrossContextServletSessionTestCase {
         ServletInfo include = new ServletInfo("include", IncludeServlet.class)
                 .addMapping("/include");
 
+        ServletInfo includeAdd = new ServletInfo("includeadd", IncludeAddServlet.class)
+                .addMapping("/includeadd");
+        ServletInfo forwardAdd = new ServletInfo("forwardadd", ForwardAddServlet.class)
+                .addMapping("/forwardadd");
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
                 .setContextPath("/" + name)
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName( name + ".war")
                 .setServletSessionConfig(new ServletSessionConfig().setPath("/"))
-                .addServlets(s, forward, include);
+                .addServlets(s, forward, include, forwardAdd, includeAdd);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -185,6 +190,44 @@ public class CrossContextServletSessionTestCase {
     }
 
     @Test
+    public void testCrossContextSessionForwardInvocationWithBothServletsAdding() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/servlet");
+            HttpGet forward1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/forwardadd?context=/2&path=/servlet");
+            HttpGet direct2 = new HttpGet(DefaultServer.getDefaultServerURL() + "/2/servlet");
+            HttpGet forward2 = new HttpGet(DefaultServer.getDefaultServerURL() + "/2/forwardadd?context=/1&path=/servlet");
+            HttpResponse result = client.execute(forward1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("1", response);
+
+            result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("2", response);
+
+            result = client.execute(forward2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("3", response);
+
+            result = client.execute(forward2);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("4", response);
+
+            result = client.execute(forward1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("4", response);
+
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+    @Test
     public void testCrossContextSessionIncludeInvocation() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -251,6 +294,35 @@ public class CrossContextServletSessionTestCase {
 
         @Override
         protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+            req.getServletContext().getContext(req.getParameter("context")).getRequestDispatcher(req.getParameter("path")).include(req, resp);
+        }
+    }
+
+    public static class ForwardAddServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+            HttpSession session = req.getSession();
+            Integer value = (Integer)session.getAttribute("key");
+            if(value == null) {
+                value = 1;
+            }
+            session.setAttribute("key", value + 1);
+            req.getServletContext().getContext(req.getParameter("context")).getRequestDispatcher(req.getParameter("path")).forward(req, resp);
+        }
+    }
+
+
+    public static class IncludeAddServlet extends HttpServlet {
+
+        @Override
+        protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+            HttpSession session = req.getSession();
+            Integer value = (Integer)session.getAttribute("key");
+            if(value == null) {
+                value = 1;
+            }
+            session.setAttribute("key", value + 1);
             req.getServletContext().getContext(req.getParameter("context")).getRequestDispatcher(req.getParameter("path")).include(req, resp);
         }
     }
