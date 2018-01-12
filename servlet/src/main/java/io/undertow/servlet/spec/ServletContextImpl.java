@@ -866,7 +866,35 @@ public class ServletContextImpl implements ServletContext {
                 if (originalServletContext != this) {
                     //this is a cross context request
                     //we need to make sure there is a top level session
-                    originalServletContext.getSession(originalServletContext, exchange, true);
+                    final HttpSessionImpl topLevel = originalServletContext.getSession(originalServletContext, exchange, true);
+                    //override the session id to just return the same ID as the top level session
+
+                    c = new SessionConfig() {
+                        @Override
+                        public void setSessionId(HttpServerExchange exchange, String sessionId) {
+                            getSessionConfig().setSessionId(exchange, sessionId);
+                        }
+
+                        @Override
+                        public void clearSession(HttpServerExchange exchange, String sessionId) {
+                            //noop
+                        }
+
+                        @Override
+                        public String findSessionId(HttpServerExchange exchange) {
+                            return topLevel.getId();
+                        }
+
+                        @Override
+                        public SessionCookieSource sessionCookieSource(HttpServerExchange exchange) {
+                            return SessionCookieSource.NONE;
+                        }
+
+                        @Override
+                        public String rewriteUrl(String originalUrl, String sessionId) {
+                            return null;
+                        }
+                    };
                 } else if (existing != null) {
                     if(deploymentInfo.isCheckOtherSessionManagers()) {
                         boolean found = false;
