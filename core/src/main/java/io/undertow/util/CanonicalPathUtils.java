@@ -26,6 +26,11 @@ import java.util.List;
  */
 public class CanonicalPathUtils {
 
+    /**
+     * System property the revert to legacy behaviour of ignoring backslash
+     */
+    private static final boolean DONT_CANONICALIZE_BACKSLASH = Boolean.parseBoolean("io.undertow.DONT_CANONICALIZE_BACKSLASH");
+
 
     public static String canonicalize(final String path) {
         int state = START;
@@ -42,16 +47,6 @@ public class CanonicalPathUtils {
                     }
                     state = FIRST_SLASH;
                     break;
-                case '\\':
-                    if (state == FIRST_BACKSLASH) {
-                        return realCanonicalize(path, i + 1, FIRST_BACKSLASH);
-                    } else if (state == ONE_DOT) {
-                        return realCanonicalize(path, i + 2, FIRST_BACKSLASH);
-                    } else if (state == TWO_DOT) {
-                        return realCanonicalize(path, i + 3, FIRST_BACKSLASH);
-                    }
-                    state = FIRST_BACKSLASH;
-                    break;
                 case '.':
                     if (state == FIRST_SLASH || state == START || state == FIRST_BACKSLASH) {
                         state = ONE_DOT;
@@ -61,6 +56,19 @@ public class CanonicalPathUtils {
                         state = NORMAL;
                     }
                     break;
+                case '\\':
+                    if(!DONT_CANONICALIZE_BACKSLASH) {
+                        if (state == FIRST_BACKSLASH) {
+                            return realCanonicalize(path, i + 1, FIRST_BACKSLASH);
+                        } else if (state == ONE_DOT) {
+                            return realCanonicalize(path, i + 2, FIRST_BACKSLASH);
+                        } else if (state == TWO_DOT) {
+                            return realCanonicalize(path, i + 3, FIRST_BACKSLASH);
+                        }
+                        state = FIRST_BACKSLASH;
+                        break;
+                    }
+                    //fall through
                 default:
                     state  = NORMAL;
                     break;
@@ -85,6 +93,7 @@ public class CanonicalPathUtils {
         for (int i = lastDot - 1; i >= 0; --i) {
             final char c = path.charAt(i);
             switch (state) {
+
                 case NORMAL: {
                     if (c == '/') {
                         state = FIRST_SLASH;
@@ -92,7 +101,7 @@ public class CanonicalPathUtils {
                             --eatCount;
                             tokenEnd = i;
                         }
-                    } else if (c == '\\') {
+                    } else if (c == '\\' && !DONT_CANONICALIZE_BACKSLASH) {
                         state = FIRST_BACKSLASH;
                         if (eatCount > 0) {
                             --eatCount;
@@ -136,7 +145,7 @@ public class CanonicalPathUtils {
                 case ONE_DOT: {
                     if (c == '.') {
                         state = TWO_DOT;
-                    } else if (c == '/' || c == '\\') {
+                    } else if (c == '/' || (c == '\\'  && !DONT_CANONICALIZE_BACKSLASH)) {
                         if (i + 2 != tokenEnd) {
                             parts.add(path.substring(i + 2, tokenEnd));
                         }
@@ -148,7 +157,7 @@ public class CanonicalPathUtils {
                     break;
                 }
                 case TWO_DOT: {
-                    if (c == '/' || c == '\\') {
+                    if (c == '/' || (c == '\\'  && !DONT_CANONICALIZE_BACKSLASH)) {
                         if (i + 3 != tokenEnd) {
                             parts.add(path.substring(i + 3, tokenEnd));
                         }
