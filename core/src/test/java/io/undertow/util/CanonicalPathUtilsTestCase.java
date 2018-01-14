@@ -71,4 +71,49 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("/aaa/bbb/", CanonicalPathUtils.canonicalize("/aaa/bbb//////"));
     }
 
+    @Test
+    public void testCanonicalizationBackslash() {
+
+        //these strings should not be touched
+        Assert.assertSame("a\\b\\c", CanonicalPathUtils.canonicalize("a\\b\\c"));
+        Assert.assertSame("a\\b\\c\\", CanonicalPathUtils.canonicalize("a\\b\\c\\"));
+        Assert.assertSame("aaaaa", CanonicalPathUtils.canonicalize("aaaaa"));
+
+        //these strings should result in the same string being output
+        Assert.assertEquals("a.\\b", CanonicalPathUtils.canonicalize("a.\\b"));
+        Assert.assertEquals("a.\\.b", CanonicalPathUtils.canonicalize("a.\\.b"));
+
+        //removing double slash
+
+        Assert.assertEquals("a\\b", CanonicalPathUtils.canonicalize("a\\\\b"));
+        Assert.assertEquals("a\\b", CanonicalPathUtils.canonicalize("a\\\\\\b"));
+        Assert.assertEquals("a\\b", CanonicalPathUtils.canonicalize("a\\\\\\\\b"));
+
+        //removing \.\
+        Assert.assertEquals("a\\b", CanonicalPathUtils.canonicalize("a\\.\\b"));
+        Assert.assertEquals("a\\b", CanonicalPathUtils.canonicalize("a\\.\\.\\b"));
+        Assert.assertEquals("a\\b\\c", CanonicalPathUtils.canonicalize("a\\.\\b\\.\\c"));
+        Assert.assertEquals("a\\b", CanonicalPathUtils.canonicalize("a\\.\\.\\.\\b"));
+        Assert.assertEquals("a\\b\\", CanonicalPathUtils.canonicalize("a\\.\\.\\.\\b\\.\\"));
+        Assert.assertEquals("a\\b", CanonicalPathUtils.canonicalize("a\\.\\.\\.\\b\\."));
+
+        //dealing with \..\
+        Assert.assertEquals("\\b", CanonicalPathUtils.canonicalize("\\a\\..\\b"));
+        Assert.assertEquals("\\b", CanonicalPathUtils.canonicalize("\\a\\..\\c\\..\\e\\..\\b"));
+        Assert.assertEquals("\\b", CanonicalPathUtils.canonicalize("\\a\\c\\..\\..\\b"));
+        Assert.assertEquals("/", CanonicalPathUtils.canonicalize("\\a\\..\\.."));
+        Assert.assertEquals("\\foo", CanonicalPathUtils.canonicalize("\\a\\..\\..\\foo"));
+
+        //preserve (single) trailing \
+        Assert.assertEquals("\\a\\", CanonicalPathUtils.canonicalize("\\a\\"));
+        Assert.assertEquals("\\", CanonicalPathUtils.canonicalize("\\"));
+        Assert.assertEquals("\\bbb\\a", CanonicalPathUtils.canonicalize("\\cc\\..\\bbb\\a\\."));
+        Assert.assertEquals("\\aaa\\bbb\\", CanonicalPathUtils.canonicalize("\\aaa\\bbb\\\\\\\\\\\\"));
+
+        //test mixtures of both forward and back slash
+        Assert.assertEquals("/", CanonicalPathUtils.canonicalize("\\a/..\\./"));
+        Assert.assertEquals("\\a/", CanonicalPathUtils.canonicalize("\\a\\b\\..\\./"));
+        Assert.assertEquals("/a/b/c../d..\\", CanonicalPathUtils.canonicalize("/a/b/c../d..\\"));
+        Assert.assertEquals("/a/d\\", CanonicalPathUtils.canonicalize("/a/b/c/..\\../d\\.\\"));
+    }
 }
