@@ -39,7 +39,7 @@ public class LocalServerNameAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        return exchange.getRequestHeaders().getFirst(Headers.HOST);
+        return exchange.getHostName();
     }
 
     @Override
