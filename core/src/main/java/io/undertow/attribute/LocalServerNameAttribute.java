@@ -19,7 +19,6 @@
 package io.undertow.attribute;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
 
 /**
  * The local server name
