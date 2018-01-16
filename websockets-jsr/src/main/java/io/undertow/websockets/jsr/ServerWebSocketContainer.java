@@ -540,7 +540,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     @Override
     public Set<Extension> getInstalledExtensions() {
-        return Collections.emptySet();
+        return new HashSet<>(installedExtensions);
     }
 
     /**
