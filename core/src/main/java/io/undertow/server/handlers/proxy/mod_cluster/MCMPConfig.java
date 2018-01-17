@@ -113,20 +113,21 @@ public class MCMPConfig {
         private final String advertiseGroup;
         private final String advertiseAddress;
         private final int advertisePort;
+        private final int advertiseTtl;
+        private final int advertiseFrequency;
 
         private final String securityKey;
         private final String protocol;
         private final String path;
-
-        private final int advertiseFrequency;
 
         private final InetSocketAddress managementSocketAddress;
 
         AdvertiseConfig(AdvertiseBuilder builder, MCMPConfig config) {
             this.advertiseGroup = builder.advertiseGroup;
             this.advertiseAddress = builder.advertiseAddress;
-            this.advertiseFrequency = builder.advertiseFrequency;
             this.advertisePort = builder.advertisePort;
+            this.advertiseTtl = builder.advertiseTtl;
+            this.advertiseFrequency = builder.advertiseFrequency;
             this.securityKey = builder.securityKey;
             this.protocol = builder.protocol;
             this.path = builder.path;
@@ -145,6 +146,14 @@ public class MCMPConfig {
             return advertisePort;
         }
 
+        public int getAdvertiseTtl() {
+            return advertiseTtl;
+        }
+
+        public int getAdvertiseFrequency() {
+            return advertiseFrequency;
+        }
+
         public String getSecurityKey() {
             return securityKey;
         }
@@ -155,10 +164,6 @@ public class MCMPConfig {
 
         public String getPath() {
             return path;
-        }
-
-        public int getAdvertiseFrequency() {
-            return advertiseFrequency;
         }
 
         public InetSocketAddress getManagementSocketAddress() {
@@ -231,12 +236,12 @@ public class MCMPConfig {
         String advertiseGroup = "224.0.1.105";
         String advertiseAddress = "127.0.0.1";
         int advertisePort = 23364;
+        int advertiseTtl = 10;
+        int advertiseFrequency = 10000;
 
         String securityKey;
         String protocol = "http";
         String path = "/";
-
-        int advertiseFrequency = 10000;
 
         private final Builder parent;
         public AdvertiseBuilder(Builder parent) {
@@ -258,6 +263,16 @@ public class MCMPConfig {
             return this;
         }
 
+        public AdvertiseBuilder setAdvertiseTtl(int advertiseTtl) {
+            this.advertiseTtl = advertiseTtl;
+            return this;
+        }
+
+        public AdvertiseBuilder setAdvertiseFrequency(int advertiseFrequency) {
+            this.advertiseFrequency = advertiseFrequency;
+            return this;
+        }
+
         public AdvertiseBuilder setSecurityKey(String securityKey) {
             this.securityKey = securityKey;
             return this;
@@ -274,11 +289,6 @@ public class MCMPConfig {
             } else {
                 this.path = "/" + path;
             }
-            return this;
-        }
-
-        public AdvertiseBuilder setAdvertiseFrequency(int advertiseFrequency) {
-            this.advertiseFrequency = advertiseFrequency;
             return this;
         }
 
