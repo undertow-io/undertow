@@ -317,6 +317,22 @@ public class SimpleParserTestCase {
         }
     }
 
+    /**
+     * Test for having mixed + and %20 in path for encoding spaces https://issues.jboss.org/browse/UNDERTOW-1193
+     */
+    @Test
+    public void testPlusSignVsSpaceEncodingInPath() throws BadRequestException {
+        byte[] in = "GET http://myurl.com/+/mypath%20with%20spaces HTTP/1.1\r\n\r\n".getBytes();
+
+        final ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("+ in path shouldn't be treated as space, caused probably by https://issues.jboss.org/browse/UNDERTOW-1193",
+                "/+/mypath with spaces", result.getRequestPath());
+        Assert.assertEquals("http://myurl.com/+/mypath%20with%20spaces", result.getRequestURI());
+    }
+
 
     @Test
     public void testEmptyQueryParams() throws BadRequestException {
