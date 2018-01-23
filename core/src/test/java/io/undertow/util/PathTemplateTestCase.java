@@ -55,16 +55,16 @@ public class PathTemplateTestCase {
 
         // test trailing slashes
         testMatch("/docs/mydoc/", "/docs/mydoc/");
-        testMatch("/docs/{docId}/", "/docs/mydoc", "docId", "mydoc");
-        testMatch("/docs/{docId}/{op}/", "/docs/mydoc/read", "docId", "mydoc", "op", "read");
-        testMatch("/docs/{docId}/{op}/{allowed}/", "/docs/mydoc/read/true", "docId", "mydoc", "op", "read", "allowed", "true");
-        testMatch("/docs/{docId}/operation/{op}/", "/docs/mydoc/operation/read", "docId", "mydoc", "op", "read");
-        testMatch("/docs/{docId}/read/", "/docs/mydoc/read", "docId", "mydoc");
+        testMatch("/docs/{docId}/", "/docs/mydoc/", "docId", "mydoc");
+        testMatch("/docs/{docId}/{op}/", "/docs/mydoc/read/", "docId", "mydoc", "op", "read");
+        testMatch("/docs/{docId}/{op}/{allowed}/", "/docs/mydoc/read/true/", "docId", "mydoc", "op", "read", "allowed", "true");
+        testMatch("/docs/{docId}/operation/{op}/", "/docs/mydoc/operation/read/", "docId", "mydoc", "op", "read");
+        testMatch("/docs/{docId}/read/", "/docs/mydoc/read/", "docId", "mydoc");
 
         // test straight replacement of template
         testMatch("/{foo}", "/bob", "foo", "bob");
         testMatch("{foo}", "/bob", "foo", "bob");
-        testMatch("/{foo}/", "/bob", "foo", "bob");
+        testMatch("/{foo}/", "/bob/", "foo", "bob");
 
         // test that brackets (and the possibility of recursive templates) don't mess up the matching
         testMatch("/{value}", "/{value}", "value", "{value}");
@@ -94,6 +94,18 @@ public class PathTemplateTestCase {
         seen.add(PathTemplate.create("/bob/{foo}"));
         Assert.assertTrue(seen.contains(PathTemplate.create("/bob/{ak}")));
         Assert.assertFalse(seen.contains(PathTemplate.create("/bob/{ak}/other")));
+    }
+
+    @Test
+    public void testTrailingSlash() {
+        PathTemplate template = PathTemplate.create("/bob/");
+        Assert.assertFalse(template.matches("/bob", new HashMap<>()));
+        Assert.assertTrue(template.matches("/bob/", new HashMap<>()));
+
+        template = PathTemplate.create("/bob/{id}/");
+        Assert.assertFalse(template.matches("/bob/1", new HashMap<>()));
+        Assert.assertTrue(template.matches("/bob/1/", new HashMap<>()));
+
     }
 
     private void testMatch(final String template, final String path, final String ... pathParams)  {
