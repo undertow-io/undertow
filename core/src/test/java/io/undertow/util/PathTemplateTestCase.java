@@ -99,12 +99,12 @@ public class PathTemplateTestCase {
     @Test
     public void testTrailingSlash() {
         PathTemplate template = PathTemplate.create("/bob/");
-        Assert.assertFalse(template.matches("/bob", new HashMap<>()));
-        Assert.assertTrue(template.matches("/bob/", new HashMap<>()));
+        Assert.assertFalse(template.matches("/bob", new HashMap<String, String>()));
+        Assert.assertTrue(template.matches("/bob/", new HashMap<String, String>()));
 
         template = PathTemplate.create("/bob/{id}/");
-        Assert.assertFalse(template.matches("/bob/1", new HashMap<>()));
-        Assert.assertTrue(template.matches("/bob/1/", new HashMap<>()));
+        Assert.assertFalse(template.matches("/bob/1", new HashMap<String, String>()));
+        Assert.assertTrue(template.matches("/bob/1/", new HashMap<String, String>()));
 
     }
 

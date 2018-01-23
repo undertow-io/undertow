@@ -129,6 +129,10 @@
                 <Class name="io.undertow.util.Cookies"/>
                 <Method name="parseCookie"/>
             </And>
+            <And>
+                <Class name="io.undertow.util.PathTemplate"/>
+                <Method name="create"/>
+            </And>
         </Or>
     </Match>
 
