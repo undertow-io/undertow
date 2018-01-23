@@ -47,13 +47,15 @@ public class PathTemplate implements Comparable<PathTemplate> {
     private final String base;
     final List<Part> parts;
     private final Set<String> parameterNames;
+    private final boolean trailingSlash;
 
-    private PathTemplate(String templateString, final boolean template, final String base, final List<Part> parts, Set<String> parameterNames) {
+    private PathTemplate(String templateString, final boolean template, final String base, final List<Part> parts, Set<String> parameterNames, boolean trailingSlash) {
         this.templateString = templateString;
         this.template = template;
         this.base = base;
         this.parts = parts;
         this.parameterNames = Collections.unmodifiableSet(parameterNames);
+        this.trailingSlash = trailingSlash;
     }
 
     public static PathTemplate create(final String inputPath) {
@@ -148,15 +150,21 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 }
             }
         }
-
+        boolean trailingSlash = false;
         switch (state) {
-            case 0:
-            case 1: {
+            case 1:
+                trailingSlash = true;
+                //fall through
+            case 0: {
                 base = path;
                 break;
             }
             case 2: {
                 throw UndertowMessages.MESSAGES.couldNotParseUriTemplate(path, path.length());
+            }
+            case 4: {
+                trailingSlash = true;
+                break;
             }
             case 5: {
                 Part part = new Part(false, path.substring(stringStart));
@@ -170,7 +178,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 templates.add(part.part);
             }
         }
-        return new PathTemplate(path, state > 1 && !base.contains("*"), base, parts, templates);
+        return new PathTemplate(path, state > 1 && !base.contains("*"), base, parts, templates, trailingSlash);
     }
 
     /**
@@ -203,6 +211,14 @@ public class PathTemplate implements Comparable<PathTemplate> {
         int baseLength = base.length();
         if (!template) {
             return path.length() == baseLength;
+        }
+        if(trailingSlash) {
+            //the template has a trailing slash
+            //we verify this first as it is cheap
+            //and it simplifies the matching algorithm below
+            if(path.charAt(path.length() -1 ) != '/') {
+                return false;
+            }
         }
 
         int currentPartPosition = 0;
