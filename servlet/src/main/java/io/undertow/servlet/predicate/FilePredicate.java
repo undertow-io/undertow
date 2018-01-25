@@ -41,9 +41,15 @@ import java.util.Set;
 public class FilePredicate implements Predicate {
 
     private final ExchangeAttribute location;
+    private final boolean requireContent;
 
     public FilePredicate(final ExchangeAttribute location) {
+        this(location, false);
+    }
+
+    public FilePredicate(final ExchangeAttribute location, boolean requireContent) {
         this.location = location;
+        this.requireContent = requireContent;
     }
 
     @Override
@@ -62,7 +68,14 @@ public class FilePredicate implements Predicate {
             if(resource == null) {
                 return false;
             }
-            return !resource.isDirectory();
+            if(resource.isDirectory()) {
+                return false;
+            }
+            if(requireContent){
+              return resource.getContentLength() != null && resource.getContentLength() > 0;
+            } else {
+                return true;
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -80,6 +93,7 @@ public class FilePredicate implements Predicate {
         public Map<String, Class<?>> parameters() {
             final Map<String, Class<?>> params = new HashMap<>();
             params.put("value", ExchangeAttribute.class);
+            params.put("require-content", Boolean.class);
             return params;
         }
 
@@ -96,10 +110,11 @@ public class FilePredicate implements Predicate {
         @Override
         public Predicate build(final Map<String, Object> config) {
             ExchangeAttribute value = (ExchangeAttribute) config.get("value");
+            Boolean requireContent = (Boolean)config.get("require-content");
             if(value == null) {
                 value = ExchangeAttributes.relativePath();
             }
-            return new FilePredicate(value);
+            return new FilePredicate(value, requireContent == null ? false : requireContent);
         }
     }
 
