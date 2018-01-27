@@ -872,7 +872,7 @@ public class ServletContextImpl implements ServletContext {
                     c = new SessionConfig() {
                         @Override
                         public void setSessionId(HttpServerExchange exchange, String sessionId) {
-                            getSessionConfig().setSessionId(exchange, sessionId);
+                            //noop
                         }
 
                         @Override
