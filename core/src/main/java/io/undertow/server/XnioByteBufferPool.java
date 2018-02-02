@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.ByteBufferSlicePool;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 
@@ -64,6 +65,7 @@ public class XnioByteBufferPool implements ByteBufferPool {
             public void close() {
                 open = false;
                 buf.free();
+                ((ByteBufferSlicePool) pool).clean();
             }
 
             @Override
