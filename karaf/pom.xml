@@ -47,7 +47,7 @@
         <libraryPath></libraryPath>
         <java.library.path></java.library.path>
         <org.wildfly.openssl.path></org.wildfly.openssl.path>
-        <dependency.karaf.version>4.0.7</dependency.karaf.version>
+        <dependency.karaf.version>4.2.0.M2</dependency.karaf.version>
     </properties>
 
     <dependencies>
