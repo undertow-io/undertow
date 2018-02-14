@@ -994,7 +994,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getLocalAddr() {
-        SocketAddress address = exchange.getConnection().getLocalAddress();
+        SocketAddress address = exchange.getDestinationAddress();
          if (address instanceof InetSocketAddress) {
             return ((InetSocketAddress) address).getAddress().getHostAddress();
         } else if (address instanceof LocalSocketAddress) {
