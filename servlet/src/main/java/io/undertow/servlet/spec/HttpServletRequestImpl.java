@@ -943,11 +943,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public int getLocalPort() {
-        SocketAddress address = exchange.getConnection().getLocalAddress();
-        if (address instanceof InetSocketAddress) {
-            return ((InetSocketAddress) address).getPort();
-        }
-        return -1;
+        return exchange.getDestinationAddress().getPort();
     }
 
     @Override
