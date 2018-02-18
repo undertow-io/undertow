@@ -25,7 +25,7 @@ import io.undertow.server.HttpServerExchange;
  */
 public class SecureExchangeAttribute implements ExchangeAttribute {
 
-    public static final String TOKEN = "${SECURE}";
+    public static final String TOKEN = "%{SECURE}";
     public static final ExchangeAttribute INSTANCE = new SecureExchangeAttribute();
 
     @Override
