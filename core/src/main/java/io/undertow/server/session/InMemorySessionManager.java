@@ -185,7 +185,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         UndertowLogger.SESSION_LOGGER.debugf("Created session with id %s for exchange %s", sessionID, serverExchange);
         sessions.put(sessionID, session);
         config.setSessionId(serverExchange, session.getId());
-        session.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
         sessionListeners.sessionCreated(session, serverExchange);
         serverExchange.putAttachment(NEW_SESSION, session);
