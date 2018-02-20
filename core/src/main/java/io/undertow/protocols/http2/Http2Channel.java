@@ -791,9 +791,17 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 ping.resumeWrites();
             }
         } catch (IOException e) {
-            exceptionHandler.handleException(ping, e);
+            if(exceptionHandler != null) {
+                exceptionHandler.handleException(ping, e);
+            } else {
+                UndertowLogger.REQUEST_LOGGER.debug("Failed to send ping and no exception handler set", e);
+            }
         } catch (Throwable t) {
-            exceptionHandler.handleException(ping, new IOException(t));
+            if(exceptionHandler != null) {
+                exceptionHandler.handleException(ping, new IOException(t));
+            } else {
+                UndertowLogger.REQUEST_LOGGER.debug("Failed to send ping and no exception handler set", t);
+            }
         }
     }
 
