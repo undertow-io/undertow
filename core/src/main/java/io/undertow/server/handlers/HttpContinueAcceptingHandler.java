@@ -19,12 +19,17 @@
 package io.undertow.server.handlers;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -76,6 +81,48 @@ public class HttpContinueAcceptingHandler implements HttpHandler {
             }
         } else {
             next.handleRequest(exchange);
+        }
+    }
+
+    public static final class Wrapper implements HandlerWrapper {
+
+        private final Predicate predicate;
+
+        public Wrapper(Predicate predicate) {
+            this.predicate = predicate;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new HttpContinueAcceptingHandler(handler, predicate);
+        }
+    }
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "http-continue-accept";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return null;
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return new Wrapper(Predicates.truePredicate());
         }
     }
 }
