@@ -37,3 +37,4 @@ io.undertow.server.handlers.LocalNameResolvingHandler$Builder
 io.undertow.server.handlers.StoredResponseHandler$Builder
 io.undertow.server.handlers.SecureCookieHandler$Builder
 io.undertow.server.handlers.ForwardedHandler$Builder
+io.undertow.server.handlers.HttpContinueAcceptingHandler$Builder
