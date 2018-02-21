@@ -75,7 +75,7 @@ public class PreCompressedResourceTestCase {
             final String compressedResource = HttpClientUtils.readResponse(result);
             headers = result.getHeaders(Headers.CONTENT_TYPE_STRING);
             Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertEquals(nonCompressedResource, compressedResource);
+            Assert.assertEquals(nonCompressedResource.replace("\r", ""), compressedResource.replace("\r", "")); //ignore line ending differences
             Assert.assertEquals("gzip", result.getFirstHeader(Headers.CONTENT_ENCODING_STRING).getValue());
 
         } finally {
