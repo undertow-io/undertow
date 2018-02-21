@@ -41,7 +41,7 @@ public class ProxyProtocolTestCase {
             undertow.start();
             int port = ((InetSocketAddress) undertow.getListenerInfo().get(0).getAddress()).getPort();
             Socket s = new Socket(DefaultServer.getHostAddress(), port);
-            s.getOutputStream().write("PROXY TCP 1.2.3.4 5.6.7.8 444 555\r\nGET / HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+            s.getOutputStream().write("PROXY TCP4 1.2.3.4 5.6.7.8 444 555\r\nGET / HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
             String result = FileUtils.readFile(s.getInputStream());
             Assert.assertTrue(result, result.contains("result: /1.2.3.4:444 /5.6.7.8:555"));
         } finally {
@@ -72,7 +72,7 @@ public class ProxyProtocolTestCase {
             undertow.start();
             int port = ((InetSocketAddress) undertow.getListenerInfo().get(0).getAddress()).getPort();
             Socket s = new Socket(DefaultServer.getHostAddress(), port);
-            s.getOutputStream().write("PROXY TCP 1.2.3.4 5.6.7.8 444 555\r\n".getBytes(StandardCharsets.US_ASCII));
+            s.getOutputStream().write("PROXY TCP4 1.2.3.4 5.6.7.8 444 555\r\n".getBytes(StandardCharsets.US_ASCII));
             s = DefaultServer.getClientSSLContext().getSocketFactory().createSocket(s, DefaultServer.getHostAddress(), port, true);
             s.getOutputStream().write("GET / HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
             String result = FileUtils.readFile(s.getInputStream());
