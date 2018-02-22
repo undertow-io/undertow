@@ -25,12 +25,12 @@ import io.undertow.server.HttpServerExchange;
  */
 public class SecureExchangeAttribute implements ExchangeAttribute {
 
-    public static final String TOKEN = "${SECURE}";
+    public static final String TOKEN = "%{SECURE}";
     public static final ExchangeAttribute INSTANCE = new SecureExchangeAttribute();
 
     @Override
     public String readAttribute(HttpServerExchange exchange) {
-        return Boolean.toString(exchange.getRequestScheme().toLowerCase().equals("https"));
+        return Boolean.toString(exchange.isSecure());
     }
 
     @Override
