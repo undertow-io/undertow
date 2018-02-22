@@ -78,8 +78,10 @@ public class SimpleAsyncTestCase {
                         .addMapping("/error"),
                 servlet("dispatch", AsyncDispatchServlet.class)
                         .setAsyncSupported(true)
-                        .addMapping("/dispatch")
-                );
+                        .addMapping("/dispatch"),
+                servlet("doubleCompleteServlet", AsyncDoubleCompleteServlet.class)
+                        .setAsyncSupported(true)
+                        .addMapping("/double-complete"));
 
     }
 
@@ -160,4 +162,17 @@ public class SimpleAsyncTestCase {
         }
     }
 
+    @Test
+    public void testServletCompletesTwiceOnInitialThread() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/double-complete");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(HELLO_WORLD, response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }
