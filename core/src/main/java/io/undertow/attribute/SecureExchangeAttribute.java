@@ -26,6 +26,8 @@ import io.undertow.server.HttpServerExchange;
 public class SecureExchangeAttribute implements ExchangeAttribute {
 
     public static final String TOKEN = "%{SECURE}";
+
+    public static final String LEGACY_INCORRECT_TOKEN = "${SECURE}"; //this was a bug, but we still support it for compat
     public static final ExchangeAttribute INSTANCE = new SecureExchangeAttribute();
 
     @Override
@@ -35,7 +37,7 @@ public class SecureExchangeAttribute implements ExchangeAttribute {
 
     @Override
     public void writeAttribute(HttpServerExchange exchange, String newValue) throws ReadOnlyAttributeException {
-        throw new ReadOnlyAttributeException("secure", newValue);
+        exchange.putAttachment(HttpServerExchange.SECURE_REQUEST, Boolean.parseBoolean(newValue));
     }
 
     public static class Builder implements ExchangeAttributeBuilder {
@@ -47,7 +49,7 @@ public class SecureExchangeAttribute implements ExchangeAttribute {
 
         @Override
         public ExchangeAttribute build(String token) {
-            if(token.equals(TOKEN)) {
+            if(token.equals(TOKEN) || token.equals(LEGACY_INCORRECT_TOKEN)) {
                 return INSTANCE;
             }
             return null;
