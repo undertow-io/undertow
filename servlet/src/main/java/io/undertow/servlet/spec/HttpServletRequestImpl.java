@@ -1026,7 +1026,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public AsyncContextImpl getAsyncContext() {
-        if (!asyncStarted) {
+        if (!isAsyncStarted()) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
         return asyncContext;
