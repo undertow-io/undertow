@@ -111,7 +111,7 @@ public class RequestDumpingHandler implements HttpHandler {
         sb.append("              host=" + exchange.getRequestHeaders().getFirst(Headers.HOST) + "\n");
         sb.append("        serverPort=" + exchange.getDestinationAddress().getPort() + "\n");
         //sb.append("       servletPath=" + exchange.getServletPath());
-        //sb.append("          isSecure=" + exchange.isSecure());
+        sb.append("          isSecure=" + exchange.isSecure() + "\n");
 
         exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
