@@ -40,8 +40,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -190,14 +188,6 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
     @Override
     protected void closeSubChannels() {
         IoUtils.safeClose(source, sink);
-    }
-
-    @Override
-    protected Collection<AbstractFramedStreamSourceChannel<AjpClientChannel, AbstractAjpClientStreamSourceChannel, AbstractAjpClientStreamSinkChannel>> getReceivers() {
-        if(source == null) {
-            return Collections.emptyList();
-        }
-        return Collections.<AbstractFramedStreamSourceChannel<AjpClientChannel, AbstractAjpClientStreamSourceChannel, AbstractAjpClientStreamSinkChannel>>singleton(source);
     }
 
     protected OptionMap getSettings() {
