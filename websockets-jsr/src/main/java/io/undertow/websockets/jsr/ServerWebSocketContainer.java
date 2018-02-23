@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.api.ClassIntrospecter;
@@ -44,11 +45,14 @@ import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import io.undertow.connector.ByteBufferPool;
+
+import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioWorker;
 import org.xnio.http.UpgradeFailedException;
 import org.xnio.ssl.XnioSsl;
 
+import javax.net.ssl.SSLContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -69,6 +73,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -208,6 +213,13 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 break;
             }
         }
+        if(ssl == null) {
+            try {
+                ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+            } catch (NoSuchAlgorithmException e) {
+                //ignore
+            }
+        }
         return connectToServerInternal(instance, ssl, config, path);
     }
 
@@ -249,6 +261,13 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                     break;
                 }
             }
+            if(ssl == null) {
+                try {
+                    ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+                } catch (NoSuchAlgorithmException e) {
+                    //ignore
+                }
+            }
             return connectToServerInternal(factory.createInstance(instance), ssl, config, uri);
         } catch (InstantiationException e) {
             throw new RuntimeException(e);
@@ -266,6 +285,13 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             ssl = provider.getSsl(xnioWorker, endpointInstance, cec, path);
             if (ssl != null) {
                 break;
+            }
+        }
+        if(ssl == null) {
+            try {
+                ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+            } catch (NoSuchAlgorithmException e) {
+                //ignore
             }
         }
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
