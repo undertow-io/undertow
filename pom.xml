@@ -62,7 +62,7 @@
          -->
         <version.com.h2database>1.3.175</version.com.h2database>
         <version.easymock>3.2</version.easymock>
-        <version.io.undertow.jastow>2.0.0.Beta2</version.io.undertow.jastow>
+        <version.io.undertow.jastow>2.0.3.Final</version.io.undertow.jastow>
         <version.junit>4.12</version.junit>
         <version.netty>4.1.8.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
@@ -112,7 +112,7 @@
         <version.com.twitter.hpack>0.10.1</version.com.twitter.hpack>
 
         <!-- Non-default maven plugin versions and configuration -->
-        <version.org.wildfly.openssl>1.0.0.CR4</version.org.wildfly.openssl>
+        <version.org.wildfly.openssl>1.0.2.Final</version.org.wildfly.openssl>
         <version.checkstyle>7.1</version.checkstyle>
     </properties>
 
