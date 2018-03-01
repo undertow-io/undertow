@@ -49,7 +49,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
 import io.undertow.util.Methods;
-import org.xnio.LocalSocketAddress;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -57,7 +56,6 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.security.AccessController;
@@ -994,11 +992,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getLocalAddr() {
-        SocketAddress address = exchange.getDestinationAddress();
-         if (address instanceof InetSocketAddress) {
-            return ((InetSocketAddress) address).getAddress().getHostAddress();
-        } else if (address instanceof LocalSocketAddress) {
-            return ((LocalSocketAddress) address).getName();
+        InetSocketAddress address = exchange.getDestinationAddress();
+         if (address != null) {
+            return address.getAddress().getHostAddress();
         }
         return null;
     }
