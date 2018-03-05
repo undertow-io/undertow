@@ -19,6 +19,7 @@
 package io.undertow.attribute;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +29,8 @@ import java.util.concurrent.TimeUnit;
  * This will only work if {@link io.undertow.UndertowOptions#RECORD_REQUEST_START_TIME} has been set
  */
 public class ResponseTimeAttribute implements ExchangeAttribute {
+
+    private static final AttachmentKey<Long> FIRST_RESPONSE_TIME_NANOS = AttachmentKey.create(Long.class);
 
     public static final String RESPONSE_TIME_MILLIS_SHORT = "%D";
     public static final String RESPONSE_TIME_SECONDS_SHORT = "%T";
@@ -47,7 +50,17 @@ public class ResponseTimeAttribute implements ExchangeAttribute {
         if(requestStartTime == -1) {
             return null;
         }
-        final long nanos = System.nanoTime() - requestStartTime;
+        final long nanos;
+        Long first = exchange.getAttachment(FIRST_RESPONSE_TIME_NANOS);
+        if(first != null) {
+            nanos = first;
+        } else {
+            nanos = System.nanoTime() - requestStartTime;
+            if(exchange.isResponseComplete()) {
+                //save the response time so it is consistent
+                exchange.putAttachment(FIRST_RESPONSE_TIME_NANOS, nanos);
+            }
+        }
         if(timeUnit == TimeUnit.SECONDS) {
             StringBuilder buf = new StringBuilder();
             long milis = TimeUnit.MILLISECONDS.convert(nanos, TimeUnit.NANOSECONDS);
