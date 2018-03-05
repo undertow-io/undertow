@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Handler that sets the peer address to the value of the X-Forwarded-For header.
@@ -41,6 +42,10 @@ import java.util.Set;
  */
 public class ProxyPeerAddressHandler implements HttpHandler {
 
+    private static final Pattern IP4_EXACT = Pattern.compile("(?:\\d{1,3}\\.){3}\\d{1,3}");
+
+    private static final Pattern IP6_EXACT = Pattern.compile("(?:[a-zA-Z0-9]{1,4}:){7}[a-zA-Z0-9]{1,4}");
+
     private final HttpHandler next;
 
     public ProxyPeerAddressHandler(HttpHandler next) {
@@ -51,8 +56,15 @@ public class ProxyPeerAddressHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String forwardedFor = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_FOR);
         if (forwardedFor != null) {
+            String remoteClient = mostRecent(forwardedFor);
             //we have no way of knowing the port
-            exchange.setSourceAddress(InetSocketAddress.createUnresolved(mostRecent(forwardedFor), 0));
+            if(IP4_EXACT.matcher(forwardedFor).matches()) {
+                exchange.setSourceAddress(new InetSocketAddress(NetworkUtils.parseIpv4Address(remoteClient), 0));
+            } else if(IP6_EXACT.matcher(forwardedFor).matches()) {
+                exchange.setSourceAddress(new InetSocketAddress(NetworkUtils.parseIpv6Address(remoteClient), 0));
+            } else {
+                exchange.setSourceAddress(InetSocketAddress.createUnresolved(remoteClient, 0));
+            }
         }
         String forwardedProto = exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PROTO);
         if (forwardedProto != null) {
