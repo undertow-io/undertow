@@ -93,7 +93,7 @@
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.1.Final</version.io.undertow.build.checkstyle-config>
-        <version.org.codehaus.mojo.findbugs-maven-plugin>3.0.4</version.org.codehaus.mojo.findbugs-maven-plugin>
+        <version.com.github.spotbugs-maven-plugin>3.1.2</version.com.github.spotbugs-maven-plugin>
         <version.org.mortbay.jetty.alpn.jdk7>7.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk7>
         <version.org.mortbay.jetty.alpn.jdk8>8.0.0.v20140317</version.org.mortbay.jetty.alpn.jdk8>
         <version.org.mortbay.jetty.alpn.jdk8.25>8.1.2.v20141202</version.org.mortbay.jetty.alpn.jdk8.25>
@@ -184,11 +184,11 @@
 
                 <!-- FindBugs -->
                 <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>findbugs-maven-plugin</artifactId>
-                    <version>${version.org.codehaus.mojo.findbugs-maven-plugin}</version>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>${version.com.github.spotbugs-maven-plugin}</version>
                     <configuration>
-                        <excludeFilterFile>../findbugs-exclude.xml</excludeFilterFile>
+                        <excludeFilterFile>../spotbugs-exclude.xml</excludeFilterFile>
                     </configuration>
                     <executions>
                         <execution>
@@ -485,17 +485,17 @@
 
     <profiles>
         <profile>
-            <id>findbugs</id>
+            <id>spotbugs</id>
             <activation>
                 <property>
-                    <name>findbugs</name>
+                    <name>findbugs</name> <!-- not modified just for compatibility reason -->
                 </property>
             </activation>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>findbugs-maven-plugin</artifactId>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
                     </plugin>
                 </plugins>
             </build>
