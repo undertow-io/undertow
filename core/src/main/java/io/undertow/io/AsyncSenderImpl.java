@@ -120,11 +120,11 @@ public class AsyncSenderImpl implements Sender {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
         if(!exchange.getConnection().isOpen()) {
-            callback.onException(exchange, this, new ClosedChannelException());
+            invokeOnException(callback, new ClosedChannelException());
             return;
         }
         if(exchange.isResponseComplete()) {
-            throw UndertowMessages.MESSAGES.responseComplete();
+            invokeOnException(callback, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
         if (this.buffer != null || this.fileChannel != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
@@ -185,11 +185,11 @@ public class AsyncSenderImpl implements Sender {
         }
 
         if(!exchange.getConnection().isOpen()) {
-            callback.onException(exchange, this, new ClosedChannelException());
+            invokeOnException(callback, new ClosedChannelException());
             return;
         }
         if(exchange.isResponseComplete()) {
-            throw UndertowMessages.MESSAGES.responseComplete();
+            invokeOnException(callback, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
         if (this.buffer != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
@@ -254,11 +254,11 @@ public class AsyncSenderImpl implements Sender {
         }
 
         if(!exchange.getConnection().isOpen()) {
-            callback.onException(exchange, this, new ClosedChannelException());
+            invokeOnException(callback, new ClosedChannelException());
             return;
         }
         if(exchange.isResponseComplete()) {
-            throw UndertowMessages.MESSAGES.responseComplete();
+            invokeOnException(callback, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
         if (this.fileChannel != null || this.buffer != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
@@ -299,11 +299,11 @@ public class AsyncSenderImpl implements Sender {
     public void send(final String data, final Charset charset, final IoCallback callback) {
 
         if(!exchange.getConnection().isOpen()) {
-            callback.onException(exchange, this, new ClosedChannelException());
+            invokeOnException(callback, new ClosedChannelException());
             return;
         }
         if(exchange.isResponseComplete()) {
-            throw UndertowMessages.MESSAGES.responseComplete();
+            invokeOnException(callback, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
         ByteBuffer bytes = ByteBuffer.wrap(data.getBytes(charset));
         if (bytes.remaining() == 0) {
