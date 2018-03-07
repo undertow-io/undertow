@@ -124,6 +124,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private volatile int defaultMaxBinaryMessageBufferSize;
     private volatile int defaultMaxTextMessageBufferSize;
     private volatile boolean deploymentComplete = false;
+    private final List<DeploymentException> deploymentExceptions = new ArrayList<>();
 
     private ServletContextImpl contextToAddFilter = null;
 
@@ -609,7 +610,12 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         if (deploymentComplete) {
             throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
         }
-        addEndpointInternal(endpoint, true);
+        try {
+            addEndpointInternal(endpoint, true);
+        } catch (DeploymentException e) {
+            deploymentExceptions.add(e);
+            throw e;
+        }
     }
 
     private synchronized void addEndpointInternal(final Class<?> endpoint, boolean requiresCreation) throws DeploymentException {
@@ -782,6 +788,12 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
 
     public void deploymentComplete() {
+        if(!deploymentExceptions.isEmpty()) {
+            Exception e = JsrWebSocketMessages.MESSAGES.deploymentFailedDueToProgramaticErrors();
+            for(DeploymentException ex : deploymentExceptions) {
+                e.addSuppressed(e);
+            }
+        }
         deploymentComplete = true;
     }
 
