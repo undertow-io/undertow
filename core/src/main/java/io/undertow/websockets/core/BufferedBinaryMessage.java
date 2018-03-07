@@ -95,6 +95,9 @@ public class BufferedBinaryMessage {
                     callback.complete(channel.getWebSocketChannel(), this);
                     return;
                 } else if (res == 0) {
+                    if(!bufferFullMessage) {
+                        callback.complete(channel.getWebSocketChannel(), BufferedBinaryMessage.this);
+                    }
                     channel.getReadSetter().set(new ChannelListener<StreamSourceFrameChannel>() {
                         @Override
                         public void handleEvent(StreamSourceFrameChannel channel) {
@@ -121,8 +124,6 @@ public class BufferedBinaryMessage {
                                         dealWithFullBuffer(channel);
                                     } else if (!current.getBuffer().hasRemaining()) {
                                         callback.complete(channel.getWebSocketChannel(), BufferedBinaryMessage.this);
-                                    } else {
-                                        handleNewFrame(channel, callback);
                                     }
                                 }
                             } catch (IOException e) {
@@ -140,25 +141,11 @@ public class BufferedBinaryMessage {
                     dealWithFullBuffer(channel);
                 } else if (!current.getBuffer().hasRemaining()) {
                     callback.complete(channel.getWebSocketChannel(), BufferedBinaryMessage.this);
-                } else {
-                    handleNewFrame(channel, callback);
                 }
             }
         } catch (IOException e) {
             callback.onError(channel.getWebSocketChannel(), this, e);
         }
-    }
-
-    private void handleNewFrame(StreamSourceFrameChannel channel, final WebSocketCallback<BufferedBinaryMessage> callback) {
-        //TODO: remove this crap
-        //basically some bogus web sockets TCK tests assume that messages will be broken up into frames
-        //even if we have the full message available.
-//        if(!bufferFullMessage) {
-//            if(channel.getWebSocketFrameCount() != frameCount && current != null && !channel.isFinalFragment()) {
-//                frameCount = channel.getWebSocketFrameCount();
-//                callback.complete(channel.getWebSocketChannel(), this);
-//            }
-//        }
     }
 
     private void checkMaxSize(StreamSourceFrameChannel channel, int res) throws IOException {
