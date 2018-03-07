@@ -18,10 +18,16 @@
 
 package io.undertow.server.handlers.form;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.Handlers;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * Handler that eagerly parses form data. The request chain will pause while the data is being read,
@@ -40,12 +46,24 @@ public class EagerFormParsingHandler implements HttpHandler {
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
     private final FormParserFactory formParserFactory;
 
+    public static HandlerWrapper WRAPPER = new HandlerWrapper() {
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new EagerFormParsingHandler(handler);
+        }
+    };
+
     public EagerFormParsingHandler(final FormParserFactory formParserFactory) {
         this.formParserFactory = formParserFactory;
     }
 
     public EagerFormParsingHandler() {
         this.formParserFactory = FormParserFactory.builder().build();
+    }
+
+    public EagerFormParsingHandler(HttpHandler next) {
+        this();
+        this.next = next;
     }
 
     @Override
@@ -71,5 +89,34 @@ public class EagerFormParsingHandler implements HttpHandler {
         Handlers.handlerNotNull(next);
         this.next = next;
         return this;
+    }
+
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "eager-form-parser";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(Map<String, Object> config) {
+            return WRAPPER;
+        }
     }
 }
