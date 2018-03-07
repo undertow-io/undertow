@@ -154,7 +154,6 @@ public class AnnotatedEndpointFactory {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
                             textMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
-                                    new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, param),
                                     createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
@@ -164,7 +163,6 @@ public class AnnotatedEndpointFactory {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
                             binaryMessage = new BoundMethod(method, param, true, maxMessageSize, new BoundSingleParameter(method, Session.class, true),
-                                    new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, param),
                                     createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
@@ -197,7 +195,6 @@ public class AnnotatedEndpointFactory {
                             }
                             binaryMessage = new BoundMethod(method, InputStream.class, false,
                                     maxMessageSize, new BoundSingleParameter(method, Session.class, true),
-                                    new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, InputStream.class),
                                     createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;
@@ -220,7 +217,6 @@ public class AnnotatedEndpointFactory {
                             }
                             textMessage = new BoundMethod(method, Reader.class, false,
                                     maxMessageSize, new BoundSingleParameter(method, Session.class, true),
-                                    new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(i, Reader.class),
                                     createBoundPathParameters(method, paths, endpointClass));
                             messageHandled = true;

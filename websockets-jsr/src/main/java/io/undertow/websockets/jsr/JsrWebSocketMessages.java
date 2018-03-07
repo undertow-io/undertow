@@ -157,4 +157,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3041, value = "Annotated endpoint %s does not have a no arg constructor, but is using a custom configurator. The custom configurator must create the instance.")
     InstantiationException endpointDoesNotHaveAppropriateConstructor(Class<?> endpoint);
+
+    @Message(id = 3042, value = "Deployment failed due to invalid programmatically added endpoints")
+    RuntimeException deploymentFailedDueToProgramaticErrors();
 }
