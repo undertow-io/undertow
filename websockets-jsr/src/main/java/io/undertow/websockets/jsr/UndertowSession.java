@@ -224,9 +224,9 @@ public final class UndertowSession implements Session {
                         }
                         //horrible hack
                         //the spec says that if we (the local container) close locally then we need to use 1006
-                        //although the TCK does not expect this behaviour for TOO_BIG
+                        //although the TCK does not expect this behaviour for TOO_BIG and VIOLATED_POLICY
                         //we need to really clean up the close behaviour in the next spec
-                        if(!webSocketChannel.isCloseInitiatedByRemotePeer() && !localClose && code.getCode() != CloseReason.CloseCodes.TOO_BIG.getCode()) {
+                        if(!webSocketChannel.isCloseInitiatedByRemotePeer() && !localClose && code.getCode() != CloseReason.CloseCodes.TOO_BIG.getCode() && code.getCode() != CloseReason.CloseCodes.VIOLATED_POLICY.getCode()) {
                             //2.1.5: we must use 1006 if the close was initiated locally
                             //however we only do this for normal closure
                             //if the close was due to another reason such as a message being too long we need to report the real reason
