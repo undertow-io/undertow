@@ -196,6 +196,10 @@ public class JsrWebSocketFilter implements Filter {
                 }
             }
         }
+
+        @Override
+        public void sessionCreated(HttpSessionEvent se) {
+        }
     }
 
 }
