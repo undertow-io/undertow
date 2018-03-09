@@ -294,8 +294,9 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         int length = string.length();
         for (int charIndex = 0; charIndex < length; charIndex++) {
             char c = string.charAt(charIndex);
-            if(c != '\r' && c != '\n') {
-                buffer.put((byte) c);
+            byte b = (byte) c;
+            if(b != '\r' && b != '\n') {
+                buffer.put(b);
             } else {
                 buffer.put((byte) ' ');
             }
