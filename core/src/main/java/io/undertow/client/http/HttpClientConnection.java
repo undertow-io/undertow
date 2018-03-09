@@ -437,8 +437,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
     private void handleError(IOException exception) {
         UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-        safeClose(connection);
         currentRequest.setFailed(exception);
+        currentRequest = null;
+        pendingResponse = null;
+        safeClose(connection);
     }
 
     public StreamConnection performUpgrade() throws IOException {
