@@ -46,7 +46,7 @@ public class EagerFormParsingHandler implements HttpHandler {
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
     private final FormParserFactory formParserFactory;
 
-    public static HandlerWrapper WRAPPER = new HandlerWrapper() {
+    public static final HandlerWrapper WRAPPER = new HandlerWrapper() {
         @Override
         public HttpHandler wrap(HttpHandler handler) {
             return new EagerFormParsingHandler(handler);
