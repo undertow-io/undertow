@@ -926,13 +926,17 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
             @Override
             public synchronized void run() {
+                List<PauseListener> copy = null;
                 synchronized (ServerWebSocketContainer.this) {
                     count--;
                     if (count == 0) {
-                        for(PauseListener p : pauseListeners) {
-                            p.paused();
-                        }
+                        copy = new ArrayList<>(pauseListeners);
                         pauseListeners.clear();
+                    }
+                }
+                if(copy != null) {
+                    for (PauseListener p : copy) {
+                        p.paused();
                     }
                 }
             }
