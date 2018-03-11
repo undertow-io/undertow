@@ -43,15 +43,19 @@ public class SessionContainer {
     }
 
     public void removeOpenSession(Session session) {
+        Runnable task = null;
         synchronized (this) {
             openSessions.remove(session);
             if (waiterCount > 0 && openSessions.isEmpty()) {
                 notifyAll();
             }
             if(doneTask != null) {
-                doneTask.run();
+                task = doneTask;
                 doneTask = null;
             }
+        }
+        if(task != null) {
+            task.run();
         }
     }
 
@@ -75,12 +79,16 @@ public class SessionContainer {
     }
 
     public void notifyClosed(Runnable done) {
+        boolean run = false;
         synchronized (this) {
             if(openSessions.isEmpty()) {
-                done.run();
+                run = true;
             } else {
                 this.doneTask = done;
             }
+        }
+        if(run) {
+            done.run();
         }
     }
 }
