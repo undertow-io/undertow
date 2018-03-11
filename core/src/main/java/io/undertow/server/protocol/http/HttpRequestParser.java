@@ -157,6 +157,8 @@ import static io.undertow.util.Protocols.HTTP_2_0_STRING;
         })
 public abstract class HttpRequestParser {
 
+    private static final boolean IGNORE_INVALID_QUERY_PARAMETERS = Boolean.getBoolean("io.undertow.ignore-invalid-query-parameters");
+
     private static final byte[] HTTP;
     public static final int HTTP_LENGTH;
 
@@ -579,7 +581,14 @@ public abstract class HttpRequestParser {
 
     private String decode(final String value, boolean urlDecodeRequired, ParseState state, final boolean allowEncodedSlash, final boolean formEncoded) {
         if (urlDecodeRequired) {
-            return URLUtils.decode(value, charset, allowEncodedSlash, formEncoded, state.decodeBuffer);
+            try {
+                return URLUtils.decode(value, charset, allowEncodedSlash, formEncoded, state.decodeBuffer);
+            } catch (RuntimeException e) {
+                if(IGNORE_INVALID_QUERY_PARAMETERS) {
+                    return null;
+                }
+                throw e;
+            }
         } else {
             return value;
         }
