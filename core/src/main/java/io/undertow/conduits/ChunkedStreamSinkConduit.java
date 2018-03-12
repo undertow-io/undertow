@@ -138,6 +138,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         }
         this.state |= FLAG_FIRST_DATA_WRITTEN;
         int oldLimit = src.limit();
+        boolean dataRemaining = false; //set to true if there is data in src that still needs to be written out
         if (chunkleft == 0 && !chunkingSepBuffer.hasRemaining()) {
             chunkingBuffer.clear();
             putIntAsHexString(chunkingBuffer, src.remaining());
@@ -150,6 +151,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             chunkleft = src.remaining();
         } else {
             if (src.remaining() > chunkleft) {
+                dataRemaining = true;
                 src.limit(chunkleft + src.position());
             }
         }
@@ -159,7 +161,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             if (chunkingSize > 0 || chunkingSepSize > 0 || lastChunkBuffer != null) {
                 int originalRemaining = src.remaining();
                 long result;
-                if (lastChunkBuffer == null) {
+                if (lastChunkBuffer == null || dataRemaining) {
                     final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src, chunkingSepBuffer};
                     result = next.write(buf, 0, buf.length);
                 } else {
