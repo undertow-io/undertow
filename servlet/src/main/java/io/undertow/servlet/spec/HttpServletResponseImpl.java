@@ -51,6 +51,8 @@ import io.undertow.util.HttpString;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 
+import static io.undertow.util.URLUtils.isAbsoluteUrl;
+
 
 /**
  * @author Stuart Douglas
@@ -184,7 +186,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         resetBuffer();
         setStatus(StatusCodes.FOUND);
         String realPath;
-        if (location.contains("://")) {//absolute url
+        if (isAbsoluteUrl(location)) {//absolute url
             exchange.getResponseHeaders().put(Headers.LOCATION, location);
         } else {
             if (location.startsWith("/")) {

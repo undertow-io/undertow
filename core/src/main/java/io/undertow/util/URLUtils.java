@@ -18,15 +18,18 @@
 
 package io.undertow.util;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
-
-import java.io.UnsupportedEncodingException;
 
 /**
  * Utilities for dealing with URLs
  *
  * @author Stuart Douglas
+ * @author Andre Schaefer
  */
 public class URLUtils {
 
@@ -310,4 +313,23 @@ public class URLUtils {
 
         return path;
     }
+
+
+	/**
+	 * Test if provided location is an absolute URI or not.
+	 *
+	 * @param location location to check, null = relative, having scheme = absolute
+	 * @return true if location is considered absolute
+	 */
+	public static boolean isAbsoluteUrl(String location) {
+		if (location != null && location.length() > 0 && location.contains(":")){
+			try {
+				URI uri = new URI(location);
+				return uri.getScheme() != null;
+			} catch (URISyntaxException e) {
+				// ignore invalid locations and consider not absolute
+			}
+		}
+		return false;
+	}
 }
