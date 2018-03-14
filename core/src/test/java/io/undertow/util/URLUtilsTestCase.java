@@ -26,9 +26,10 @@ import org.junit.runners.Parameterized;
 
 import java.nio.charset.Charset;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 /**
  * @author Oleksandr Radchykov
+ * @author Andre Schaefer
  */
 @RunWith(Parameterized.class)
 @Category(UnitTest.class)
@@ -58,4 +59,35 @@ public class URLUtilsTestCase {
         assertEquals(url, result);
     }
 
+	@Test
+	public void testIsAbsoluteUrlRecognizingAbsolutUrls() {
+		assertTrue(URLUtils.isAbsoluteUrl("https://some.valid.url:8080/path?query=val"));
+		assertTrue(URLUtils.isAbsoluteUrl("http://some.valid.url:8080/path?query=val"));
+		assertTrue(URLUtils.isAbsoluteUrl("http://some.valid.url"));
+	}
+
+	@Test
+	public void testIsAbsoluteUrlRecognizingAppUrls() {
+		assertTrue(URLUtils.isAbsoluteUrl("com.example.app:/oauth2redirect/example-provider"));
+		assertTrue(URLUtils.isAbsoluteUrl("com.example.app:/oauth2redirect/example-provider?query=val"));
+	}
+
+	@Test
+	public void testIsAbsoluteUrlRecognizingRelativeUrls() {
+		assertFalse(URLUtils.isAbsoluteUrl("relative"));
+		assertFalse(URLUtils.isAbsoluteUrl("relative/path"));
+		assertFalse(URLUtils.isAbsoluteUrl("relative/path?query=val"));
+		assertFalse(URLUtils.isAbsoluteUrl("/root/relative/path"));
+	}
+
+	@Test
+	public void testIsAbsoluteUrlRecognizingEmptyOrNullAsRelative() {
+		assertFalse(URLUtils.isAbsoluteUrl(null));
+		assertFalse(URLUtils.isAbsoluteUrl(""));
+	}
+
+	@Test
+	public void testIsAbsoluteUrlIgnoresSyntaxErrorsAreNotAbsolute() {
+		assertFalse(URLUtils.isAbsoluteUrl(":"));
+	}
 }
