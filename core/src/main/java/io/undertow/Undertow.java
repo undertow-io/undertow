@@ -263,7 +263,12 @@ public final class Undertow {
          * Only shutdown the worker if it was created during start()
          */
         if (internalWorker && worker != null) {
-            worker.shutdownNow();
+            worker.shutdown();
+            try {
+                worker.awaitTermination();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             worker = null;
         }
         xnio = null;
