@@ -798,6 +798,22 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 }
                 return res;
             }
+        } catch (SSLException e) {
+            try {
+                try {
+                    //we make an effort to write out the final record
+                    //this is best effort, there are no guarantees
+                    doWrap(null, 0, 0);
+                    flush();
+                } catch (Exception e2) {
+                    UndertowLogger.REQUEST_LOGGER.debug("Failed to write out final SSL record", e);
+                }
+                close();
+            } catch (Throwable ex) {
+                //we ignore this
+                UndertowLogger.REQUEST_LOGGER.debug("Exception closing SSLConduit after exception in doUnwrap", e);
+            }
+            throw e;
         } catch (RuntimeException|IOException|Error e) {
             try {
                 close();
