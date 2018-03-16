@@ -178,6 +178,12 @@ public class JsrWebSocketFilter implements Filter {
 
 
     public static class LogoutListener implements HttpSessionListener {
+
+        @Override
+        public void sessionCreated(HttpSessionEvent se) {
+            
+        }
+
         @Override
         public void sessionDestroyed(HttpSessionEvent se) {
             HttpSessionImpl session = (HttpSessionImpl) se.getSession();
