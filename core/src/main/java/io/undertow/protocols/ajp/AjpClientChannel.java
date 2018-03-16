@@ -233,9 +233,6 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
     }
 
     public void sendPing(ClientConnection.PingListener pingListener, long timeout, TimeUnit timeUnit) {
-        synchronized (pingListeners) {
-            pingListeners.add(pingListener);
-        }
         AjpClientCPingStreamSinkChannel pingChannel = new AjpClientCPingStreamSinkChannel(this);
         try {
             pingChannel.shutdownWrites();
@@ -244,14 +241,21 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
                     @Override
                     public void handleException(AbstractAjpClientStreamSinkChannel channel, IOException exception) {
                         pingListener.failed(exception);
+                        synchronized (pingListeners) {
+                            pingListeners.remove(pingListener);
+                        }
                     }
                 }));
                 pingChannel.resumeWrites();
             }
         } catch (IOException e) {
             pingListener.failed(e);
+            return;
         }
 
+        synchronized (pingListeners) {
+            pingListeners.add(pingListener);
+        }
         getIoThread().executeAfter(() -> {
             synchronized (pingListeners) {
                 if(pingListeners.contains(pingListener)) {
