@@ -37,6 +37,15 @@ public class SubstituteEmptyWrapper implements ExchangeAttributeWrapper {
         }
 
         @Override
+        public void readAttribute(final HttpServerExchange exchange, final StringBuilder destination) {
+            int start = destination.length();
+            attribute.readAttribute(exchange, destination);
+            if(start == destination.length() && substitute != null) {
+                destination.append(substitute);
+            }
+        }
+
+        @Override
         public void writeAttribute(HttpServerExchange exchange, String newValue) throws ReadOnlyAttributeException {
             attribute.writeAttribute(exchange, newValue);
         }

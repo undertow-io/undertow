@@ -40,11 +40,25 @@ public class BytesSentAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        if (dashIfZero )  {
+        if (dashIfZero)  {
             long bytesSent = exchange.getResponseBytesSent();
             return bytesSent == 0 ? "-" : Long.toString(bytesSent);
         } else {
             return Long.toString(exchange.getResponseBytesSent());
+        }
+    }
+
+    @Override
+    public void readAttribute(HttpServerExchange exchange, StringBuilder destination) {
+        if (dashIfZero)  {
+            long bytesSent = exchange.getResponseBytesSent();
+            if (bytesSent == 0) {
+                destination.append('-');
+            } else {
+                destination.append(bytesSent);
+            }
+        } else {
+            destination.append(exchange.getResponseBytesSent());
         }
     }
 

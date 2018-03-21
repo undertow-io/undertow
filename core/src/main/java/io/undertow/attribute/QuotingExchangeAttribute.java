@@ -47,22 +47,33 @@ public class QuotingExchangeAttribute implements ExchangeAttribute {
 
         /* Wrap all quotes in double quotes. */
         StringBuilder buffer = new StringBuilder(svalue.length() + 2);
-        buffer.append('\'');
-        int i = 0;
-        while (i < svalue.length()) {
-            int j = svalue.indexOf('\'', i);
-            if (j == -1) {
-                buffer.append(svalue.substring(i));
-                i = svalue.length();
-            } else {
-                buffer.append(svalue.substring(i, j + 1));
-                buffer.append('"');
-                i = j + 2;
-            }
+        readAttribute(exchange, buffer);
+        return buffer.toString();
+    }
+
+    @Override
+    public void readAttribute(HttpServerExchange exchange, StringBuilder buffer) {
+        int start = buffer.length();
+        exchangeAttribute.readAttribute(exchange, buffer);
+        int end = buffer.length();
+        // Does the value contain a " ? If so must encode it
+        if (buffer.length() == start) {
+            buffer.append('-');
+            return;
+        } else if (end == start + 1 && buffer.charAt(start) == '-') {
+            return;
         }
 
+        /* Wrap all quotes in double quotes. */
+        buffer.insert(start, '\'');
+        for (int i = start + 1; i < buffer.length(); i++) {
+            if (buffer.charAt(i) == '\'') {
+                buffer.insert(i, '"');
+                buffer.insert(i + 2, '"');
+                i += 2;
+            }
+        }
         buffer.append('\'');
-        return buffer.toString();
     }
 
     @Override

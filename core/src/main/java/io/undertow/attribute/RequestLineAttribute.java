@@ -38,8 +38,14 @@ public class RequestLineAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        StringBuilder sb = new StringBuilder()
-                .append(exchange.getRequestMethod().toString())
+        StringBuilder sb = new StringBuilder();
+        readAttribute(exchange, sb);
+        return sb.toString();
+    }
+
+    @Override
+    public void readAttribute(HttpServerExchange exchange, StringBuilder sb) {
+        sb.append(exchange.getRequestMethod().toString())
                 .append(' ')
                 .append(exchange.getRequestURI());
         if (!exchange.getQueryString().isEmpty()) {
@@ -47,8 +53,7 @@ public class RequestLineAttribute implements ExchangeAttribute {
             sb.append(exchange.getQueryString());
         }
         sb.append(' ')
-                .append(exchange.getProtocol().toString()).toString();
-        return sb.toString();
+                .append(exchange.getProtocol().toString());
     }
 
     @Override
