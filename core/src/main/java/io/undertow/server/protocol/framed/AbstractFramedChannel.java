@@ -129,7 +129,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     @SuppressWarnings("unused")
     private volatile int outstandingBuffers;
-    private volatile AtomicIntegerFieldUpdater<AbstractFramedChannel> outstandingBuffersUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "outstandingBuffers");
+    private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> outstandingBuffersUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "outstandingBuffers");
 
     private final LinkedBlockingDeque<Runnable> taskRunQueue = new LinkedBlockingDeque<>();
     private final OptionMap settings;
