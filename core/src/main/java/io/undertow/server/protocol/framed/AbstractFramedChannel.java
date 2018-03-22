@@ -141,14 +141,21 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         public void freed() {
             int res = outstandingBuffersUpdater.decrementAndGet(AbstractFramedChannel.this);
             if(!receivesSuspended && res == maxQueuedBuffers - 1) {
-                synchronized (AbstractFramedChannel.this) {
-                    if(outstandingBuffersUpdater.get(AbstractFramedChannel.this) < maxQueuedBuffers) {
-                        if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
-                            UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
+                //we need to do the resume in the IO thread, as there is a risk of deadlock otherwise, as the calling thread is an application thread
+                //and may hold a lock on a stream source channel, see UNDERTOW-1312
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        synchronized (AbstractFramedChannel.this) {
+                            if(outstandingBuffersUpdater.get(AbstractFramedChannel.this) < maxQueuedBuffers) {
+                                if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                                    UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
+                                }
+                                channel.getSourceChannel().resumeReads();
+                            }
                         }
-                        channel.getSourceChannel().resumeReads();
                     }
-                }
+                });
             }
         }
     };
