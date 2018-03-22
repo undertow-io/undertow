@@ -742,8 +742,14 @@ class ModClusterContainer implements ModClusterController {
         }
 
         @Override
+        public int getMaxRetries() {
+            return balancer.getMaxRetries();
+        }
+
+        @Override
+        @Deprecated
         public int getMaxAttempts() {
-            return balancer.getMaxattempts();
+            return balancer.getMaxRetries();
         }
     }
 
