@@ -35,7 +35,7 @@ class MCMPInfoUtil {
                 .append(" remove: ").append(toStringOneZero(balancer.isStickySessionRemove()))
                 .append(" force: ").append(toStringOneZero(balancer.isStickySessionForce()))
                 .append(" Timeout: ").append(balancer.getWaitWorker())
-                .append(" maxAttempts: ").append(balancer.getMaxattempts())
+                .append(" maxAttempts: ").append(balancer.getMaxRetries())
                 .append(NEWLINE);
     }
 
