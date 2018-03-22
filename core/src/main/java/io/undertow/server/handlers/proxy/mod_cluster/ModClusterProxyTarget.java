@@ -84,7 +84,7 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
             if(balancer == null) {
                 return 0;
             }
-            return balancer.getMaxattempts() - 1;
+            return balancer.getMaxattempts();
         }
     }
 
@@ -111,7 +111,7 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
             if(balancer == null) {
                 return 0;
             }
-            return balancer.getMaxattempts() - 1;
+            return balancer.getMaxattempts();
         }
 
         @Override

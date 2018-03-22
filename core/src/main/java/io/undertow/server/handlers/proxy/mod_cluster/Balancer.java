@@ -68,7 +68,7 @@ public class Balancer {
     private final int waitWorker;
 
     /**
-     * value: number of attempts to send the request to the backend server. Default: "1"
+     * Maximum number of failover attempts to send the request to the backend server. Default: "1"
      */
     private final int maxattempts;
 
