@@ -40,52 +40,29 @@ public interface ModClusterStatus {
 
         Node getNode(String name);
 
-        /**
-         * Getter for stickySession
-         *
-         * @return the stickySession
-         */
         boolean isStickySession();
 
-        /**
-         * Getter for stickySessionCookie
-         *
-         * @return the stickySessionCookie
-         */
         String getStickySessionCookie();
-        /**
-         * Getter for stickySessionPath
-         *
-         * @return the stickySessionPath
-         */
+
         String getStickySessionPath();
 
-        /**
-         * Getter for stickySessionRemove
-         *
-         * @return the stickySessionRemove
-         */
         boolean isStickySessionRemove();
 
-        /**
-         * Getter for stickySessionForce
-         *
-         * @return the stickySessionForce
-         */
         boolean isStickySessionForce();
 
-        /**
-         * Getter for waitWorker
-         *
-         * @return the waitWorker
-         */
         int getWaitWorker();
 
         /**
-         * Getter for maxattempts
+         * Returns maximum number of failover attempts to send the request to the backend server.
          *
-         * @return the maxattempts
+         * @return number of failover attempts
          */
+        int getMaxRetries();
+
+        /**
+         * @deprecated Use {@link LoadBalancer#getMaxRetries()}.
+         */
+        @Deprecated
         int getMaxAttempts();
     }
 

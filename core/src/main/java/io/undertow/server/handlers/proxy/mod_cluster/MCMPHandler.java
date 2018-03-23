@@ -212,9 +212,8 @@ class MCMPHandler implements HttpHandler {
      *
      * @param exchange the http server exchange
      * @param requestData the request data
-     * @throws IOException
      */
-    private void processConfig(final HttpServerExchange exchange, final RequestData requestData) throws IOException {
+    private void processConfig(final HttpServerExchange exchange, final RequestData requestData) {
 
         // Get the node builder
         List<String> hosts = null;
@@ -236,7 +235,7 @@ class MCMPHandler implements HttpHandler {
                 node.setBalancer(value);
                 balancer.setName(value);
             } else if (MAXATTEMPTS.equals(name)) {
-                balancer.setMaxattempts(Integer.parseInt(value));
+                balancer.setMaxRetries(Integer.parseInt(value));
             } else if (STICKYSESSION.equals(name)) {
                 if ("No".equalsIgnoreCase(value)) {
                     balancer.setStickySession(false);

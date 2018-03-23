@@ -68,9 +68,9 @@ public class Balancer {
     private final int waitWorker;
 
     /**
-     * value: number of attempts to send the request to the backend server. Default: "1"
+     * Maximum number of failover attempts to send the request to the backend server. Default: "1"
      */
-    private final int maxattempts;
+    private final int maxRetries;
 
     private final int id;
     private static final AtomicInteger idGen = new AtomicInteger();
@@ -84,85 +84,50 @@ public class Balancer {
         this.stickySessionRemove = b.isStickySessionRemove();
         this.stickySessionForce = b.isStickySessionForce();
         this.waitWorker = b.getWaitWorker();
-        this.maxattempts = b.getMaxattempts();
+        this.maxRetries = b.getMaxRetries();
         UndertowLogger.ROOT_LOGGER.balancerCreated(this.id, this.name, this.stickySession, this.stickySessionCookie, this.stickySessionPath,
-                this.stickySessionRemove,  this.stickySessionForce, this.waitWorker, this.maxattempts);
+                this.stickySessionRemove,  this.stickySessionForce, this.waitWorker, this.maxRetries);
     }
 
     public int getId() {
         return id;
     }
 
-    /**
-     * Getter for name
-     *
-     * @return the name
-     */
     public String getName() {
         return this.name;
     }
 
-    /**
-     * Getter for stickySession
-     *
-     * @return the stickySession
-     */
     public boolean isStickySession() {
         return this.stickySession;
     }
 
-    /**
-     * Getter for stickySessionCookie
-     *
-     * @return the stickySessionCookie
-     */
     public String getStickySessionCookie() {
         return this.stickySessionCookie;
     }
 
-    /**
-     * Getter for stickySessionPath
-     *
-     * @return the stickySessionPath
-     */
     public String getStickySessionPath() {
         return this.stickySessionPath;
     }
 
-    /**
-     * Getter for stickySessionRemove
-     *
-     * @return the stickySessionRemove
-     */
     public boolean isStickySessionRemove() {
         return this.stickySessionRemove;
     }
 
-    /**
-     * Getter for stickySessionForce
-     *
-     * @return the stickySessionForce
-     */
     public boolean isStickySessionForce() {
         return this.stickySessionForce;
     }
 
-    /**
-     * Getter for waitWorker
-     *
-     * @return the waitWorker
-     */
     public int getWaitWorker() {
         return this.waitWorker;
     }
 
-    /**
-     * Getter for maxattempts
-     *
-     * @return the maxattempts
-     */
+    public int getMaxRetries() {
+        return this.maxRetries;
+    }
+
+    @Deprecated
     public int getMaxattempts() {
-        return this.maxattempts;
+        return this.maxRetries;
     }
 
     @Override
@@ -173,10 +138,10 @@ public class Balancer {
                 .append(this.stickySessionPath).append("], remove: ")
                 .append(this.stickySessionRemove ? 1 : 0).append(", force: ")
                 .append(this.stickySessionForce ? 1 : 0).append(", Timeout: ")
-                .append(this.waitWorker).append(", Maxtry: ").append(this.maxattempts).toString();
+                .append(this.waitWorker).append(", Maxtry: ").append(this.maxRetries).toString();
     }
 
-    static final BalancerBuilder builder() {
+    static BalancerBuilder builder() {
         return new BalancerBuilder();
     }
 
@@ -189,7 +154,7 @@ public class Balancer {
         private boolean stickySessionRemove = false;
         private boolean stickySessionForce = true;
         private int waitWorker = 0;
-        private int maxattempts = 1;
+        private int maxRetries = 1;
 
         public String getName() {
             return name;
@@ -259,12 +224,34 @@ public class Balancer {
             return this;
         }
 
-        public int getMaxattempts() {
-            return maxattempts;
+        public int getMaxRetries() {
+            return this.maxRetries;
         }
 
+        /**
+         * Maximum number of failover attempts to send the request to the backend server.
+         *
+         * @param maxRetries number of failover attempts
+         */
+        public BalancerBuilder setMaxRetries(int maxRetries) {
+            this.maxRetries = maxRetries;
+            return this;
+        }
+
+        /**
+         * @deprecated Use {@link BalancerBuilder#getMaxRetries()}.
+         */
+        @Deprecated
+        public int getMaxattempts() {
+            return maxRetries;
+        }
+
+        /**
+         * @deprecated Use {@link BalancerBuilder#setMaxRetries(int)}.
+         */
+        @Deprecated
         public BalancerBuilder setMaxattempts(int maxattempts) {
-            this.maxattempts = maxattempts;
+            this.maxRetries = maxattempts;
             return this;
         }
 
