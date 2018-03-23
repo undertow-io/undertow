@@ -806,12 +806,12 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     doWrap(null, 0, 0);
                     flush();
                 } catch (Exception e2) {
-                    UndertowLogger.REQUEST_LOGGER.debug("Failed to write out final SSL record", e);
+                    UndertowLogger.REQUEST_LOGGER.debug("Failed to write out final SSL record", e2);
                 }
                 close();
             } catch (Throwable ex) {
                 //we ignore this
-                UndertowLogger.REQUEST_LOGGER.debug("Exception closing SSLConduit after exception in doUnwrap", e);
+                UndertowLogger.REQUEST_LOGGER.debug("Exception closing SSLConduit after exception in doUnwrap", ex);
             }
             throw e;
         } catch (RuntimeException|IOException|Error e) {
@@ -819,7 +819,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 close();
             } catch (Throwable ex) {
                 //we ignore this
-                UndertowLogger.REQUEST_LOGGER.debug("Exception closing SSLConduit after exception in doUnwrap", e);
+                UndertowLogger.REQUEST_LOGGER.debug("Exception closing SSLConduit after exception in doUnwrap", ex);
             }
             throw e;
         } finally {
