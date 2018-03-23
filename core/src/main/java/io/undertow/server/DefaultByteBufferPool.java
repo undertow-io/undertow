@@ -122,9 +122,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             local = threadLocalCache.get();
             if (local != null) {
                 buffer = local.buffers.poll();
-                if (buffer != null) {
-                    currentQueueLengthUpdater.decrementAndGet(this);
-                }
             } else {
                 local = new ThreadLocalData();
                 synchronized (threadLocalDataList) {
@@ -140,6 +137,9 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         }
         if (buffer == null) {
             buffer = queue.poll();
+            if (buffer != null) {
+                currentQueueLengthUpdater.decrementAndGet(this);
+            }
         }
         if (buffer == null) {
             if (direct) {
@@ -207,7 +207,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                 DirectByteBufferDeallocator.free(buffer);
                 return;
             }
-        } while (!currentQueueLengthUpdater.compareAndSet(this, size, currentQueueLength + 1));
+        } while (!currentQueueLengthUpdater.compareAndSet(this, size, size + 1));
         queue.add(buffer);
     }
 
