@@ -3,6 +3,7 @@ package io.undertow.server;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import io.undertow.UndertowLogger;
@@ -87,11 +88,11 @@ public final class DirectByteBufferDeallocator {
 
     private static Unsafe getUnsafe() {
         if (System.getSecurityManager() != null) {
-            return new PrivilegedAction<Unsafe>() {
+            return AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
                 public Unsafe run() {
                     return getUnsafe0();
                 }
-            }.run();
+            });
         }
         return getUnsafe0();
     }
