@@ -1521,11 +1521,11 @@ public class FastConcurrentDirectDeque<E>
 
     private static Unsafe getUnsafe() {
         if (System.getSecurityManager() != null) {
-            return new PrivilegedAction<Unsafe>() {
+            AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
                 public Unsafe run() {
                     return getUnsafe0();
                 }
-            }.run();
+            });
         }
         return getUnsafe0();
     }
