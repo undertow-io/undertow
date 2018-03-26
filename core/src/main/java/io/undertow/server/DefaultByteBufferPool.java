@@ -148,7 +148,9 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                 buffer = ByteBuffer.allocate(bufferSize);
             }
         }
-        if(local != null) {
+        // limit allocationDepth runaway in scenarios where buffers flow from I/O threads to workers.
+        // Without an upper bound, allocationDepth may overflow and disable the threadLocal cache.
+        if (local != null && local.allocationDepth < 100) {
             local.allocationDepth++;
         }
         buffer.clear();
