@@ -149,7 +149,9 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             }
         }
         if(local != null) {
-            local.allocationDepth++;
+            if(local.allocationDepth < threadLocalCacheSize) { //prevent overflow if the thread only allocates and never frees
+                local.allocationDepth++;
+            }
         }
         buffer.clear();
         return new DefaultPooledBuffer(this, buffer, leakDectionPercent == 0 ? false : (++count % 100 < leakDectionPercent));
