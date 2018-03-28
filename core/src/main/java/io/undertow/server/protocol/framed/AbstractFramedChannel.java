@@ -132,6 +132,15 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private final LinkedBlockingDeque<Runnable> taskRunQueue = new LinkedBlockingDeque<>();
     private final OptionMap settings;
 
+    private final Runnable taskRunQueueRunnable = new Runnable() {
+        @Override
+        public void run() {
+            while (!taskRunQueue.isEmpty()) {
+                taskRunQueue.poll().run();
+            }
+        }
+    };
+
     /**
      * If this is true then the flush() method must be called to queue writes. This is provided to support batching
      */
@@ -230,19 +239,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     void runInIoThread(Runnable task) {
         this.taskRunQueue.add(task);
         try {
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    while (!taskRunQueue.isEmpty()) {
-                        taskRunQueue.poll().run();
-                    }
-                }
-            });
+            getIoThread().execute(taskRunQueueRunnable);
         } catch (RejectedExecutionException e) {
             //thread is shutting down
-            while (!taskRunQueue.isEmpty()) {
-                taskRunQueue.poll().run();
-            }
+            // Must run tasks on a separate thread to prevent deadlocks
+            Thread thread = new Thread(taskRunQueueRunnable);
+            thread.setName(String.format("%s AbstractFramedChannel task queue", getWorker().getName());
+            thread.start();
         }
     }
 
