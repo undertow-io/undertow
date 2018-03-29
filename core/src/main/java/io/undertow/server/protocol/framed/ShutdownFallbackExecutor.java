@@ -37,7 +37,7 @@ final class ShutdownFallbackExecutor {
             synchronized (ShutdownFallbackExecutor.class) {
                 if (EXECUTOR == null) {
                     EXECUTOR = new ThreadPoolExecutor(0, 1,
-                            100, TimeUnit.MILLISECONDS,
+                            10, TimeUnit.MILLISECONDS,
                             new LinkedBlockingQueue<Runnable>());
                 }
             }
