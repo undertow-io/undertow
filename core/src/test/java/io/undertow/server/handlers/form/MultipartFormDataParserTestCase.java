@@ -18,15 +18,21 @@
 
 package io.undertow.server.handlers.form;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
-import io.undertow.util.StatusCodes;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -40,9 +46,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas
@@ -54,12 +66,9 @@ public class MultipartFormDataParserTestCase {
         return new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                System.out.println("In handler");
                 final FormDataParser parser = FormParserFactory.builder().build().createParser(exchange);
-                System.out.println("Created parser");
                 try {
                     FormData data = parser.parseBlocking();
-                    System.out.println("done parsing");
                     exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     if (data.getFirst("formValue").getValue().equals("myValue")) {
                         FormData.FormValue file = data.getFirst("file");
@@ -188,5 +197,173 @@ public class MultipartFormDataParserTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    private static HttpHandler createInMemoryReadingHandler(final long fileSizeThreshold) {
+        return new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                MultiPartParserDefinition multiPartParserDefinition = new MultiPartParserDefinition();
+                multiPartParserDefinition.setFileSizeThreshold(fileSizeThreshold);
+                final FormDataParser parser = FormParserFactory.builder(false)
+                        .addParsers(new FormEncodedDataDefinition(), multiPartParserDefinition)
+                        .build().createParser(exchange);
+                try {
+                    FormData data = parser.parseBlocking();
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    if (data.getFirst("formValue").getValue().equals("myValue")) {
+                        FormData.FormValue file = data.getFirst("file");
+                        if (file.isFileItem()) {
+                            exchange.setStatusCode(StatusCodes.OK);
+                            logResult(exchange, file.getFileItem().isInMemory(), file.getFileName(), stream2String(file));
+                        }
+                    }
+                    exchange.endExchange();
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    exchange.endExchange();
+                } finally {
+                    IoUtils.safeClose(parser);
+                }
+            }
+
+            private String stream2String(FormData.FormValue file) throws IOException {
+                try (InputStream is = file.getFileItem().getInputStream()) {
+                    StringWriter sw = new StringWriter();
+                    IOUtils.copy(is, sw, "UTF-8");
+                    return sw.toString();
+                }
+            }
+
+            private String getFileName(FormData.FormValue data) {
+                HeaderValues cdHeaders = data.getHeaders().get("content-disposition");
+                for (String cdHeader : cdHeaders) {
+                    if (cdHeader.startsWith("form-data")) {
+                        return cdHeader.substring(cdHeader.indexOf("filename=") + "filename=".length()).replace("\"", "");
+                    }
+                }
+                return null;
+            }
+
+            private void logResult(HttpServerExchange exchange, boolean inMemory, String fileName, String content) throws IOException {
+                String res = String.format("in_memory:%s;file_name:%s;hash:%s", inMemory, fileName, DigestUtils.md5Hex(content));
+                final OutputStream outputStream = exchange.getOutputStream();
+                outputStream.write(res.getBytes());
+                outputStream.close();
+            }
+        };
+    }
+
+    @Test
+    public void testFileUploadWithSmallFileSizeThreshold() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createInMemoryReadingHandler(10)));
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+            entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String resp = HttpClientUtils.readResponse(result);
+
+            Map<String, String> parsedResponse = parse(resp);
+
+            Assert.assertEquals("false", parsedResponse.get("in_memory"));
+            Assert.assertEquals("uploadfile.txt", parsedResponse.get("file_name"));
+            Assert.assertEquals(DigestUtils.md5Hex(new FileInputStream(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile()))), parsedResponse.get("hash"));
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testFileUploadWithLargeFileSizeThreshold() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createInMemoryReadingHandler(10_000)));
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+            entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String resp = HttpClientUtils.readResponse(result);
+
+            Map<String, String> parsedResponse = parse(resp);
+            Assert.assertEquals("true", parsedResponse.get("in_memory"));
+            Assert.assertEquals("uploadfile.txt", parsedResponse.get("file_name"));
+            Assert.assertEquals(DigestUtils.md5Hex(new FileInputStream(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile()))), parsedResponse.get("hash"));
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testFileUploadWithMediumFileSizeThresholdAndLargeFile() throws Exception {
+        int fileSizeThreshold = 1000;
+        DefaultServer.setRootHandler(new BlockingHandler(createInMemoryReadingHandler(fileSizeThreshold)));
+
+        TestHttpClient client = new TestHttpClient();
+        File file = new File("tmp_upload_file.txt");
+        file.createNewFile();
+        try {
+            writeLargeFileContent(file, fileSizeThreshold * 2);
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+            entity.addPart("file", new FileBody(file));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String resp = HttpClientUtils.readResponse(result);
+
+            Map<String, String> parsedResponse = parse(resp);
+            Assert.assertEquals("false", parsedResponse.get("in_memory"));
+            Assert.assertEquals("tmp_upload_file.txt", parsedResponse.get("file_name"));
+            Assert.assertEquals(DigestUtils.md5Hex(new FileInputStream(file)), parsedResponse.get("hash"));
+
+        } finally {
+            file.delete();
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    private void writeLargeFileContent(File file, int size) throws IOException {
+        int textLength = "content".getBytes().length;
+        FileOutputStream fos = new FileOutputStream(file);
+        for (int i = 0; i < size / textLength; i++) {
+            fos.write("content".getBytes());
+        }
+        fos.flush();
+        fos.close();
+    }
+
+    private Map<String, String> parse(String resp) {
+        Map<String, String> parsed = new HashMap<>();
+
+        String[] split = resp.split(";");
+        for (String s : split) {
+            String[] pair = s.split(":");
+            parsed.put(pair[0], pair[1]);
+        }
+
+        return parsed;
     }
 }
