@@ -87,7 +87,7 @@ public interface UndertowMessages {
 //    @Message(id = 16, value = "Could not add cookie as cookie handler was not present in the handler chain")
 //    IllegalStateException cookieHandlerNotPresent();
 
-    @Message(id = 17, value = "Form value is a file, use getFile() instead")
+    @Message(id = 17, value = "Form value is a file, use getFileItem() instead")
     IllegalStateException formValueIsAFile();
 
     @Message(id = 18, value = "Form value is a String, use getValue() instead")
@@ -565,4 +565,7 @@ public interface UndertowMessages {
 
     @Message(id = 185, value = "Invalid IP address %s")
     IOException invalidIpAddress(String addressString);
+
+    @Message(id = 192, value = "Form value is a in-memory file, use getFileItem() instead")
+    IllegalStateException formValueIsInMemoryFile();
 }

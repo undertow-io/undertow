@@ -18,7 +18,13 @@
 
 package io.undertow.server.handlers.form;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -62,6 +68,17 @@ public final class FormData implements Iterable<String> {
 
     public Deque<FormValue> get(String name) {
         return values.get(name);
+    }
+
+    public void add(String name, byte[] value, String fileName, HeaderMap headers) {
+        Deque<FormValue> values = this.values.get(name);
+        if (values == null) {
+            this.values.put(name, values = new ArrayDeque<>(1));
+        }
+        values.add(new FormValueImpl(value, fileName, headers));
+        if (++valueCount > maxValues) {
+            throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(maxValues));
+        }
     }
 
     public void add(String name, String value) {
@@ -157,16 +174,23 @@ public final class FormData implements Iterable<String> {
          *
          * @return
          */
+        @Deprecated
         boolean isFile();
 
         /**
          * @return The temp file that the file data was saved to
+         *
          * @throws IllegalStateException if this is not a file
          */
+        @Deprecated
         Path getPath();
 
         @Deprecated
         File getFile();
+
+        FileItem getFileItem();
+
+        boolean isFileItem();
 
         /**
          * @return The filename specified in the disposition header.
@@ -181,25 +205,92 @@ public final class FormData implements Iterable<String> {
 
     }
 
+    public static class FileItem {
+        private final Path file;
+        private final byte[] content;
+
+        public FileItem(Path file) {
+            this.file = file;
+            this.content = null;
+        }
+
+        public FileItem(byte[] content) {
+            this.file = null;
+            this.content = content;
+        }
+
+        public boolean isInMemory() {
+            return file == null;
+        }
+
+        public Path getFile() {
+            return file;
+        }
+
+        public long getFileSize() throws IOException {
+            if (isInMemory()) {
+                return content.length;
+            } else {
+                return Files.size(file);
+            }
+        }
+
+        public InputStream getInputStream() throws IOException {
+            if (file != null) {
+                return new BufferedInputStream(Files.newInputStream(file));
+            } else {
+                return new ByteArrayInputStream(content);
+            }
+        }
+
+        public void delete() throws IOException {
+            if (file != null) {
+                try {
+                    Files.delete(file);
+                } catch (NoSuchFileException e) { //already deleted
+                }
+            }
+        }
+
+        public void write(Path target) throws IOException {
+            if (file != null) {
+                try {
+                    Files.move(file, target);
+                } catch (IOException e) {
+                    Files.copy(getInputStream(), target);
+                }
+            } else {
+                Files.copy(getInputStream(), target);
+            }
+        }
+    }
+
 
     static class FormValueImpl implements FormValue {
 
         private final String value;
         private final String fileName;
-        private final Path file;
         private final HeaderMap headers;
+        private final FileItem fileItem;
 
         FormValueImpl(String value, HeaderMap headers) {
             this.value = value;
             this.headers = headers;
-            this.file = null;
             this.fileName = null;
+            this.fileItem = null;
         }
 
         FormValueImpl(Path file, final String fileName, HeaderMap headers) {
-            this.file = file;
+            this.fileItem = new FileItem(file);
             this.headers = headers;
             this.fileName = fileName;
+            this.value = null;
+        }
+
+        FormValueImpl(byte[] data, String fileName, HeaderMap headers) {
+            this.fileItem = new FileItem(data);
+            this.fileName = fileName;
+            this.headers = headers;
             this.value = null;
         }
 
@@ -214,20 +305,36 @@ public final class FormData implements Iterable<String> {
 
         @Override
         public boolean isFile() {
-            return file != null;
+            return fileItem != null && !fileItem.isInMemory();
         }
 
         @Override
         public Path getPath() {
-            if (file == null) {
+            if (fileItem == null) {
                 throw UndertowMessages.MESSAGES.formValueIsAString();
             }
-            return file;
+            if (fileItem.isInMemory()) {
+                throw UndertowMessages.MESSAGES.formValueIsInMemoryFile();
+            }
+            return fileItem.getFile();
         }
 
         @Override
         public File getFile() {
             return getPath().toFile();
+        }
+
+        @Override
+        public FileItem getFileItem() {
+            if (fileItem == null) {
+                throw UndertowMessages.MESSAGES.formValueIsAString();
+            }
+            return fileItem;
+        }
+
+        @Override
+        public boolean isFileItem() {
+            return fileItem != null;
         }
 
         @Override

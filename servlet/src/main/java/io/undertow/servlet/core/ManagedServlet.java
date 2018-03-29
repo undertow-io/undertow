@@ -112,6 +112,9 @@ public class ManagedServlet implements Lifecycle {
             if(config.getMaxFileSize() > 0) {
                 multiPartParserDefinition.setMaxIndividualFileSize(config.getMaxFileSize());
             }
+            if (config.getFileSizeThreshold() > 0) {
+                multiPartParserDefinition.setFileSizeThreshold(config.getFileSizeThreshold());
+            }
             multiPartParserDefinition.setDefaultEncoding(servletContext.getDeployment().getDefaultCharset().name());
 
             formParserFactory = FormParserFactory.builder(false)
