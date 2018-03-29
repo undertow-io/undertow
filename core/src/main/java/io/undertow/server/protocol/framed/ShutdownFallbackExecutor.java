@@ -18,9 +18,12 @@
 package io.undertow.server.protocol.framed;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * {@link ShutdownFallbackExecutor} wrapper around a single threaded executor
@@ -38,10 +41,24 @@ final class ShutdownFallbackExecutor {
                 if (EXECUTOR == null) {
                     EXECUTOR = new ThreadPoolExecutor(0, 1,
                             10, TimeUnit.MILLISECONDS,
-                            new LinkedBlockingQueue<Runnable>());
+                            new LinkedBlockingQueue<Runnable>(),
+                            new ShutdownFallbackThreadFactory());
                 }
             }
         }
         EXECUTOR.execute(runnable);
+    }
+
+    static final class ShutdownFallbackThreadFactory implements ThreadFactory {
+        private final AtomicLong count = new AtomicLong();
+        private final ThreadFactory threadFactory = Executors.defaultThreadFactory();
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread thread = threadFactory.newThread(r);
+            thread.setName("undertow-shutdown-" + count.getAndIncrement());
+            thread.setDaemon(true);
+            return thread;
+        }
     }
 }
