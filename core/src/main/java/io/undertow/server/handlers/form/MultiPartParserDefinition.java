@@ -36,6 +36,7 @@ import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -48,6 +49,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executor;
 
@@ -66,6 +68,8 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
     private long maxIndividualFileSize = -1;
 
+    private long fileSizeThreshold;
+
     public MultiPartParserDefinition() {
         tempFileLocation = Paths.get(System.getProperty("java.io.tmpdir"));
     }
@@ -83,7 +87,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 UndertowLogger.REQUEST_LOGGER.debugf("Could not find boundary in multipart request with ContentType: %s, multipart data will not be available", mimeType);
                 return null;
             }
-            final MultiPartUploadHandler parser = new MultiPartUploadHandler(exchange, boundary, maxIndividualFileSize, defaultEncoding);
+            final MultiPartUploadHandler parser = new MultiPartUploadHandler(exchange, boundary, maxIndividualFileSize, fileSizeThreshold, defaultEncoding);
             exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                 @Override
                 public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
@@ -138,12 +142,17 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         this.maxIndividualFileSize = maxIndividualFileSize;
     }
 
+    public void setFileSizeThreshold(long fileSizeThreshold) {
+        this.fileSizeThreshold = fileSizeThreshold;
+    }
+
     private final class MultiPartUploadHandler implements FormDataParser, MultipartParser.PartHandler {
 
         private final HttpServerExchange exchange;
         private final FormData data;
         private final List<Path> createdFiles = new ArrayList<>();
         private final long maxIndividualFileSize;
+        private final long fileSizeThreshold;
         private String defaultEncoding;
 
         private final ByteArrayOutputStream contentBytes = new ByteArrayOutputStream();
@@ -157,10 +166,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         private final MultipartParser.ParseState parser;
 
 
-        private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary, final long maxIndividualFileSize, final String defaultEncoding) {
+        private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary, final long maxIndividualFileSize, final long fileSizeThreshold, final String defaultEncoding) {
             this.exchange = exchange;
             this.maxIndividualFileSize = maxIndividualFileSize;
             this.defaultEncoding = defaultEncoding;
+            this.fileSizeThreshold = fileSizeThreshold;
             this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
             String charset = defaultEncoding;
             String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
@@ -238,7 +248,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 if (disposition.startsWith("form-data")) {
                     currentName = Headers.extractQuotedValueFromHeader(disposition, "name");
                     fileName = Headers.extractQuotedValueFromHeaderWithEncoding(disposition, "filename");
-                    if (fileName != null) {
+                    if (fileName != null && fileSizeThreshold == 0) {
                         try {
                             if (tempFileLocation != null) {
                                 file = Files.createTempFile(tempFileLocation, "undertow", "upload");
@@ -261,6 +271,24 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             if (this.maxIndividualFileSize > 0 && this.currentFileSize > this.maxIndividualFileSize) {
                 throw UndertowMessages.MESSAGES.maxFileSizeExceeded(this.maxIndividualFileSize);
             }
+            if (file == null && fileName != null && fileSizeThreshold < this.currentFileSize) {
+                try {
+                    if (tempFileLocation != null) {
+                        file = Files.createTempFile(tempFileLocation, "undertow", "upload");
+                    } else {
+                        file = Files.createTempFile("undertow", "upload");
+                    }
+                    createdFiles.add(file);
+
+                    FileOutputStream fileOutputStream = new FileOutputStream(file.toFile());
+                    contentBytes.writeTo(fileOutputStream);
+
+                    fileChannel = fileOutputStream.getChannel();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
             if (file == null) {
                 while (buffer.hasRemaining()) {
                     contentBytes.write(buffer.get());
@@ -275,12 +303,16 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             if (file != null) {
                 data.add(currentName, file, fileName, headers);
                 file = null;
+                contentBytes.reset();
                 try {
                     fileChannel.close();
                     fileChannel = null;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
+            } else if (fileName != null) {
+                data.add(currentName, Arrays.copyOf(contentBytes.toByteArray(), contentBytes.size()), fileName, headers);
+                contentBytes.reset();
             } else {
 
 
