@@ -791,7 +791,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         if(!deploymentExceptions.isEmpty()) {
             Exception e = JsrWebSocketMessages.MESSAGES.deploymentFailedDueToProgramaticErrors();
             for(DeploymentException ex : deploymentExceptions) {
-                e.addSuppressed(e);
+                e.addSuppressed(ex);
             }
         }
         deploymentComplete = true;
