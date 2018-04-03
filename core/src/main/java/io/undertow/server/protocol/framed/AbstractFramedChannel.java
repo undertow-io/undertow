@@ -130,6 +130,14 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> outstandingBuffersUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "outstandingBuffers");
 
     private final LinkedBlockingDeque<Runnable> taskRunQueue = new LinkedBlockingDeque<>();
+    private final Runnable taskRunQueueRunnable = new Runnable() {
+        @Override
+        public void run() {
+            while (!taskRunQueue.isEmpty()) {
+                taskRunQueue.poll().run();
+            }
+        }
+    };
     private final OptionMap settings;
 
     /**
@@ -230,19 +238,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     void runInIoThread(Runnable task) {
         this.taskRunQueue.add(task);
         try {
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    while (!taskRunQueue.isEmpty()) {
-                        taskRunQueue.poll().run();
-                    }
-                }
-            });
+            getIoThread().execute(taskRunQueueRunnable);
         } catch (RejectedExecutionException e) {
             //thread is shutting down
-            while (!taskRunQueue.isEmpty()) {
-                taskRunQueue.poll().run();
-            }
+            ShutdownFallbackExecutor.execute(taskRunQueueRunnable);
         }
     }
 
