@@ -447,8 +447,8 @@ public final class ProxyHandler implements HttpHandler {
                 }
             }
             final String remoteHost;
-            final SocketAddress address = exchange.getConnection().getPeerAddress();
-            if (address != null && address instanceof InetSocketAddress) {
+            final SocketAddress address = exchange.getSourceAddress();
+            if (address != null) {
                 remoteHost = ((InetSocketAddress) address).getHostString();
                 if(!((InetSocketAddress) address).isUnresolved()) {
                     request.putAttachment(ProxiedRequestAttachments.REMOTE_ADDRESS, ((InetSocketAddress) address).getAddress().getHostAddress());
