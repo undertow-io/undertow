@@ -234,14 +234,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         String matchValue;
         switch (match.getMappingMatch()) {
             case EXACT:
-            case DEFAULT: //TODO: TCK expects different behaviour to the spec, but I think the TCK makes more sense
                 matchValue = match.getMatched();
                 if(matchValue.startsWith("/")) {
                     matchValue = matchValue.substring(1);
                 }
                 break;
+            case DEFAULT:
             case CONTEXT_ROOT:
-                matchValue = "";
+                matchValue = "\"\""; //blegh
                 break;
             case PATH:
                 matchValue = match.getRemaining();
