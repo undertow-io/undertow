@@ -208,20 +208,22 @@ public class Http2ServerConnection extends ServerConnection {
     @Override
     public void terminateRequestChannel(HttpServerExchange exchange) {
         if(HttpContinue.requiresContinueResponse(exchange.getRequestHeaders()) && !continueSent) {
-            requestChannel.setIgnoreForceClose(true);
-            requestChannel.close();
-            //if this request requires a 100-continue and it was not sent we have to reset the stream
-            //we do it in a completion listener though, to make sure the response is sent first
-            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
-                @Override
-                public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                    try {
-                        channel.sendRstStream(responseChannel.getStreamId(), Http2Channel.ERROR_CANCEL);
-                    } finally {
-                        nextListener.proceed();
+            if(requestChannel != null) { //can happen on upgrade
+                requestChannel.setIgnoreForceClose(true);
+                requestChannel.close();
+                //if this request requires a 100-continue and it was not sent we have to reset the stream
+                //we do it in a completion listener though, to make sure the response is sent first
+                exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                    @Override
+                    public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                        try {
+                            channel.sendRstStream(responseChannel.getStreamId(), Http2Channel.ERROR_CANCEL);
+                        } finally {
+                            nextListener.proceed();
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 
