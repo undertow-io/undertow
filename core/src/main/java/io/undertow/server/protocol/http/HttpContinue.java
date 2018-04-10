@@ -166,6 +166,16 @@ public class HttpContinue {
     }
 
     /**
+     * Marks a continue response as already having been sent. In general this should only be used
+     * by low level handlers than need fine grained control over the continue response.
+     *
+     * @param exchange The exchange
+     */
+    public static void markContinueResponseSent(HttpServerExchange exchange) {
+        exchange.putAttachment(ALREADY_SENT, true);
+    }
+
+    /**
      * Sends a continue response using blocking IO
      *
      * @param exchange The exchange

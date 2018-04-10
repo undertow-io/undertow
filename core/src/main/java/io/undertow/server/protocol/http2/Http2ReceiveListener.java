@@ -30,6 +30,7 @@ import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
@@ -241,6 +242,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             requestHeaders.putAll(hv.getHeaderName(), hv);
         }
         final HttpServerExchange exchange = new HttpServerExchange(connection, requestHeaders, sink.getHeaders(), maxEntitySize);
+        if(initial.getRequestHeaders().contains(Headers.EXPECT)) {
+            HttpContinue.markContinueResponseSent(exchange);
+        }
         if(initial.getAttachment(HttpAttachments.REQUEST_TRAILERS) != null) {
             exchange.putAttachment(HttpAttachments.REQUEST_TRAILERS, initial.getAttachment(HttpAttachments.REQUEST_TRAILERS));
         }
