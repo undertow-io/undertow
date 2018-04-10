@@ -101,7 +101,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         this.sessions = new ConcurrentHashMap<>();
         this.maxSize = maxSessions;
         ConcurrentDirectDeque<String> evictionQueue = null;
-        if (maxSessions > 0) {
+        if (maxSessions > 0 && expireOldestUnusedSessionOnMax) {
             evictionQueue = ConcurrentDirectDeque.newInstance();
         }
         this.evictionQueue = evictionQueue;
@@ -560,6 +560,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             invalidate(exchange, SessionListener.SessionDestroyedReason.INVALIDATED);
             if(exchange != null) {
                 exchange.removeAttachment(sessionManager.NEW_SESSION);
+            }
+            Object evictionToken = this.evictionToken;
+            if(evictionToken != null) {
+                sessionManager.evictionQueue.removeToken(evictionToken);
             }
         }
 
