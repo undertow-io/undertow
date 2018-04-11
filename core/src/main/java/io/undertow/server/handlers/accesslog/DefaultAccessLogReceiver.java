@@ -125,6 +125,14 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         calendar.add(Calendar.DATE, 1);
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
         currentDateString = df.format(new Date());
+        // if there is an existing default log file, use the date last modified instead of the current date
+        if (Files.exists(defaultLogFile)) {
+            try {
+                currentDateString = df.format(new Date(Files.getLastModifiedTime(defaultLogFile).toMillis()));
+            } catch(IOException e){
+                // ignore. use the current date if exception happens.
+            }
+        }
         changeOverPoint = calendar.getTimeInMillis();
     }
 
