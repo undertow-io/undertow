@@ -62,7 +62,7 @@ public class GzipContentEncodingTestCase {
     }
 
     /**
-     * Tests the use of the deflate contentent encoding
+     * Tests the use of the deflate content encoding
      *
      * @throws java.io.IOException
      */

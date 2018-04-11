@@ -19,19 +19,29 @@
 package io.undertow.server.handlers.file;
 
 import java.io.IOException;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.ContentEncodingHttpClient;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import io.undertow.predicate.Predicates;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.encoding.ContentEncodingRepository;
+import io.undertow.server.handlers.encoding.EncodingHandler;
+import io.undertow.server.handlers.encoding.GzipEncodingProvider;
 import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.PreCompressedResourceSupplier;
 import io.undertow.server.handlers.resource.ResourceHandler;
@@ -47,40 +57,155 @@ import io.undertow.util.StatusCodes;
 @RunWith(DefaultServer.class)
 public class PreCompressedResourceTestCase {
 
+    @After
+    public void clean() throws IOException, URISyntaxException {
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+
+        if (Files.exists(rootPath.resolve("page.html.gz"))) {
+            Files.delete(rootPath.resolve("page.html.gz"));
+        }
+
+        if (Files.exists(rootPath.resolve("page.html.gzip"))) {
+            Files.delete(rootPath.resolve("page.html.gzip"));
+        }
+
+        if (Files.exists(rootPath.resolve("page.html.nonsense"))) {
+            Files.delete(rootPath.resolve("page.html.nonsense"));
+        }
+
+        if (Files.exists(rootPath.resolve("page.html.gzip.nonsense"))) {
+            Files.delete(rootPath.resolve("page.html.gzip.nonsense"));
+        }
+    }
 
     @Test
     public void testContentEncodedResource() throws IOException, URISyntaxException {
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
         TestHttpClient client = new TestHttpClient();
+        ContentEncodingHttpClient compClient = new ContentEncodingHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PreCompressedResourceSupplier(new PathResourceManager(rootPath, 10485760)).addEncoding("gzip", ".gz"))
                                     .setDirectoryListingEnabled(true))));
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String nonCompressedResource = HttpClientUtils.readResponse(result);
-            Header[] headers = result.getHeaders(Headers.CONTENT_TYPE_STRING);
-            Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertTrue(nonCompressedResource, nonCompressedResource.contains("A web page"));
-            Assert.assertNull(result.getFirstHeader(Headers.CONTENT_ENCODING_STRING));
+            //assert response without compression
+            final String plainResponse = assertResponse(client.execute(get), false);
 
+            //assert compressed response, that doesn't exists, so returns plain
+            assertResponse(compClient.execute(get), false, plainResponse);
 
-            ContentEncodingHttpClient compClient = new ContentEncodingHttpClient();
-            result = compClient.execute(get);
+            //generate compressed resource with extension .gz
+            generatePreCompressedResource("gz");
 
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String compressedResource = HttpClientUtils.readResponse(result);
-            headers = result.getHeaders(Headers.CONTENT_TYPE_STRING);
-            Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertEquals(nonCompressedResource.replace("\r", ""), compressedResource.replace("\r", "")); //ignore line ending differences
-            Assert.assertEquals("gzip", result.getFirstHeader(Headers.CONTENT_ENCODING_STRING).getValue());
+            //assert compressed response that was pre compressed
+            assertResponse(compClient.execute(get), true, plainResponse, "gz");
 
         } finally {
             client.getConnectionManager().shutdown();
+            compClient.getConnectionManager().shutdown();
         }
     }
 
+    @Test
+    public void testCorrectResourceSelected() throws IOException, URISyntaxException {
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
+        TestHttpClient client = new TestHttpClient();
+        ContentEncodingHttpClient compClient = new ContentEncodingHttpClient();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+
+        try {
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPrefixPath("/path", new EncodingHandler(new ContentEncodingRepository()
+                                            .addEncodingHandler("gzip", new GzipEncodingProvider(), 50, Predicates.truePredicate()))
+                                    .setNext(new ResourceHandler(new PreCompressedResourceSupplier(new PathResourceManager(rootPath, 10485760)).addEncoding("gzip", ".gzip"))
+                                            .setDirectoryListingEnabled(true)))
+                    ));
+
+            //assert response without compression
+            final String plainResponse = assertResponse(client.execute(get), false);
+
+            //assert compressed response generated by filter
+            assertResponse(compClient.execute(get), true, plainResponse);
+
+            //generate resources
+            generatePreCompressedResource("gzip");
+            generatePreCompressedResource("nonsense");
+            generatePreCompressedResource("gzip.nonsense");
+
+            //assert compressed response that was pre compressed
+            assertResponse(compClient.execute(get), true, plainResponse, "gzip");
+
+        } finally {
+            client.getConnectionManager().shutdown();
+            compClient.getConnectionManager().shutdown();
+        }
+    }
+
+    private void generateGZipFile(Path source, Path target) throws IOException {
+        byte[] buffer = new byte[1024];
+
+        GZIPOutputStream gzos = new GZIPOutputStream(new FileOutputStream(target.toFile()));
+        FileInputStream in = new FileInputStream(source.toFile());
+
+        int len;
+        while ((len = in.read(buffer)) > 0) {
+            gzos.write(buffer, 0, len);
+        }
+
+        in.close();
+        gzos.finish();
+        gzos.close();
+    }
+
+    private void replaceStringInFile(Path file, String original, String replacement) throws IOException {
+        String content = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        content = content.replaceAll(original, replacement);
+        Files.write(file, content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String assertResponse(HttpResponse response, boolean encoding) throws IOException {
+        return assertResponse(response, encoding, null, null);
+    }
+
+    private String assertResponse(HttpResponse response, boolean encoding, String compareWith) throws IOException {
+        return assertResponse(response, encoding, compareWith, "web");
+    }
+
+    /**
+     * Series of assertions checking response code, headers and response content
+     */
+    private String assertResponse(HttpResponse response, boolean encoding, String compareWith, String extension) throws IOException {
+        Assert.assertEquals(StatusCodes.OK, response.getStatusLine().getStatusCode());
+        String body = HttpClientUtils.readResponse(response);
+        Header[] headers = response.getHeaders(Headers.CONTENT_TYPE_STRING);
+        Assert.assertEquals("text/html", headers[0].getValue());
+
+        if (encoding) {
+            Assert.assertEquals("gzip", response.getFirstHeader(Headers.CONTENT_ENCODING_STRING).getValue());
+        } else {
+            Assert.assertNull(response.getFirstHeader(Headers.CONTENT_ENCODING_STRING));
+        }
+
+        if (compareWith != null) {
+            Assert.assertEquals(compareWith.replace("\r", "").replace("web", extension), body.replace("\r", "")); //ignore line ending differences and change inside of html page
+        }
+        return body;
+    }
+
+    /**
+     * Creates compressed resource made by compressing page.html which content is updated before with {@param extension}
+     * and after compression returned to original content
+     */
+    private void generatePreCompressedResource(String extension) throws IOException, URISyntaxException{
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path html = rootPath.resolve("page.html");
+
+        replaceStringInFile(html, "web", extension);
+        generateGZipFile(html, rootPath.resolve("page.html." + extension));
+        replaceStringInFile(html, extension, "web");
+    }
 }
