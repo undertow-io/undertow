@@ -102,7 +102,7 @@ public class Http2UpgradeHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
-    private void handleUpgradeBody(HttpServerExchange exchange, String upgrade, String settings) throws Exception {
+    private void handleUpgradeBody(final HttpServerExchange exchange, final String upgrade, final String settings) throws Exception {
         if(exchange.isRequestComplete()) {
             handleHttp2Upgrade(exchange, upgrade, settings, null);
         } else {
