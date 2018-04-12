@@ -992,11 +992,16 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getLocalAddr() {
-        InetSocketAddress address = exchange.getDestinationAddress();
-         if (address != null) {
-            return address.getAddress().getHostAddress();
+        InetSocketAddress destinationAddress = exchange.getDestinationAddress();
+        if (destinationAddress == null) {
+            return "";
         }
-        return null;
+        InetAddress address = destinationAddress.getAddress();
+        if (address == null) {
+            //this is unresolved, so we just return the host name
+            return destinationAddress.getHostString();
+        }
+        return address.getHostAddress();
     }
 
     @Override
