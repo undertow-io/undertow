@@ -35,6 +35,7 @@ import java.util.concurrent.Executor;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.MultipartConfigElement;
+import javax.servlet.ServletContextListener;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.security.api.AuthenticationMechanism;
@@ -192,6 +193,8 @@ public class DeploymentInfo implements Cloneable {
     private boolean securityDisabled;
 
     private boolean checkOtherSessionManagers = true;
+
+    private final List<ServletContextListener> deploymentCompleteListeners = new ArrayList<>();
 
     /**
      * A map of content encoding to file extension for pre compressed resource (e.g. gzip -> .gz)
@@ -1348,6 +1351,23 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    /**
+     * Add's a listener that is only invoked once all other deployment steps have been completed
+     *
+     * The listeners <code>contextDestroyed</code> method will be called after all undeployment steps are undertaken
+     *
+     * @param servletContextListener
+     * @return
+     */
+    public DeploymentInfo addDeploymentCompleteListener(ServletContextListener servletContextListener) {
+        deploymentCompleteListeners.add(servletContextListener);
+        return this;
+    }
+
+    public List<ServletContextListener> getDeploymentCompleteListeners() {
+        return Collections.unmodifiableList(deploymentCompleteListeners);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1440,6 +1460,7 @@ public class DeploymentInfo implements Cloneable {
         info.preCompressedResources.putAll(preCompressedResources);
         info.containerMajorVersion = containerMajorVersion;
         info.containerMinorVersion = containerMinorVersion;
+        info.deploymentCompleteListeners.addAll(deploymentCompleteListeners);
         return info;
     }
 

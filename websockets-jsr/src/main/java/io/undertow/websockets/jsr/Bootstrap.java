@@ -104,6 +104,12 @@ public class Bootstrap implements ServletExtension {
         SecurityActions.addContainer(deploymentInfo.getClassLoader(), container);
 
         deploymentInfo.addListener(Servlets.listener(WebSocketListener.class));
+        deploymentInfo.addDeploymentCompleteListener(new ServletContextListener() {
+            @Override
+            public void contextInitialized(ServletContextEvent sce) {
+                container.validateDeployment();
+            }
+        });
     }
 
     private static final class WebSocketListener implements ServletContextListener {

@@ -90,6 +90,8 @@ import io.undertow.util.MimeMappings;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
 
 import java.io.File;
@@ -253,6 +255,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         //any problems with the paths won't get detected until the data is initialize
         //so we force initialization here
         deployment.getServletPaths().initData();
+        for(ServletContextListener listener : deploymentInfo.getDeploymentCompleteListeners()) {
+            listener.contextInitialized(new ServletContextEvent(servletContext));
+        }
         state = State.DEPLOYED;
     }
 
@@ -660,6 +665,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
             deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
                 @Override
                 public Void call(HttpServerExchange exchange, Object ignore) throws ServletException {
+                    for(ServletContextListener listener : deployment.getDeploymentInfo().getDeploymentCompleteListeners()) {
+                        listener.contextDestroyed(new ServletContextEvent(deployment.getServletContext()));
+                    }
                     deployment.destroy();
                     deployment = null;
                     state = State.UNDEPLOYED;
