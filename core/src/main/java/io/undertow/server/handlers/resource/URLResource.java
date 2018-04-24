@@ -21,6 +21,7 @@ package io.undertow.server.handlers.resource;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -88,7 +89,13 @@ public class URLResource implements Resource, RangeAwareResource {
                     contentLength = null;
                     return;
                 }
-                lastModified =  new Date(connection.getLastModified());
+                if (url.getProtocol().equals("jar")) {
+                    connection.setUseCaches(false);
+                    URL jar = ((JarURLConnection) connection).getJarFileURL();
+                    lastModified = new Date(new File(jar.getFile()).lastModified());
+                } else {
+                    lastModified = new Date(connection.getLastModified());
+                }
                 contentLength = connection.getContentLengthLong();
             } finally {
                 if (connection != null) {
