@@ -243,6 +243,8 @@ class HttpTransferEncoding {
                     return res;
                 }
             }
+        } else {
+            responseHeaders.remove(Headers.CONTENT_LENGTH); //if there is a transfer-encoding header we remove content length if present
         }
         return handleResponseConduit(exchange, headRequest, channel, responseHeaders, terminateResponseListener(exchange), transferEncodingHeader);
     }
