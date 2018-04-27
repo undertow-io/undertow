@@ -56,6 +56,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.security.AccessController;
@@ -998,8 +999,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         InetAddress address = destinationAddress.getAddress();
         if (address == null) {
-            //this is unresolved, so we just return the host name
-            return destinationAddress.getHostString();
+            // this is unresolved, try to determine the IP address from destinationAddress.getHostString()
+            try {
+                return InetAddress.getByName(destinationAddress.getHostString()).getHostAddress();
+            } catch (UnknownHostException e) {
+                // this still can not be resolved, so we just return the host name
+                return destinationAddress.getHostString();
+            }
         }
         return address.getHostAddress();
     }
