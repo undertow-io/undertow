@@ -537,7 +537,9 @@
                                     <goal>checkstyle</goal>
                                 </goals>
                                 <configuration>
-                                    <sourceDirectory>${java9.sourceDirectory}</sourceDirectory>
+                                    <sourceDirectories>
+                                        <sourceDirectory>${java9.sourceDirectory}</sourceDirectory>
+                                    </sourceDirectories>
                                 </configuration>
                             </execution>
                         </executions>
