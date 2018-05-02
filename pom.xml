@@ -68,6 +68,7 @@
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpmime>4.2.6</version.org.apache.httpmime>
         <version.org.apache.httpcomponents>4.2.6</version.org.apache.httpcomponents>
+        <version.org.apache.maven.plugins.maven-surefire-plugin>2.21.0</version.org.apache.maven.plugins.maven-surefire-plugin>
         <version.org.glassfish.el>3.0.1-b08</version.org.glassfish.el>
         <version.org.jboss.classfilewriter>1.0.5.Final</version.org.jboss.classfilewriter>
         <version.org.jboss.logging>3.3.0.Final</version.org.jboss.logging>
@@ -205,7 +206,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${version.surefire.plugin}</version>
+                    <version>${version.org.apache.maven.plugins.maven-surefire-plugin}</version>
                     <configuration>
                         <groups>${test.categories}</groups>
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
