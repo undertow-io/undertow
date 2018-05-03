@@ -109,6 +109,11 @@ public class Bootstrap implements ServletExtension {
             public void contextInitialized(ServletContextEvent sce) {
                 container.validateDeployment();
             }
+
+            @Override
+            public void contextDestroyed(ServletContextEvent sce) {
+
+            }
         });
     }
 
