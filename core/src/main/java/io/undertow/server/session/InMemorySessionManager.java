@@ -138,7 +138,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
     @Override
     public Session createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
-        if (evictionQueue != null) {
+        if (maxSize > 0) {
             if(expireOldestUnusedSessionOnMax) {
                 while (sessions.size() >= maxSize && !evictionQueue.isEmpty()) {
 
