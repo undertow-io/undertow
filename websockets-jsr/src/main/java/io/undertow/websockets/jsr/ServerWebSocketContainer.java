@@ -106,6 +106,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new CopyOnWriteMap<>();
 
     private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<>();
+    private final Set<Class<?>> annotatedEndpointClasses = new HashSet<>();
 
     /**
      * set of all deployed server endpoint paths. Due to the comparison function we can detect
@@ -610,6 +611,12 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         if (deploymentComplete) {
             throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
         }
+        //work around a TCK7 problem
+        //if the class has already been added we just ignore it
+        if(annotatedEndpointClasses.contains(endpoint)) {
+            return;
+        }
+        annotatedEndpointClasses.add(endpoint);
         try {
             addEndpointInternal(endpoint, true);
         } catch (DeploymentException e) {
