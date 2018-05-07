@@ -241,7 +241,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 break;
             case DEFAULT:
             case CONTEXT_ROOT:
-                matchValue = "\"\""; //blegh
+                matchValue = "";
                 break;
             case PATH:
                 matchValue = match.getRemaining();

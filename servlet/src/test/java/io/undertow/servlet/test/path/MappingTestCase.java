@@ -76,7 +76,7 @@ public class MappingTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Mapping match:CONTEXT_ROOT\n" +
-                    "Match value:\"\"\n" +
+                    "Match value:\n" +
                     "Pattern:", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/doesnotexist");
@@ -84,7 +84,7 @@ public class MappingTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Mapping match:DEFAULT\n" +
-                    "Match value:\"\"\n" +
+                    "Match value:\n" +
                     "Pattern:/", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/exact");

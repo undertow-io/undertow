@@ -53,7 +53,6 @@ public class PushBuilderImpl implements PushBuilder {
         ignore.add(Headers.RANGE);
         ignore.add(Headers.ACCEPT_RANGES);
         ignore.add(Headers.EXPECT);
-        ignore.add(Headers.AUTHORIZATION);
         ignore.add(Headers.REFERER);
         IGNORE = Collections.unmodifiableSet(ignore);
 
