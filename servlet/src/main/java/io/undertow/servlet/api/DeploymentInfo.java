@@ -23,7 +23,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -357,7 +356,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public Map<String, ServletInfo> getServlets() {
-        return Collections.unmodifiableMap(servlets);
+        return servlets;
     }
 
 
@@ -381,7 +380,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public Map<String, FilterInfo> getFilters() {
-        return Collections.unmodifiableMap(filters);
+        return filters;
     }
 
     public DeploymentInfo addFilterUrlMapping(final String filterName, final String mapping, DispatcherType dispatcher) {
@@ -407,7 +406,7 @@ public class DeploymentInfo implements Cloneable {
     public List<FilterMappingInfo> getFilterMappings() {
         final ArrayList<FilterMappingInfo> ret = new ArrayList<>(filterUrlMappings);
         ret.addAll(filterServletNameMappings);
-        return Collections.unmodifiableList(ret);
+        return ret;
     }
 
 
@@ -497,7 +496,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public Map<String, String> getInitParameters() {
-        return Collections.unmodifiableMap(initParameters);
+        return initParameters;
     }
 
     public DeploymentInfo addServletContextAttribute(final String name, final Object value) {
@@ -506,7 +505,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public Map<String, Object> getServletContextAttributes() {
-        return Collections.unmodifiableMap(servletContextAttributes);
+        return servletContextAttributes;
     }
 
     public DeploymentInfo addWelcomePage(final String welcomePage) {
@@ -525,7 +524,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<String> getWelcomePages() {
-        return Collections.unmodifiableList(welcomePages);
+        return welcomePages;
     }
 
     public DeploymentInfo addErrorPage(final ErrorPage errorPage) {
@@ -544,7 +543,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<ErrorPage> getErrorPages() {
-        return Collections.unmodifiableList(errorPages);
+        return errorPages;
     }
 
     public DeploymentInfo addMimeMapping(final MimeMapping mimeMappings) {
@@ -563,7 +562,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<MimeMapping> getMimeMappings() {
-        return Collections.unmodifiableList(mimeMappings);
+        return mimeMappings;
     }
 
 
@@ -583,7 +582,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<SecurityConstraint> getSecurityConstraints() {
-        return Collections.unmodifiableList(securityConstraints);
+        return securityConstraints;
     }
 
     public Executor getExecutor() {
@@ -731,7 +730,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public Set<String> getSecurityRoles() {
-        return Collections.unmodifiableSet(securityRoles);
+        return securityRoles;
     }
 
     /**
@@ -747,7 +746,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<HandlerWrapper> getOuterHandlerChainWrappers() {
-        return Collections.unmodifiableList(outerHandlerChainWrappers);
+        return outerHandlerChainWrappers;
     }
 
     /**
@@ -762,7 +761,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<HandlerWrapper> getInnerHandlerChainWrappers() {
-        return Collections.unmodifiableList(innerHandlerChainWrappers);
+        return innerHandlerChainWrappers;
     }
 
     public DeploymentInfo addInitialHandlerChainWrapper(final HandlerWrapper wrapper) {
@@ -771,7 +770,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<HandlerWrapper> getInitialHandlerChainWrappers() {
-        return Collections.unmodifiableList(initialHandlerChainWrappers);
+        return initialHandlerChainWrappers;
     }
 
 
@@ -808,7 +807,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<HandlerWrapper> getSecurityWrappers() {
-        return Collections.unmodifiableList(securityWrappers);
+        return securityWrappers;
     }
 
     public DeploymentInfo addNotificationReceiver(final NotificationReceiver notificationReceiver) {
@@ -827,7 +826,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<NotificationReceiver> getNotificationReceivers() {
-        return Collections.unmodifiableList(notificationReceivers);
+        return notificationReceivers;
     }
 
     public ConcurrentMap<String, Object> getServletContextAttributeBackingMap() {
@@ -952,7 +951,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public Map<String, Set<String>> getPrincipalVersusRolesMap() {
-        return Collections.unmodifiableMap(principalVersusRolesMap);
+        return principalVersusRolesMap;
     }
 
     /**
@@ -1028,7 +1027,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public Map<String, AuthenticationMechanismFactory> getAuthenticationMechanisms() {
-        return Collections.unmodifiableMap(authenticationMechanisms);
+        return authenticationMechanisms;
     }
 
     /**
@@ -1122,7 +1121,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<LifecycleInterceptor> getLifecycleInterceptors() {
-        return Collections.unmodifiableList(lifecycleInterceptors);
+        return lifecycleInterceptors;
     }
 
     /**
@@ -1166,7 +1165,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public List<SessionListener> getSessionListeners() {
-        return Collections.unmodifiableList(sessionListeners);
+        return sessionListeners;
     }
 
     public AuthenticationMode getAuthenticationMode() {
@@ -1305,7 +1304,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     public Map<String, String> getPreCompressedResources() {
-        return Collections.unmodifiableMap(preCompressedResources);
+        return preCompressedResources;
     }
 
     @Override
