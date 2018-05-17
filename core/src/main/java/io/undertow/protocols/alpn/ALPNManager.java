@@ -30,7 +30,7 @@ import javax.net.ssl.SSLEngine;
  */
 public class ALPNManager {
 
-    private final List<ALPNProvider> alpnProviders;
+    private final ALPNProvider[] alpnProviders;
 
     public static final ALPNManager INSTANCE = new ALPNManager(ALPNManager.class.getClassLoader());
 
@@ -46,7 +46,7 @@ public class ALPNManager {
                 return Integer.compare(o2.getPriority(), o1.getPriority()); //highest first
             }
         });
-        this.alpnProviders = Collections.unmodifiableList(provider);
+        this.alpnProviders = provider.toArray(new ALPNProvider[0]);
     }
 
     public ALPNProvider getProvider(SSLEngine engine) {
