@@ -394,15 +394,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentLength(final int len) {
-        if (insideInclude || responseStarted()) {
-            return;
-        }
-        if(len >= 0) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(len));
-        } else {
-            exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
-        }
-        this.contentLength = (long) len;
+        setContentLengthLong((long) len);
     }
 
     @Override
