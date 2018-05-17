@@ -1428,7 +1428,9 @@ public class DeploymentInfo implements Cloneable {
         info.invalidateSessionOnLogout = invalidateSessionOnLogout;
         info.defaultCookieVersion = defaultCookieVersion;
         info.sessionPersistenceManager = sessionPersistenceManager;
-        info.principalVersusRolesMap.putAll(principalVersusRolesMap);
+        for (Map.Entry<String, Set<String>> e : principalVersusRolesMap.entrySet()) {
+            info.principalVersusRolesMap.put(e.getKey(), new HashSet<>(e.getValue()));
+        }
         info.ignoreFlush = ignoreFlush;
         info.authorizationManager = authorizationManager;
         info.authenticationMechanisms.putAll(authenticationMechanisms);
