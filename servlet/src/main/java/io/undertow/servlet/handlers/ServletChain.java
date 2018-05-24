@@ -58,6 +58,7 @@ public class ServletChain {
                             if(!initDone) {
                                 ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
                                 forceInit(src.getDispatcherType());
+                                initDone = true;
                             }
                         }
                     }
