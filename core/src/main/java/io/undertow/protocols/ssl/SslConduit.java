@@ -803,6 +803,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 try {
                     //we make an effort to write out the final record
                     //this is best effort, there are no guarantees
+                    clearWriteRequiresRead();
                     doWrap(null, 0, 0);
                     flush();
                 } catch (Exception e2) {
