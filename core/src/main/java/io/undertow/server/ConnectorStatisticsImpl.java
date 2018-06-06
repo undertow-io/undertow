@@ -143,7 +143,7 @@ public class ConnectorStatisticsImpl implements ConnectorStatistics {
         do {
             maxActiveRequests = this.maxActiveRequests;
             if(current <= maxActiveRequests) {
-                return;
+                break;
             }
         } while (!maxActiveRequestsUpdater.compareAndSet(this, maxActiveRequests, current));
         exchange.addExchangeCompleteListener(completionListener);
