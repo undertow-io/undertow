@@ -67,7 +67,7 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 15005, value = "Error invoking method %s on listener %s")
-    void errorInvokingListener(final String method, Class<?> listenerClass, @Cause Exception e);
+    void errorInvokingListener(final String method, Class<?> listenerClass, @Cause Throwable t);
 
     @LogMessage(level = ERROR)
     @Message(id = 15006, value = "IOException dispatching async event")
@@ -119,7 +119,7 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 15019, value = "Failed to destroy %s")
-    void failedToDestroy(Object object, @Cause Exception e);
+    void failedToDestroy(Object object, @Cause Throwable t);
 
     @LogMessage(level = WARN)
     @Message(id = 15020, value = "Path %s is secured for some HTTP methods, however it is not secured for %s")

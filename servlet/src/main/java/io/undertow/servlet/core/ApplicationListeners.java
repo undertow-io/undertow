@@ -200,8 +200,8 @@ public class ApplicationListeners implements Lifecycle {
             ManagedListener listener = servletContextListeners[i];
             try {
                 this.<ServletContextListener>get(listener).contextDestroyed(event);
-            } catch (Exception e) {
-                UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("contextDestroyed", listener.getListenerInfo().getListenerClass(), e);
+            } catch (Throwable t) {
+                UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("contextDestroyed", listener.getListenerInfo().getListenerClass(), t);
             }
         }
     }
