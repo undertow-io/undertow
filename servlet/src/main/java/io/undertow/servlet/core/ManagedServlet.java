@@ -381,7 +381,11 @@ public class ManagedServlet implements Lifecycle {
 
                 @Override
                 public void release() {
-                    instance.destroy();
+                    try {
+                        instance.destroy();
+                    } catch (Throwable t) {
+                        UndertowServletLogger.REQUEST_LOGGER.failedToDestroy(instance, t);
+                    }
                     instanceHandle.release();
                 }
             };

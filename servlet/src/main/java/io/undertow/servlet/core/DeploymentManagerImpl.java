@@ -91,7 +91,6 @@ import io.undertow.util.MimeMappings;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -592,8 +591,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     for (Lifecycle object : deployment.getLifecycleObjects()) {
                         try {
                             object.stop();
-                        } catch (Exception e) {
-                            UndertowServletLogger.ROOT_LOGGER.failedToDestroy(object, e);
+                        } catch (Throwable t) {
+                            UndertowServletLogger.ROOT_LOGGER.failedToDestroy(object, t);
                         }
                     }
                     deployment.getSessionManager().stop();
