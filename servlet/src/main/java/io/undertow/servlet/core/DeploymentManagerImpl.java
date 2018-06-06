@@ -93,7 +93,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
-
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -666,7 +665,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 @Override
                 public Void call(HttpServerExchange exchange, Object ignore) throws ServletException {
                     for(ServletContextListener listener : deployment.getDeploymentInfo().getDeploymentCompleteListeners()) {
-                        listener.contextDestroyed(new ServletContextEvent(deployment.getServletContext()));
+                        try {
+                            listener.contextDestroyed(new ServletContextEvent(deployment.getServletContext()));
+                        } catch (Throwable t) {
+                            UndertowServletLogger.REQUEST_LOGGER.failedToDestroy(listener, t);
+                        }
                     }
                     deployment.destroy();
                     deployment = null;
