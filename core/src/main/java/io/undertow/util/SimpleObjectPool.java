@@ -34,15 +34,20 @@ import io.undertow.UndertowMessages;
 public class SimpleObjectPool<T> implements ObjectPool {
 
     private final Supplier<T> supplier;
+    private final Consumer<T> recycler;
     private final Consumer<T> consumer;
     private final LinkedBlockingDeque<T> pool;
 
-    public SimpleObjectPool(int poolSize, Supplier<T> supplier, Consumer<T> consumer) {
+    public SimpleObjectPool(int poolSize, Supplier<T> supplier, Consumer<T> recycler, Consumer<T> consumer) {
         this.supplier = supplier;
+        this.recycler = recycler;
         this.consumer = consumer;
         pool = new LinkedBlockingDeque<T>(poolSize);
     }
 
+    public SimpleObjectPool(int poolSize, Supplier<T> supplier, Consumer<T> consumer) {
+        this(poolSize, supplier, object -> {}, consumer);
+    }
 
     @Override
     public PooledObject allocate() {
@@ -66,6 +71,7 @@ public class SimpleObjectPool<T> implements ObjectPool {
             @Override
             public void close() {
                 closed = true;
+                recycler.accept(finObj);
                 if(!pool.offer(finObj)) {
                     consumer.accept(finObj);
                 }
