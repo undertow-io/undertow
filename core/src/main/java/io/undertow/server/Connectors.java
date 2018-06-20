@@ -377,7 +377,7 @@ public class Connectors {
                         executor.execute(dispatchTask);
                     } catch (RejectedExecutionException e) {
                         UndertowLogger.REQUEST_LOGGER.debug("Failed to dispatch to worker", e);
-                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
                         exchange.endExchange();
                     }
                 }
