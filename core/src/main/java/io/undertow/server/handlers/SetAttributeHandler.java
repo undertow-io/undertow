@@ -172,7 +172,6 @@ public class SetAttributeHandler implements HttpHandler {
         public Set<String> requiredParameters() {
             final Set<String> req = new HashSet<>();
             req.add("attribute");
-            req.add("pre-commit");
             return req;
         }
 
