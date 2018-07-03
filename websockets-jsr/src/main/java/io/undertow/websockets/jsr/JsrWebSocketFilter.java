@@ -47,6 +47,7 @@ import org.xnio.StreamConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.session.Session;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
 import io.undertow.util.Headers;
@@ -128,7 +129,8 @@ public class JsrWebSocketFilter implements Filter {
                     facade.putAttachment(HandshakeUtil.PATH_PARAMS, matchResult.getParameters());
                     facade.putAttachment(HandshakeUtil.PRINCIPAL, req.getUserPrincipal());
                     final Handshake selected = handshaker;
-                    final HttpSessionImpl session = (HttpSessionImpl) req.getSession(false);
+                    ServletRequestContext src = ServletRequestContext.requireCurrent();
+                    final HttpSessionImpl session = src.getCurrentServletContext().getSession(src.getExchange(), false);
                     facade.upgradeChannel(new HttpUpgradeListener() {
                         @Override
                         public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
