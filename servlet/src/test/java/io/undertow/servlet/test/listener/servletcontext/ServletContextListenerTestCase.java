@@ -59,7 +59,7 @@ public class ServletContextListenerTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .addServletContainerInitalizer(new ServletContainerInitializerInfo(TestSci.class, Collections.<Class<?>>emptySet()))
+                .addServletContainerInitializer(new ServletContainerInitializerInfo(TestSci.class, Collections.<Class<?>>emptySet()))
                 .addServlet(
                         new ServletInfo("servlet", MessageServlet.class)
                                 .addMapping("/aa")
