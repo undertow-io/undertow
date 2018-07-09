@@ -454,19 +454,34 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public DeploymentInfo addServletContainerInitalizer(final ServletContainerInitializerInfo servletContainerInitializer) {
+    public DeploymentInfo addServletContainerInitializer(final ServletContainerInitializerInfo servletContainerInitializer) {
         servletContainerInitializers.add(servletContainerInitializer);
         return this;
     }
 
-    public DeploymentInfo addServletContainerInitalizers(final ServletContainerInitializerInfo... servletContainerInitializer) {
+    @Deprecated // UNDERTOW-1375 Method name is misspelled
+    public DeploymentInfo addServletContainerInitalizer(final ServletContainerInitializerInfo servletContainerInitializer) {
+        return addServletContainerInitializer(servletContainerInitializer);
+    }
+
+    public DeploymentInfo addServletContainerInitializers(final ServletContainerInitializerInfo... servletContainerInitializer) {
         servletContainerInitializers.addAll(Arrays.asList(servletContainerInitializer));
         return this;
     }
 
-    public DeploymentInfo addServletContainerInitalizers(final List<ServletContainerInitializerInfo> servletContainerInitializer) {
+    @Deprecated // UNDERTOW-1375 Method name is misspelled
+    public DeploymentInfo addServletContainerInitalizers(final ServletContainerInitializerInfo... servletContainerInitializer) {
+        return addServletContainerInitializers(servletContainerInitializer);
+    }
+
+    public DeploymentInfo addServletContainerInitializers(final List<ServletContainerInitializerInfo> servletContainerInitializer) {
         servletContainerInitializers.addAll(servletContainerInitializer);
         return this;
+    }
+
+    @Deprecated // UNDERTOW-1375 Method name is misspelled
+    public DeploymentInfo addServletContainerInitalizers(final List<ServletContainerInitializerInfo> servletContainerInitializers) {
+        return addServletContainerInitializers(servletContainerInitializers);
     }
 
     public List<ServletContainerInitializerInfo> getServletContainerInitializers() {
