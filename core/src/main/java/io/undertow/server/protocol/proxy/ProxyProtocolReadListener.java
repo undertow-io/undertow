@@ -209,8 +209,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                 conduit.pushBack(new PooledAdaptor(additionalData));
                 streamConnection.getSourceChannel().setConduit(conduit);
             }
-            SslConnection sslConnection = ssl.wrapExistingConnection(streamConnection, sslOptionMap == null ? OptionMap.EMPTY : sslOptionMap);
-            UndertowXnioSsl.getSslEngine(sslConnection).setUseClientMode(false);
+            SslConnection sslConnection = ssl.wrapExistingConnection(streamConnection, sslOptionMap == null ? OptionMap.EMPTY : sslOptionMap, false);
             streamConnection = sslConnection;
 
             callOpenListener(streamConnection, null);

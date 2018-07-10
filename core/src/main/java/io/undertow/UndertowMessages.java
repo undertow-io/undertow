@@ -20,6 +20,8 @@ package io.undertow;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 
@@ -574,4 +576,22 @@ public interface UndertowMessages {
 
     @Message(id = 185, value = "Invalid IP address %s")
     IOException invalidIpAddress(String addressString);
+
+    @Message(id = 186, value = "Invalid TLS extension")
+    SSLException invalidTlsExt();
+
+    @Message(id = 187, value = "Not enough data")
+    SSLException notEnoughData();
+
+    @Message(id = 188, value = "Empty host name in SNI extension")
+    SSLException emptyHostNameSni();
+
+    @Message(id = 189, value = "Duplicated host name of type %s")
+    SSLException duplicatedSniServerName(int type);
+
+    @Message(id = 190, value = "No context for SSL connection")
+    SSLException noContextForSslConnection();
+
+    @Message(id = 191, value = "Default context cannot be null")
+    IllegalStateException defaultContextCannotBeNull();
 }

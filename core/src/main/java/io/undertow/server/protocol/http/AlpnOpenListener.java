@@ -25,6 +25,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+
 import javax.net.ssl.SSLEngine;
 
 import org.xnio.ChannelListener;
@@ -34,6 +37,7 @@ import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.SslConnection;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -217,65 +221,79 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         final SslConduit sslConduit = UndertowXnioSsl.getSslConduit((SslConnection) channel);
-        final SSLEngine sslEngine = sslConduit.getSSLEngine();
-        if (!engineSupportsHTTP2(sslEngine)) {
-            if(!alpnFailLogged) {
-                synchronized (this) {
-                    if(!alpnFailLogged) {
-                        UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however %s is not present or TLS1.2 is not enabled, falling back to default protocol", REQUIRED_CIPHER);
-                        alpnFailLogged = true;
-                    }
-                }
-            }
-            if (fallbackProtocol != null) {
-                ListenerEntry listener = listeners.get(fallbackProtocol);
-                if (listener != null) {
-                    listener.listener.handleEvent(channel);
-                    return;
-                }
-            }
-        }
+        final SSLEngine originalSSlEngine = sslConduit.getSSLEngine();
 
-
-        final ALPNProvider provider = alpnManager.getProvider(sslEngine);
-        if (provider == null) {
-            if(!providerLogged) {
-                synchronized (this) {
-                    if(!providerLogged) {
-                        UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however no provider could be found for engine %s for connector at %s", sslEngine, channel.getLocalAddress());
-                        providerLogged = true;
-                    }
-                }
-            }
-            if (fallbackProtocol != null) {
-                ListenerEntry listener = listeners.get(fallbackProtocol);
-                if (listener != null) {
-                    listener.listener.handleEvent(channel);
-                    return;
-                }
-            }
-            UndertowLogger.REQUEST_LOGGER.debugf("No ALPN provider available and no fallback defined");
-            IoUtils.safeClose(channel);
-            return;
-        }
-
-        if(!providerLogged) {
-            synchronized (this) {
-                if(!providerLogged) {
-                    UndertowLogger.REQUEST_LOGGER.debugf("Using ALPN provider %s for connector at %s", provider, channel.getLocalAddress());
-                    providerLogged = true;
-                }
-            }
-        }
-
-        final SSLEngine newEngine = provider.setProtocols(sslEngine, protocols);
-        sslConduit.setSslEngine(new ALPNLimitingSSLEngine(newEngine, new Runnable() {
+        //this will end up with the ALPN engine, or null if the engine did not support ALPN
+        final CompletableFuture<SelectedAlpn> selectedALPNEngine = new CompletableFuture<>();
+        alpnManager.registerEngineCallback(originalSSlEngine, new SSLConduitUpdater(sslConduit, new Function<SSLEngine, SSLEngine>() {
             @Override
-            public void run() {
-                provider.setProtocols(newEngine, new String[]{fallbackProtocol});
+            public SSLEngine apply(SSLEngine engine) {
+
+                if (!engineSupportsHTTP2(engine)) {
+                    if (!alpnFailLogged) {
+                        synchronized (this) {
+                            if (!alpnFailLogged) {
+                                UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however %s is not present or TLS1.2 is not enabled, falling back to default protocol", REQUIRED_CIPHER);
+                                alpnFailLogged = true;
+                            }
+                        }
+                    }
+                    if (fallbackProtocol != null) {
+                        ListenerEntry listener = listeners.get(fallbackProtocol);
+                        if (listener != null) {
+                            listener.listener.handleEvent(channel);
+                            selectedALPNEngine.complete(null);
+                            return engine;
+                        }
+                    }
+                }
+                final ALPNProvider provider = alpnManager.getProvider(engine);
+                if (provider == null) {
+                    if (!providerLogged) {
+                        synchronized (this) {
+                            if (!providerLogged) {
+                                UndertowLogger.REQUEST_LOGGER.debugf("ALPN has been configured however no provider could be found for engine %s for connector at %s", engine, channel.getLocalAddress());
+                                providerLogged = true;
+                            }
+                        }
+                    }
+                    if (fallbackProtocol != null) {
+                        ListenerEntry listener = listeners.get(fallbackProtocol);
+                        if (listener != null) {
+                            listener.listener.handleEvent(channel);
+                            selectedALPNEngine.complete(null);
+                            return engine;
+                        }
+                    }
+                    UndertowLogger.REQUEST_LOGGER.debugf("No ALPN provider available and no fallback defined");
+                    IoUtils.safeClose(channel);
+                    selectedALPNEngine.complete(null);
+                    return engine;
+                }
+
+                if (!providerLogged) {
+                    synchronized (this) {
+                        if (!providerLogged) {
+                            UndertowLogger.REQUEST_LOGGER.debugf("Using ALPN provider %s for connector at %s", provider, channel.getLocalAddress());
+                            providerLogged = true;
+                        }
+                    }
+                }
+
+                final SSLEngine newEngine = provider.setProtocols(engine, protocols);
+                ALPNLimitingSSLEngine alpnLimitingSSLEngine = new ALPNLimitingSSLEngine(newEngine, new Runnable() {
+                    @Override
+                    public void run() {
+                        provider.setProtocols(newEngine, new String[]{fallbackProtocol});
+                    }
+                });
+                selectedALPNEngine.complete(new SelectedAlpn(newEngine, provider)); //we don't want the limiting engine, but the actual one we can use with a provider
+                return alpnLimitingSSLEngine;
             }
         }));
-        final AlpnConnectionListener potentialConnection = new AlpnConnectionListener(channel, newEngine, provider);
+
+
+        final AlpnConnectionListener potentialConnection = new AlpnConnectionListener(channel, selectedALPNEngine);
         channel.getSourceChannel().setReadListener(potentialConnection);
         potentialConnection.handleEvent(channel.getSourceChannel());
 
@@ -286,13 +304,13 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         //if not then ALPN will not be attempted
         String[] protcols = engine.getEnabledProtocols();
         boolean found = false;
-        for(String proto : protcols) {
-            if(proto.equals(REQUIRED_PROTOCOL)) {
+        for (String proto : protcols) {
+            if (proto.equals(REQUIRED_PROTOCOL)) {
                 found = true;
                 break;
             }
         }
-        if(!found) {
+        if (!found) {
             return false;
         }
 
@@ -307,13 +325,11 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
 
     private class AlpnConnectionListener implements ChannelListener<StreamSourceChannel> {
         private final StreamConnection channel;
-        private final SSLEngine engine;
-        private final ALPNProvider provider;
+        private final CompletableFuture<SelectedAlpn> selectedAlpn;
 
-        private AlpnConnectionListener(StreamConnection channel, SSLEngine engine, ALPNProvider provider) {
+        private AlpnConnectionListener(StreamConnection channel, CompletableFuture<SelectedAlpn> selectedAlpn) {
             this.channel = channel;
-            this.engine = engine;
-            this.provider = provider;
+            this.selectedAlpn = selectedAlpn;
         }
 
         @Override
@@ -328,7 +344,13 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
                         return;
                     }
                     buffer.getBuffer().flip();
-                    final String selected = provider.getSelectedProtocol(engine);
+                    SelectedAlpn selectedAlpn = this.selectedAlpn.getNow(null);
+                    final String selected;
+                    if (selectedAlpn != null) {
+                        selected = selectedAlpn.provider.getSelectedProtocol(selectedAlpn.engine);
+                    } else {
+                        selected = null;
+                    }
                     if (selected != null) {
                         DelegateOpenListener listener;
                         if (selected.isEmpty()) {
@@ -374,6 +396,33 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
                     buffer.close();
                 }
             }
+        }
+    }
+
+    static final class SelectedAlpn {
+        final SSLEngine engine;
+        final ALPNProvider provider;
+
+        SelectedAlpn(SSLEngine engine, ALPNProvider provider) {
+            this.engine = engine;
+            this.provider = provider;
+        }
+    }
+
+    static final class SSLConduitUpdater implements Function<SSLEngine, SSLEngine> {
+        final SslConduit conduit;
+        final Function<SSLEngine, SSLEngine> underlying;
+
+        SSLConduitUpdater(SslConduit conduit, Function<SSLEngine, SSLEngine> underlying) {
+            this.conduit = conduit;
+            this.underlying = underlying;
+        }
+
+        @Override
+        public SSLEngine apply(SSLEngine engine) {
+            SSLEngine res = underlying.apply(engine);
+            conduit.setSslEngine(res);
+            return res;
         }
     }
 }

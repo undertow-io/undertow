@@ -18,7 +18,27 @@
 
 package io.undertow.protocols.ssl;
 
-import io.undertow.server.DefaultByteBufferPool;
+import static org.xnio.IoUtils.safeClose;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
@@ -26,7 +46,8 @@ import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
+import org.xnio.Options;
+import org.xnio.Sequence;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioExecutor;
@@ -42,17 +63,8 @@ import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.util.concurrent.TimeUnit;
-
-import static org.xnio.IoUtils.safeClose;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.DefaultByteBufferPool;
 
 /**
  * @author Stuart Douglas
@@ -184,7 +196,51 @@ public class UndertowXnioSsl extends XnioSsl {
     }
 
     public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap) {
-        return new UndertowSslConnection(connection, JsseSslUtils.createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress()), bufferPool);
+        return new UndertowSslConnection(connection, createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), true), bufferPool);
+    }
+
+    public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap, boolean clientMode) {
+        return new UndertowSslConnection(connection, createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), clientMode), bufferPool);
+    }
+
+    /**
+     * Create a new  SSL engine, configured from an option map.
+     *
+     * @param sslContext the SSL context
+     * @param optionMap the SSL options
+     * @param peerAddress the peer address of the connection
+     * @return the configured SSL engine
+     */
+    private static SSLEngine createSSLEngine(SSLContext sslContext, OptionMap optionMap, InetSocketAddress peerAddress, boolean client) {
+        final SSLEngine engine = sslContext.createSSLEngine(
+                optionMap.get(Options.SSL_PEER_HOST_NAME, peerAddress.getHostString()),
+                optionMap.get(Options.SSL_PEER_PORT, peerAddress.getPort())
+        );
+        engine.setUseClientMode(client);
+        engine.setEnableSessionCreation(optionMap.get(Options.SSL_ENABLE_SESSION_CREATION, true));
+        final Sequence<String> cipherSuites = optionMap.get(Options.SSL_ENABLED_CIPHER_SUITES);
+        if (cipherSuites != null) {
+            final Set<String> supported = new HashSet<String>(Arrays.asList(engine.getSupportedCipherSuites()));
+            final List<String> finalList = new ArrayList<String>();
+            for (String name : cipherSuites) {
+                if (supported.contains(name)) {
+                    finalList.add(name);
+                }
+            }
+            engine.setEnabledCipherSuites(finalList.toArray(new String[finalList.size()]));
+        }
+        final Sequence<String> protocols = optionMap.get(Options.SSL_ENABLED_PROTOCOLS);
+        if (protocols != null) {
+            final Set<String> supported = new HashSet<String>(Arrays.asList(engine.getSupportedProtocols()));
+            final List<String> finalList = new ArrayList<String>();
+            for (String name : protocols) {
+                if (supported.contains(name)) {
+                    finalList.add(name);
+                }
+            }
+            engine.setEnabledProtocols(finalList.toArray(new String[finalList.size()]));
+        }
+        return engine;
     }
 
     private IoFuture<SslConnection> setupSslConnection(FutureResult<SslConnection> futureResult, IoFuture<StreamConnection> connection) {
@@ -318,7 +374,13 @@ public class UndertowXnioSsl extends XnioSsl {
 
         public void handleEvent(final StreamConnection connection) {
             try {
-                final SslConnection wrappedConnection = new UndertowSslConnection(connection, JsseSslUtils.createSSLEngine(sslContext, optionMap, destination), bufferPool);
+
+                SSLEngine sslEngine = JsseSslUtils.createSSLEngine(sslContext, optionMap, destination);
+                SSLParameters params = sslEngine.getSSLParameters();
+                params.setServerNames(Collections.singletonList(new SNIHostName(destination.getHostString())));
+                sslEngine.setSSLParameters(params);
+
+                final SslConnection wrappedConnection = new UndertowSslConnection(connection, sslEngine, bufferPool);
                 if (!futureResult.setResult(wrappedConnection)) {
                     IoUtils.safeClose(connection);
                 } else {

@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.function.Function;
+
 import javax.net.ssl.SSLEngine;
 
 /**
@@ -31,13 +33,14 @@ import javax.net.ssl.SSLEngine;
 public class ALPNManager {
 
     private final ALPNProvider[] alpnProviders;
+    private final ALPNEngineManager[] alpnEngineManagers;
 
     public static final ALPNManager INSTANCE = new ALPNManager(ALPNManager.class.getClassLoader());
 
     public ALPNManager(ClassLoader classLoader) {
         ServiceLoader<ALPNProvider> loader = ServiceLoader.load(ALPNProvider.class, classLoader);
         List<ALPNProvider> provider = new ArrayList<>();
-        for(ALPNProvider prov : loader) {
+        for (ALPNProvider prov : loader) {
             provider.add(prov);
         }
         Collections.sort(provider, new Comparator<ALPNProvider>() {
@@ -47,15 +50,37 @@ public class ALPNManager {
             }
         });
         this.alpnProviders = provider.toArray(new ALPNProvider[0]);
+
+        ServiceLoader<ALPNEngineManager> managerLoader = ServiceLoader.load(ALPNEngineManager.class, classLoader);
+        List<ALPNEngineManager> managers = new ArrayList<>();
+        for (ALPNEngineManager manager : managerLoader) {
+            managers.add(manager);
+        }
+        Collections.sort(managers, new Comparator<ALPNEngineManager>() {
+            @Override
+            public int compare(ALPNEngineManager o1, ALPNEngineManager o2) {
+                return Integer.compare(o2.getPriority(), o1.getPriority()); //highest first
+            }
+        });
+        this.alpnEngineManagers = managers.toArray(new ALPNEngineManager[0]);
+
     }
 
     public ALPNProvider getProvider(SSLEngine engine) {
-        for(ALPNProvider provider: alpnProviders) {
-            if(provider.isEnabled(engine)) {
+        for (ALPNProvider provider : alpnProviders) {
+            if (provider.isEnabled(engine)) {
                 return provider;
             }
         }
         return null;
+    }
+
+    public void registerEngineCallback(SSLEngine original, Function<SSLEngine, SSLEngine> selectionFunction) {
+        for(ALPNEngineManager manager : alpnEngineManagers) {
+            if(manager.registerEngine(original, selectionFunction)) {
+                return;
+            }
+        }
     }
 
 }
