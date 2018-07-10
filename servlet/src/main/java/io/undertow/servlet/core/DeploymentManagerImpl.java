@@ -277,7 +277,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             extension.handleDeployment(deploymentInfo, servletContext);
         }
 
-        if (!ServletExtension.class.getClassLoader().equals(deploymentInfo.getClassLoader())) {
+        if (ServletExtension.class.getClassLoader() != null && !ServletExtension.class.getClassLoader().equals(deploymentInfo.getClassLoader())) {
             for (ServletExtension extension : ServiceLoader.load(ServletExtension.class)) {
 
                 // Note: If the CLs are different, but can the see the same extensions and extension might get loaded
