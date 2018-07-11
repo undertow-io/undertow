@@ -26,7 +26,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -118,8 +119,7 @@ public class RequestContentEncodingTestCase {
 
 
     public void runTest(final String theMessage, String encoding) throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
-        try {
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()){
             message = theMessage;
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/encode");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, encoding);
@@ -139,8 +139,6 @@ public class RequestContentEncodingTestCase {
             Assert.assertEquals(theMessage.length(), sb.length());
             Assert.assertEquals(theMessage, sb);
 
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 }

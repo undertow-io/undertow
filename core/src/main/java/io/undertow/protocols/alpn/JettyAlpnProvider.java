@@ -120,7 +120,6 @@ public class JettyAlpnProvider implements ALPNProvider {
             this.sslEngine = sslEngine;
         }
 
-        @Override
         public boolean supports() {
             return true;
         }
