@@ -30,8 +30,10 @@ import io.undertow.util.ObjectPool;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.entity.DecompressingEntity;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.ContentEncodingHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -83,8 +85,8 @@ public class GzipContentEncodingSimpleObjectPoolTestCase {
      */
     @Test
     public void testSmallMessagePredicateDoesNotCompress() throws IOException {
-        ContentEncodingHttpClient client = new ContentEncodingHttpClient();
-        try {
+
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()){
             message = "Hi";
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "gzip");
@@ -94,8 +96,6 @@ public class GzipContentEncodingSimpleObjectPoolTestCase {
             Assert.assertEquals(0, header.length);
             final String body = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Hi", body);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
@@ -103,8 +103,7 @@ public class GzipContentEncodingSimpleObjectPoolTestCase {
     //UNDERTOW-331
     @Test
     public void testAcceptIdentity() throws IOException {
-        ContentEncodingHttpClient client = new ContentEncodingHttpClient();
-        try {
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()){
             message = "Hi";
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "identity;q=1, *;q=0");
@@ -115,8 +114,6 @@ public class GzipContentEncodingSimpleObjectPoolTestCase {
             Assert.assertEquals("identity", header[0].getValue());
             final String body = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Hi", body);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
@@ -132,7 +129,7 @@ public class GzipContentEncodingSimpleObjectPoolTestCase {
     @Test
     public void testGzipEncodingRandomSizeResponse() throws IOException {
         int seed = new Random().nextInt();
-        System.out.println("Using seed " + seed);
+        //System.out.println("Using seed " + seed);
         try {
             final Random random = new Random(seed);
             int size = random.nextInt(691963);
@@ -147,19 +144,15 @@ public class GzipContentEncodingSimpleObjectPoolTestCase {
     }
 
     public void runTest(final String theMessage) throws IOException {
-        ContentEncodingHttpClient client = new ContentEncodingHttpClient();
-        try {
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()){
             message = theMessage;
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "gzip");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
-            Assert.assertEquals("gzip", header[0].getValue());
+            assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
             final String body = HttpClientUtils.readResponse(result);
             Assert.assertEquals(theMessage, body);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 }
