@@ -30,8 +30,10 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.entity.DecompressingEntity;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.ContentEncodingHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -82,10 +84,9 @@ public class PreCompressedResourceTestCase {
     public void testContentEncodedResource() throws IOException, URISyntaxException {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
         TestHttpClient client = new TestHttpClient();
-        ContentEncodingHttpClient compClient = new ContentEncodingHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
 
-        try {
+        try (CloseableHttpClient compClient = HttpClientBuilder.create().build()){
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PreCompressedResourceSupplier(new PathResourceManager(rootPath, 10485760)).addEncoding("gzip", ".gz"))
@@ -105,7 +106,6 @@ public class PreCompressedResourceTestCase {
 
         } finally {
             client.getConnectionManager().shutdown();
-            compClient.getConnectionManager().shutdown();
         }
     }
 
@@ -113,10 +113,9 @@ public class PreCompressedResourceTestCase {
     public void testCorrectResourceSelected() throws IOException, URISyntaxException {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
         TestHttpClient client = new TestHttpClient();
-        ContentEncodingHttpClient compClient = new ContentEncodingHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
 
-        try {
+        try (CloseableHttpClient compClient = HttpClientBuilder.create().build()){
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new EncodingHandler(new ContentEncodingRepository()
@@ -141,7 +140,6 @@ public class PreCompressedResourceTestCase {
 
         } finally {
             client.getConnectionManager().shutdown();
-            compClient.getConnectionManager().shutdown();
         }
     }
 
@@ -185,7 +183,7 @@ public class PreCompressedResourceTestCase {
         Assert.assertEquals("text/html", headers[0].getValue());
 
         if (encoding) {
-            Assert.assertEquals("gzip", response.getFirstHeader(Headers.CONTENT_ENCODING_STRING).getValue());
+            assert response.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
         } else {
             Assert.assertNull(response.getFirstHeader(Headers.CONTENT_ENCODING_STRING));
         }

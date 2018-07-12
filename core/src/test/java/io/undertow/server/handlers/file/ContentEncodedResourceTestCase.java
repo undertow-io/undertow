@@ -27,11 +27,13 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.FileUtils;
-import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.entity.DecompressingEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.ContentEncodingHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -73,18 +75,18 @@ public class ContentEncodedResourceTestCase {
 
     @Test
     public void testFileIsCompressed() throws IOException, InterruptedException {
-        ContentEncodingHttpClient client = new ContentEncodingHttpClient();
         String fileName = "hello.html";
         Path f = tmpDir.resolve(fileName);
         Files.write(f, "hello world".getBytes());
-        try {
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()){
             for (int i = 0; i < 3; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + fileName);
-                HttpResponse result = client.execute(get);
+                CloseableHttpResponse result = client.execute(get);
                 Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 String response = HttpClientUtils.readResponse(result);
                 Assert.assertEquals("hello world", response);
-                Assert.assertEquals("deflate", result.getHeaders(Headers.CONTENT_ENCODING_STRING)[0].getValue());
+                assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
+                result.close();
             }
             Files.write(f, "modified file".getBytes());
 
@@ -94,10 +96,9 @@ public class ContentEncodedResourceTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("hello world", response);
-            Assert.assertEquals("deflate", result.getHeaders(Headers.CONTENT_ENCODING_STRING)[0].getValue());
+            assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
 
-        } finally {
-            client.getConnectionManager().shutdown();
+
         }
     }
 }
