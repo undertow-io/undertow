@@ -241,7 +241,16 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) || wakeup || unwrappedData != null) {
                 runReadListener(true);
             } else {
-                delegate.getSourceChannel().resumeReads();
+                if (Thread.currentThread() == delegate.getIoThread()) {
+                    delegate.getSourceChannel().resumeReads();
+                } else {
+                    delegate.getIoThread().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            delegate.getSourceChannel().resumeReads();
+                        }
+                    });
+                }
             }
         }
     }
