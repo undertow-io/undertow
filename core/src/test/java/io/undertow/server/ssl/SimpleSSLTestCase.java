@@ -28,13 +28,22 @@ import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Stuart Douglas
@@ -96,6 +105,86 @@ public class SimpleSSLTestCase {
             }
         } finally {
             client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void parallel() throws Exception {
+        runTest(32, new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                exchange.endExchange();
+            }
+        });
+    }
+
+    @Test
+    public void parallelWithDispatch() throws Exception {
+        runTest(32, new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.dispatch(() -> {
+                    exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                    exchange.endExchange();
+                });
+            }
+        });
+    }
+
+    @Test
+    public void parallelWithBlockingDispatch() throws Exception {
+        runTest(32, new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                if (exchange.isInIoThread()) {
+                    exchange.dispatch(this);
+                    return;
+                }
+                exchange.startBlocking();
+                exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                exchange.endExchange();
+            }
+        });
+    }
+
+    private void runTest(int concurrency, HttpHandler handler) throws IOException, InterruptedException {
+        DefaultServer.setRootHandler(handler);
+        DefaultServer.startSSLServer();
+        try (CloseableHttpClient client = HttpClients.custom().disableConnectionState()
+                .setSSLContext(DefaultServer.getClientSSLContext())
+                .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(5000).build())
+                .setMaxConnPerRoute(1000)
+                .build()) {
+            ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
+            AtomicBoolean failed = new AtomicBoolean();
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    if (failed.get()) {
+                        return;
+                    }
+                    try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerSSLAddress()))) {
+                        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                        Header[] header = result.getHeaders("scheme");
+                        Assert.assertEquals("https", header[0].getValue());
+                        EntityUtils.consumeQuietly(result.getEntity());
+                    } catch (Throwable t) {
+                        if (failed.compareAndSet(false, true)) {
+                            t.printStackTrace();
+                            executorService.shutdownNow();
+                        }
+                    }
+                }
+            };
+            for (int i = 0; i < concurrency * 3000; i++) {
+                executorService.submit(task);
+            }
+            executorService.shutdown();
+            Assert.assertTrue(executorService.awaitTermination(70, TimeUnit.SECONDS));
+            Assert.assertFalse(failed.get());
+        } finally {
             DefaultServer.stopSSLServer();
         }
     }
