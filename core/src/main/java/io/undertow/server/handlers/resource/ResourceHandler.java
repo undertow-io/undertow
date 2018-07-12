@@ -159,7 +159,13 @@ public class ResourceHandler implements HttpHandler {
             } else {
                 exchange.setStatusCode(StatusCodes.NOT_IMPLEMENTED);
             }
-            exchange.endExchange();
+
+            if ( this.next != null ) {
+                next.handleRequest(exchange)
+            }
+            else {
+                exchange.endExchange(); 
+            }
         }
     }
 
