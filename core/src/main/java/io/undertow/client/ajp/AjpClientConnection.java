@@ -355,9 +355,16 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 AbstractAjpClientStreamSourceChannel result = channel.receive();
                 if(result == null) {
                     if(!channel.isOpen()) {
-                        if(currentRequest != null) {
-                            currentRequest.setFailed(new ClosedChannelException());
-                        }
+                        //we execute this in a runnable
+                        //as there may be close/data frames that need to be processed
+                        getIoThread().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                if(currentRequest != null) {
+                                    currentRequest.setFailed(new ClosedChannelException());
+                                }
+                            }
+                        });
                     }
                     return;
                 }

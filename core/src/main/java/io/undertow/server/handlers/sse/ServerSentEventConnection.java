@@ -414,12 +414,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
 
                 synchronized (ServerSentEventConnection.this) {
                     if (queue.isEmpty() && pooled == null) {
-                        try {
-                            sink.shutdownWrites();
-                        } catch (IOException e) {
-                            //ignore
-                        }
-                        IoUtils.safeClose(ServerSentEventConnection.this);
+                        exchange.endExchange();
                     }
                 }
             }
