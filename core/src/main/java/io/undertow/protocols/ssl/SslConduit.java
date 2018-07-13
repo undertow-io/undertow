@@ -174,11 +174,18 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
     };
 
+    private final Runnable resumeReadsCommand = new Runnable() {
+        @Override
+        public void run() {
+            delegate.getSourceChannel().resumeReads();
+        }
+    };
+
     private final Runnable runReadListenerAndResumeCommand = new Runnable() {
         @Override
         public void run() {
             if (allAreSet(state, FLAG_READS_RESUMED)) {
-                delegate.getSourceChannel().resumeReads();
+                resumeReadsCommand.run();
             }
             runReadListenerCommand.run();
         }
@@ -224,7 +231,16 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     public void suspendReads() {
         state &= ~FLAG_READS_RESUMED;
         if(!allAreSet(state, FLAG_WRITES_RESUMED | FLAG_WRITE_REQUIRES_READ)) {
-            delegate.getSourceChannel().suspendReads();
+            if (Thread.currentThread() != getReadThread()) {
+                getReadThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        delegate.getSourceChannel().suspendReads();
+                    }
+                });
+            } else {
+                delegate.getSourceChannel().suspendReads();
+            }
         }
     }
 
@@ -241,11 +257,18 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) || wakeup || unwrappedData != null) {
                 runReadListener(true);
             } else {
-                delegate.getSourceChannel().resumeReads();
+                delegateSourceResumeReads();
             }
         }
     }
 
+    private void delegateSourceResumeReads() {
+        if (Thread.currentThread() == getReadThread()) {
+            resumeReadsCommand.run();
+        } else {
+            getReadThread().execute(resumeReadsCommand);
+        }
+    }
 
     private void runReadListener(final boolean resumeInListener) {
         try {
@@ -406,9 +429,18 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     public void resumeWrites() {
         state |= FLAG_WRITES_RESUMED;
         if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
-            delegate.getSourceChannel().resumeReads();
+            delegateSourceResumeReads();
         } else {
-            delegate.getSinkChannel().resumeWrites();
+            if (Thread.currentThread() != getWriteThread()) {
+                getWriteThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        delegate.getSinkChannel().resumeWrites();
+                    }
+                });
+            } else {
+                delegate.getSinkChannel().resumeWrites();
+            }
         }
     }
 
@@ -416,7 +448,16 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     public void suspendWrites() {
         state &= ~FLAG_WRITES_RESUMED;
         if(!allAreSet(state, FLAG_READS_RESUMED | FLAG_READ_REQUIRES_WRITE)) {
-            delegate.getSinkChannel().suspendWrites();
+            if (Thread.currentThread() != getWriteThread()) {
+                getWriteThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        delegate.getSinkChannel().suspendWrites();
+                    }
+                });
+            } else {
+                delegate.getSinkChannel().suspendWrites();
+            }
         }
     }
 
