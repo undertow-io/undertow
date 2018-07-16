@@ -67,12 +67,15 @@ public class JvmRouteHandler implements HttpHandler {
         @Override
         public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
 
-            Cookie sessionId = exchange.getResponseCookies().get(sessionCookieName);
-            if (sessionId != null) {
-                StringBuilder sb = new StringBuilder(sessionId.getValue());
-                sb.append('.');
-                sb.append(jvmRoute);
-                sessionId.setValue(sb.toString());
+            Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
+            if (cookies != null) {
+                Cookie sessionId = cookies.get(sessionCookieName);
+                if (sessionId != null) {
+                    StringBuilder sb = new StringBuilder(sessionId.getValue());
+                    sb.append('.');
+                    sb.append(jvmRoute);
+                    sessionId.setValue(sb.toString());
+                }
             }
             return factory.create();
         }
