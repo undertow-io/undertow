@@ -125,9 +125,12 @@ public class SimpleSSLTestCase {
         runTest(32, new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.dispatch(() -> {
-                    exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
-                    exchange.endExchange();
+                exchange.dispatch(new Runnable() {
+                    @Override
+                    public void run() {
+                        exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                        exchange.endExchange();
+                    }
                 });
             }
         });
@@ -157,8 +160,8 @@ public class SimpleSSLTestCase {
                 .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(5000).build())
                 .setMaxConnPerRoute(1000)
                 .build()) {
-            ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
-            AtomicBoolean failed = new AtomicBoolean();
+            final ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
+            final AtomicBoolean failed = new AtomicBoolean();
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
