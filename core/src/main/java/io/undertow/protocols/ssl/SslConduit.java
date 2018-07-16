@@ -1135,7 +1135,12 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 } finally {
                     invokingReadListenerHandshake = false;
                 }
+
+                if(!anyAreSet(state, FLAG_READS_RESUMED) && !allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED)) {
+                    delegate.getSourceChannel().suspendReads();
+                }
             }
+
             boolean noProgress = false;
             int initialDataToUnwrap = -1;
             int initialUnwrapped = -1;
@@ -1162,9 +1167,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     delegateHandler.readReady();
                 }
             }
-            if(!anyAreSet(state, FLAG_READS_RESUMED) && !allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED)) {
-                delegate.getSourceChannel().suspendReads();
-            } else if(anyAreSet(state, FLAG_READS_RESUMED) && (unwrappedData != null || anyAreSet(state, FLAG_DATA_TO_UNWRAP))) {
+            if(anyAreSet(state, FLAG_READS_RESUMED) && (unwrappedData != null || anyAreSet(state, FLAG_DATA_TO_UNWRAP))) {
                 if(anyAreSet(state, FLAG_READ_CLOSED)) {
                     if(unwrappedData != null) {
                         unwrappedData.close();
