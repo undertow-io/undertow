@@ -178,7 +178,7 @@ public class SimpleSSLTestCase {
                     }
                 }
             };
-            for (int i = 0; i < concurrency * 3000; i++) {
+            for (int i = 0; i < concurrency * 300; i++) {
                 executorService.submit(task);
             }
             executorService.shutdown();
