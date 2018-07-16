@@ -36,7 +36,7 @@ import static io.undertow.Handlers.resource;
 /**
  * @author Stuart Douglas
  */
-@UndertowExample("Web Sockets")
+@UndertowExample("Web Socket Extensions")
 public class WebSocketServer {
 
     public static void main(final String[] args) {
