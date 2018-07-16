@@ -174,11 +174,18 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
     };
 
+    private final Runnable resumeReadsCommand = new Runnable() {
+        @Override
+        public void run() {
+            delegate.getSourceChannel().resumeReads();
+        }
+    };
+
     private final Runnable runReadListenerAndResumeCommand = new Runnable() {
         @Override
         public void run() {
             if (allAreSet(state, FLAG_READS_RESUMED)) {
-                delegate.getSourceChannel().resumeReads();
+                resumeReadsCommand.run();
             }
             runReadListenerCommand.run();
         }
@@ -241,11 +248,18 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) || wakeup || unwrappedData != null) {
                 runReadListener(true);
             } else {
-                delegate.getSourceChannel().resumeReads();
+                delegateSourceResumeReads();
             }
         }
     }
 
+    private void delegateSourceResumeReads() {
+        if (Thread.currentThread() == delegate.getIoThread()) {
+            resumeReadsCommand.run();
+        } else {
+            delegate.getIoThread().execute(resumeReadsCommand);
+        }
+    }
 
     private void runReadListener(final boolean resumeInListener) {
         try {
@@ -406,7 +420,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     public void resumeWrites() {
         state |= FLAG_WRITES_RESUMED;
         if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
-            delegate.getSourceChannel().resumeReads();
+            delegateSourceResumeReads();
         } else {
             delegate.getSinkChannel().resumeWrites();
         }
