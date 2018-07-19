@@ -114,7 +114,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private Cookie[] cookies;
     private List<Part> parts = null;
     private volatile boolean asyncStarted = false;
-    private volatile boolean asyncCancelled = false;
     private volatile AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
     private FormData parsedFormData;
@@ -1054,16 +1053,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isAsyncStarted() {
-        return asyncStarted || asyncCancelled;
+        return asyncStarted;
     }
 
     @Override
     public boolean isAsyncSupported() {
         return exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).isAsyncSupported();
-    }
-
-    void setAsyncCancelled(boolean asyncCancelled) {
-        this.asyncCancelled = asyncCancelled;
     }
 
     @Override
