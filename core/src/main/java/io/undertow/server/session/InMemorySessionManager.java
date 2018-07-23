@@ -203,7 +203,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         }
         String sessionId = config.findSessionId(serverExchange);
         InMemorySessionManager.SessionImpl session = (SessionImpl) getSession(sessionId);
-        if(session != null) {
+        if(session != null && serverExchange != null) {
             session.requestStarted(serverExchange);
         }
         return session;
