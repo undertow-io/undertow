@@ -359,7 +359,7 @@ public class Connectors {
             exchange.setInCall(true);
             handler.handleRequest(exchange);
             exchange.setInCall(false);
-            boolean resumed = exchange.runResumeReadWrite();
+            boolean resumed = exchange.isResumed();
             if (exchange.isDispatched()) {
                 if (resumed) {
                     UndertowLogger.REQUEST_LOGGER.resumedAndDispatched();
@@ -383,6 +383,8 @@ public class Connectors {
                 }
             } else if (!resumed) {
                 exchange.endExchange();
+            } else {
+                exchange.runResumeReadWrite();
             }
         } catch (Throwable t) {
             exchange.putAttachment(DefaultResponseListener.EXCEPTION, t);
