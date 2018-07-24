@@ -76,9 +76,9 @@ public class ServletOutputStreamTestCase {
 
     @Test
     public void testFlushAndCloseWithContentLength() throws Exception {
-        TestHttpClient client = new TestHttpClient();
+        TestHttpClient client = createClient();
         try {
-            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + CONTENT_LENGTH_SERVLET;
+            String uri = getBaseUrl() + "/servletContext/" + CONTENT_LENGTH_SERVLET;
 
             HttpGet get = new HttpGet(uri);
             HttpResponse result = client.execute(get);
@@ -96,13 +96,16 @@ public class ServletOutputStreamTestCase {
         }
     }
 
+    protected TestHttpClient createClient() {
+        return new TestHttpClient();
+    }
 
 
     @Test
     public void testResetBuffer() throws Exception {
-        TestHttpClient client = new TestHttpClient();
+        TestHttpClient client = createClient();
         try {
-            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + RESET;
+            String uri = getBaseUrl() + "/servletContext/" + RESET;
 
             HttpGet get = new HttpGet(uri);
             HttpResponse result = client.execute(get);
@@ -226,10 +229,10 @@ public class ServletOutputStreamTestCase {
     }
 
     public void runTest(final String message, String url, final boolean flush, final boolean close, int reps, boolean initialFlush, boolean writePreable, boolean offIoThread) throws IOException {
-        TestHttpClient client = new TestHttpClient();
+        TestHttpClient client = createClient();
         try {
             ServletOutputStreamTestCase.message = message;
-            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url + "?reps=" + reps + "&";
+            String uri = getBaseUrl() + "/servletContext/" + url + "?reps=" + reps + "&";
             if (flush) {
                 uri = uri + "flush=true&";
             }
@@ -264,6 +267,10 @@ public class ServletOutputStreamTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    protected String getBaseUrl() {
+        return DefaultServer.getDefaultServerURL();
     }
 
 }

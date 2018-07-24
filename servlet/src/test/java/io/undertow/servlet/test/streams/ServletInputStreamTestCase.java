@@ -158,7 +158,7 @@ public class ServletInputStreamTestCase {
             throws IOException {
         HttpURLConnection urlcon = null;
         try {
-            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url;
+            String uri = getBaseUrl() + "/servletContext/" + url;
             urlcon = (HttpURLConnection) new URL(uri).openConnection();
             urlcon.setInstanceFollowRedirects(true);
             urlcon.setRequestProperty("Connection", "close");
@@ -190,6 +190,10 @@ public class ServletInputStreamTestCase {
         }
     }
 
+    protected String getBaseUrl() {
+        return DefaultServer.getDefaultServerURL();
+    }
+
     @Test
     public void testAsyncServletInputStream3() {
         String message = "to_user_id=7999&msg_body=msg3";
@@ -206,9 +210,9 @@ public class ServletInputStreamTestCase {
 
 
     public void runTest(final String message, String url, boolean preamble, boolean offIOThread) throws IOException {
-        TestHttpClient client = new TestHttpClient();
+        TestHttpClient client = createClient();
         try {
-            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url;
+            String uri = getBaseUrl() + "/servletContext/" + url;
             HttpPost post = new HttpPost(uri);
             if (preamble && !message.isEmpty()) {
                 post.addHeader("preamble", Integer.toString(message.length() / 2));
@@ -225,6 +229,10 @@ public class ServletInputStreamTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    protected TestHttpClient createClient() {
+        return new TestHttpClient();
     }
 
 }
