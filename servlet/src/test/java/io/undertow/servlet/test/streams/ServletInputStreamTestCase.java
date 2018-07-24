@@ -18,6 +18,26 @@
 
 package io.undertow.servlet.test.streams;
 
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import javax.servlet.ServletException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -30,28 +50,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.servlet.ServletException;
-
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.config.SocketConfig;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas
@@ -189,7 +187,7 @@ public class ServletInputStreamTestCase {
             throws IOException {
         HttpURLConnection urlcon = null;
         try {
-            String uri = getBaseUrl() + "/servletContext/" + url;
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url;
             urlcon = (HttpURLConnection) new URL(uri).openConnection();
             urlcon.setInstanceFollowRedirects(true);
             urlcon.setRequestProperty("Connection", "close");
@@ -221,10 +219,6 @@ public class ServletInputStreamTestCase {
         }
     }
 
-    protected String getBaseUrl() {
-        return DefaultServer.getDefaultServerURL();
-    }
-
     @Test
     public void testAsyncServletInputStream3() {
         String message = "to_user_id=7999&msg_body=msg3";
@@ -241,9 +235,9 @@ public class ServletInputStreamTestCase {
 
 
     public void runTest(final String message, String url, boolean preamble, boolean offIOThread) throws IOException {
-        TestHttpClient client = createClient();
+        TestHttpClient client = new TestHttpClient();
         try {
-            String uri = getBaseUrl() + "/servletContext/" + url;
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url;
             HttpPost post = new HttpPost(uri);
             if (preamble && !message.isEmpty()) {
                 post.addHeader("preamble", Integer.toString(message.length() / 2));
@@ -277,7 +271,7 @@ public class ServletInputStreamTestCase {
                         return;
                     }
                     try {
-                        String uri = getBaseUrl() + "/servletContext/" + url;
+                        String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url;
                         HttpPost post = new HttpPost(uri);
                         if (preamble && !message.isEmpty()) {
                             post.addHeader("preamble", Integer.toString(message.length() / 2));
@@ -341,9 +335,4 @@ public class ServletInputStreamTestCase {
             in.close();
         }
     }
-
-    protected TestHttpClient createClient() {
-        return new TestHttpClient();
-    }
-
 }
