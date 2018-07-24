@@ -18,12 +18,18 @@
 
 package io.undertow.servlet.test.streams;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.servlet.ServletException;
 
@@ -35,8 +41,13 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -110,6 +121,26 @@ public class ServletInputStreamTestCase {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
+    }
+
+    @Test
+    public void testAsyncServletInputStreamWithPreambleInParallel() throws Exception {
+        StringBuilder builder = new StringBuilder(100000 * HELLO_WORLD.length());
+        for (int j = 0; j < 100000; ++j) {
+            builder.append(HELLO_WORLD);
+        }
+        String message = builder.toString();
+        runTestParallel(100, message, ASYNC_SERVLET, true, false);
+    }
+
+    @Test
+    public void testAsyncServletInputStreamWithPreambleInParallelOffIoThread() throws Exception {
+        StringBuilder builder = new StringBuilder(100000 * HELLO_WORLD.length());
+        for (int j = 0; j < 100000; ++j) {
+            builder.append(HELLO_WORLD);
+        }
+        String message = builder.toString();
+        runTestParallel(100, message, ASYNC_SERVLET, true, true);
     }
 
     @Test
@@ -228,6 +259,86 @@ public class ServletInputStreamTestCase {
             Assert.assertEquals(message, response);
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    public void runTestParallel(int concurrency, final String message, String url, boolean preamble, boolean offIOThread) throws Exception {
+        CloseableHttpClient client = HttpClients.custom()
+                .setMaxConnPerRoute(1000)
+                .build();
+        byte[] messageBytes = message.getBytes();
+        try {
+            ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
+            AtomicBoolean failed = new AtomicBoolean();
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    if (failed.get()) {
+                        return;
+                    }
+                    try {
+                        String uri = getBaseUrl() + "/servletContext/" + url;
+                        HttpPost post = new HttpPost(uri);
+                        if (preamble && !message.isEmpty()) {
+                            post.addHeader("preamble", Integer.toString(message.length() / 2));
+                        }
+                        if (offIOThread) {
+                            post.addHeader("offIoThread", "true");
+                        }
+                        post.setEntity(new InputStreamEntity(
+                                // Server should wait for events from the client
+                                new RateLimitedInputStream(new ByteArrayInputStream(messageBytes))));
+                        CloseableHttpResponse result = client.execute(post);
+                        try {
+                            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                            final String response = HttpClientUtils.readResponse(result);
+                            Assert.assertEquals(message.length(), response.length());
+                            Assert.assertEquals(message, response);
+                        } finally {
+                            result.close();
+                        }
+                    } catch (Throwable t) {
+                        if (failed.compareAndSet(false, true)) {
+                            t.printStackTrace();
+                            executorService.shutdownNow();
+                        }
+                    }
+                }
+            };
+            for (int i = 0; i < concurrency * 5; i++) {
+                executorService.submit(task);
+            }
+            executorService.shutdown();
+            Assert.assertTrue(executorService.awaitTermination(70, TimeUnit.SECONDS));
+            Assert.assertFalse(failed.get());
+        } finally {
+            client.close();
+        }
+    }
+
+    private static final class RateLimitedInputStream extends InputStream {
+        private final InputStream in;
+        private int count;
+
+        RateLimitedInputStream(InputStream in) {
+            this.in = in;
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (count++ % 1000 == 0) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    throw new InterruptedIOException();
+                }
+            }
+            return in.read();
+        }
+
+        @Override
+        public void close() throws IOException {
+            in.close();
         }
     }
 
