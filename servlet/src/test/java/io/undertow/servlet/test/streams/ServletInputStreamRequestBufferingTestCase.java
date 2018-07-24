@@ -18,26 +18,36 @@
 
 package io.undertow.servlet.test.streams;
 
+import io.undertow.server.handlers.RequestBufferingHandler;
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
+import javax.servlet.ServletContext;
+
 /**
- * @author Stuart Douglas
+ * @author Carter Kozak
  */
 @RunWith(DefaultServer.class)
-public class ServletInputStreamTestCase extends AbstractServletInputStreamTestCase {
+public class ServletInputStreamRequestBufferingTestCase extends AbstractServletInputStreamTestCase {
 
     @BeforeClass
     public static void setup() {
         DeploymentUtils.setupServlet(
+                new ServletExtension() {
+                    @Override
+                    public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
+                        deploymentInfo.addInitialHandlerChainWrapper(new RequestBufferingHandler.Wrapper(1));
+                    }
+                },
                 new ServletInfo(BLOCKING_SERVLET, BlockingInputStreamServlet.class)
                         .addMapping("/" + BLOCKING_SERVLET),
                 new ServletInfo(ASYNC_SERVLET, AsyncInputStreamServlet.class)
                         .addMapping("/" + ASYNC_SERVLET)
                         .setAsyncSupported(true));
     }
-
 }
