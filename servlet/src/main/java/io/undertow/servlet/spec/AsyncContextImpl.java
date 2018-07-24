@@ -94,7 +94,6 @@ public class AsyncContextImpl implements AsyncContext {
     private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
     private boolean processingAsyncTask = false;
     private volatile boolean complete = false;
-    private volatile boolean completedBeforeInitialRequestDone = false;
 
     public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse, final ServletRequestContext servletRequestContext, boolean requestSupplied, final AsyncContextImpl previousAsyncContext) {
         this.exchange = exchange;
@@ -107,6 +106,7 @@ public class AsyncContextImpl implements AsyncContext {
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
             public void run() {
+                servletRequestContext.getOriginalRequest().setAsyncCancelled(false);
                 exchange.setDispatchExecutor(null);
                 initialRequestDone();
             }
@@ -282,14 +282,20 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     public synchronized void completeInternal() {
+        servletRequestContext.getOriginalRequest().asyncRequestDispatched();
         Thread currentThread = Thread.currentThread();
         if (!initialRequestDone && currentThread == initiatingThread) {
-            completedBeforeInitialRequestDone = true;
+            servletRequestContext.getOriginalRequest().setAsyncCancelled(true);
+            //TODO: according to the spec we should delay this until the container initiated thread has returned?
+
+            onAsyncComplete();
             if (dispatched) {
                 throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
             }
+            exchange.unDispatch();
+            dispatched = true;
+            initialRequestDone();
         } else {
-            servletRequestContext.getOriginalRequest().asyncRequestDispatched();
             if (currentThread == exchange.getIoThread()) {
                 //the thread safety semantics here are a bit weird.
                 //basically if we are doing async IO we can't do a dispatch here, as then the IO thread can be racing
@@ -307,7 +313,6 @@ public class AsyncContextImpl implements AsyncContext {
                     UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
                 }
             } else {
-                servletRequestContext.getOriginalRequest().asyncRequestDispatched();
                 doDispatch(new Runnable() {
                     @Override
                     public void run() {
@@ -452,10 +457,6 @@ public class AsyncContextImpl implements AsyncContext {
      */
     public synchronized void initialRequestDone() {
         initialRequestDone = true;
-        if(completedBeforeInitialRequestDone) {
-            completeInternal();
-            dispatched = true;
-        }
         if (previousAsyncContext != null) {
             previousAsyncContext.onAsyncStart(this);
             previousAsyncContext = null;

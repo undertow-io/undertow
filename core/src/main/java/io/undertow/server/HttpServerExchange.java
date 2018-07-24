@@ -1863,17 +1863,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         return ret;
     }
 
-    boolean isResumed() {
-        boolean ret = false;
-        if(anyAreSet(state, FLAG_SHOULD_RESUME_WRITES)) {
-            ret = true;
-        }
-        if(anyAreSet(state, FLAG_SHOULD_RESUME_READS)) {
-            ret = true;
-        }
-        return ret;
-    }
-
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
         private final ExchangeCompletionListener[] list;
         private final HttpServerExchange exchange;
