@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.test.streams;
 
+import javax.servlet.ServletContext;
+
 import io.undertow.server.handlers.RequestBufferingHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -26,8 +28,6 @@ import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
-
-import javax.servlet.ServletContext;
 
 /**
  * @author Carter Kozak

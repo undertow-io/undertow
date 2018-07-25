@@ -18,10 +18,22 @@
 
 package io.undertow.servlet.test.streams;
 
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -33,18 +45,10 @@ import org.apache.http.impl.client.HttpClients;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas
@@ -112,7 +116,7 @@ public abstract class AbstractServletInputStreamTestCase {
             builder.append(HELLO_WORLD);
         }
         String message = builder.toString();
-        runTestParallel(100, message, ASYNC_SERVLET, false, false);
+        runTestParallel(20, message, ASYNC_SERVLET, false, false);
     }
 
     @Test
@@ -122,7 +126,7 @@ public abstract class AbstractServletInputStreamTestCase {
             builder.append(HELLO_WORLD);
         }
         String message = builder.toString();
-        runTestParallel(100, message, ASYNC_SERVLET, false, true);
+        runTestParallel(20, message, ASYNC_SERVLET, false, true);
     }
 
     @Test
@@ -187,7 +191,7 @@ public abstract class AbstractServletInputStreamTestCase {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             byte[] buf = new byte[256];
             int len;
-            while ((len = is.read(buf)) > 0 ){
+            while ((len = is.read(buf)) > 0) {
                 bytes.write(buf, 0, len);
             }
             is.close();
@@ -245,54 +249,50 @@ public abstract class AbstractServletInputStreamTestCase {
     }
 
     public void runTestParallel(int concurrency, final String message, String url, boolean preamble, boolean offIOThread) throws Exception {
+
         CloseableHttpClient client = HttpClients.custom()
                 .setMaxConnPerRoute(1000)
+                .setSSLContext(DefaultServer.createClientSslContext())
                 .build();
         byte[] messageBytes = message.getBytes();
         try {
             ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
-            AtomicBoolean failed = new AtomicBoolean();
-            Runnable task = new Runnable() {
+            Callable task = new Callable<Void>() {
                 @Override
-                public void run() {
-                    if (failed.get()) {
-                        return;
+                public Void call() throws Exception {
+                    String uri = getBaseUrl() + "/servletContext/" + url;
+                    HttpPost post = new HttpPost(uri);
+                    if (preamble && !message.isEmpty()) {
+                        post.addHeader("preamble", Integer.toString(message.length() / 2));
                     }
+                    if (offIOThread) {
+                        post.addHeader("offIoThread", "true");
+                    }
+                    post.setEntity(new InputStreamEntity(
+                            // Server should wait for events from the client
+                            new RateLimitedInputStream(new ByteArrayInputStream(messageBytes))));
+                    CloseableHttpResponse result = client.execute(post);
                     try {
-                        String uri = getBaseUrl() + "/servletContext/" + url;
-                        HttpPost post = new HttpPost(uri);
-                        if (preamble && !message.isEmpty()) {
-                            post.addHeader("preamble", Integer.toString(message.length() / 2));
-                        }
-                        if (offIOThread) {
-                            post.addHeader("offIoThread", "true");
-                        }
-                        post.setEntity(new InputStreamEntity(
-                                // Server should wait for events from the client
-                                new RateLimitedInputStream(new ByteArrayInputStream(messageBytes))));
-                        CloseableHttpResponse result = client.execute(post);
-                        try {
-                            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                            final String response = HttpClientUtils.readResponse(result);
-                            Assert.assertEquals(message.length(), response.length());
-                            Assert.assertEquals(message, response);
-                        } finally {
-                            result.close();
-                        }
-                    } catch (Throwable t) {
-                        if (failed.compareAndSet(false, true)) {
-                            t.printStackTrace();
-                            executorService.shutdownNow();
-                        }
+                        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                        final String response = HttpClientUtils.readResponse(result);
+                        Assert.assertEquals(message.length(), response.length());
+                        Assert.assertEquals(message, response);
+                    } finally {
+                        result.close();
                     }
+                    return null;
                 }
             };
+            List<Future<?>> results = new ArrayList<>();
             for (int i = 0; i < concurrency * 5; i++) {
-                executorService.submit(task);
+                Future<?> future = executorService.submit(task);
+                results.add(future);
+            }
+            for(Future<?> i : results) {
+                i.get();
             }
             executorService.shutdown();
             Assert.assertTrue(executorService.awaitTermination(70, TimeUnit.SECONDS));
-            Assert.assertFalse(failed.get());
         } finally {
             client.close();
         }
