@@ -49,7 +49,7 @@ public class JDK9AlpnProvider implements ALPNProvider {
                     UndertowLogger.ROOT_LOGGER.debug("Using JDK9 ALPN");
                     return new JDK9ALPNMethods(setApplicationProtocols, getApplicationProtocol);
                 } catch (Exception e) {
-                    UndertowLogger.ROOT_LOGGER.debug("JDK9 ALPN not supported", e);
+                    UndertowLogger.ROOT_LOGGER.debug("JDK9 ALPN not supported");
                     return null;
                 }
             }
