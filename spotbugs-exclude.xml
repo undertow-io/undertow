@@ -186,6 +186,12 @@
                 <Class name="io.undertow.util.FlexBase64$Encoder"/>
                 <Method name="encodeString"/>
             </And>
+
+            <!-- Intentional not throwing exception -->
+            <And>
+                <Class name="io.undertow.protocols.alpn.JDK9AlpnProvider$1"/>
+                <Method name="run"/>
+            </And>
         </Or>
     </Match>
 
