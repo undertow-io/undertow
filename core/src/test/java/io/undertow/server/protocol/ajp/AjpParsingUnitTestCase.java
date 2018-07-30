@@ -18,21 +18,23 @@
 
 package io.undertow.server.protocol.ajp;
 
-import io.undertow.testutils.category.UnitTest;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-import io.undertow.util.BadRequestException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.xnio.IoUtils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.util.BadRequestException;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 
 /**
  * @author Stuart Douglas
@@ -59,7 +61,7 @@ public class AjpParsingUnitTestCase {
         }
     }
 
-    public static final AjpRequestParser AJP_REQUEST_PARSER = new AjpRequestParser("UTF-8", true, 100, 100, false);
+    public static final AjpRequestParser AJP_REQUEST_PARSER = new AjpRequestParser("UTF-8", true, 100, 100, false, true);
 
 
     @Test
@@ -99,5 +101,70 @@ public class AjpParsingUnitTestCase {
         Assert.assertEquals("localhost:7777", exchange.getRequestHeaders().getFirst(Headers.HOST));
         Assert.assertEquals("Apache-HttpClient/4.1.3 (java 1.5)", exchange.getRequestHeaders().getFirst(Headers.USER_AGENT));
         Assert.assertEquals("Keep-Alive", exchange.getRequestHeaders().getFirst(Headers.CONNECTION));
+    }
+
+
+    @Test
+    public void testCharsetHandling() throws Exception {
+        ByteBuffer data = createAjpRequest("/hi".getBytes(StandardCharsets.UTF_8));
+        HttpServerExchange result = new HttpServerExchange(null);
+        AjpRequestParseState state = new AjpRequestParseState();
+        AJP_REQUEST_PARSER.parse(data, state, result);
+        Assert.assertEquals("/hi", result.getRequestPath());
+
+        data = createAjpRequest("/한글이름".getBytes(StandardCharsets.UTF_8));
+        result = new HttpServerExchange(null);
+        state = new AjpRequestParseState();
+        AJP_REQUEST_PARSER.parse(data, state, result);
+        Assert.assertEquals("/한글이름", result.getRequestPath());
+
+
+    }
+
+    protected ByteBuffer createAjpRequest(byte[] path) {
+        ByteBuffer data = ByteBuffer.allocate(1000);
+        data.put((byte) 0x12);
+        data.put((byte) 0x34);
+        data.put((byte) 0); //size
+        data.put((byte) 0);
+        data.put((byte) 2);
+        data.put((byte) 2); //GET method
+        putString(data, "HTTP/1.1");
+        putString(data, path);
+        putString(data, "");//REMOTE_ADDRESS
+        putString(data, "");//REMOTE_HOST
+        putString(data, "");//SERVER_NAME
+        putInt(data, 100); //SERVER_PORT
+        data.put((byte) 0); //IS_SSL
+        putInt(data, 0); //number of headers
+        data.put((byte) 0xFF);
+        int dataLength = data.position() - 4;
+        data.put(2, (byte) ((dataLength >> 8) & 0xFF));
+        data.put(3, (byte) (dataLength & 0xFF));
+        data.flip();
+        return data;
+    }
+
+
+    static void putInt(final ByteBuffer buf, int value) {
+        buf.put((byte) ((value >> 8) & 0xFF));
+        buf.put((byte) (value & 0xFF));
+    }
+
+    static void putString(final ByteBuffer buf, String value) {
+        final int length = value.length();
+        putInt(buf, length);
+        for (int i = 0; i < length; ++i) {
+            buf.put((byte) value.charAt(i));
+        }
+        buf.put((byte) 0);
+    }
+    static void putString(final ByteBuffer buf, byte[] value) {
+        final int length = value.length;
+        putInt(buf, length);
+        for (int i = 0; i < length; ++i) {
+            buf.put(value[i]);
+        }
+        buf.put((byte) 0);
     }
 }
