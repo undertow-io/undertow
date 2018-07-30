@@ -133,7 +133,22 @@ public class AsyncInputStreamServlet extends HttpServlet {
         @Override
         public synchronized void onAllDataRead() throws IOException {
             done = true;
-            onWritePossible();
+            if(offIoThread) {
+                context.start(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+                            onWritePossible();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            } else {
+
+                onWritePossible();
+            }
         }
 
         @Override
