@@ -74,6 +74,7 @@ public class AjpRequestParser {
     private final int maxParameters;
     private final int maxHeaders;
     private StringBuilder decodeBuffer;
+    private final boolean allowUnescapedCharactersInUrl;
 
     private static final HttpString[] HTTP_HEADERS;
 
@@ -176,12 +177,13 @@ public class AjpRequestParser {
         ATTRIBUTES[13] = STORED_METHOD;
     }
 
-    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash) {
+    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash, boolean allowUnescapedCharactersInUrl) {
         this.encoding = encoding;
         this.doDecode = doDecode;
         this.maxParameters = maxParameters;
         this.maxHeaders = maxHeaders;
         this.allowEncodedSlash = allowEncodedSlash;
+        this.allowUnescapedCharactersInUrl = allowUnescapedCharactersInUrl;
     }
 
 
@@ -493,7 +495,7 @@ public class AjpRequestParser {
         }
     }
 
-    protected StringHolder parseString(ByteBuffer buf, AjpRequestParseState state, StringType type) throws UnsupportedEncodingException {
+    protected StringHolder parseString(ByteBuffer buf, AjpRequestParseState state, StringType type) throws UnsupportedEncodingException, BadRequestException {
         boolean containsUrlCharacters = state.containsUrlCharacters;
         if (!buf.hasRemaining()) {
             return new StringHolder(null, false, false);
@@ -531,7 +533,10 @@ public class AjpRequestParser {
             byte c = buf.get();
             if(type == StringType.QUERY_STRING && (c == '+' || c == '%')) {
                     containsUrlCharacters = true;
-            } else if(type == StringType.URL && c == '%') {
+            } else if(type == StringType.URL && (c == '%' || c < 0 )) {
+                if(c < 0 && !allowUnescapedCharactersInUrl) {
+                    throw new BadRequestException();
+                }
                 containsUrlCharacters = true;
             }
             state.addStringByte(c);
