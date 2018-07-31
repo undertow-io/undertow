@@ -18,28 +18,30 @@
 
 package io.undertow.server.handlers;
 
-import java.util.Collections;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-
 import io.undertow.UndertowLogger;
-import io.undertow.attribute.StoredResponse;
+import io.undertow.conduits.StoredRequestStreamSinkConduit;
+import io.undertow.conduits.StoredResponseStreamSinkConduit;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.LocaleUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
 /**
  * Handler that dumps a exchange to a log.
+ * If a detailed handler is created the body of the request & response will be logged.
+ * Take care when using the detailed handler as it buffers the bodies in-memory.
  *
  * @author Stuart Douglas
  */
@@ -48,7 +50,20 @@ public class RequestDumpingHandler implements HttpHandler {
     private final HttpHandler next;
 
     public RequestDumpingHandler(final HttpHandler next) {
-        this.next = next;
+        this(next, false);
+    }
+
+    /**
+     * Create a RequestDumpingHandler
+     * @param next the next handler in the chain
+     * @param detailed if true the body of the request & response are logged
+     */
+    public RequestDumpingHandler(final HttpHandler next, boolean detailed) {
+        if (detailed) {
+            this.next = new StoredRequestHandler(new StoredResponseHandler(next));
+        } else {
+            this.next = next;
+        }
     }
 
     @Override
@@ -117,7 +132,12 @@ public class RequestDumpingHandler implements HttpHandler {
             @Override
             public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
 
-                dumpRequestBody(exchange, sb);
+                final byte[] request = exchange.getAttachment(StoredRequestStreamSinkConduit.REQUEST);
+                if (request != null) {
+                    sb.append("body=\n");
+                    sb.append(new String(request, StandardCharsets.UTF_8));
+                    sb.append("\n");
+                }
 
                 // Log post-service information
                 sb.append("--------------------------RESPONSE--------------------------\n");
@@ -143,10 +163,12 @@ public class RequestDumpingHandler implements HttpHandler {
                     }
                 }
                 sb.append("            status=" + exchange.getStatusCode() + "\n");
-                String storedResponse = StoredResponse.INSTANCE.readAttribute(exchange);
-                if (storedResponse != null) {
+
+                final byte[] response = exchange.getAttachment(StoredResponseStreamSinkConduit.RESPONSE);
+                if (response != null) {
                     sb.append("body=\n");
-                    sb.append(storedResponse);
+                    sb.append(new String(response, StandardCharsets.UTF_8));
+                    sb.append("\n");
                 }
 
                 sb.append("\n==============================================================");
@@ -160,37 +182,6 @@ public class RequestDumpingHandler implements HttpHandler {
 
         // Perform the exchange
         next.handleRequest(exchange);
-    }
-
-    private void dumpRequestBody(HttpServerExchange exchange, StringBuilder sb) {
-        try {
-            FormData formData = exchange.getAttachment(FormDataParser.FORM_DATA);
-            if (formData != null) {
-                sb.append("body=\n");
-
-                for (String formField : formData) {
-                    Deque<FormData.FormValue> formValues = formData.get(formField);
-
-                    sb.append(formField)
-                            .append("=");
-                    for (FormData.FormValue formValue : formValues) {
-                        sb.append(formValue.isFile() ? "[file-content]" : formValue.getValue());
-                        sb.append("\n");
-
-                        if (formValue.getHeaders() != null) {
-                            sb.append("headers=\n");
-                            for (HeaderValues header : formValue.getHeaders()) {
-                                sb.append("\t")
-                                        .append(header.getHeaderName()).append("=").append(header.getFirst()).append("\n");
-
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
 
