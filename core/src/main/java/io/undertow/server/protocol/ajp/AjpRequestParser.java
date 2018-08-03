@@ -253,13 +253,13 @@ public class AjpRequestParser {
                     int colon = result.value.indexOf(';');
                     if (colon == -1) {
                         String res = decode(result.value, result.containsUrlCharacters);
-                        exchange.setRequestURI(result.value);
+                        exchange.setRequestURI(res);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
                     } else {
                         final String url = result.value.substring(0, colon);
                         String res = decode(url, result.containsUrlCharacters);
-                        exchange.setRequestURI(result.value);
+                        exchange.setRequestURI(res);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
                         try {
