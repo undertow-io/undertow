@@ -53,6 +53,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Convenience class used to build an Undertow server.
@@ -263,10 +264,18 @@ public final class Undertow {
          * Only shutdown the worker if it was created during start()
          */
         if (internalWorker && worker != null) {
+            Integer shutdownTimeoutMillis = serverOptions.get(UndertowOptions.SHUTDOWN_TIMEOUT);
             worker.shutdown();
             try {
-                worker.awaitTermination();
+                if (shutdownTimeoutMillis == null) {
+                    worker.awaitTermination();
+                } else {
+                    if (!worker.awaitTermination(shutdownTimeoutMillis, TimeUnit.MILLISECONDS)) {
+                        worker.shutdownNow();
+                    }
+                }
             } catch (InterruptedException e) {
+                worker.shutdownNow();
                 throw new RuntimeException(e);
             }
             worker = null;
