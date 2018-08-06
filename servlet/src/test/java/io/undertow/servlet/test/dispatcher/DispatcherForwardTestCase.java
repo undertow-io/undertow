@@ -120,6 +120,7 @@ public class DispatcherForwardTestCase {
 
     @Test
     public void testPathBasedInclude() throws IOException, InterruptedException {
+        Assert.assertFalse(DefaultServer.isH2upgrade());
         resetLatch();
         TestHttpClient client = new TestHttpClient();
         try {
