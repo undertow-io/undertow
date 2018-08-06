@@ -117,6 +117,7 @@ public class AjpParsingUnitTestCase {
         state = new AjpRequestParseState();
         AJP_REQUEST_PARSER.parse(data, state, result);
         Assert.assertEquals("/한글이름", result.getRequestPath());
+        Assert.assertEquals("/한글이름", result.getRequestURI());
 
 
     }
