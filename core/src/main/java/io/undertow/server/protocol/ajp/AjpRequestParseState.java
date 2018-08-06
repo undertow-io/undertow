@@ -94,6 +94,7 @@ class AjpRequestParseState {
     public String sslCert;
     public String sslKeySize;
     boolean badRequest;
+    public boolean containsUnencodedUrlCharacters;
 
     public void reset() {
         stringLength = -1;
@@ -101,6 +102,7 @@ class AjpRequestParseState {
         readHeaders = 0;
         badRequest = false;
         currentString.setLength(0);
+        containsUnencodedUrlCharacters = false;
     }
     public boolean isComplete() {
         return state == 15;
