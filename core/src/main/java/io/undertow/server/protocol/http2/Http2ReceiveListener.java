@@ -49,6 +49,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Supplier;
+
 import javax.net.ssl.SSLSession;
 
 /**
@@ -149,6 +151,10 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         dataChannel.getResponseChannel().setTrailersProducer(new Http2DataStreamSinkChannel.TrailersProducer() {
             @Override
             public HeaderMap getTrailers() {
+                Supplier<HeaderMap> supplier = exchange.getAttachment(HttpAttachments.RESPONSE_TRAILER_SUPPLIER);
+                if(supplier != null) {
+                    return supplier.get();
+                }
                 return exchange.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
             }
         });
@@ -270,6 +276,10 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         sink.setTrailersProducer(new Http2DataStreamSinkChannel.TrailersProducer() {
             @Override
             public HeaderMap getTrailers() {
+                Supplier<HeaderMap> supplier = exchange.getAttachment(HttpAttachments.RESPONSE_TRAILER_SUPPLIER);
+                if(supplier != null) {
+                    return supplier.get();
+                }
                 return exchange.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
             }
         });
