@@ -135,7 +135,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      *
      * This will be null if there is no data
      */
-    private PooledByteBuffer wrappedData;
+    private volatile PooledByteBuffer wrappedData;
     /**
      * Data that has been read from the underlying channel, and needs to be unwrapped.
      *
@@ -143,14 +143,14 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * flag must still be checked, otherwise there may be situations where even though some data
      * has been read there is not enough to unwrap (i.e. the engine returned buffer underflow).
      */
-    private PooledByteBuffer dataToUnwrap;
+    private volatile PooledByteBuffer dataToUnwrap;
 
     /**
      * Unwrapped data, ready to be delivered to the application. Will be null if there is no data.
      *
      * If possible we avoid allocating this buffer, and instead unwrap directly into the end users buffer.
      */
-    private PooledByteBuffer unwrappedData;
+    private volatile PooledByteBuffer unwrappedData;
 
     private SslWriteReadyHandler writeReadyHandler;
     private SslReadReadyHandler readReadyHandler;
@@ -769,7 +769,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
 
             if (!handleHandshakeResult(result)) {
-                if (this.dataToUnwrap.getBuffer().hasRemaining() && result.getStatus() != SSLEngineResult.Status.BUFFER_UNDERFLOW && dataToUnwrap.getBuffer().remaining() != dataToUnwrapLength) {
+                if (this.dataToUnwrap.getBuffer().hasRemaining()
+                        && result.getStatus() != SSLEngineResult.Status.BUFFER_UNDERFLOW
+                        && dataToUnwrap.getBuffer().remaining() != dataToUnwrapLength) {
                     state |= FLAG_DATA_TO_UNWRAP;
                 } else {
                     state &= ~FLAG_DATA_TO_UNWRAP;
