@@ -713,6 +713,12 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     notifyReadClosed();
                     return -1;
                 } else if (res == 0 && engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
+                    //its possible there was some data in the buffer from a previous unwrap that had a buffer underflow
+                    //if not we just close the buffer so it does not hang around
+                    if(!dataToUnwrap.getBuffer().hasRemaining()) {
+                        dataToUnwrap.close();
+                        dataToUnwrap = null;
+                    }
                     return 0;
                 }
             }
