@@ -791,7 +791,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static boolean isAlpnEnabled() {
         if (alpnEnabled == null) {
-            SSLEngine engine = getServerSslContext().createSSLEngine();
+            //we use the client context, as the server one is wrapped by a SNISSLEngine
+            //so we can't tell that ALPN is enabled or now
+            SSLEngine engine = getClientSSLContext().createSSLEngine();
             ALPNProvider provider = ALPNManager.INSTANCE.getProvider(engine);
             if (provider instanceof JettyAlpnProvider) {
                 alpnEnabled = System.getProperty("alpn-boot-string") != null;
