@@ -268,4 +268,20 @@
         <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
     </Match>
 
+    <Match>
+        <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
+        <Class name="io.undertow.predicate.PredicatesHandler$RestartHandlerBuilder$1$1"/>
+        <Method name="handleRequest"/>
+    </Match>
+
+    <!-- Method is actually fine-->
+    <Match>
+        <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
+        <Class name="io.undertow.server.protocol.http.AlpnOpenListener$AlpnConnectionListener"/>
+    </Match>
+    <!-- Field can be modified by code between the first check-->
+    <Match>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+        <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener" />
+    </Match>
 </FindBugsFilter>
