@@ -80,7 +80,7 @@ final class SNISSLExplorer {
 
         // Is it a handshake message?
         byte firstByte = input.get();
-        byte secondByte = input.get();
+        input.get();
         byte thirdByte = input.get();
         if ((firstByte & 0x80) != 0 && thirdByte == 0x01) {
             // looks like a V2ClientHello
@@ -332,8 +332,8 @@ final class SNISSLExplorer {
         ExtensionInfo info = null;
 
         // client version
-        byte helloMajorVersion = input.get();
-        byte helloMinorVersion = input.get();
+        input.get(); //helloMajorVersion
+        input.get(); //helloMinorVersion
 
         // ignore random
         int position = input.position();
@@ -342,14 +342,11 @@ final class SNISSLExplorer {
         // ignore session id
         ignoreByteVector8(input);
 
-        ArrayList<Integer> ciphers = new ArrayList<>();
-
         // ignore cipher_suites
         int csLen = getInt16(input);
         while (csLen > 0) {
-            int byte1 = getInt8(input);
-            int byte2 = getInt8(input);
-            ciphers.add((byte1 << 8) | byte2);
+            getInt8(input);
+            getInt8(input);
             csLen -= 2;
         }
 

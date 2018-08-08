@@ -280,4 +280,9 @@
         <Method name="handleRequest"/>
     </Match>
 
+    <!-- Method is actually fine-->
+    <Match>
+        <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
+        <Class name="io.undertow.server.protocol.http.AlpnOpenListener$AlpnConnectionListener"/>
+    </Match>
 </FindBugsFilter>
