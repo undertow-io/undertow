@@ -74,6 +74,9 @@ public class DispatcherForwardTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
+        //we don't run this test on h2 upgrade, as if it is run with the original request
+        //the protocols will not match
+        Assert.assertFalse(DefaultServer.isH2upgrade());
 
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
@@ -117,7 +120,6 @@ public class DispatcherForwardTestCase {
 
     @Test
     public void testPathBasedInclude() throws IOException, InterruptedException {
-        Assert.assertFalse(DefaultServer.isH2upgrade());
         resetLatch();
         TestHttpClient client = new TestHttpClient();
         try {
