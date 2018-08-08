@@ -285,4 +285,9 @@
         <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
         <Class name="io.undertow.server.protocol.http.AlpnOpenListener$AlpnConnectionListener"/>
     </Match>
+    <!-- Field can be modified by code between the first check-->
+    <Match>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+        <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener" />
+    </Match>
 </FindBugsFilter>
