@@ -71,15 +71,20 @@ import io.undertow.util.Protocols;
 class AjpClientConnection extends AbstractAttachable implements Closeable, ClientConnection {
 
     public final ChannelListener<AjpClientRequestClientStreamSinkChannel> requestFinishListener = new ChannelListener<AjpClientRequestClientStreamSinkChannel>() {
+
         @Override
         public void handleEvent(AjpClientRequestClientStreamSinkChannel channel) {
-            currentRequest.terminateRequest();
+            if(currentRequest != null) {
+                currentRequest.terminateRequest();
+            }
         }
     };
     public final ChannelListener<AjpClientResponseStreamSourceChannel> responseFinishedListener = new ChannelListener<AjpClientResponseStreamSourceChannel>() {
         @Override
         public void handleEvent(AjpClientResponseStreamSourceChannel channel) {
-            currentRequest.terminateResponse();
+            if(currentRequest != null) {
+                currentRequest.terminateResponse();
+            }
         }
     };
 
