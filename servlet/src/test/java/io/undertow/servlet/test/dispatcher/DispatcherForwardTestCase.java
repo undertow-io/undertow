@@ -42,6 +42,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -76,8 +78,7 @@ public class DispatcherForwardTestCase {
     public static void setup() throws ServletException {
         //we don't run this test on h2 upgrade, as if it is run with the original request
         //the protocols will not match
-        Assert.assertFalse(DefaultServer.isH2upgrade());
-
+        Assume.assumeFalse(DefaultServer.isH2upgrade());
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
