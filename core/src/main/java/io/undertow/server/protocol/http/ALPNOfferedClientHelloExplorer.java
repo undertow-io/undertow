@@ -42,6 +42,10 @@ final class ALPNOfferedClientHelloExplorer {
      */
     private static final int RECORD_HEADER_SIZE = 0x05;
 
+    static boolean isIncompleteHeader(ByteBuffer source) {
+        return source.remaining() < RECORD_HEADER_SIZE;
+    }
+
     /**
      * Checks if a client handshake is offering ALPN, and if so it returns a list of all ciphers. If ALPN is not being
      * offered then this will return null.
@@ -52,7 +56,7 @@ final class ALPNOfferedClientHelloExplorer {
         ByteBuffer input = source.duplicate();
 
         // Do we have a complete header?
-        if (input.remaining() < RECORD_HEADER_SIZE) {
+        if (isIncompleteHeader(input)) {
             throw new BufferUnderflowException();
         }
         // Is it a handshake message?
