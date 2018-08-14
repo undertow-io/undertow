@@ -37,6 +37,8 @@ import javax.net.ssl.SSLSession;
  * @author Stuart Douglas
  */
 public class ALPNLimitingSSLEngine extends SSLEngine {
+    private static final SSLEngineResult UNDERFLOW_RESULT = new SSLEngineResult(
+            SSLEngineResult.Status.BUFFER_UNDERFLOW, SSLEngineResult.HandshakeStatus.NEED_UNWRAP, 0, 0);
 
     private final SSLEngine delegate;
     private final Runnable invalidAlpnRunnable;
@@ -72,6 +74,9 @@ public class ALPNLimitingSSLEngine extends SSLEngine {
         if (done) {
             return delegate.unwrap(src, dst);
         }
+        if (ALPNOfferedClientHelloExplorer.isIncompleteHeader(src)) {
+            return UNDERFLOW_RESULT;
+        }
         try {
             List<Integer> clientCiphers = ALPNOfferedClientHelloExplorer.parseClientHello(src);
             if (clientCiphers != null) {
@@ -81,7 +86,7 @@ public class ALPNLimitingSSLEngine extends SSLEngine {
                 done = true;
             }
         } catch (BufferUnderflowException e) {
-            return new SSLEngineResult(SSLEngineResult.Status.BUFFER_UNDERFLOW, SSLEngineResult.HandshakeStatus.NEED_UNWRAP, 0, 0);
+            return UNDERFLOW_RESULT;
         }
         return delegate.unwrap(src, dst);
     }
@@ -137,6 +142,9 @@ public class ALPNLimitingSSLEngine extends SSLEngine {
             return delegate.unwrap(byteBuffer, byteBuffers, i, i1);
         }
 
+        if (ALPNOfferedClientHelloExplorer.isIncompleteHeader(byteBuffer)) {
+            return UNDERFLOW_RESULT;
+        }
         try {
             List<Integer> clientCiphers = ALPNOfferedClientHelloExplorer.parseClientHello(byteBuffer);
             if (clientCiphers != null) {
@@ -146,7 +154,7 @@ public class ALPNLimitingSSLEngine extends SSLEngine {
                 done = true;
             }
         } catch (BufferUnderflowException e) {
-            return new SSLEngineResult(SSLEngineResult.Status.BUFFER_UNDERFLOW, SSLEngineResult.HandshakeStatus.NEED_UNWRAP, 0, 0);
+            return UNDERFLOW_RESULT;
         }
         return delegate.unwrap(byteBuffer, byteBuffers, i, i1);
     }
