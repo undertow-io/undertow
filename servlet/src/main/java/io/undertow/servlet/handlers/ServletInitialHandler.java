@@ -290,12 +290,19 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         try {
             listeners.requestInitialized(request);
             next.handleRequest(exchange);
+            AsyncContextImpl asyncContextInternal = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
+            if(asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
+                asyncContextInternal.handleCompletedBeforeInitialRequestDone();
+            }
             //
             if(servletRequestContext.getErrorCode() > 0) {
                 servletRequestContext.getOriginalResponse().doErrorDispatch(servletRequestContext.getErrorCode(), servletRequestContext.getErrorMessage());
             }
         } catch (Throwable t) {
-
+            AsyncContextImpl asyncContextInternal = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
+            if(asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
+                asyncContextInternal.handleCompletedBeforeInitialRequestDone();
+            }
             //by default this will just log the exception
             boolean handled = exceptionHandler.handleThrowable(exchange, request, response, t);
 

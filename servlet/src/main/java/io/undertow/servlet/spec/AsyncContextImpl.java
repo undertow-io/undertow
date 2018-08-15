@@ -18,6 +18,31 @@
 
 package io.undertow.servlet.spec;
 
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+
+import javax.servlet.AsyncContext;
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
+import javax.servlet.DispatcherType;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.xnio.IoUtils;
+import org.xnio.XnioExecutor;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
@@ -41,29 +66,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.WorkerUtils;
-import org.xnio.IoUtils;
-import org.xnio.XnioExecutor;
-
-import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-import javax.servlet.AsyncContext;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
-import javax.servlet.DispatcherType;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author Stuart Douglas
@@ -272,7 +274,7 @@ public class AsyncContextImpl implements AsyncContext {
             timeoutKey = null;
         }
         if (!dispatched) {
-            completeInternal();
+            completeInternal(false);
         } else {
             onAsyncComplete();
         }
@@ -281,16 +283,16 @@ public class AsyncContextImpl implements AsyncContext {
         }
     }
 
-    public synchronized void completeInternal() {
+    public synchronized void completeInternal(boolean forceComplete) {
         Thread currentThread = Thread.currentThread();
-        if (!initialRequestDone && currentThread == initiatingThread) {
+        if (!forceComplete && !initialRequestDone && currentThread == initiatingThread) {
             completedBeforeInitialRequestDone = true;
             if (dispatched) {
                 throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
             }
         } else {
             servletRequestContext.getOriginalRequest().asyncRequestDispatched();
-            if (currentThread == exchange.getIoThread()) {
+            if (forceComplete || currentThread == exchange.getIoThread()) {
                 //the thread safety semantics here are a bit weird.
                 //basically if we are doing async IO we can't do a dispatch here, as then the IO thread can be racing
                 //with the dispatch thread.
@@ -364,6 +366,10 @@ public class AsyncContextImpl implements AsyncContext {
 
     public boolean isDispatched() {
         return dispatched;
+    }
+
+    public boolean isCompletedBeforeInitialRequestDone() {
+        return completedBeforeInitialRequestDone;
     }
 
     @Override
@@ -452,10 +458,6 @@ public class AsyncContextImpl implements AsyncContext {
      */
     public synchronized void initialRequestDone() {
         initialRequestDone = true;
-        if(completedBeforeInitialRequestDone) {
-            completeInternal();
-            dispatched = true;
-        }
         if (previousAsyncContext != null) {
             previousAsyncContext.onAsyncStart(this);
             previousAsyncContext = null;
@@ -483,6 +485,12 @@ public class AsyncContextImpl implements AsyncContext {
         if (timeoutKey != null) {
             timeoutKey.remove();
         }
+    }
+
+    public void handleCompletedBeforeInitialRequestDone() {
+        assert completedBeforeInitialRequestDone;
+        completeInternal(true);
+        dispatched = true;
     }
 
 

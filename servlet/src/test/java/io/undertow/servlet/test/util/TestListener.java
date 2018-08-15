@@ -36,6 +36,11 @@ public class TestListener implements ServletRequestListener {
 
     private static volatile CountDownLatch latch;
 
+    public static void addMessage(String message) {
+        RESULTS.add(message);
+        latch.countDown();
+    }
+
     public static void init(int count) {
         RESULTS.clear();
         latch = new CountDownLatch(count);

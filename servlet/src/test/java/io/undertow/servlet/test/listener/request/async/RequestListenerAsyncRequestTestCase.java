@@ -67,6 +67,10 @@ public class RequestListenerAsyncRequestTestCase {
                 .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
                 .setAsyncSupported(true)
                 .addMapping("/async");
+        ServletInfo comp = new ServletInfo("completeAsyncServlet", CompleteAsyncServlet.class)
+                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
+                .setAsyncSupported(true)
+                .addMapping("/asynccomplete");
 
         ServletInfo a2 = new ServletInfo("asyncServlet2", AnotherAsyncServlet.class)
         .setAsyncSupported(true)
@@ -77,7 +81,7 @@ public class RequestListenerAsyncRequestTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .addServlets(m, a, a2)
+                .addServlets(m, a, a2, comp)
                 .addListener(new ListenerInfo(TestListener.class));
 
         DeploymentManager manager = container.addDeployment(builder);
@@ -99,6 +103,23 @@ public class RequestListenerAsyncRequestTestCase {
             Assert.assertEquals(HELLO_WORLD, response);
 
             Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST", "created ASYNC", "destroyed ASYNC"}, TestListener.results().toArray());
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+    @Test
+    public void testSimpleHttpServletCompleteInInitialRequest() throws IOException {
+        TestListener.init(3);
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/asynccomplete");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("asynccomplete", response);
+
+            Assert.assertArrayEquals(new String[]{"created REQUEST", "onComplete", "destroyed REQUEST"}, TestListener.results().toArray());
 
         } finally {
             client.getConnectionManager().shutdown();
