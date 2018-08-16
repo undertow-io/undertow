@@ -106,23 +106,26 @@ public class AjpParsingUnitTestCase {
 
     @Test
     public void testCharsetHandling() throws Exception {
-        ByteBuffer data = createAjpRequest("/hi".getBytes(StandardCharsets.UTF_8));
+        ByteBuffer data = createAjpRequest("/hi".getBytes(StandardCharsets.UTF_8),
+                "param=value".getBytes(StandardCharsets.UTF_8));
         HttpServerExchange result = new HttpServerExchange(null);
         AjpRequestParseState state = new AjpRequestParseState();
         AJP_REQUEST_PARSER.parse(data, state, result);
         Assert.assertEquals("/hi", result.getRequestPath());
+        Assert.assertEquals("/hi", result.getRequestURI());
+        Assert.assertEquals("param=value", result.getQueryString());
 
-        data = createAjpRequest("/한글이름".getBytes(StandardCharsets.UTF_8));
+        data = createAjpRequest("/한글이름".getBytes(StandardCharsets.UTF_8),
+                "param=한글이름".getBytes(StandardCharsets.UTF_8));
         result = new HttpServerExchange(null);
         state = new AjpRequestParseState();
         AJP_REQUEST_PARSER.parse(data, state, result);
         Assert.assertEquals("/한글이름", result.getRequestPath());
         Assert.assertEquals("/한글이름", result.getRequestURI());
-
-
+        Assert.assertEquals("param=한글이름", result.getQueryString());
     }
 
-    protected ByteBuffer createAjpRequest(byte[] path) {
+    protected ByteBuffer createAjpRequest(byte[] path, byte[] query) {
         ByteBuffer data = ByteBuffer.allocate(1000);
         data.put((byte) 0x12);
         data.put((byte) 0x34);
@@ -138,6 +141,7 @@ public class AjpParsingUnitTestCase {
         putInt(data, 100); //SERVER_PORT
         data.put((byte) 0); //IS_SSL
         putInt(data, 0); //number of headers
+        putQueryAttribute(data, query); // Attribute - query string
         data.put((byte) 0xFF);
         int dataLength = data.position() - 4;
         data.put(2, (byte) ((dataLength >> 8) & 0xFF));
@@ -162,6 +166,15 @@ public class AjpParsingUnitTestCase {
     }
     static void putString(final ByteBuffer buf, byte[] value) {
         final int length = value.length;
+        putInt(buf, length);
+        for (int i = 0; i < length; ++i) {
+            buf.put(value[i]);
+        }
+        buf.put((byte) 0);
+    }
+    static void putQueryAttribute(final ByteBuffer buf, byte[] value) {
+        final int length = value.length;
+        putInt(buf, 0x05);
         putInt(buf, length);
         for (int i = 0; i < length; ++i) {
             buf.put(value[i]);

@@ -56,10 +56,10 @@ import io.undertow.UndertowMessages;
 import io.undertow.security.impl.ExternalAuthenticationMechanism;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
-import io.undertow.util.BadRequestException;
 import io.undertow.util.URLUtils;
 
 /**
@@ -409,6 +409,7 @@ public class AjpRequestParser {
                         state.currentIntegerPart = -1;
                     }
                     String result;
+                    boolean decodingAlreadyDone = false;
                     if (state.currentAttribute.equals(SSL_KEY_SIZE)) {
                         IntegerHolder resultHolder = parse16BitInteger(buf, state);
                         if (!resultHolder.readComplete) {
@@ -422,14 +423,19 @@ public class AjpRequestParser {
                             state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
                         }
-                        result = resultHolder.value;
+                        if(resultHolder.containsUnencodedCharacters) {
+                            result = decode(resultHolder.value, true);
+                            decodingAlreadyDone = true;
+                        } else {
+                            result = resultHolder.value;
+                        }
                     }
                     //query string.
                     if (state.currentAttribute.equals(QUERY_STRING)) {
                         String resultAsQueryString = result == null ? "" : result;
                         exchange.setQueryString(resultAsQueryString);
                         try {
-                            URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode, maxParameters);
+                            URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode && !decodingAlreadyDone, maxParameters);
                         } catch (ParameterLimitException e) {
                             UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                             state.badRequest = true;
@@ -543,8 +549,15 @@ public class AjpRequestParser {
                 return new StringHolder(null, false, false, false);
             }
             byte c = buf.get();
-            if(type == StringType.QUERY_STRING && (c == '+' || c == '%')) {
-                    containsUrlCharacters = true;
+            if(type == StringType.QUERY_STRING && (c == '+' || c == '%' || c < 0 )) {
+                if (c < 0) {
+                    if (!allowUnescapedCharactersInUrl) {
+                        throw new BadRequestException();
+                    } else {
+                        containsUnencodedUrlCharacters = true;
+                    }
+                }
+                containsUrlCharacters = true;
             } else if(type == StringType.URL && (c == '%' || c < 0 )) {
                 if(c < 0 ) {
                     if(!allowUnescapedCharactersInUrl) {
