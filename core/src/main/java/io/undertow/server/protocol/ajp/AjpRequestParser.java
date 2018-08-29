@@ -436,7 +436,7 @@ public class AjpRequestParser {
                         exchange.setQueryString(resultAsQueryString);
                         try {
                             URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode && !decodingAlreadyDone, maxParameters);
-                        } catch (ParameterLimitException e) {
+                        } catch (ParameterLimitException | IllegalArgumentException e) {
                             UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                             state.badRequest = true;
                         }
