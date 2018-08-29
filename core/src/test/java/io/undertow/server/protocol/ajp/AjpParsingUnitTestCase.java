@@ -111,6 +111,7 @@ public class AjpParsingUnitTestCase {
         HttpServerExchange result = new HttpServerExchange(null);
         AjpRequestParseState state = new AjpRequestParseState();
         AJP_REQUEST_PARSER.parse(data, state, result);
+        Assert.assertFalse(state.badRequest);
         Assert.assertEquals("/hi", result.getRequestPath());
         Assert.assertEquals("/hi", result.getRequestURI());
         Assert.assertEquals("param=value", result.getQueryString());
@@ -120,9 +121,20 @@ public class AjpParsingUnitTestCase {
         result = new HttpServerExchange(null);
         state = new AjpRequestParseState();
         AJP_REQUEST_PARSER.parse(data, state, result);
+        Assert.assertFalse(state.badRequest);
         Assert.assertEquals("/한글이름", result.getRequestPath());
         Assert.assertEquals("/한글이름", result.getRequestURI());
         Assert.assertEquals("param=한글이름", result.getQueryString());
+    }
+
+    @Test
+    public void testInvalidQueryString() throws Exception {
+        ByteBuffer data = createAjpRequest("/hi".getBytes(StandardCharsets.UTF_8),
+                "param=value%http".getBytes(StandardCharsets.UTF_8));
+        HttpServerExchange result = new HttpServerExchange(null);
+        AjpRequestParseState state = new AjpRequestParseState();
+        AJP_REQUEST_PARSER.parse(data, state, result);
+        Assert.assertTrue(state.badRequest);
     }
 
     protected ByteBuffer createAjpRequest(byte[] path, byte[] query) {
