@@ -146,7 +146,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         }
                         data[0] = byteBuffer;
                         System.arraycopy(userData, pos, data, 1, length);
-                        res = next.write(data, 0, data.length);
+                        res = next.write(data, 0, length + 1);
                     }
                     if (res == 0) {
                         return STATE_BUF_FLUSH;
