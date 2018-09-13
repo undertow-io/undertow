@@ -190,24 +190,32 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
             final String[] cipherSuites = UndertowAcceptingSslChannel.this.cipherSuites;
             if (cipherSuites != null) {
                 final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedCipherSuites()));
-                final List<String> finalList = new ArrayList<>();
-                for (String name : cipherSuites) {
-                    if (supported.contains(name)) {
-                        finalList.add(name);
+                if(supported.isEmpty()) {
+                    engine.setEnabledCipherSuites(cipherSuites);
+                } else {
+                    final List<String> finalList = new ArrayList<>();
+                    for (String name : cipherSuites) {
+                        if (supported.contains(name)) {
+                            finalList.add(name);
+                        }
                     }
+                    engine.setEnabledCipherSuites(finalList.toArray(new String[finalList.size()]));
                 }
-                engine.setEnabledCipherSuites(finalList.toArray(new String[finalList.size()]));
             }
             final String[] protocols = UndertowAcceptingSslChannel.this.protocols;
             if (protocols != null) {
                 final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedProtocols()));
-                final List<String> finalList = new ArrayList<>();
-                for (String name : protocols) {
-                    if (supported.contains(name)) {
-                        finalList.add(name);
+                if(supported.isEmpty()) {
+                    engine.setEnabledProtocols(protocols);
+                } else {
+                    final List<String> finalList = new ArrayList<>();
+                    for (String name : protocols) {
+                        if (supported.contains(name)) {
+                            finalList.add(name);
+                        }
                     }
+                    engine.setEnabledProtocols(finalList.toArray(new String[finalList.size()]));
                 }
-                engine.setEnabledProtocols(finalList.toArray(new String[finalList.size()]));
             }
             return accept(tcpConnection, engine);
         } catch (IOException | RuntimeException e) {

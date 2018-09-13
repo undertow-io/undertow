@@ -58,6 +58,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
+import org.xnio.Sequence;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
@@ -590,7 +591,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         SSLContext serverContext = getServerSslContext();
         getClientSSLContext();
 
-        startSSLServer(serverContext, OptionMap.create(SSL_CLIENT_AUTH_MODE, REQUESTED));
+        startSSLServer(serverContext, OptionMap.create(SSL_CLIENT_AUTH_MODE, REQUESTED, Options.SSL_ENABLED_PROTOCOLS, Sequence.of("TLSv1.2")));
     }
 
     public static SSLContext createClientSslContext() {
