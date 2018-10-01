@@ -140,8 +140,10 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 });
 
             } finally {
-                    servletRequestContext.setSession(oldSession);
-                    servletRequestContext.setCurrentServletContext(oldServletContext);
+                servletRequestContext.setSession(oldSession);
+                servletRequestContext.setCurrentServletContext(oldServletContext);
+                // update time in old context and run the requestDone for the session
+                servletRequestContext.getCurrentServletContext().updateSessionAccessTime(servletRequestContext.getExchange());
             }
         } else {
             forwardImpl(request, response, servletRequestContext);
@@ -304,6 +306,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     }
                 });
             } finally {
+                // update time in new context and run the requestDone for the session
+                servletRequestContext.getCurrentServletContext().updateSessionAccessTime(servletRequestContext.getExchange());
                 servletRequestContext.setSession(oldSession);
                 servletRequestContext.setCurrentServletContext(oldServletContext);
             }

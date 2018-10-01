@@ -81,13 +81,17 @@ public class CrossContextServletSessionTestCase {
                 .addMapping("/includeadd");
         ServletInfo forwardAdd = new ServletInfo("forwardadd", ForwardAddServlet.class)
                 .addMapping("/forwardadd");
+
+        ServletInfo accessTimeServlet = new ServletInfo("accesstimeservlet", LastAccessTimeSessionServlet.class)
+                .addMapping("/accesstimeservlet");
+
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
                 .setContextPath("/" + name)
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName( name + ".war")
                 .setServletSessionConfig(new ServletSessionConfig().setPath("/"))
-                .addServlets(s, forward, include, forwardAdd, includeAdd);
+                .addServlets(s, forward, include, forwardAdd, includeAdd, accessTimeServlet);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -190,6 +194,50 @@ public class CrossContextServletSessionTestCase {
     }
 
     @Test
+    public void testCrossContextSessionForwardAccessTimeInvocation() throws IOException, InterruptedException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/accesstimeservlet");
+            HttpGet forward1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/forward?context=/2&path=/accesstimeservlet");
+
+            HttpResponse result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("1 "));
+
+            result = client.execute(forward1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("1 "));
+
+            Thread.sleep(50);
+            result = client.execute(forward1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("2 "));
+            Long time1 = Long.parseLong(response.substring(2));
+
+            Thread.sleep(50);
+            result = client.execute(forward1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("3 "));
+            Long time2 = Long.parseLong(response.substring(2));
+            Assert.assertTrue(time2 > time1); // access time updated in forward app
+
+            result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("2 "));
+            Long time3 = Long.parseLong(response.substring(2));
+            Assert.assertTrue(time3 > time2); // access time updated in outer app
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
     public void testCrossContextSessionForwardInvocationWithBothServletsAdding() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -280,6 +328,49 @@ public class CrossContextServletSessionTestCase {
         }
     }
 
+    @Test
+    public void testCrossContextSessionIncludeAccessTimeInvocation() throws IOException, InterruptedException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/accesstimeservlet");
+            HttpGet include1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/include?context=/2&path=/accesstimeservlet");
+
+            HttpResponse result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("1 "));
+
+            result = client.execute(include1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("1 "));
+
+            Thread.sleep(50);
+            result = client.execute(include1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("2 "));
+            Long time1 = Long.parseLong(response.substring(2));
+
+            Thread.sleep(50);
+            result = client.execute(include1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("3 "));
+            Long time2 = Long.parseLong(response.substring(2));
+            Assert.assertTrue(time2 > time1); // access time updated in include app
+
+            result = client.execute(direct1);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.startsWith("2 "));
+            Long time3 = Long.parseLong(response.substring(2));
+            Assert.assertTrue(time3 > time2); // access time updated in outer app
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
     public static class ForwardServlet extends HttpServlet {
 
