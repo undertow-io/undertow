@@ -166,18 +166,17 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                 final ByteBuffer buf = pooled.getBuffer();
                 res = Channels.readBlocking(requestChannel, buf);
                 if (!buf.hasRemaining()) {
-                    if (usedBuffers == allowedBuffers) {
-                        throw new SSLPeerUnverifiedException("");
-                    } else {
-                        buf.flip();
-                        pooled = exchange.getConnection().getByteBufferPool().allocate();
-                        poolArray[usedBuffers++] = pooled;
-                    }
+                    buf.flip();
+                    pooled = exchange.getConnection().getByteBufferPool().allocate();
+                    poolArray[usedBuffers++] = pooled;
                 }
-            } while (res != -1);
+            } while (res != -1 && usedBuffers != allowedBuffers);
             free = false;
             pooled.getBuffer().flip();
             Connectors.ungetRequestBytes(exchange, poolArray);
+            if(usedBuffers == allowedBuffers) {
+                throw new SSLPeerUnverifiedException("Cannot renegotiate");
+            }
             renegotiateNoRequest(exchange, newAuthMode);
         } finally {
             if (free) {
