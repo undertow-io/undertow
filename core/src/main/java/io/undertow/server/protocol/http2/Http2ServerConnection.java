@@ -427,6 +427,12 @@ public class Http2ServerConnection extends ServerConnection {
                 return false;
             }
 
+            sink.setCompletionListener(new ChannelListener<Http2DataStreamSinkChannel>() {
+                @Override
+                public void handleEvent(Http2DataStreamSinkChannel channel) {
+                    Connectors.terminateResponse(exchange);
+                }
+            });
             Connectors.terminateRequest(exchange);
             getIoThread().execute(new Runnable() {
                 @Override
