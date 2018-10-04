@@ -47,28 +47,36 @@ public class BytesReceivedStreamSourceConduit extends AbstractStreamSourceCondui
     @Override
     public long transferTo(long position, long count, FileChannel target) throws IOException {
         long l = super.transferTo(position, count, target);
-        callback.activity(l);
+        if (l > 0) {
+            callback.activity(l);
+        }
         return l;
     }
 
     @Override
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long l = super.transferTo(count, throughBuffer, target);
-        callback.activity(l);
+        if (l > 0) {
+            callback.activity(l);
+        }
         return l;
     }
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
         int i = super.read(dst);
-        callback.activity(i);
+        if (i > 0) {
+            callback.activity(i);
+        }
         return i;
     }
 
     @Override
     public long read(ByteBuffer[] dsts, int offs, int len) throws IOException {
         long l = super.read(dsts, offs, len);
-        callback.activity(l);
+        if (l > 0) {
+            callback.activity(l);
+        }
         return l;
     }
 }
