@@ -254,6 +254,7 @@
             <Class name="io.undertow.servlet.api.LoginConfig"/>
             <Class name="io.undertow.servlet.api.FilterInfo"/>
             <Class name="io.undertow.servlet.api.ServletInfo"/>
+            <Class name="io.undertow.websockets.jsr.WebSocketDeploymentInfo"/>
         </Or>
     </Match>
 
