@@ -53,16 +53,24 @@ public class ExtendedAccessLogFileTestCase {
 
     public static final String PATTERN = "cs-uri cs(test-header) x-O(aa) x-H(secure)";
 
+    private DefaultAccessLogReceiver logReceiver;
+
     @Before
     public void before() throws IOException {
         Files.createDirectories(logDirectory);
         DefaultServer.startSSLServer();
+
+        logReceiver = DefaultAccessLogReceiver.builder().setLogWriteExecutor(DefaultServer.getWorker())
+                .setOutputDirectory(logDirectory)
+                .setLogBaseName("extended.")
+                .setLogFileHeaderGenerator(new ExtendedAccessLogParser.ExtendedAccessLogHeaderGenerator(PATTERN)).build();
     }
 
     @After
     public void after() throws IOException {
         DefaultServer.stopSSLServer();
         FileUtils.deleteRecursive(logDirectory);
+        logReceiver.close();
     }
 
     private static final HttpHandler HELLO_HANDLER = new HttpHandler() {
@@ -75,12 +83,7 @@ public class ExtendedAccessLogFileTestCase {
 
     @Test
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
-        Path directory = logDirectory;
-        Path logFileName = directory.resolve("extended.log");
-        DefaultAccessLogReceiver logReceiver = DefaultAccessLogReceiver.builder().setLogWriteExecutor(DefaultServer.getWorker())
-                .setOutputDirectory(directory)
-                .setLogBaseName("extended.")
-                .setLogFileHeaderGenerator(new ExtendedAccessLogParser.ExtendedAccessLogHeaderGenerator(PATTERN)).build();
+        Path logFileName = logDirectory.resolve("extended.log");
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }
 
