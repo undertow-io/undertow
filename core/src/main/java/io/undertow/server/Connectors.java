@@ -467,7 +467,7 @@ public class Connectors {
                 URLUtils.parsePathParams(encodedPath.substring(i + 1), exchange, charset, decode, maxParameters);
                 return;
             } else if(c == '%' || c == '+') {
-                requiresDecode = true;
+                requiresDecode = decode;
             }
         }
 
