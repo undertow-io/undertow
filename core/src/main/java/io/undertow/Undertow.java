@@ -53,6 +53,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -584,6 +585,7 @@ public final class Undertow {
         private final OpenListener openListener;
         private final UndertowXnioSsl ssl;
         private final AcceptingChannel<? extends StreamConnection> channel;
+        private volatile boolean suspended = false;
 
         public ListenerInfo(String protcol, SocketAddress address, OpenListener openListener, UndertowXnioSsl ssl, AcceptingChannel<? extends StreamConnection> channel) {
             this.protcol = protcol;
@@ -613,6 +615,37 @@ public final class Undertow {
                 //just ignore it if this is not a SSL listener
                 ssl.updateSSLContext(sslContext);
             }
+        }
+
+        public synchronized void suspend() {
+            suspended = true;
+            channel.suspendAccepts();
+            CountDownLatch latch = new CountDownLatch(1);
+            //the channel may be in the middle of an accept, we need to close from the IO thread
+            channel.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        openListener.closeConnections();
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+            });
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public synchronized void resume() {
+            suspended = false;
+            channel.resumeAccepts();
+        }
+
+        public boolean isSuspended() {
+            return suspended;
         }
 
         public ConnectorStatistics getConnectorStatistics() {

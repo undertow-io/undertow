@@ -66,4 +66,11 @@ public interface OpenListener extends ChannelListener<StreamConnection> {
      * @return The connector statistics, or null if statistics gathering is disabled.
      */
     ConnectorStatistics getConnectorStatistics();
+
+    /**
+     * Close all active connections that were handled by this listener
+     */
+    default void closeConnections() {
+        //nnop by default
+    }
 }

@@ -30,13 +30,18 @@ import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.XnioByteBufferPool;
 import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -45,6 +50,11 @@ import java.nio.ByteBuffer;
  * @author Stuart Douglas
  */
 public final class Http2OpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
+
+
+    private final Set<Http2Channel> connections = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+
     public static final String HTTP2 = "h2";
     @Deprecated
     public static final String HTTP2_14 = "h2-14";
@@ -116,6 +126,14 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
             connectorStatistics.incrementConnectionCount();
             http2Channel.addCloseTask(closeTask);
         }
+
+        connections.add(http2Channel);
+        http2Channel.addCloseTask(new ChannelListener<Http2Channel>() {
+            @Override
+            public void handleEvent(Http2Channel channel) {
+                connections.remove(channel);
+            }
+        });
         http2Channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics));
         http2Channel.resumeReceives();
 
@@ -128,6 +146,14 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         }
         return null;
     }
+
+    @Override
+    public void closeConnections() {
+        for(Http2Channel i : connections) {
+            IoUtils.safeClose(i);
+        }
+    }
+
     @Override
     public HttpHandler getRootHandler() {
         return rootHandler;

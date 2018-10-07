@@ -18,6 +18,19 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.Pool;
+import org.xnio.StreamConnection;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -26,22 +39,14 @@ import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.ServerConnection;
 import io.undertow.server.XnioByteBufferPool;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.Pool;
-import org.xnio.StreamConnection;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -50,6 +55,8 @@ import java.nio.ByteBuffer;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class HttpOpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
+
+    private final Set<HttpServerConnection> connections = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private final ByteBufferPool bufferPool;
     private final int bufferSize;
@@ -92,6 +99,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     public void handleEvent(StreamConnection channel) {
         handleEvent(channel, null);
     }
+
     @Override
     public void handleEvent(final StreamConnection channel, PooledByteBuffer buffer) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
@@ -102,7 +110,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         try {
             Integer readTimeout = channel.getOption(Options.READ_TIMEOUT);
             Integer idle = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
-            if(idle != null) {
+            if (idle != null) {
                 IdleTimeoutConduit conduit = new IdleTimeoutConduit(channel);
                 channel.getSourceChannel().setConduit(conduit);
                 channel.getSinkChannel().setConduit(conduit);
@@ -121,7 +129,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             IoUtils.safeClose(channel);
             UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
         }
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
             channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
         }
@@ -130,17 +138,24 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         HttpReadListener readListener = new HttpReadListener(connection, parser, statisticsEnabled ? connectorStatistics : null);
 
 
-        if(buffer != null) {
-            if(buffer.getBuffer().hasRemaining()) {
+        if (buffer != null) {
+            if (buffer.getBuffer().hasRemaining()) {
                 connection.setExtraBytes(buffer);
             } else {
                 buffer.close();
             }
         }
-        if(connectorStatistics != null && statisticsEnabled) {
+        if (connectorStatistics != null && statisticsEnabled) {
             connectorStatistics.incrementConnectionCount();
         }
 
+        connections.add(connection);
+        connection.addCloseListener(new ServerConnection.CloseListener() {
+            @Override
+            public void closed(ServerConnection c) {
+                connections.remove(connection);
+            }
+        });
         connection.setReadListener(readListener);
         readListener.newRequest();
         channel.getSourceChannel().setReadListener(readListener);
@@ -179,10 +194,17 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     @Override
     public ConnectorStatistics getConnectorStatistics() {
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             return connectorStatistics;
         }
         return null;
+    }
+
+    @Override
+    public void closeConnections() {
+        for(HttpServerConnection i : connections) {
+            IoUtils.safeClose(i);
+        }
     }
 
 }

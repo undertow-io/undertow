@@ -166,6 +166,13 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         return null;
     }
 
+    @Override
+    public void closeConnections() {
+        for(Map.Entry<String, ListenerEntry> i : listeners.entrySet()) {
+            i.getValue().listener.closeConnections();
+        }
+    }
+
 
     private static class ListenerEntry implements Comparable<ListenerEntry> {
         final DelegateOpenListener listener;

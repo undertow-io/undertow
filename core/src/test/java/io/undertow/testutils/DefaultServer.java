@@ -617,7 +617,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * single client. Client cert mode is not set by default
      */
     public static void startSSLServer(OptionMap optionMap) throws IOException {
-        SSLContext serverContext = getServerSslContext();
         clientSslContext = createClientSslContext();
         startSSLServer(optionMap, proxyAcceptListener != null ? proxyAcceptListener : acceptListener);
     }
@@ -692,6 +691,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             sslServer = null;
         }
         clientSslContext = null;
+        if(proxyOpenListener != null) {
+            proxyOpenListener.closeConnections();
+        } else {
+            openListener.closeConnections();
+        }
     }
 
     public static String getHostAddress(String serverName) {
@@ -730,6 +734,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             builder.set(UndertowOptions.ENABLE_HTTP2, true);
         }
         openListener.setUndertowOptions(builder.getMap());
+        openListener.closeConnections();
+        if(proxyOpenListener != null) {
+            proxyOpenListener.closeConnections();
+        }
         if (loadBalancingProxyClient != null) {
             loadBalancingProxyClient.closeCurrentConnections();
         }

@@ -43,6 +43,9 @@ import org.xnio.StreamConnection;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static io.undertow.UndertowOptions.DECODE_URL;
 import static io.undertow.UndertowOptions.URL_CHARSET;
@@ -51,6 +54,8 @@ import static io.undertow.UndertowOptions.URL_CHARSET;
  * @author Stuart Douglas
  */
 public class AjpOpenListener implements OpenListener {
+
+    private final Set<AjpServerConnection> connections = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private final ByteBufferPool bufferPool;
     private final int bufferSize;
@@ -134,6 +139,16 @@ public class AjpOpenListener implements OpenListener {
             connection.addCloseListener(closeListener);
         }
         connection.setAjpReadListener(readListener);
+
+        connections.add(connection);
+        connection.addCloseListener(new ServerConnection.CloseListener() {
+            @Override
+            public void closed(ServerConnection c) {
+                connections.remove(connection);
+            }
+        });
+
+
         readListener.startRequest();
         channel.getSourceChannel().setReadListener(readListener);
         readListener.handleEvent(channel.getSourceChannel());
@@ -175,6 +190,13 @@ public class AjpOpenListener implements OpenListener {
             return connectorStatistics;
         }
         return null;
+    }
+
+    @Override
+    public void closeConnections() {
+        for(AjpServerConnection i : connections) {
+            IoUtils.safeClose(i);
+        }
     }
 
     public String getScheme() {
