@@ -21,6 +21,7 @@ package io.undertow.servlet.api;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 import io.undertow.security.api.AuthenticationMechanism;
@@ -97,5 +98,12 @@ public interface Deployment {
     List<AuthenticationMechanism> getAuthenticationMechanisms();
 
     DeploymentManager.State getDeploymentState();
+
+    /**
+     * Attempts to add a servlet mapping using {@link javax.servlet.ServletRegistration#addMapping(String...)}
+     *
+     * @return true if the addition was sucessful
+     */
+    Set<String> tryAddServletMappings(ServletInfo servletInfo, String... urlPatterns);
 
 }
