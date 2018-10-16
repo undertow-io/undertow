@@ -20,17 +20,20 @@ package io.undertow.server.protocol.http2;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.protocols.http2.AbstractHttp2StreamSourceChannel;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.protocols.http2.Http2StreamSourceChannel;
+import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
@@ -44,6 +47,7 @@ import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.channels.Channels;
+import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -148,16 +152,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
 
         final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
-        dataChannel.getResponseChannel().setTrailersProducer(new Http2DataStreamSinkChannel.TrailersProducer() {
-            @Override
-            public HeaderMap getTrailers() {
-                Supplier<HeaderMap> supplier = exchange.getAttachment(HttpAttachments.RESPONSE_TRAILER_SUPPLIER);
-                if(supplier != null) {
-                    return supplier.get();
-                }
-                return exchange.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
-            }
-        });
+
         dataChannel.setTrailersHandler(new Http2StreamSourceChannel.TrailersHandler() {
             @Override
             public void handleTrailers(HeaderMap headerMap) {
@@ -167,7 +162,6 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         connection.setExchange(exchange);
         dataChannel.setMaxStreamSize(maxEntitySize);
         exchange.setRequestScheme(exchange.getRequestHeaders().getFirst(SCHEME));
-        exchange.setProtocol(Protocols.HTTP_2_0);
         exchange.setRequestMethod(Methods.fromString(exchange.getRequestHeaders().getFirst(METHOD)));
         exchange.getRequestHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(AUTHORITY));
         if(!Connectors.areRequestHeadersValid(exchange.getRequestHeaders())) {
@@ -186,16 +180,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         if (recordRequestStartTime) {
             Connectors.setRequestStartTime(exchange);
         }
-        SSLSession session = channel.getSslSession();
-        if(session != null) {
-            connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
-        }
-        dataChannel.getResponseChannel().setCompletionListener(new ChannelListener<Http2DataStreamSinkChannel>() {
-            @Override
-            public void handleEvent(Http2DataStreamSinkChannel channel) {
-                Connectors.terminateResponse(exchange);
-            }
-        });
+        handleCommonSetup(dataChannel.getResponseChannel(), exchange, connection);
         if(!dataChannel.isOpen()) {
             Connectors.terminateRequest(exchange);
         } else {
@@ -257,7 +242,6 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         Connectors.setRequestStartTime(initial, exchange);
         connection.setExchange(exchange);
         exchange.setRequestScheme(initial.getRequestScheme());
-        exchange.setProtocol(initial.getProtocol());
         exchange.setRequestMethod(initial.getRequestMethod());
         exchange.setQueryString(initial.getQueryString());
         if(data != null) {
@@ -273,6 +257,18 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             exchange.endExchange();
             return;
         }
+
+
+        handleCommonSetup(sink, exchange, connection);
+        Connectors.executeRootHandler(rootHandler, exchange);
+    }
+
+    private void handleCommonSetup(Http2HeadersStreamSinkChannel sink, HttpServerExchange exchange, Http2ServerConnection connection) {
+        Http2Channel channel = sink.getChannel();
+        SSLSession session = channel.getSslSession();
+        if(session != null) {
+            connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
+        }
         sink.setTrailersProducer(new Http2DataStreamSinkChannel.TrailersProducer() {
             @Override
             public HeaderMap getTrailers() {
@@ -283,19 +279,21 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
                 return exchange.getAttachment(HttpAttachments.RESPONSE_TRAILERS);
             }
         });
-
-
-        SSLSession session = channel.getSslSession();
-        if(session != null) {
-            connection.setSslSessionInfo(new Http2SslSessionInfo(channel));
-        }
         sink.setCompletionListener(new ChannelListener<Http2DataStreamSinkChannel>() {
             @Override
             public void handleEvent(Http2DataStreamSinkChannel channel) {
                 Connectors.terminateResponse(exchange);
             }
         });
-        Connectors.executeRootHandler(rootHandler, exchange);
+        exchange.setProtocol(Protocols.HTTP_2_0);
+        if(exchange.getRequestMethod().equals(Methods.HEAD)) {
+            exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
+                @Override
+                public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+                    return new HeadStreamSinkConduit(factory.create(), null, true);
+                }
+            });
+        }
     }
 
     /**
