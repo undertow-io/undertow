@@ -1,5 +1,6 @@
 package io.undertow.server.handlers.file;
 
+import io.undertow.server.handlers.resource.Resource;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.server.handlers.resource.PathResourceManager;
 import io.undertow.server.handlers.resource.ResourceManager;
@@ -9,6 +10,7 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,6 +30,16 @@ public class PathResourceManagerTestCase {
         Assert.assertNotNull(resourceManager.getResource("page.html"));
         Assert.assertNotNull(resourceManager.getResource("./page.html"));
         Assert.assertNotNull(resourceManager.getResource("../file/page.html"));
+    }
+
+    @Test
+    public void testListDir() throws Exception {
+
+        final Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        final PathResourceManager resourceManager = new PathResourceManager(rootPath, 1024 * 1024);
+        Resource subdir = resourceManager.getResource("subdir");
+        Resource found = subdir.list().get(0);
+        Assert.assertEquals("subdir" + File.separatorChar+ "a.txt", found.getPath());
     }
 
 

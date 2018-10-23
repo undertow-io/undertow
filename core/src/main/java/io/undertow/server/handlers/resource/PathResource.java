@@ -88,7 +88,7 @@ public class PathResource implements RangeAwareResource {
         final List<Resource> resources = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
             for (Path child : stream) {
-                resources.add(new PathResource(child, manager, path));
+                resources.add(new PathResource(child, manager, path + File.separator + child.getFileName().toString()));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
