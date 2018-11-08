@@ -67,6 +67,10 @@
             <artifactId>jboss-logmanager</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-parser-generator</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
