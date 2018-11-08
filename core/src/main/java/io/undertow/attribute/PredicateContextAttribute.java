@@ -24,6 +24,7 @@ import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpServerExchange;
 
 /**
+ * 谓词的特性貌似没有用
  * @author Stuart Douglas
  */
 public class PredicateContextAttribute implements ExchangeAttribute {

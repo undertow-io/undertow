@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * The request protocol
- *
+ * 获得请求协议
  * @author Stuart Douglas
  */
 public class RequestProtocolAttribute implements ExchangeAttribute {

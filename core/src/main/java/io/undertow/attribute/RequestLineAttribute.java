@@ -21,7 +21,7 @@ package io.undertow.attribute;
 import io.undertow.server.HttpServerExchange;
 
 /**
- * The request line
+ * The request line  头部的request line 字段
  *
  * @author Stuart Douglas
  */

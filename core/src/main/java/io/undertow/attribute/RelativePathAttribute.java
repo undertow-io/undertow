@@ -23,7 +23,7 @@ import io.undertow.util.QueryParameterUtils;
 
 /**
  * The relative path
- *
+ * 相对路径信息
  * @author Stuart Douglas
  */
 public class RelativePathAttribute implements ExchangeAttribute {

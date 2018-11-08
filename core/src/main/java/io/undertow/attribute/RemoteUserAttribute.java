@@ -39,6 +39,7 @@ public class RemoteUserAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
+        //TODO 安全的东西 暂时不知道干嘛
         SecurityContext sc = exchange.getSecurityContext();
         if (sc == null || !sc.isAuthenticated()) {
             return null;

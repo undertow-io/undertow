@@ -24,6 +24,7 @@ import io.undertow.server.HttpServerExchange;
  * Exchange attribute that wraps string attributes in quotes.
  *
  * This is mostly used
+ * 不懂是干嘛用的 貌似是为为了统一批量处理数据用的把
  *
  * @author Stuart Douglas
  */

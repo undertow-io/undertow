@@ -56,7 +56,7 @@ public class NullAttribute implements ExchangeAttribute {
         @Override
         public ExchangeAttribute build(final String token) {
             if (token.equals(NAME)) {
-                return INSTANCE;
+                return NullAttribute.INSTANCE;
             }
             return null;
         }

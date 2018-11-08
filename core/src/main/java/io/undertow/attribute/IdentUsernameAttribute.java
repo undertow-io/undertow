@@ -22,7 +22,8 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * The ident username, not used, included for apache access log compatibility
- *未使用的ident用户名包含在apache访问日志兼容性中
+ * 未使用的ident用户名包含在apache访问日志兼容性中
+ * ident 协议相关的东西, undertow 并没有支持
  * @author Stuart Douglas
  */
 public class IdentUsernameAttribute implements ExchangeAttribute {

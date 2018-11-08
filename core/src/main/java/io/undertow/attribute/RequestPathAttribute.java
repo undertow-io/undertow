@@ -22,6 +22,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.QueryParameterUtils;
 
 /**
+ * 获得请求的相对路基 这个方法和 RelativePath 重复
  * @author Stuart Douglas
  */
 public class RequestPathAttribute implements ExchangeAttribute {

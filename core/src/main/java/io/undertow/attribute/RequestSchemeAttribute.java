@@ -23,6 +23,8 @@ import io.undertow.server.HttpServerExchange;
 /**
  * The request scheme
  *
+ *  类似这个一个完整的uri地址,其实是一个协议标准foo://username:password@example.com:8042/over/there/index.dtb?type=animal&name=narwhal#nose
+ * urn:example:animal:ferret:nose
  * @author Stuart Douglas
  */
 public class RequestSchemeAttribute implements ExchangeAttribute {

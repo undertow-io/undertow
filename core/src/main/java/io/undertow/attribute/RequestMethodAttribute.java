@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * The request method
- *
+ * 获得请求的类型 get还是post 等等
  * @author Stuart Douglas
  */
 public class RequestMethodAttribute implements ExchangeAttribute {

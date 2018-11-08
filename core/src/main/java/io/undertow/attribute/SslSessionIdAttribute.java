@@ -24,6 +24,7 @@ import io.undertow.util.FlexBase64;
 
 /**
  * @author Stuart Douglas
+ * SSL session与SSL connection是不同的概念。SSL session指的是通过握手而产生的一些参数和加密秘钥的集合；然而SSL connection是指利用某个session建立起来的活动的会话。
  */
 public class SslSessionIdAttribute implements ExchangeAttribute {
 

@@ -23,6 +23,8 @@ import io.undertow.server.SSLSessionInfo;
 
 /**
  * @author Stuart Douglas
+ *
+ * 返回http协议中的ssl信息
  */
 public class SslCipherAttribute implements ExchangeAttribute {
 

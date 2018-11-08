@@ -25,7 +25,7 @@ import java.util.Deque;
 
 /**
  * Query parameter
- *
+ * 这个可能是URL变量 /usef?id=123
  * @author Stuart Douglas
  */
 public class QueryParameterAttribute implements ExchangeAttribute {

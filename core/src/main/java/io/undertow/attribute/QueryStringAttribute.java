@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * The query string
- *
+ * 返回URL变量的非解析模式
  * @author Stuart Douglas
  */
 public class QueryStringAttribute implements ExchangeAttribute {

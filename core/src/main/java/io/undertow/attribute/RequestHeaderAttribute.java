@@ -23,7 +23,8 @@ import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
 
 /**
- * A request header
+ *
+ *  A request header
  *
  * @author Stuart Douglas
  */

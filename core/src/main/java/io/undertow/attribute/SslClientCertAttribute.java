@@ -29,6 +29,7 @@ import javax.security.cert.X509Certificate;
 
 /**
  * @author Stuart Douglas
+ * 返回ssl 中客户端信息
  */
 public class SslClientCertAttribute implements ExchangeAttribute {
 

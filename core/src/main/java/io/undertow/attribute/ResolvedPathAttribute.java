@@ -22,6 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * @author Stuart Douglas
+ * 绝对地址
  */
 public class ResolvedPathAttribute implements ExchangeAttribute {
 

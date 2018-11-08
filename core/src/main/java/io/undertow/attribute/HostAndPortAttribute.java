@@ -35,6 +35,11 @@ public class HostAndPortAttribute implements ExchangeAttribute {
 
     }
 
+    /**
+     * 这里体现出封装器的特性
+     * @param exchange The exchange
+     * @return
+     */
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         return exchange.getHostAndPort();

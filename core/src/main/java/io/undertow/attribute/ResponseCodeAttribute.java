@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * The request status code
- *
+ * 设置返回值状态码
  * @author Stuart Douglas
  */
 public class ResponseCodeAttribute implements ExchangeAttribute {

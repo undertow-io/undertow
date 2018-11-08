@@ -24,7 +24,7 @@ import io.undertow.util.StatusCodes;
 
 /**
  * The request status code
- *
+ * 设置HTTP原因短语。 根据协议，这可能会或可能不会受到尊重。 特别是HTTP2已经删除了对原因短语的支持。 此方法仅应用于与为原因短语赋予特殊含义的旧框架进行交互。
  * @author Stuart Douglas
  */
 public class ResponseReasonPhraseAttribute implements ExchangeAttribute {

@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * The local server name
- *
+ * 活动本地的hostName
  * @author Stuart Douglas
  */
 public class LocalServerNameAttribute implements ExchangeAttribute {

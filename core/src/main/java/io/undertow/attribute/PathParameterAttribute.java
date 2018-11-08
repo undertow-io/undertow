@@ -25,7 +25,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * Path parameter
- *
+ * 这个可能是 URL 路径变量 PATH Variable
  * @author Stuart Douglas
  */
 public class PathParameterAttribute implements ExchangeAttribute {

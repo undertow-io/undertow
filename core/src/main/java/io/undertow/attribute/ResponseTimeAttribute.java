@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * The response time
- *
+ * 响应时间
  * This will only work if {@link io.undertow.UndertowOptions#RECORD_REQUEST_START_TIME} has been set
  */
 public class ResponseTimeAttribute implements ExchangeAttribute {

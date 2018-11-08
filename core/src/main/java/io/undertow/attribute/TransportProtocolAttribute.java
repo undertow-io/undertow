@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * The request method
- *
+ * 网络传输协议
  * @author Stuart Douglas
  */
 public class TransportProtocolAttribute implements ExchangeAttribute {

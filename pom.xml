@@ -117,8 +117,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
-
-
             <!-- Zanata translations -->
             <plugin>
                 <groupId>org.zanata</groupId>
@@ -170,26 +168,6 @@
                         </execution>
                     </executions>
                 </plugin>
-
-                <!-- FindBugs -->
-                <plugin>
-                    <groupId>com.github.spotbugs</groupId>
-                    <artifactId>spotbugs-maven-plugin</artifactId>
-                    <version>${version.com.github.spotbugs-maven-plugin}</version>
-                    <configuration>
-                        <excludeFilterFile>../spotbugs-exclude.xml</excludeFilterFile>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>find-bugs</id>
-                            <phase>verify</phase>
-                            <goals>
-                                <goal>check</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
@@ -197,40 +175,6 @@
                     <configuration>
                         <groups>${test.categories}</groups>
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                    </configuration>
-                </plugin>
-                <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-                <plugin>
-                    <!--suppress MavenModelInspection -->
-                    <groupId>org.eclipse.m2e</groupId>
-                    <!--suppress MavenModelInspection -->
-                    <artifactId>lifecycle-mapping</artifactId>
-                    <!--suppress MavenModelInspection -->
-                    <version>1.0.0</version>
-                    <configuration>
-                        <lifecycleMappingMetadata>
-                            <pluginExecutions>
-                                <pluginExecution>
-                                    <pluginExecutionFilter>
-                                        <groupId>
-                                            org.apache.maven.plugins
-                                        </groupId>
-                                        <artifactId>
-                                            maven-checkstyle-plugin
-                                        </artifactId>
-                                        <versionRange>
-                                            [2.5,)
-                                        </versionRange>
-                                        <goals>
-                                            <goal>checkstyle</goal>
-                                        </goals>
-                                    </pluginExecutionFilter>
-                                    <action>
-                                        <ignore></ignore>
-                                    </action>
-                                </pluginExecution>
-                            </pluginExecutions>
-                        </lifecycleMappingMetadata>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -469,22 +413,6 @@
 
     <profiles>
         <profile>
-            <id>spotbugs</id>
-            <activation>
-                <property>
-                    <name>findbugs</name> <!-- not modified just for compatibility reason -->
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.github.spotbugs</groupId>
-                        <artifactId>spotbugs-maven-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
             <id>jdk9</id>
             <activation>
                 <jdk>9</jdk>
@@ -520,39 +448,6 @@
             <modules>
                 <module>dist</module>
             </modules>
-        </profile>
-
-        <profile>
-            <id>test-coverage</id>
-            <modules>
-                <module>coverage-report</module>
-            </modules>
-            <properties>
-                <jacoco.agent.argLine>${jacoco.activated.agent.argLine}</jacoco.agent.argLine>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.jacoco</groupId>
-                        <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>${version.org.jacoco}</version>
-                        <executions>
-                            <execution>
-                                <id>agent</id>
-                                <goals>
-                                    <goal>prepare-agent</goal>
-                                </goals>
-                                <configuration>
-                                    <includes>
-                                        <include>io.undertow*</include>
-                                    </includes>
-                                    <propertyName>jacoco.activated.agent.argLine</propertyName>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
 
         <profile>
