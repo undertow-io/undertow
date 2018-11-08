@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * The request scheme
- *
+ * 自定义数据获取,获取 Ip 地址等信息
  * @author Stuart Douglas
  */
 public class HostAndPortAttribute implements ExchangeAttribute {

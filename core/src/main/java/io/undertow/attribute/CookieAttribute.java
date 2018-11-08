@@ -24,7 +24,7 @@ import io.undertow.server.handlers.CookieImpl;
 
 /**
  * A cookie
- *
+ * cookie 参数操作
  * @author Stuart Douglas
  */
 public class CookieAttribute implements ExchangeAttribute {

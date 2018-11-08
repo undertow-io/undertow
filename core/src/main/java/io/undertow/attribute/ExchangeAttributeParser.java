@@ -41,6 +41,7 @@ public class ExchangeAttributeParser {
     private final List<ExchangeAttributeBuilder> builders;
     private final List<ExchangeAttributeWrapper> wrappers;
 
+    //包装器模式,可以自定义参数的构建方法,来自定义attributer 类的实现方式
     ExchangeAttributeParser(final ClassLoader classLoader, List<ExchangeAttributeWrapper> wrappers) {
         this.wrappers = wrappers;
         ServiceLoader<ExchangeAttributeBuilder> loader = ServiceLoader.load(ExchangeAttributeBuilder.class, classLoader);

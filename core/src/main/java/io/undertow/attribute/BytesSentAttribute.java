@@ -38,6 +38,11 @@ public class BytesSentAttribute implements ExchangeAttribute {
     }
 
 
+    /**
+     * 如果实体发送的自己的数是否是0 将会动态的添加一个- 进去
+     * @param exchange The exchange
+     * @return
+     */
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         if (dashIfZero )  {

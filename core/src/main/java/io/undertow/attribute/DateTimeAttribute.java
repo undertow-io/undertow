@@ -63,6 +63,8 @@ public class DateTimeAttribute implements ExchangeAttribute {
             }
         };
     }
+
+    //简单的获取当前的时间数据
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         if(dateFormat == null) {
@@ -73,6 +75,7 @@ public class DateTimeAttribute implements ExchangeAttribute {
         }
     }
 
+    //不可写
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
         throw new ReadOnlyAttributeException("Date time", newValue);
@@ -85,6 +88,7 @@ public class DateTimeAttribute implements ExchangeAttribute {
             return "Date Time";
         }
 
+        //可以通过谓词方式自定义时间格式
         @Override
         public ExchangeAttribute build(final String token) {
             if (token.equals(DATE_TIME) || token.equals(DATE_TIME_SHORT)) {

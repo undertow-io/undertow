@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * Exchange attribute that represents a combination of attributes that should be merged into a single string.
- *
+ * Exchange属性-表示应合并为单个字符串的属性组合
  * @author Stuart Douglas
  */
 public class CompositeExchangeAttribute implements ExchangeAttribute {
@@ -35,6 +35,11 @@ public class CompositeExchangeAttribute implements ExchangeAttribute {
         this.attributes = copy;
     }
 
+    /**
+     * 将各种属性添加成一个字符串
+     * @param exchange The exchange
+     * @return
+     */
     @Override
     public String readAttribute(HttpServerExchange exchange) {
         final StringBuilder sb = new StringBuilder();

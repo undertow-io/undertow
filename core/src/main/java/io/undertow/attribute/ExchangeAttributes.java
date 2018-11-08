@@ -26,7 +26,7 @@ import java.util.Collections;
 
 /**
  * Utility class for retrieving exchange attributes
- *
+ * 这个类和  ExchangeAttributesParser 搭配使用 一个口子 可以定制化的获取 Attribute
  * @author Stuart Douglas
  */
 public class ExchangeAttributes {
@@ -123,6 +123,7 @@ public class ExchangeAttributes {
         return new ConstantExchangeAttribute(value);
     }
 
+    //通用方法批量处理 exchang请求 让这个匹配 attributes
     public static String  resolve(final HttpServerExchange exchange, final ExchangeAttribute[] attributes) {
         final StringBuilder result = new StringBuilder();
         for (int i = 0; i < attributes.length; ++i) {

@@ -22,6 +22,7 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
 
 /**
+ * 身份验证 参数
  * @author Stuart Douglas
  */
 public class AuthenticationTypeExchangeAttribute implements ExchangeAttribute {

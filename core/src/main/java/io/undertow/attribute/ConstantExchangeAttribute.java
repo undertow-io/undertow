@@ -22,7 +22,7 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * Exchange attribute that represents a fixed value
- *
+ * 表示固定值的Exchange属性 表示不可修改的固定值属性 constant 不变的
  * @author Stuart Douglas
  */
 public class ConstantExchangeAttribute implements ExchangeAttribute {
