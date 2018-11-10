@@ -118,7 +118,28 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
 
-
+            <!-- Javadoc -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <!--
+                        The Javadoc comments contains a lot of minor HTML errors
+                        which will cause Javadoc generation to fail without the
+                        following setting.
+                    -->
+                    <doclint>none</doclint>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
             <!-- Zanata translations -->
             <plugin>
                 <groupId>org.zanata</groupId>
