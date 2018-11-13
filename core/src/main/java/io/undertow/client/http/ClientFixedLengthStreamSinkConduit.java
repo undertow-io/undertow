@@ -39,8 +39,6 @@ class ClientFixedLengthStreamSinkConduit extends AbstractFixedLengthStreamSinkCo
         this.exchange = exchange;
     }
 
-
-
     @Override
     protected void channelFinished() {
         exchange.terminateRequest();

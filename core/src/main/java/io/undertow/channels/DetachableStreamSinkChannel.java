@@ -38,7 +38,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * Stream sink channel. When this channel is considered detached it will no longer forward
  * calls to the delegate
- *
+ * 这个接口是为了函数式编程而开发, 通过函数式引用可以将channel 的实现和处理解耦
+ * 请求的处理接口
  * @author Stuart Douglas
  */
 public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
@@ -53,6 +54,7 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
     }
 
     protected abstract boolean isFinished();
+
 
     @Override
     public void suspendWrites() {
@@ -95,6 +97,10 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
         delegate.awaitWritable(time, timeUnit);
     }
 
+    /**
+     * 这里有问题 应该使用的方法是getIOThread
+     * @return
+     */
     @Override
     public XnioExecutor getWriteThread() {
         return delegate.getWriteThread();
@@ -119,6 +125,7 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
         return delegate.flush();
     }
 
+    //转移
     @Override
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
         if (isFinished()) {

@@ -59,6 +59,7 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
 
     private int state = 0;
     private static final int REQUEST_TERMINATED = 1;
+    //为了更加清晰,下面使用了 位运算将
     private static final int RESPONSE_TERMINATED = 1 << 1;
 
     HttpClientExchange(ClientCallback<ClientExchange> readyCallback, ClientRequest request, HttpClientConnection clientConnection) {
@@ -79,6 +80,10 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     public void setRequestConduit(HttpRequestConduit requestConduit) {
         this.requestConduit = requestConduit;
     }
+
+    /**
+     * 这有两个terminate 方法, 都是当state和对应的终止方法不同的时候却掉,然后当相同的时候进行下一步操作
+     */
 
     void terminateRequest() {
         if(anyAreSet(state, REQUEST_TERMINATED)) {

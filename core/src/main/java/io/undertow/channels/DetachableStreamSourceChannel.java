@@ -39,7 +39,7 @@ import io.undertow.UndertowMessages;
 /**
  * A stream source channel that can be marked as detached. Once this is marked as detached then
  * calls will no longer be forwarded to the delegate.
- *
+ * 响应的处理接口
  * @author Stuart Douglas
  */
 public abstract class DetachableStreamSourceChannel implements StreamSourceChannel{

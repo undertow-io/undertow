@@ -109,20 +109,27 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private static final Logger log = Logger.getLogger(HttpClientConnection.class);
 
     private final Deque<HttpClientExchange> pendingQueue = new ArrayDeque<>();
+
     private HttpClientExchange currentRequest;
+
     private HttpResponseBuilder pendingResponse;
 
     private final OptionMap options;
     private final StreamConnection connection;
+
+    // response 用的通道
     private final PushBackStreamSourceConduit pushBackStreamSourceConduit;
+
     private final ClientReadListener clientReadListener = new ClientReadListener();
 
     private final ByteBufferPool bufferPool;
     private PooledByteBuffer pooledBuffer;
+
+    // 传入的request通道
     private final StreamSinkConduit originalSinkConduit;
 
-    private static final int UPGRADED = 1 << 28;
-    private static final int UPGRADE_REQUESTED = 1 << 29;
+    private static final int UPGRADED = 1 << 28;//升级
+    private static final int UPGRADE_REQUESTED = 1 << 29;//请求升级
     private static final int CLOSE_REQ = 1 << 30;
     private static final int CLOSED = 1 << 31;
 
@@ -474,21 +481,24 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
     /**
      * Notification that the current request is finished
+     * 通知这个请求结束
      */
     public void exchangeDone() {
         log.debugf("exchange complete in connection to %s", getPeerAddress());
 
         connection.getSinkChannel().setConduit(originalSinkConduit);
         connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
-        connection.getSinkChannel().suspendWrites();
+        connection.getSinkChannel().suspendWrites();//暂停进一步写入通知
         connection.getSinkChannel().setWriteListener(null);
+
+        // 各种信号量的处理
 
         if (anyAreSet(state, CLOSE_REQ)) {
             currentRequest = null;
             pendingResponse = null;
             this.state |= CLOSED;
             safeClose(connection);
-        } else if (anyAreSet(state, UPGRADE_REQUESTED)) {
+        } else if (anyAreSet(state, UPGRADE_REQUESTED)) {//如果不是关闭状态就先做暂停处理
             connection.getSourceChannel().suspendReads();
             currentRequest = null;
             pendingResponse = null;
@@ -496,6 +506,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         }
         currentRequest = null;
         pendingResponse = null;
+
+        //校验有没有接下来的处理逻辑
 
         HttpClientExchange next = pendingQueue.poll();
         if (next == null) {
