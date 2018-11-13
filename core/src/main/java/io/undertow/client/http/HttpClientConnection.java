@@ -170,11 +170,15 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         }
         this.options = options;
         this.connection = connection;
+        //从传入的连接中获取返回值通道
         this.pushBackStreamSourceConduit = new PushBackStreamSourceConduit(connection.getSourceChannel().getConduit());
         this.connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
+        //xnio 定义的缓冲池
         this.bufferPool = bufferPool;
+
         this.originalSinkConduit = connection.getSinkChannel().getConduit();
 
+        //定义关闭通道的时候处理的方法
         connection.getCloseSetter().set(new ChannelListener<StreamConnection>() {
 
             public void handleEvent(StreamConnection channel) {
@@ -182,6 +186,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                 HttpClientConnection.this.state |= CLOSED;
                 ChannelListeners.invokeChannelListener(HttpClientConnection.this, closeSetter.get());
                 try {
+
                     if (pooledBuffer != null) {
                         pooledBuffer.close();
                     }
@@ -203,7 +208,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             }
         });
         //we resume reads, so if the target goes away we get notified
+        //我们恢复读取，所以如果目标消失，我们会收到通知
+        //TODO 这里 使用内部类 生成一个处理请求监听的listenner 来处理http 请求
         connection.getSourceChannel().setReadListener(clientReadListener);
+        //TODO 开启使用
         connection.getSourceChannel().resumeReads();
     }
 
@@ -330,6 +338,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         closeListeners.add(listener);
     }
 
+    //处理请求的第一个阶段,对待处理的相关方比如是否是ssl 对象的处理 进行初始化
     @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
         if(http2Delegate != null) {
@@ -356,7 +365,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             pendingQueue.add(httpClientExchange);
         }
     }
-
+    //
     private void initiateRequest(HttpClientExchange httpClientExchange) {
         this.requestCount++;
         currentRequest = httpClientExchange;
@@ -525,8 +534,8 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         }
     }
 
+    //TODO 这个是默认的阅读器针对的是http client 请求
     class ClientReadListener implements ChannelListener<StreamSourceChannel> {
-
         public void handleEvent(StreamSourceChannel channel) {
 
             HttpResponseBuilder builder = pendingResponse;

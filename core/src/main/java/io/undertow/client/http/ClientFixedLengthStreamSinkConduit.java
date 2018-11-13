@@ -21,6 +21,9 @@ package io.undertow.client.http;
 import io.undertow.conduits.AbstractFixedLengthStreamSinkConduit;
 import org.xnio.conduits.StreamSinkConduit;
 
+/**
+ * 固定长度请求接受 通道
+ */
 class ClientFixedLengthStreamSinkConduit extends AbstractFixedLengthStreamSinkConduit {
 
     private final HttpClientExchange exchange;
