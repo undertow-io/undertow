@@ -40,7 +40,7 @@ import static org.xnio.Bits.longBitMask;
 
 /**
  * A channel which writes a fixed amount of data.  A listener is called once the data has been written.
- *
+ * 自定义一个数据集 写入固定数据量的通道---给予xnio 一部框架的技术
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
@@ -48,15 +48,15 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
 
     private long state;
 
-    private boolean broken = false;
+    private boolean broken = false;//出毛病？？？
 
-    private static final int CONF_FLAG_CONFIGURABLE = 1 << 0;
-    private static final int CONF_FLAG_PASS_CLOSE = 1 << 1;
+    private static final int CONF_FLAG_CONFIGURABLE = 1 << 0; //标记可进行配置
+    private static final int CONF_FLAG_PASS_CLOSE = 1 << 1; //标记通道关闭
 
-    private static final long FLAG_CLOSE_REQUESTED = 1L << 63L;
-    private static final long FLAG_CLOSE_COMPLETE = 1L << 62L;
-    private static final long FLAG_FINISHED_CALLED = 1L << 61L;
-    private static final long MASK_COUNT = longBitMask(0, 60);
+    private static final long FLAG_CLOSE_REQUESTED = 1L << 63L;//标记请求关闭
+    private static final long FLAG_CLOSE_COMPLETE = 1L << 62L; //标记关闭完成
+    private static final long FLAG_FINISHED_CALLED = 1L << 61L; // 标记停止呼叫
+    private static final long MASK_COUNT = longBitMask(0, 60);//明天公司看看
 
     /**
      * Construct a new instance.
