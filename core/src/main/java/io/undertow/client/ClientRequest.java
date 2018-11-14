@@ -30,7 +30,7 @@ import io.undertow.util.Protocols;
  * This class only represents the HTTP header, it does not represent an entity body. If the request needs an entity
  * body then this must be specified by either setting a Content-Length or Transfer-Encoding header, otherwise
  * the client will assume that the body is empty.
- *
+ *客户请求。 提交到ClientConnection后，不应修改此类。 此类仅表示HTTP标头，它不表示实体主体。 如果请求需要实体主体，则必须通过设置Content-Length或Transfer-Encoding标头来指定，否则客户端将假定主体为空。
  * @author Stuart Douglas
  */
 public final class ClientRequest extends AbstractAttachable {

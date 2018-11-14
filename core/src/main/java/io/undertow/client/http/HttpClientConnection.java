@@ -339,12 +339,14 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     }
 
     //处理请求的第一个阶段,对待处理的相关方比如是否是ssl 对象的处理 进行初始化
+    //请求处理的接口,使用回调的方式进行处理
     @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
         if(http2Delegate != null) {
             http2Delegate.sendRequest(request, clientCallback);
             return;
         }
+        //状态是 后面四种之外的情况下
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
             clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());
             return;
@@ -365,14 +367,17 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             pendingQueue.add(httpClientExchange);
         }
     }
-    //
+
+    //初始化连接点
     private void initiateRequest(HttpClientExchange httpClientExchange) {
         this.requestCount++;
         currentRequest = httpClientExchange;
         pendingResponse = new HttpResponseBuilder();
         ClientRequest request = httpClientExchange.getRequest();
-
+        //处理http 头部请求的参数
         String connectionString = request.getRequestHeaders().getFirst(Headers.CONNECTION);
+
+        // 接下来的就是针对http的各种METHOD状态对 状态进行处理
         if (connectionString != null) {
             if (Headers.CLOSE.equalToString(connectionString)) {
                 state |= CLOSE_REQ;
@@ -382,6 +387,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         } else if (request.getProtocol() != Protocols.HTTP_1_1) {
             state |= CLOSE_REQ;
         }
+
         if (request.getRequestHeaders().contains(Headers.UPGRADE)) {
             state |= UPGRADE_REQUESTED;
         }
@@ -390,17 +396,21 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             state |= UPGRADE_REQUESTED;
         }
 
+        //connection 在这个类进行new 的时候已经传入进去了
         //setup the client request conduits
+        //todo 流读取通道初始化
         final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
-        sourceChannel.setReadListener(clientReadListener);
-        sourceChannel.resumeReads();
+        sourceChannel.setReadListener(clientReadListener);//这里注意是内部类 -- 重点
+        sourceChannel.resumeReads(); //  开始进行监听
 
+        //todo 流写入通道初始化
         ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
-        StreamSinkConduit conduit = originalSinkConduit;
+        StreamSinkConduit conduit = originalSinkConduit; //todo 这货其实是 新进对象的时候 传入的 connect 中获取的
         HttpRequestConduit httpRequestConduit = new HttpRequestConduit(conduit, bufferPool, request);
         httpClientExchange.setRequestConduit(httpRequestConduit);
-        conduit = httpRequestConduit;
+        conduit = httpRequestConduit;//todo 暂时认为这个是因为新生成了的 httpRequestConduit 所以这里进行了 替换
 
+        //获取http 协议中相关的各种信息
         String fixedLengthString = request.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
         String transferEncodingString = request.getRequestHeaders().getLast(Headers.TRANSFER_ENCODING);
 
@@ -425,6 +435,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             conduit = new ClientFixedLengthStreamSinkConduit(conduit, 0, false, false, currentRequest);
             hasContent = false;
         }
+        //添加已经进行了相关处理的各种通道和流
         sinkChannel.setConduit(conduit);
 
         httpClientExchange.invokeReadReadyCallback();
@@ -433,11 +444,13 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             //otherwise it is up to the user
             try {
                 sinkChannel.shutdownWrites();
-                if (!sinkChannel.flush()) {
+
+                //todo 刷新任何等待的部分发送或写入。 如果没有要刷新的数据，或者如果刷新成功完成，则此方法将返回true。 如果有要刷新的数据无法立即写入，则此方法将返回false。 如果在此通道上调用SuspendableWriteChannel.shutdownWrites（）后此方法返回true，则将不再在此通道上调用写入侦听器。 如果是这种情况，另外这是一个只写通道或读取端先前已关闭，则通道将自动关闭。
+                if (!sinkChannel.flush()) { //如果通道还有数据没有写入
                     sinkChannel.setWriteListener(ChannelListeners.flushingChannelListener(null, new ChannelExceptionHandler<ConduitStreamSinkChannel>() {
                         @Override
                         public void handleException(ConduitStreamSinkChannel channel, IOException exception) {
-                            handleError(exception);
+                            handleError(exception); //当轮训再次处理这个的时候将会调用本地方法手动关闭
                         }
                     }));
                     sinkChannel.resumeWrites();
@@ -455,6 +468,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             handleError(new IOException(exception));
         }
     }
+    //
     private void handleError(IOException exception) {
         UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
         currentRequest.setFailed(exception);
@@ -463,6 +477,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         safeClose(connection);
     }
 
+    //对当前的状态进行重置
     public StreamConnection performUpgrade() throws IOException {
         log.debugf("connection to %s is being upgraded", getPeerAddress());
         // Upgrade the connection
