@@ -105,7 +105,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         if(requestIdleTimeout < 0 && requestParseTimeout < 0) {
             this.parseTimeoutUpdater = null;
         } else {
-            this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection, requestParseTimeout, requestIdleTimeout);
+            this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection.getChannel(), requestParseTimeout, requestIdleTimeout);
             connection.addCloseListener(parseTimeoutUpdater);
         }
         state = new ParseState(connection.getUndertowOptions().get(UndertowOptions.HTTP_HEADERS_CACHE_SIZE, UndertowOptions.DEFAULT_HTTP_HEADERS_CACHE_SIZE));

@@ -204,7 +204,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public XnioWorker getWorker() {
-        return exchange.getConnection().getWorker();
+        return (XnioWorker) exchange.getConnection().getWorker();
     }
 
     @Override

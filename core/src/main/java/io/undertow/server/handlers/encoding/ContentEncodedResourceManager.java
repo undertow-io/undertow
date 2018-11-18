@@ -288,7 +288,7 @@ public class ContentEncodedResourceManager {
 
         @Override
         public XnioWorker getWorker() {
-            return exchange.getConnection().getWorker();
+            return (XnioWorker) exchange.getConnection().getWorker();
         }
     }
 }

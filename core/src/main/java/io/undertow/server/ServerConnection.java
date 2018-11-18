@@ -34,9 +34,12 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
+
 import javax.net.ssl.SSLSession;
 
 /**
@@ -44,14 +47,7 @@ import javax.net.ssl.SSLSession;
  *
  * @author Stuart Douglas
  */
-public abstract class ServerConnection extends AbstractAttachable implements ConnectedChannel  {
-
-    /**
-     *
-     * @return The connections buffer pool
-     */
-    @Deprecated
-    public abstract Pool<ByteBuffer> getBufferPool();
+public abstract class ServerConnection extends AbstractAttachable implements Closeable {
 
     /**
      *
@@ -63,13 +59,12 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      *
      * @return The connections worker
      */
-    public abstract XnioWorker getWorker();
+    public abstract Executor getWorker();
 
     /**
      *
      * @return The IO thread associated with the connection
      */
-    @Override
     public abstract XnioIoThread getIoThread();
 
     /**

@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -378,7 +379,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         private volatile boolean invalidationStarted = false;
 
         final XnioIoThread executor;
-        final XnioWorker worker;
+        final Executor worker;
 
         XnioExecutor.Key timerCancelKey;
 
@@ -399,7 +400,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
         };
 
-        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final XnioIoThread executor, final XnioWorker worker, final Object evictionToken, final int maxInactiveInterval) {
+        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final XnioIoThread executor, final Executor worker, final Object evictionToken, final int maxInactiveInterval) {
             this.sessionManager = sessionManager;
             this.sessionId = sessionId;
             this.sessionCookieConfig = sessionCookieConfig;

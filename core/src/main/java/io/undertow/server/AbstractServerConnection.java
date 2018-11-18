@@ -18,15 +18,15 @@
 
 package io.undertow.server;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Executor;
+
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -35,13 +35,12 @@ import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.util.LinkedList;
-import java.util.List;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 
-public abstract class AbstractServerConnection  extends ServerConnection {
+public abstract class AbstractServerConnection extends ServerConnection {
     protected final StreamConnection channel;
     protected final CloseSetter closeSetter;
     protected final ByteBufferPool bufferPool;
@@ -54,8 +53,6 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     protected HttpServerExchange current;
 
     private final int bufferSize;
-
-    private XnioBufferPoolAdaptor poolAdaptor;
 
     /**
      * Any extra bytes that were read from the channel. This could be data for this requests, or the next response.
@@ -77,14 +74,6 @@ public abstract class AbstractServerConnection  extends ServerConnection {
             this.originalSinkConduit = null;
             this.originalSourceConduit = null;
         }
-    }
-
-    @Override
-    public Pool<ByteBuffer> getBufferPool() {
-        if(poolAdaptor == null) {
-            poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
-        }
-        return poolAdaptor;
     }
 
     /**
@@ -116,18 +105,13 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     }
 
     @Override
-    public ChannelListener.Setter<ServerConnection> getCloseSetter() {
-        return closeSetter;
-    }
-
-    @Override
-    public XnioWorker getWorker() {
+    public Executor getWorker() {
         return channel.getWorker();
     }
 
     @Override
     public XnioIoThread getIoThread() {
-        if(channel == null) {
+        if (channel == null) {
             return null;
         }
         return channel.getIoThread();
@@ -193,7 +177,7 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     }
 
     public PooledByteBuffer getExtraBytes() {
-        if(extraBytes != null && !extraBytes.getBuffer().hasRemaining()) {
+        if (extraBytes != null && !extraBytes.getBuffer().hasRemaining()) {
             extraBytes.close();
             extraBytes = null;
             return null;
@@ -241,6 +225,7 @@ public abstract class AbstractServerConnection  extends ServerConnection {
         channel.getSinkChannel().setConduit(originalSinkConduit);
         channel.getSourceChannel().setConduit(originalSourceConduit);
     }
+
     /**
      * Restores the channel conduits to a previous state.
      *
@@ -293,14 +278,8 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
     }
 
-    private class CloseSetter implements ChannelListener.Setter<ServerConnection>, ChannelListener<StreamConnection> {
+    private class CloseSetter implements ChannelListener<StreamConnection> {
 
-        private ChannelListener<? super ServerConnection> listener;
-
-        @Override
-        public void set(ChannelListener<? super ServerConnection> listener) {
-            this.listener = listener;
-        }
 
         @Override
         public void handleEvent(StreamConnection channel) {
@@ -315,9 +294,8 @@ public abstract class AbstractServerConnection  extends ServerConnection {
                 if (current != null) {
                     current.endExchange();
                 }
-                ChannelListeners.invokeChannelListener(AbstractServerConnection.this, listener);
             } finally {
-                if(extraBytes != null) {
+                if (extraBytes != null) {
                     extraBytes.close();
                     extraBytes = null;
                 }

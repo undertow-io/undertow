@@ -86,7 +86,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         if(requestIdleTimeout < 0 && requestParseTimeout < 0) {
             this.parseTimeoutUpdater = null;
         } else {
-            this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection, requestParseTimeout, requestIdleTimeout);
+            this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection.getChannel(), requestParseTimeout, requestIdleTimeout);
             connection.addCloseListener(parseTimeoutUpdater);
         }
     }

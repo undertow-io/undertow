@@ -32,7 +32,6 @@ import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.XnioBufferPoolAdaptor;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.DateUtils;
@@ -97,7 +96,6 @@ public class Http2ServerConnection extends ServerConnection {
     private final HttpHandler rootHandler;
     private HttpServerExchange exchange;
     private boolean continueSent = false;
-    private XnioBufferPoolAdaptor poolAdaptor;
 
     public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
@@ -134,13 +132,6 @@ public class Http2ServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(getIoThread()));
-    }
-    @Override
-    public Pool<ByteBuffer> getBufferPool() {
-        if(poolAdaptor == null) {
-            poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
-        }
-        return poolAdaptor;
     }
 
     public SSLSession getSslSession() {
@@ -260,11 +251,6 @@ public class Http2ServerConnection extends ServerConnection {
     @Override
     public <A extends SocketAddress> A getPeerAddress(Class<A> type) {
         return channel.getPeerAddress(type);
-    }
-
-    @Override
-    public ChannelListener.Setter<? extends ConnectedChannel> getCloseSetter() {
-        return channel.getCloseSetter();
     }
 
     @Override
